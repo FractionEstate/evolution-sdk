@@ -5,34 +5,12 @@ import * as KupmiosEffects from "./internal/KupmiosEffects.js"
 import type { Provider, ProviderEffect } from "./Provider.js"
 
 /**
+ * Kupmios provider for Cardano blockchain data access.
  * Provides support for interacting with both Kupo and Ogmios APIs.
+ * Supports custom headers for authentication with Demeter or other providers.
  *
- * @example Using Local URLs (No Authentication):
- * ```typescript
- * const kupmios = new KupmiosProvider(
- *   "http://localhost:1442", // Kupo API URL
- *   "http://localhost:1337"  // Ogmios API URL
- * );
- * ```
- *
- * @example Using Authenticated URLs (No Custom Headers):
- * ```typescript
- * const kupmios = new KupmiosProvider(
- *   "https://dmtr_kupoXXX.preprod-v2.kupo-m1.demeter.run", // Kupo Authenticated URL
- *   "https://dmtr_ogmiosXXX.preprod-v6.ogmios-m1.demeter.run" // Ogmios Authenticated URL
- * );
- * ```
- *
- * @example Using Public URLs with Custom Headers:
- * ```typescript
- * const kupmios = new KupmiosProvider(
- *   "https://preprod-v2.kupo-m1.demeter.run", // Kupo API URL
- *   "https://preprod-v6.ogmios-m1.demeter.run", // Ogmios API URL
- *   {
- *     kupoHeader: { "dmtr-api-key": "dmtr_kupoXXX" }, // Custom header for Kupo
- *     ogmiosHeader: { "dmtr-api-key": "dmtr_ogmiosXXX" } // Custom header for Ogmios
- *   }
- * );
+ * @since 2.0.0
+ * @category constructors
  */
 export class KupmiosProvider implements Provider {
   private readonly kupoUrl: string
@@ -42,7 +20,6 @@ export class KupmiosProvider implements Provider {
     readonly kupoHeader?: Record<string, string>
   }
 
-  // Effect property for Provider interface
   readonly Effect: ProviderEffect
 
   constructor(
@@ -57,7 +34,6 @@ export class KupmiosProvider implements Provider {
     this.ogmiosUrl = ogmiosUrl
     this.headers = headers
 
-    // Initialize Effect property
     this.Effect = {
       getProtocolParameters: () => KupmiosEffects.getProtocolParametersEffect(this.ogmiosUrl, this.headers),
       getUtxos: KupmiosEffects.getUtxosEffect(this.kupoUrl, this.headers),
@@ -71,10 +47,6 @@ export class KupmiosProvider implements Provider {
       submitTx: KupmiosEffects.submitTxEffect(this.ogmiosUrl, this.headers)
     }
   }
-
-  // ============================================================================
-  // Promise-based API - arrow functions as own properties (spreadable!)
-  // ============================================================================
 
   getProtocolParameters = () => Effect.runPromise(this.Effect.getProtocolParameters())
 

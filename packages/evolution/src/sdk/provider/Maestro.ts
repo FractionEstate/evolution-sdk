@@ -1,8 +1,3 @@
-/**
- * @fileoverview Maestro provider implementation
- * Public provider class implementing both Effect and Promise APIs
- */
-
 import { Effect } from "effect"
 
 import * as MaestroEffect from "./internal/MaestroEffect.js"
@@ -10,44 +5,12 @@ import type { Provider, ProviderEffect } from "./Provider.js"
 
 /**
  * Maestro provider for Cardano blockchain data access.
- *
  * Supports mainnet and testnet networks with API key authentication.
  * Features cursor-based pagination and optional turbo submit for faster transaction processing.
  * Implements rate limiting to respect Maestro API limits.
  *
- * @example Basic usage with API key:
- * ```typescript
- * const maestro = new MaestroProvider(
- *   "https://api.maestro.org/v1",
- *   "your-api-key"
- * );
- *
- * // Using Promise API
- * const params = await maestro.getProtocolParameters();
- *
- * // Using Effect API
- * const paramsEffect = maestro.Effect.getProtocolParameters;
- * ```
- *
- * @example With turbo submit enabled:
- * ```typescript
- * const maestro = new MaestroProvider(
- *   "https://api.maestro.org/v1",
- *   "your-api-key",
- *   true // Enable turbo submit
- * );
- *
- * // Transactions will use turbo submit endpoint
- * const txHash = await maestro.submitTx(signedTx);
- * ```
- *
- * @example Testnet usage:
- * ```typescript
- * const maestro = new MaestroProvider(
- *   "https://preprod.api.maestro.org/v1",
- *   "your-preprod-api-key"
- * );
- * ```
+ * @since 2.0.0
+ * @category constructors
  */
 export class MaestroProvider implements Provider {
   readonly Effect: ProviderEffect
@@ -57,7 +20,6 @@ export class MaestroProvider implements Provider {
     private readonly apiKey: string,
     private readonly turboSubmit: boolean = false
   ) {
-    // Initialize Effect-based API with curry pattern
     this.Effect = {
       getProtocolParameters: () => MaestroEffect.getProtocolParameters(this.baseUrl, this.apiKey),
       getUtxos: MaestroEffect.getUtxos(this.baseUrl, this.apiKey),
@@ -71,10 +33,6 @@ export class MaestroProvider implements Provider {
       awaitTx: MaestroEffect.awaitTx(this.baseUrl, this.apiKey)
     }
   }
-
-  // ============================================================================
-  // Promise-based API - arrow functions as own properties (spreadable!)
-  // ============================================================================
 
   getProtocolParameters = () => Effect.runPromise(this.Effect.getProtocolParameters())
 
@@ -108,24 +66,29 @@ export class MaestroProvider implements Provider {
     Effect.runPromise(this.Effect.evaluateTx(tx, additionalUTxOs))
 }
 
-// ============================================================================
-// Network Configuration Helpers
-// ============================================================================
-
 /**
- * Pre-configured Maestro provider for Cardano mainnet
+ * Pre-configured Maestro provider for Cardano mainnet.
+ *
+ * @since 2.0.0
+ * @category constructors
  */
 export const mainnet = (apiKey: string, turboSubmit: boolean = false): MaestroProvider =>
   new MaestroProvider("https://api.maestro.org/v1", apiKey, turboSubmit)
 
 /**
- * Pre-configured Maestro provider for Cardano preprod testnet
+ * Pre-configured Maestro provider for Cardano preprod testnet.
+ *
+ * @since 2.0.0
+ * @category constructors
  */
 export const preprod = (apiKey: string, turboSubmit: boolean = false): MaestroProvider =>
   new MaestroProvider("https://preprod.api.maestro.org/v1", apiKey, turboSubmit)
 
 /**
- * Pre-configured Maestro provider for Cardano preview testnet
+ * Pre-configured Maestro provider for Cardano preview testnet.
+ *
+ * @since 2.0.0
+ * @category constructors
  */
 export const preview = (apiKey: string, turboSubmit: boolean = false): MaestroProvider =>
   new MaestroProvider("https://preview.api.maestro.org/v1", apiKey, turboSubmit)

@@ -1,0 +1,225 @@
+---
+title: "Wallet Creation Methods"
+description: "Choose the wallet type that fits your use case"
+---
+
+# Wallet Creation Methods
+
+Evolution SDK offers four wallet types, each designed for specific scenarios. Seed phrase wallets excel in development with their mnemonic-based key derivation. Private key wallets suit automated systems where you manage keys directly. API wallets integrate browser extensions and hardware devices through the CIP-30 standard. Read-only wallets monitor addresses without signing capability.
+
+This guide walks through creating each wallet type, showing when to use them and how to configure them securely.
+
+## Seed Phrase Wallets
+
+Seed phrases (BIP-39 mnemonics) are ideal for development, testing, and applications where you can securely store a 12 or 24-word phrase. They're human-readable, backup-friendly, and support multiple accounts from a single seed.
+
+### Step 1: Generate a Seed Phrase
+
+```bash
+# Using a tool like BIP39:
+# https://github.com/trezor/python-mnemonic
+python3 -m mnemonic generate --strength 128
+```
+
+### Step 2: Create the Client
+
+```ts twoslash
+import type { SigningClient } from "@evolution-sdk/evolution";
+import { createClient } from "@evolution-sdk/evolution";
+
+const client: SigningClient = createClient({
+  network: "preprod",
+  provider: {
+    type: "blockfrost",
+    baseUrl: "https://cardano-preprod.blockfrost.io/api/v0",
+    projectId: "your-project-id"
+  },
+  wallet: {
+    type: "seed",
+    mnemonic: "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+    accountIndex: 0  // Use account 0
+  }
+});
+```
+
+### Step 3: Use Testnet to Verify
+
+Always test on testnet before mainnet:
+
+```ts twoslash
+import { createClient } from "@evolution-sdk/evolution";
+
+const client = createClient({
+  network: "preprod",  // Testnet
+  provider: {
+    type: "blockfrost",
+    baseUrl: "https://cardano-preprod.blockfrost.io/api/v0",
+    projectId: "preprod-project-id"
+  },
+  wallet: { 
+    type: "seed", 
+    mnemonic: "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+    accountIndex: 0 
+  }
+});
+
+const mainnet = createClient({
+  network: "mainnet",  // Production
+  provider: {
+    type: "blockfrost",
+    baseUrl: "https://cardano-mainnet.blockfrost.io/api/v0",
+    projectId: "mainnet-project-id"
+  },
+  wallet: { 
+    type: "seed", 
+    mnemonic: process.env.WALLET_MNEMONIC!,
+    accountIndex: 0 
+  }
+});
+```
+
+## Private Key Wallets
+
+When you have direct access to extended or raw private keys—common in server-side automation, payment processing systems, or integrations with existing key management infrastructure. Private keys give you full control but require careful security practices.
+
+```ts twoslash
+import { createClient } from "@evolution-sdk/evolution";
+
+const client = createClient({
+  network: "preprod",
+  provider: {
+    type: "blockfrost",
+    baseUrl: "https://cardano-preprod.blockfrost.io/api/v0",
+    projectId: "your-project-id"
+  },
+  wallet: {
+    type: "private-key",
+    paymentKey: "a" + "0".repeat(127)  // 128 hex characters
+  }
+});
+```
+
+**Security considerations:**
+- Never commit private keys to version control
+- Use environment variables or secure vaults (AWS Secrets Manager, HashiCorp Vault)
+- Rotate keys regularly for production systems
+- Consider HSM integration for high-value operations
+
+## API Wallets (Browser Extensions & Hardware)
+
+For production applications requiring user-owned keys, browser extensions (Nami, Eternl, Flint) and hardware wallets (Ledger, Trezor) connect through the CIP-30 standard. The wallet handles signing while keeping private keys secure on the device.
+
+```ts twoslash
+import { createClient } from "@evolution-sdk/evolution";
+
+// Assuming you have a CIP-30 wallet API from browser extension
+declare const walletApi: any; // From window.cardano.nami.enable() etc
+
+const client = createClient({
+  network: "mainnet",
+  provider: {
+    type: "blockfrost",
+    baseUrl: "https://cardano-mainnet.blockfrost.io/api/v0",
+    projectId: "mainnet-project-id"
+  },
+  wallet: {
+    type: "api",
+    api: walletApi
+  }
+});
+```
+
+### Common Derivation Paths
+
+Hardware wallets typically follow standard Cardano derivation paths:
+
+| Path | Use Case |
+|------|----------|
+| `m/1852'/1815'/0'/0/0` | Account 0, Address 0 (Standard) |
+| `m/1852'/1815'/0'/0/1` | Account 0, Address 1 |
+});
+```
+
+**Browser extension integration:**
+```typescript
+// Connect to user's wallet
+const api = await window.cardano.nami.enable();
+
+const client = createClient({
+  network: "mainnet",
+  provider: { type: "blockfrost", baseUrl: "...", projectId: "..." },
+  wallet: { type: "api", api }
+});
+```
+
+Hardware wallets and browser extensions use the same `type: "api"` configuration—the wallet API abstracts whether keys live on a Ledger device or in a browser extension.
+
+## Choosing Your Wallet Type
+
+Match the wallet type to your security requirements and use case:
+
+| Scenario | Recommended Type | Why |
+|----------|------------------|-----|
+| **Local development** | Seed phrase | Quick setup, easy testing |
+| **Automated services** | Private key | Direct control, no user interaction |
+| **User-facing dApp** | API wallet | User controls keys, better UX |
+| **Production treasury** | API wallet (hardware) | Maximum security, air-gapped signing |
+| **CI/CD pipelines** | Private key | Automated, controlled environment |
+| **Read-only monitoring** | Read-only | No signing risk, query-only access |
+
+## Security Best Practices
+
+Regardless of wallet type, follow these security principles:
+
+**Never commit secrets:**
+```ts twoslash
+import { createClient } from "@evolution-sdk/evolution";
+
+// ❌ BAD - Hardcoded credentials
+const bad = createClient({
+  network: "mainnet",
+  provider: {
+    type: "blockfrost",
+    baseUrl: "https://cardano-mainnet.blockfrost.io/api/v0",
+    projectId: "mainnet-project-id"
+  },
+  wallet: {
+    type: "seed",
+    mnemonic: "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",  // NEVER
+    accountIndex: 0
+  }
+});
+```
+
+**Always use environment variables:**
+```ts twoslash
+import { createClient } from "@evolution-sdk/evolution";
+
+// ✅ GOOD - Environment configuration
+const good = createClient({
+  network: "mainnet",
+  provider: {
+    type: "blockfrost",
+    baseUrl: "https://cardano-mainnet.blockfrost.io/api/v0",
+    projectId: process.env.BLOCKFROST_PROJECT_ID!
+  },
+  wallet: {
+    type: "seed",
+    mnemonic: process.env.WALLET_MNEMONIC!,
+    accountIndex: 0
+  }
+});
+```
+
+**Additional safeguards:**
+- Use `.gitignore` for `.env` files
+- Employ secret management services (AWS Secrets Manager, Vault) in production
+- Test thoroughly on testnet before mainnet deployment
+- Implement key rotation policies for long-lived systems
+- Consider multi-sig for high-value operations
+
+## Next Steps
+
+- [Wallet Basics](/docs/wallets/wallet-basics) - Core wallet operations
+- [Transaction Signing](/docs/wallets/signing) - Signing patterns and security
+- [Getting Started](/docs/introduction/getting-started) - Build your first transaction

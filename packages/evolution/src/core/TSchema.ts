@@ -4,11 +4,7 @@ import type { NonEmptyReadonlyArray } from "effect/Array"
 
 import * as Data from "./Data.js"
 
-export interface ByteArray
-  extends Schema.transform<
-    Schema.SchemaClass<Uint8Array<ArrayBufferLike>, Uint8Array<ArrayBufferLike>, never>,
-    typeof Schema.String
-  > {}
+export interface ByteArray extends Schema.Schema<string, string, never> {}
 
 /**
  * Schema transformations between TypeScript types and Plutus Data
@@ -19,30 +15,13 @@ export interface ByteArray
  */
 
 /**
- * ByteArray schema that transforms hex string to Data.ByteArray for PlutusData.
- * This enables withSchema compatibility by transforming from hex string to Uint8Array.
+ * ByteArray schema for PlutusData hex strings.
+ * Since Data.ByteArray is now hex string based, this is just an alias to it.
  *
  * @since 2.0.0
  * @category schemas
  */
-export const ByteArray: ByteArray = Schema.transform(Schema.typeSchema(Data.ByteArray), Schema.String, {
-  strict: true,
-  encode: (hex: string) => {
-    // Convert hex string to Uint8Array
-    if (hex.length % 2 !== 0) {
-      throw new Error("Invalid hex string length")
-    }
-    const bytes = new Uint8Array(hex.length / 2)
-    for (let i = 0; i < hex.length; i += 2) {
-      bytes[i / 2] = parseInt(hex.substr(i, 2), 16)
-    }
-    return bytes
-  },
-  decode: (bytes: Uint8Array) => {
-    // Convert Uint8Array to hex string
-    return globalThis.Array.from(bytes, (byte: number) => byte.toString(16).padStart(2, "0")).join("")
-  }
-})
+export const ByteArray: ByteArray = Data.ByteArray
 
 /**
  * HexString schema that transforms hex string to ByteArray for PlutusData.

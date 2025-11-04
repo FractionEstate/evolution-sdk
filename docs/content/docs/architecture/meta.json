@@ -1,0 +1,13 @@
+{
+  "title": "Architecture",
+  "pages": [
+    "index",
+    "transaction-flow",
+    "coin-selection",
+    "script-evaluation",
+    "unfrack-optimization",
+    "devnet",
+    "provider-layer",
+    "wallet-layer"
+  ]
+}

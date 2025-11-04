@@ -275,10 +275,10 @@ describe("Utility Functions", () => {
         Map: (entries) => `Map with ${entries.length} entries`,
         List: (items) => `List with ${items.length} items`,
         Int: (value) => `BigInt: ${value}`,
-        Bytes: (bytes) => `Bytes: ${Array.from(bytes).join(",")}`,
+        Bytes: (bytes) => `Bytes: ${bytes}`,
         Constr: (constr) => `Constructor ${constr.index} with ${constr.fields.length} fields`
       })
-      expect(result).toBe("Bytes: 202,254")
+      expect(result).toBe("Bytes: cafe")
     })
 
     it("should match Constr type", () => {
@@ -535,11 +535,8 @@ describe("Error Handling and Edge Cases", () => {
           const decoded = Data.fromCBORBytes(encoded)
           // Note: hex strings are normalized to lowercase during processing
           if (Data.isBytes(decoded)) {
-            // Convert Uint8Array back to hex string for comparison
-            const hexString = Array.from(decoded)
-              .map((byte) => byte.toString(16).padStart(2, "0"))
-              .join("")
-            expect(hexString).toBe(value.toLowerCase())
+            // Data.ByteArray now stores as hex string, so compare directly
+            expect(decoded).toBe(value.toLowerCase())
           }
         }).not.toThrow()
       })

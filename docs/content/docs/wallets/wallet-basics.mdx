@@ -1,0 +1,156 @@
+---
+title: "Wallet Basics"
+description: "Learn the basics of creating and using wallets with Evolution SDK"
+---
+
+# Wallet Basics
+
+Wallets in Evolution SDK handle private key management and transaction signing. They abstract the complexity of cryptographic operations while keeping your keys secure—whether you're using a seed phrase for development, direct private keys for server-side signing, or hardware devices for production security.
+
+Evolution SDK supports four wallet types, each suited to different use cases. Choose seed phrases for local development, private keys for automated services, API wallets for browser extensions and hardware devices, or read-only wallets for monitoring.
+
+## Wallet Types
+
+### Seed Phrase Wallets
+
+The most common choice for development and testing. Derive addresses from a mnemonic phrase using BIP-32/BIP-44 hierarchical deterministic key derivation:
+
+```ts twoslash
+import { createClient } from "@evolution-sdk/evolution";
+
+const client = createClient({
+  network: "preprod",
+  provider: {
+    type: "blockfrost",
+    baseUrl: "https://cardano-preprod.blockfrost.io/api/v0",
+    projectId: "your-project-id"
+  },
+  wallet: {
+    type: "seed",
+    mnemonic: "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+    accountIndex: 0
+  }
+});
+```
+
+### Private Key Wallets
+
+When you have direct access to signing keys—common in server-side applications, automated services, or when integrating with existing key management systems:
+
+```ts twoslash
+import { createClient } from "@evolution-sdk/evolution";
+
+const client = createClient({
+  network: "preprod",
+  provider: {
+    type: "blockfrost",
+    baseUrl: "https://cardano-preprod.blockfrost.io/api/v0",
+    projectId: "your-project-id"
+  },
+  wallet: {
+    type: "private-key",
+    paymentKey: "a" + "0".repeat(127)
+  }
+});
+```
+
+### API Wallets (Hardware & Browser)
+
+For integrating with CIP-30 browser extensions (Nami, Eternl, etc.) or hardware wallets (Ledger, Trezor). The wallet API handles signing through the external device or extension:
+
+```ts twoslash
+import { createClient } from "@evolution-sdk/evolution";
+
+// Hardware wallets use the API wallet type
+declare const walletApi: any; // From CIP-30 browser extension
+
+const client = createClient({
+  network: "mainnet",
+  provider: {
+    type: "blockfrost",
+    baseUrl: "https://cardano-mainnet.blockfrost.io/api/v0",
+    projectId: "mainnet-project-id"
+  },
+  wallet: {
+    type: "api",
+    api: walletApi
+  }
+});
+```
+
+## What Wallets Do
+
+Every wallet type provides the same core capabilities, regardless of how keys are stored:
+
+- **Transaction Signing**: Apply cryptographic signatures without exposing private keys
+- **Address Generation**: Derive payment and stake addresses from your keys
+- **Key Management**: Secure key storage and rotation
+
+```ts twoslash
+import { createClient } from "@evolution-sdk/evolution";
+
+const client = createClient({
+  network: "preprod",
+  provider: { 
+    type: "blockfrost", 
+    baseUrl: "https://cardano-preprod.blockfrost.io/api/v0", 
+    projectId: "your-project-id" 
+  },
+  wallet: { 
+    type: "seed", 
+    mnemonic: "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about",
+    accountIndex: 0 
+  }
+});
+
+// Build and execute
+const builder = client.newTx();
+builder.payToAddress({ 
+  address: "addr_test1qzrf9g3ea6hdc5vfujgrpjc0c0xq3qqkz8zkpwh3s6nqzhgey8k3eq73kr0gcqd7cyy75s0qqx0qqx0qqx0qqx0qx7e8pq",
+  assets: { lovelace: 1000000n } 
+});
+const signBuilder = await builder.build();
+const submitBuilder = await signBuilder.sign();
+const hash = await submitBuilder.submit();
+console.log("Submitted:", hash);
+```
+
+## Security Best Practices
+
+- **Never commit mnemonic phrases** to version control
+- **Use environment variables** for sensitive data
+- **Prefer hardware wallets** for mainnet transactions
+- **Test on testnet first** before mainnet
+
+## Environment Setup
+
+```bash
+# .env.local
+WALLET_MNEMONIC=your_12_word_phrase_here
+```
+
+Then in your code:
+
+```ts twoslash
+import { createClient } from "@evolution-sdk/evolution";
+
+const client = createClient({
+  network: "preprod",
+  provider: {
+    type: "blockfrost",
+    baseUrl: "https://cardano-preprod.blockfrost.io/api/v0",
+    projectId: process.env.BLOCKFROST_PROJECT_ID!
+  },
+  wallet: {
+    type: "seed",
+    mnemonic: process.env.WALLET_MNEMONIC!,
+    accountIndex: 0
+  }
+});
+```
+
+## Next Steps
+
+- [Wallet Creation Methods](/docs/wallets/creating-wallets) - Detailed setup guide
+- [Client Basics](/docs/clients/client-basics) - Provider connection
+- [Transactions](/docs/transactions) - Build and sign transactions

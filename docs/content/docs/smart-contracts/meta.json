@@ -1,0 +1,10 @@
+{
+  "title": "Smart Contracts",
+  "pages": [
+    "index",
+    "validators",
+    "datums-redeemers",
+    "minting-policies",
+    "testing"
+  ]
+}

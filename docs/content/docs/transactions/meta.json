@@ -1,0 +1,9 @@
+{
+  "title": "Transactions",
+  "pages": [
+    "index",
+    "first-transaction",
+    "simple-payment",
+    "multi-output"
+  ]
+}

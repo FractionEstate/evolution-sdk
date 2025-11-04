@@ -1,0 +1,17 @@
+{
+  "compilerOptions": {
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "target": "ESNext",
+    "lib": ["ES2022", "DOM"],
+    "skipLibCheck": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "@evolution-sdk/evolution": ["../packages/evolution/src/index.ts"],
+      "@evolution-sdk/evolution/*": ["../packages/evolution/src/*"]
+    }
+  }
+}

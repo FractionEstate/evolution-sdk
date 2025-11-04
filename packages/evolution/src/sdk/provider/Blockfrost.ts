@@ -1,8 +1,3 @@
-/**
- * @fileoverview Blockfrost provider implementation
- * Public provider class implementing both Effect and Promise APIs
- */
-
 import { Effect } from "effect"
 
 import * as BlockfrostEffect from "./internal/BlockfrostEffect.js"
@@ -10,38 +5,11 @@ import type { Provider, ProviderEffect } from "./Provider.js"
 
 /**
  * Blockfrost provider for Cardano blockchain data access.
- * 
  * Supports both mainnet and testnet networks with project-based authentication.
  * Implements rate limiting to respect Blockfrost API limits.
- * 
- * @example Basic usage with project ID:
- * ```typescript
- * const blockfrost = new BlockfrostProvider(
- *   "https://cardano-mainnet.blockfrost.io/api/v0",
- *   "your-project-id"
- * );
- * 
- * // Using Promise API
- * const params = await blockfrost.getProtocolParameters();
- * 
- * // Using Effect API  
- * const paramsEffect = blockfrost.Effect.getProtocolParameters;
- * ```
- * 
- * @example Testnet usage:
- * ```typescript
- * const blockfrost = new BlockfrostProvider(
- *   "https://cardano-preprod.blockfrost.io/api/v0",
- *   "your-preprod-project-id"
- * );
- * ```
- * 
- * @example Using without project ID (for public endpoints):
- * ```typescript
- * const blockfrost = new BlockfrostProvider(
- *   "https://cardano-mainnet.blockfrost.io/api/v0"
- * );
- * ```
+ *
+ * @since 2.0.0
+ * @category constructors
  */
 export class BlockfrostProvider implements Provider {
   readonly Effect: ProviderEffect
@@ -52,7 +20,6 @@ export class BlockfrostProvider implements Provider {
     this.baseUrl = baseUrl
     this.projectId = projectId
     
-    // Initialize Effect-based API with curry pattern
     this.Effect = {
       getProtocolParameters: () => BlockfrostEffect.getProtocolParameters(baseUrl, projectId),
       getUtxos: BlockfrostEffect.getUtxos(baseUrl, projectId),
@@ -66,10 +33,6 @@ export class BlockfrostProvider implements Provider {
       evaluateTx: BlockfrostEffect.evaluateTx(baseUrl, projectId)
     }
   }
-
-  // ============================================================================
-  // Promise-based API - now using arrow functions as own properties (spreadable!)
-  // ============================================================================
 
   getProtocolParameters = () => Effect.runPromise(this.Effect.getProtocolParameters())
   
@@ -103,30 +66,38 @@ export class BlockfrostProvider implements Provider {
     Effect.runPromise(this.Effect.evaluateTx(tx, additionalUTxOs))
 }
 
-// ============================================================================
-// Network Configuration Helpers
-// ============================================================================
-
 /**
- * Pre-configured Blockfrost provider for Cardano mainnet
+ * Pre-configured Blockfrost provider for Cardano mainnet.
+ *
+ * @since 2.0.0
+ * @category constructors
  */
 export const mainnet = (projectId: string): BlockfrostProvider =>
   new BlockfrostProvider("https://cardano-mainnet.blockfrost.io/api/v0", projectId)
 
 /**
- * Pre-configured Blockfrost provider for Cardano preprod testnet
+ * Pre-configured Blockfrost provider for Cardano preprod testnet.
+ *
+ * @since 2.0.0
+ * @category constructors
  */
 export const preprod = (projectId: string): BlockfrostProvider =>
   new BlockfrostProvider("https://cardano-preprod.blockfrost.io/api/v0", projectId)
 
 /**
- * Pre-configured Blockfrost provider for Cardano preview testnet
+ * Pre-configured Blockfrost provider for Cardano preview testnet.
+ *
+ * @since 2.0.0
+ * @category constructors
  */
 export const preview = (projectId: string): BlockfrostProvider =>
   new BlockfrostProvider("https://cardano-preview.blockfrost.io/api/v0", projectId)
 
 /**
- * Create a custom Blockfrost provider with custom base URL
+ * Create a custom Blockfrost provider with custom base URL.
+ *
+ * @since 2.0.0
+ * @category constructors
  */
 export const custom = (baseUrl: string, projectId?: string): BlockfrostProvider =>
   new BlockfrostProvider(baseUrl, projectId)

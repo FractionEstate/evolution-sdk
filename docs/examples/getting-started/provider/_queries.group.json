@@ -1,0 +1,58 @@
+{
+  "title": "Provider Queries",
+  "description": "Query blockchain data using providers",
+  "output": "queries.mdx",
+  "files": [
+    {
+      "file": "setup.ts",
+      "heading": "Setup",
+      "description": "Before querying blockchain data, you need to establish a connection to a Cardano node. The read-only client uses a provider to communicate with the blockchain. The Kupmios provider connects to Kupo (for UTxO queries) and Ogmios (for protocol parameters and chain queries). This setup is required for all subsequent queries and allows you to interact with the blockchain without needing wallet credentials or signing capabilities."
+    },
+    {
+      "file": "protocol-parameters.ts",
+      "heading": "Protocol Parameters",
+      "description": "Protocol parameters define the rules and constraints of the Cardano network, including transaction fees, maximum transaction size, and staking rewards. You need to query these parameters when building transactions to ensure they meet network requirements.\n\n<Callout type=\"info\">\nProtocol parameters change through governance votes and hard forks. Always fetch them dynamically rather than hardcoding values to ensure your transactions remain valid as the network evolves.\n</Callout>\n\nThis helps calculate accurate transaction fees and ensures compliance with current network rules."
+    },
+    {
+      "file": "query-utxos-by-address.ts",
+      "heading": "Query UTxOs by Address",
+      "description": "UTxOs (Unspent Transaction Outputs) represent spendable value on the blockchain. You query UTxOs by address to determine available funds for transaction building, check balances, or locate specific assets. Each UTxO contains ada and optionally native tokens, along with optional datum hashes for script interactions. This is the fundamental operation for any transaction, as you need to identify which UTxOs to spend as inputs to create new outputs."
+    },
+    {
+      "file": "query-utxo-by-unit.ts",
+      "heading": "Query UTxO by Unit",
+      "description": "Assets on Cardano are identified by a unique unit combining the policy ID and asset name. You query UTxOs by unit to find all outputs containing a specific token or NFT. This is essential for applications dealing with native assets, such as NFT marketplaces, token trackers, or DeFi protocols. The query returns all UTxOs holding the specified asset, allowing you to locate tokens across multiple addresses or verify token ownership."
+    },
+    {
+      "file": "query-datum-by-hash.ts",
+      "heading": "Query Datum",
+      "description": "Datums contain custom data attached to UTxOs in smart contract interactions. You need to retrieve datums to understand the state of script UTxOs and validate contract conditions. Datums are referenced by their hash and can be queried either from the blockchain directly or from the UTxO itself. This is essential for interacting with Plutus smart contracts, as the datum often contains critical state information like ownership, timing constraints, or application-specific data."
+    },
+    {
+      "file": "query-delegation.ts",
+      "heading": "Staking Queries",
+      "description": "Staking information includes delegation status, stake pool details, and reward balances for any address. You query staking data to display delegation status in wallets, calculate rewards, or verify stake pool performance. The information helps users make informed decisions about delegation and track their staking rewards. This is particularly useful for portfolio applications, wallet interfaces, and staking analytics tools."
+    },
+    {
+      "file": "submit-transaction.ts",
+      "heading": "Submit Transaction",
+      "description": "Submitting a transaction broadcasts it to the Cardano network for inclusion in the blockchain. You submit transactions after building and signing them to transfer funds, interact with smart contracts, or mint tokens. The provider sends the transaction to a node, which validates it and propagates it to the network.\n\n<Callout type=\"warn\">\nSuccessful submission doesn't guarantee inclusion in the blockchain. Always monitor transaction status and handle potential failures or timeouts appropriately.\n</Callout>"
+    },
+    {
+      "file": "wait-for-confirmation.ts",
+      "heading": "Wait for Confirmation",
+      "description": "After submitting a transaction, you need to wait for it to be included in a block and receive confirmations. The confirmation process ensures the transaction is permanently recorded on the blockchain and reduces the risk of chain reorganizations.\n\n<Callout type=\"tip\">\nFor production applications handling payments or high-value transfers, wait for multiple confirmations (typically 5-10 blocks) before considering a transaction final to prevent double-spending attacks.\n</Callout>\n\nYou typically wait for multiple confirmations (blocks built on top of the transaction's block) before considering a transaction final."
+    },
+    {
+      "file": "complete-workflow.ts",
+      "heading": "Complete Workflow",
+      "description": "This demonstrates a full end-to-end workflow combining multiple provider operations. It shows the typical sequence: connecting to the blockchain, querying necessary data, building a transaction, and submitting it to the network. Real-world applications follow this pattern to ensure transactions are properly constructed, validated, and submitted. This workflow illustrates best practices for error handling, resource management, and coordinating multiple blockchain operations in a production environment."
+    },
+    {
+      "file": "advanced-query-options.ts",
+      "heading": "Advanced Query Techniques",
+      "description": "Beyond basic queries, you can apply filtering, sorting, and aggregation techniques to UTxO sets. These advanced patterns are useful for coin selection algorithms, portfolio analytics, and optimizing transaction building. Learn how to filter UTxOs by amount, find specific asset combinations, and aggregate data across multiple outputs.",
+      "accordion": true
+    }
+  ]
+}

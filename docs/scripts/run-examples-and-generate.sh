@@ -12,10 +12,31 @@ SCRIPTS_DIR="$DOCS_DIR/scripts"
 echo "🚀 Running Evolution SDK Documentation Generator"
 echo "==============================================="
 
+# Function to check if a file has a skip tag
+has_skip_tag() {
+    local file="$1"
+    # Check for @skip-check: comment in the first 5 lines
+    head -n 5 "$file" | grep -q "@skip-check:" && return 0 || return 1
+}
+
+# Function to extract skip reason from file
+get_skip_reason() {
+    local file="$1"
+    # Extract the reason after @skip-check:
+    head -n 5 "$file" | grep "@skip-check:" | sed 's/.*@skip-check://' | tr -d ' */'
+}
+
 # Function to run a single TypeScript file
 run_example() {
     local file="$1"
     local relative_path="${file#$EXAMPLES_DIR/}"
+    
+    # Check if file should be skipped
+    if has_skip_tag "$file"; then
+        local skip_reason=$(get_skip_reason "$file")
+        echo "⏭️  Skipping: $relative_path ($skip_reason)"
+        return 0  # Return success to not block the build
+    fi
     
     echo "📄 Running: $relative_path"
     

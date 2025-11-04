@@ -1,0 +1,11 @@
+{
+  "title": "Introduction",
+  "pages": [
+    "index",
+    "why-evolution",
+    "getting-started",
+    "installation",
+    "platform-compatibility",
+    "migration-from-lucid"
+  ]
+}

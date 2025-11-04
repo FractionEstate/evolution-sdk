@@ -16,6 +16,7 @@ const config = {
   images: {
     unoptimized: true,
   },
+  serverExternalPackages: ['typescript', 'twoslash'],
 }
 
 export default withMDX(config)

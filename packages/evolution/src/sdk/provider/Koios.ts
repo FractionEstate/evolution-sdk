@@ -4,45 +4,23 @@ import * as KoiosEffect from "./internal/KoiosEffect.js"
 import type { Provider, ProviderEffect } from "./Provider.js"
 
 /**
- *  Provides support for interacting with the Koios API
+ * Koios provider for Cardano blockchain data access.
+ * Provides support for interacting with the Koios API across multiple environments.
+ * Supports optional bearer token authentication.
  *
- * @example Using the Preprod API URL:
- * ```typescript
- * const koios = new Koios(
- *   "https://preview.koios.rest/api/v1", // Preprod Preview Environment
- *   "optional-bearer-token" // Optional Bearer Token for authentication
- * );
- * ```
- *
- * @example Using the Preprod Stable API URL:
- * ```typescript
- * const koios = new Koios(
- *   "https://preprod.koios.rest/api/v1", // Preprod Stable Environment
- *   "optional-bearer-token" // Optional Bearer Token for authentication
- * );
- * ```
- *
- * @example Using the Mainnet API URL:
- * ```typescript
- * const koios = new Koios(
- *   "https://api.koios.rest/api/v1", // Mainnet Environment
- *   "optional-bearer-token" // Optional Bearer Token for authentication
- * );
- * ```
- *
+ * @since 2.0.0
+ * @category constructors
  */
 export class Koios implements Provider {
   private readonly baseUrl: string
   private readonly token?: string
 
-  // Effect property for Provider interface
   readonly Effect: ProviderEffect
 
   constructor(baseUrl: string, token?: string) {
     this.baseUrl = baseUrl
     this.token = token
 
-    // Initialize Effect property
     this.Effect = {
       getProtocolParameters: () => KoiosEffect.getProtocolParameters(this.baseUrl, this.token),
       getUtxos: KoiosEffect.getUtxos(this.baseUrl, this.token),
@@ -56,10 +34,6 @@ export class Koios implements Provider {
       evaluateTx: KoiosEffect.evaluateTx(this.baseUrl, this.token)
     }
   }
-
-  // ============================================================================
-  // Promise-based API - arrow functions as own properties (spreadable!)
-  // ============================================================================
 
   getProtocolParameters = () => Effect.runPromise(this.Effect.getProtocolParameters())
 

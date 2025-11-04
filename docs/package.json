@@ -8,21 +8,25 @@
     "dev": "next dev --turbo",
     "start": "next start",
     "copy-evolution-docs": "tsx scripts/copy-evolution-docs.ts",
-    "generate-examples": "./scripts/run-examples-and-generate.sh",
-    "prebuild": "pnpm run copy-evolution-docs && pnpm run generate-examples",
+    "prebuild": "pnpm run copy-evolution-docs",
     "postinstall": "fumadocs-mdx"
   },
   "dependencies": {
     "@orama/orama": "^3.1.11",
     "fumadocs-core": "15.7.2",
     "fumadocs-mdx": "11.8.0",
+    "fumadocs-twoslash": "^3.1.9",
     "fumadocs-ui": "15.7.2",
+    "mermaid": "^11.12.1",
     "next": "15.5.0",
+    "next-themes": "^0.4.6",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "twoslash": "^0.3.4"
   },
   "devDependencies": {
     "@evolution-sdk/evolution": "workspace:*",
+    "@shikijs/twoslash": "^3.14.0",
     "@tailwindcss/postcss": "^4.1.12",
     "@types/mdx": "^2.0.13",
     "@types/node": "24.3.0",

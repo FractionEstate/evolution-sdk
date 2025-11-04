@@ -1,4 +1,5 @@
 import "@/app/global.css"
+import "@/app/twoslash.css"
 // import { RootProvider } from "fumadocs-ui/provider"
 import { Provider } from "./provider"
 

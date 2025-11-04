@@ -1,0 +1,10 @@
+{
+  "title": "Encoding",
+  "pages": [
+    "index",
+    "cbor",
+    "bech32",
+    "hex",
+    "json"
+  ]
+}

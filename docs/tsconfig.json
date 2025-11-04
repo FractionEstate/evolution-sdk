@@ -25,6 +25,12 @@
       ],
       "@/*": [
         "./*"
+      ],
+      "@evolution-sdk/evolution": [
+        "../packages/evolution/src/index.ts"
+      ],
+      "@evolution-sdk/evolution/*": [
+        "../packages/evolution/src/*"
       ]
     },
     "plugins": [

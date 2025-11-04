@@ -1,0 +1,21 @@
+{
+  "title": "Documentation",
+  "pages": [
+    "introduction",
+    "architecture",
+    "clients",
+    "wallets",
+    "addresses",
+    "transactions",
+    "assets",
+    "querying",
+    "encoding",
+    "time",
+    "smart-contracts",
+    "staking",
+    "governance",
+    "testing",
+    "advanced",
+    "modules"
+  ]
+}

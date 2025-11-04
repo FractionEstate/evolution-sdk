@@ -16,15 +16,6 @@ export class DataError extends EffectData.TaggedError("DataError")<{
   cause?: unknown
 }> {}
 
-// Working recursive schema example with BigInt transformation
-type TestRecursiveEncoded = ReadonlyArray<TestRecursiveEncoded> | string
-
-type TestRecursiveType = ReadonlyArray<TestRecursiveType> | bigint
-
-const TestRecursive: Schema.Schema<TestRecursiveType, TestRecursiveEncoded> = Schema.Union(
-  Schema.Array(Schema.suspend((): Schema.Schema<TestRecursiveType, TestRecursiveEncoded> => TestRecursive)),
-  Schema.BigInt
-)
 
 /**
  * PlutusData encoded type definition (wire format)
@@ -87,8 +78,8 @@ export type Data =
   | ReadonlyArray<Data>
   // Int (runtime as bigint)
   | bigint
-  // ByteArray (runtime as Uint8Array)
-  | Uint8Array
+  // ByteArray (runtime as hex string)
+  | string
 
 /**
  * Constr type for constructor alternatives based on Conway CDDL specification
@@ -218,7 +209,7 @@ export type Int = typeof IntSchema.Type
  *
  * @since 2.0.0
  */
-export const ByteArray = Schema.Uint8ArrayFromHex.annotations({
+export const ByteArray = Bytes.HexLenientSchema.annotations({
   identifier: "Data.ByteArray"
 })
 export type ByteArray = typeof ByteArray.Type
@@ -378,7 +369,7 @@ export const matchData = <T>(
     Map: (entries: ReadonlyArray<[Data, Data]>) => T
     List: (items: ReadonlyArray<Data>) => T
     Int: (value: bigint) => T
-    Bytes: (bytes: Uint8Array) => T
+    Bytes: (bytes: string) => T
     Constr: (constr: Constr) => T
   }
 ): T => {
@@ -437,7 +428,7 @@ export const arbitraryPlutusBytes = (): FastCheck.Arbitrary<ByteArray> =>
   FastCheck.uint8Array({
     minLength: 0, // Allow empty arrays (valid for PlutusBytes)
     maxLength: 32 // Max 32 bytes
-  }).map((bytes) => bytearray(Bytes.toHexLenient(bytes)))
+  }).map((bytes) => Bytes.toHexLenient(bytes))
 
 /**
  * Creates an arbitrary that generates PlutusBigInt values
@@ -580,7 +571,8 @@ export const plutusDataToCBORValue = (data: Data): CBOR.CBOR => {
       return value
     },
     Bytes: (bytes): CBOR.CBOR => {
-      return bytes
+      // Convert hex string to Uint8Array for CBOR encoding (lenient to allow empty)
+      return Bytes.fromHexLenient(bytes)
     },
     Constr: (constr): CBOR.CBOR => {
       // PlutusData Constr -> CBOR tags based on index
@@ -622,9 +614,9 @@ export const cborValueToPlutusData = (cborValue: CBOR.CBOR): Data => {
     return cborValue
   }
 
-  // Handle Uint8Array (bytes)
+  // Handle Uint8Array (bytes) - convert to hex string
   if (CBOR.isByteArray(cborValue)) {
-    return cborValue
+    return Bytes.toHex(cborValue)
   }
 
   // Handle tagged values
@@ -739,16 +731,8 @@ export const cborValueToPlutusData = (cborValue: CBOR.CBOR): Data => {
 export const equals = (a: Data, b: Data): boolean => {
   if (typeof a === "bigint" || typeof b === "bigint") return a === b
 
-  if (typeof a === "string" || typeof b === "string") return a === b
-
-  // Uint8Array (ByteArray)
-  if (a instanceof Uint8Array && b instanceof Uint8Array) {
-    if (a.length !== b.length) return false
-    for (let i = 0; i < a.length; i++) {
-      if (a[i] !== b[i]) return false
-    }
-    return true
-  }
+  // String comparison (for ByteArray hex strings or other string types)
+  if (typeof a === "string" && typeof b === "string") return a === b
 
   // Arrays (Lists)
   if (Array.isArray(a) && Array.isArray(b)) {
