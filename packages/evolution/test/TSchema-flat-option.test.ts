@@ -167,6 +167,17 @@ describe("TSchema.Struct with flat option", () => {
         )
       }).not.toThrow()
     })
+
+    it("should detect collision between two flat members with same custom index", () => {
+      // This is the bug: two flat members with the same index would both encode to
+      // Constr(100, [...]), making it impossible to distinguish them during decoding
+      expect(() => {
+        TSchema.Union(
+          TSchema.Struct({ first: TSchema.Integer }, { index: 100, flat: true }),
+          TSchema.Struct({ second: TSchema.Integer }, { index: 100, flat: true })
+        )
+      }).toThrow(/Index collision detected/)
+    })
   })
 
   describe("CBOR encoding/decoding", () => {

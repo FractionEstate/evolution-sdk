@@ -357,25 +357,44 @@ export const Union = <Members extends ReadonlyArray<Schema.Schema.Any>>(...membe
   })
 
   // Detect index collisions
-  // A collision occurs when a flat member's index equals the position of a non-flat member
+  // Collisions can occur in two scenarios:
+  // 1. A flat member's index equals the position of a non-flat member
+  // 2. Two flat members have the same index (both would encode to same Constr index)
   const collisions = new globalThis.Array<{
-    autoPosition: number
+    type: "flat-to-nested" | "flat-to-flat"
+    position1: number
+    position2: number
     conflictingIndex: number
-    customPosition: number
   }>()
 
-  memberInfos.forEach((flatMember, flatPos) => {
-    if (flatMember.isFlat) {
-      const flatIndex = flatMember.customIndex ?? flatMember.position
+  memberInfos.forEach((member1, pos1) => {
+    if (member1.isFlat) {
+      const index1 = member1.customIndex ?? member1.position
       
-      // Check if this flat member's index conflicts with any non-flat member's position
-      memberInfos.forEach((otherMember, otherPos) => {
-        if (!otherMember.isFlat && flatIndex === otherMember.position) {
+      // Check for flat-to-nested collisions
+      memberInfos.forEach((member2, pos2) => {
+        if (!member2.isFlat && index1 === member2.position) {
           collisions.push({
-            autoPosition: otherPos,
-            conflictingIndex: flatIndex,
-            customPosition: flatPos
+            type: "flat-to-nested",
+            position1: pos1,
+            position2: pos2,
+            conflictingIndex: index1
           })
+        }
+      })
+      
+      // Check for flat-to-flat collisions (only check positions after current to avoid duplicates)
+      memberInfos.forEach((member2, pos2) => {
+        if (pos2 > pos1 && member2.isFlat) {
+          const index2 = member2.customIndex ?? member2.position
+          if (index1 === index2) {
+            collisions.push({
+              type: "flat-to-flat",
+              position1: pos1,
+              position2: pos2,
+              conflictingIndex: index1
+            })
+          }
         }
       })
     }
@@ -383,15 +402,18 @@ export const Union = <Members extends ReadonlyArray<Schema.Schema.Any>>(...membe
 
   if (collisions.length > 0) {
     const collisionDetails = collisions
-      .map(
-        ({ autoPosition, conflictingIndex, customPosition }) =>
-          `flat member at position ${customPosition} with index ${conflictingIndex} conflicts with nested member at position ${autoPosition}`
-      )
+      .map((collision) => {
+        if (collision.type === "flat-to-nested") {
+          return `flat member at position ${collision.position1} with index ${collision.conflictingIndex} conflicts with nested member at position ${collision.position2}`
+        } else {
+          return `flat members at positions ${collision.position1} and ${collision.position2} both use index ${collision.conflictingIndex}`
+        }
+      })
       .join("; ")
 
     const errorMessage =
       `[TSchema.Union] Index collision detected: ${collisionDetails}. ` +
-      `Flat members' indices must not equal the array position of nested members. ` +
+      `Flat members' indices must not equal the array position of nested members, and each flat member must have a unique index. ` +
       `Recommendation: Use indices 100+ for flat members to avoid collision with auto-indices, or set flat: false.`
 
     throw new Error(errorMessage)
