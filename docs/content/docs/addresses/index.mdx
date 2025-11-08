@@ -5,13 +5,7 @@ description: Working with Cardano addresses using the Core AddressStructure modu
 
 # Addresses
 
-Cardano addresses identify where funds can be sent and who controls them. In Evolution SDK:
-- **SDK Level**: `Address` is a simple string type alias for Bech32 addresses (`type Address = string`)
-- **Core Level**: `AddressStructure` module handles all parsing, encoding, validation, and manipulation
-
-<Callout type="info">
-**Important**: The SDK `Address` type is just a Bech32 string. All address functionality lives in the Core `AddressStructure` module. This documentation focuses on the Core module.
-</Callout>
+Cardano addresses identify where funds can be sent and who controls them. The Evolution SDK Core `AddressStructure` module handles all parsing, encoding, validation, and manipulation of addresses.
 
 ## Address Types Overview
 
@@ -24,19 +18,6 @@ Cardano has several address types, each optimized for different use cases:
 | **[Reward](/docs/addresses/reward)** | ❌ No | ✅ Yes | Stake rewards | Auto-generated |
 | **[Pointer](/docs/addresses/pointer)** | ✅ Yes | 🔗 Reference | Legacy optimization | ❌ Avoid |
 | **[Franken](/docs/addresses/franken)** | ✅ Yes (A) | ✅ Yes (B) | Custody, enterprise | Advanced use |
-
-## SDK Address Type
-
-At the SDK level, an `Address` is just a Bech32-encoded string:
-
-```typescript twoslash
-import type { Address } from "@evolution-sdk/evolution/sdk/Address";
-
-// Address is simply: type Address = string
-const address: Address = "addr_test1qz...";
-```
-
-All the actual address functionality is in the **Core `AddressStructure` module**.
 
 ## Quick Start
 

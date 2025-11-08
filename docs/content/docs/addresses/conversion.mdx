@@ -123,32 +123,6 @@ const bech32 = Address.toBech32(address);
 console.log("Bech32:", bech32);
 ```
 
-## SDK Helper Functions
-
-The SDK module provides convenient helpers that wrap the Core transformations:
-
-```typescript twoslash
-import * as Address from "@evolution-sdk/evolution/sdk/Address";
-
-const bech32Address = "addr1qx2kd28nq8ac5prwg32hhvudlwggpgfp8utlyqxu6wqgz62f79qsdmm5dsknt9ecr5w468r9ey0fxwkdrwh08ly3tu9sy0f4qd";
-
-// Bech32 string → AddressStructure
-const structure = Address.toAddressStructure(bech32Address);
-
-// AddressStructure → Bech32 string
-const bech32 = Address.fromAddressStructure(structure);
-
-// JSON ↔ AddressStructure (for serialization)
-const json = Address.fromAddressStructureToJson(structure);
-const fromJson = Address.fromJsonToAddressStructure(json);
-
-// Combined: Bech32 → JSON
-const jsonDirect = Address.addressToJson(bech32Address);
-
-// Combined: JSON → Bech32
-const bech32Direct = Address.jsonToAddress(json);
-```
-
 ## Best Practices
 
 **Use Bech32 for Display**: Always show users Bech32-encoded addresses. They're human-readable and include error detection.
