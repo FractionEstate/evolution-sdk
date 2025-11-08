@@ -205,18 +205,70 @@ interface Struct<Fields extends Schema.Struct.Fields>
   extends Schema.transform<Schema.SchemaClass<Data.Constr, Data.Constr, never>, Schema.Struct<Fields>> {}
 
 /**
+ * Options for Struct schema
+ */
+export interface StructOptions {
+  /**
+   * Custom Constr index for this struct (default: 0)
+   * Useful when creating union variants with specific indices
+   */
+  index?: number
+  /**
+   * When used in a Union, controls whether this Struct should be "flattened" (unwrapped).
+   * - true: Encodes as Constr(index, [fields]) directly
+   * - false: Encodes as Constr(unionPos, [Constr(index, [fields])]) (nested)
+   * 
+   * Default: true when index is specified, false otherwise
+   */
+  flat?: boolean
+}
+
+/**
  * Creates a schema for struct types using Plutus Data Constructor
- * Objects are represented as a constructor with index 0 and fields as an array
+ * Objects are represented as a constructor with index (default 0) and fields as an array
+ *
+ * @example
+ * ```typescript
+ * import { TSchema } from "@evolution-sdk/evolution"
+ * 
+ * // Default: nested in Union, index 0
+ * TSchema.Struct({ name: TSchema.ByteArray, age: TSchema.Integer })
+ * ```
+ *
+ * @example
+ * ```typescript
+ * import { TSchema } from "@evolution-sdk/evolution"
+ * 
+ * // Flat union variants with custom indices
+ * TSchema.Struct({ amount: TSchema.Integer }, { index: 121, flat: true })
+ * TSchema.Struct({ amount: TSchema.Integer }, { index: 122, flat: true })
+ * ```
+ * 
+ * @example
+ * ```typescript
+ * import { TSchema } from "@evolution-sdk/evolution"
+ * 
+ * // Custom index but stay nested (advanced use case)
+ * TSchema.Struct({ data: TSchema.Integer }, { index: 10, flat: false })
+ * ```
  *
  * @since 2.0.0
  */
-export const Struct = <Fields extends Schema.Struct.Fields>(fields: Fields): Struct<Fields> =>
-  Schema.transform(Schema.typeSchema(Data.Constr), Schema.Struct(fields), {
+export const Struct = <Fields extends Schema.Struct.Fields>(
+  fields: Fields,
+  options: StructOptions = {}
+): Struct<Fields> => {
+  const { flat, index = 0 } = options
+  
+  // Default: flat is true when index is explicitly set, false otherwise
+  const isFlat = flat ?? (options.index !== undefined)
+
+  return Schema.transform(Schema.typeSchema(Data.Constr), Schema.Struct(fields), {
     strict: false,
     encode: (encodedStruct) => {
       // encodedStruct is the result of Schema.Struct(fields), which has already transformed all fields
       return new Data.Constr({
-        index: 0n,
+        index: BigInt(index),
         fields: Object.values(encodedStruct)
       })
     },
@@ -228,7 +280,15 @@ export const Struct = <Fields extends Schema.Struct.Fields>(fields: Fields): Str
       })
       return result as { [K in keyof Schema.Struct.Encoded<Fields>]: Schema.Struct.Encoded<Fields>[K] }
     }
+  }).annotations({
+    identifier: "TSchema.Struct",
+    // Store the custom index in annotations so Union can detect it
+    // Store explicitly even if index is 0, to distinguish from default
+    ["TSchema.customIndex"]: options.index !== undefined ? index : undefined,
+    // Store flat setting so Union knows whether to unwrap this Struct
+    ["TSchema.flat"]: isFlat
   })
+}
 
 interface Union<Members extends ReadonlyArray<Schema.Schema.Any>>
   extends Schema.transformOrFail<
@@ -239,11 +299,126 @@ interface Union<Members extends ReadonlyArray<Schema.Schema.Any>>
 
 /**
  * Creates a schema for union types using Plutus Data Constructor
- * Unions are represented as a constructor with index 0 and fields as an array
+ * Unions are represented as a constructor with index 0, 1, 2... and fields as an array
+ *
+ * Members marked with flat: true will be encoded directly using their index
+ * instead of being wrapped in an additional Constr layer.
+ *
+ * @example
+ * ```typescript
+ * import { TSchema } from "@evolution-sdk/evolution"
+ * 
+ * // Standard union with auto indices (nested)
+ * TSchema.Union(
+ *   TSchema.Struct({ a: TSchema.Integer }),
+ *   TSchema.Struct({ b: TSchema.Integer })
+ * )
+ * // Encodes to: Constr(0, [Constr(0, [a])]) or Constr(1, [Constr(0, [b])])
+ * ```
+ *
+ * @example
+ * ```typescript
+ * import { TSchema } from "@evolution-sdk/evolution"
+ * 
+ * // Union with flat Structs (single-level encoding)
+ * TSchema.Union(
+ *   TSchema.Struct({ amount: TSchema.Integer }, { index: 121, flat: true }),
+ *   TSchema.Struct({ amount: TSchema.Integer }, { index: 122, flat: true })
+ * )
+ * // Encodes to: Constr(121, [amount]) or Constr(122, [amount]) - single level!
+ * ```
+ * 
+ * @example
+ * ```typescript
+ * import { TSchema } from "@evolution-sdk/evolution"
+ * 
+ * // Mixed union: some nested, some flat
+ * TSchema.Union(
+ *   TSchema.Struct({ a: TSchema.Integer }),  // nested, auto index 0
+ *   TSchema.Struct({ b: TSchema.Integer }, { flat: true }),  // flat, auto index 1
+ *   TSchema.Struct({ c: TSchema.Integer }, { index: 100, flat: true })  // flat, custom index 100
+ * )
+ * ```
  *
  * @since 2.0.0
  */
 export const Union = <Members extends ReadonlyArray<Schema.Schema.Any>>(...members: Members): Union<Members> => {
+  // Extract member metadata from annotations
+  const memberInfos = members.map((member, position) => {
+    const customIndex = member.ast.annotations?.["TSchema.customIndex"] as number | undefined
+    const isFlat = (member.ast.annotations?.["TSchema.flat"] as boolean | undefined) ?? false
+    
+    return {
+      schema: member,
+      position,           // Position in the members array
+      customIndex,        // Custom index if set, undefined otherwise
+      isFlat              // Whether this member should be flat in the union
+    }
+  })
+
+  // Detect index collisions
+  // Collisions can occur in two scenarios:
+  // 1. A flat member's index equals the position of a non-flat member
+  // 2. Two flat members have the same index (both would encode to same Constr index)
+  const collisions = new globalThis.Array<{
+    type: "flat-to-nested" | "flat-to-flat"
+    position1: number
+    position2: number
+    conflictingIndex: number
+  }>()
+
+  memberInfos.forEach((member1, pos1) => {
+    if (member1.isFlat) {
+      const index1 = member1.customIndex ?? member1.position
+      
+      // Check for flat-to-nested collisions
+      memberInfos.forEach((member2, pos2) => {
+        if (!member2.isFlat && index1 === member2.position) {
+          collisions.push({
+            type: "flat-to-nested",
+            position1: pos1,
+            position2: pos2,
+            conflictingIndex: index1
+          })
+        }
+      })
+      
+      // Check for flat-to-flat collisions (only check positions after current to avoid duplicates)
+      memberInfos.forEach((member2, pos2) => {
+        if (pos2 > pos1 && member2.isFlat) {
+          const index2 = member2.customIndex ?? member2.position
+          if (index1 === index2) {
+            collisions.push({
+              type: "flat-to-flat",
+              position1: pos1,
+              position2: pos2,
+              conflictingIndex: index1
+            })
+          }
+        }
+      })
+    }
+  })
+
+  if (collisions.length > 0) {
+    const collisionDetails = collisions
+      .map((collision) => {
+        if (collision.type === "flat-to-nested") {
+          return `flat member at position ${collision.position1} with index ${collision.conflictingIndex} conflicts with nested member at position ${collision.position2}`
+        } else {
+          return `flat members at positions ${collision.position1} and ${collision.position2} both use index ${collision.conflictingIndex}`
+        }
+      })
+      .join("; ")
+
+    const errorMessage =
+      `[TSchema.Union] Index collision detected: ${collisionDetails}. ` +
+      `Flat members' indices must not equal the array position of nested members, and each flat member must have a unique index. ` +
+      `Recommendation: Use indices 100+ for flat members to avoid collision with auto-indices, or set flat: false.`
+
+    throw new Error(errorMessage)
+  }
+
   // Get readable names for each member schema for better error messages
   const getMemberNames = () => {
     return members.map((member, index) => {
@@ -260,9 +435,10 @@ export const Union = <Members extends ReadonlyArray<Schema.Schema.Any>>(...membe
     strict: false,
     encode: (value) =>
       Effect.gen(function* () {
-        const index = members.findIndex((schema) => Schema.is(schema)(value))
+        // Find which member matches this value
+        const matchedIndex = members.findIndex((schema) => Schema.is(schema)(value))
 
-        if (index === -1) {
+        if (matchedIndex === -1) {
           const memberNames = getMemberNames()
           const actualType =
             typeof value === "bigint"
@@ -282,15 +458,44 @@ export const Union = <Members extends ReadonlyArray<Schema.Schema.Any>>(...membe
           )
         }
 
-        const encodedValue = yield* ParseResult.encode(members[index] as Schema.Schema<any, any, never>)(value)
+        const memberInfo = memberInfos[matchedIndex]
+        const encodedValue = yield* ParseResult.encode(memberInfo.schema as Schema.Schema<any, any, never>)(value)
 
+        // If the member is flat, use its encoded value directly (unwrap the Constr)
+        if (memberInfo.isFlat && encodedValue instanceof Data.Constr) {
+          // If the member has no custom index, we need to use the auto index
+          if (memberInfo.customIndex === undefined) {
+            return new Data.Constr({
+              index: BigInt(memberInfo.position),
+              fields: encodedValue.fields
+            })
+          }
+          // Return the encoded Constr as-is (it already has the custom index)
+          return encodedValue
+        }
+
+        // Otherwise, wrap in Union's Constr with auto index (position)
         return new Data.Constr({
-          index: BigInt(index),
+          index: BigInt(memberInfo.position),
           fields: [encodedValue]
         })
       }),
     decode: (value, _, ast) => {
+      // Try to find a flat member with matching index first
+      const flatMemberIndex = Number(value.index)
+      const flatMember = memberInfos.find((m) => {
+        const memberIndex = m.customIndex ?? m.position
+        return m.isFlat && memberIndex === flatMemberIndex
+      })
+
+      if (flatMember) {
+        // This is a flat Struct, decode it directly (no unwrapping needed)
+        return ParseResult.decode(flatMember.schema)(value)
+      }
+
+      // Otherwise, use standard Union decoding with auto index
       const memberIndex = Number(value.index)
+
       // Check if index is valid for the members array
       if (memberIndex < 0 || memberIndex >= members.length) {
         return ParseResult.fail(
@@ -301,6 +506,7 @@ export const Union = <Members extends ReadonlyArray<Schema.Schema.Any>>(...membe
           )
         )
       }
+
       // Get the member schema for this index
       const member = members[memberIndex] as Schema.Schema<any, any, never>
 
@@ -336,7 +542,7 @@ export const Union = <Members extends ReadonlyArray<Schema.Schema.Any>>(...membe
 
       return `Invalid value for Union: received ${actualType} (${JSON.stringify(actual)}), expected ${memberNames.join(" or ")}`
     }
-  })
+  }) as Union<Members>
 }
 
 interface Tuple<Elements extends Schema.TupleType.Elements> extends Schema.Tuple<Elements> {}

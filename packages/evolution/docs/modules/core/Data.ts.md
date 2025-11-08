@@ -330,8 +330,8 @@ export type Data =
   | ReadonlyArray<Data>
   // Int (runtime as bigint)
   | bigint
-  // ByteArray (runtime as Uint8Array)
-  | Uint8Array
+  // ByteArray (runtime as hex string)
+  | string
 ```
 
 Added in v2.0.0
@@ -410,7 +410,7 @@ Type guard to check if a value is a PlutusBytes
 **Signature**
 
 ```ts
-export declare const isBytes: (u: unknown, overrideOptions?: ParseOptions | number) => u is Uint8Array
+export declare const isBytes: (u: unknown, overrideOptions?: ParseOptions | number) => u is string
 ```
 
 Added in v2.0.0
@@ -472,7 +472,7 @@ Schema for PlutusBytes data type
 **Signature**
 
 ```ts
-export declare const ByteArray: Schema.Schema<Uint8Array, string, never>
+export declare const ByteArray: Schema.refine<string, typeof Schema.String>
 ```
 
 Added in v2.0.0
@@ -741,7 +741,7 @@ export declare const matchData: <T>(
     Map: (entries: ReadonlyArray<[Data, Data]>) => T
     List: (items: ReadonlyArray<Data>) => T
     Int: (value: bigint) => T
-    Bytes: (bytes: Uint8Array) => T
+    Bytes: (bytes: string) => T
     Constr: (constr: Constr) => T
   }
 ) => T

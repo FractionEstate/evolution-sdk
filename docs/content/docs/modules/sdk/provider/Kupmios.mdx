@@ -10,7 +10,7 @@ parent: Modules
 
 <h2 className="text-delta">Table of contents</h2>
 
-- [utils](#utils)
+- [constructors](#constructors)
   - [KupmiosProvider (class)](#kupmiosprovider-class)
     - [Effect (property)](#effect-property)
     - [getProtocolParameters (property)](#getprotocolparameters-property)
@@ -26,11 +26,13 @@ parent: Modules
 
 ---
 
-# utils
+# constructors
 
 ## KupmiosProvider (class)
 
+Kupmios provider for Cardano blockchain data access.
 Provides support for interacting with both Kupo and Ogmios APIs.
+Supports custom headers for authentication with Demeter or other providers.
 
 **Signature**
 
@@ -47,58 +49,7 @@ export declare class KupmiosProvider {
 }
 ```
 
-**Example**
-
-````ts
-Using Local URLs (No Authentication):
-```typescript
-const kupmios = new KupmiosProvider(
-  "http://localhost:1442", // Kupo API URL
-  "http://localhost:1337"  // Ogmios API URL
-);
-````
-
-````
-
-
-
-
-
-
-**Example**
-
-
-```ts
-Using Authenticated URLs (No Custom Headers):
-```typescript
-const kupmios = new KupmiosProvider(
-  "https://dmtr_kupoXXX.preprod-v2.kupo-m1.demeter.run", // Kupo Authenticated URL
-  "https://dmtr_ogmiosXXX.preprod-v6.ogmios-m1.demeter.run" // Ogmios Authenticated URL
-);
-````
-
-````
-
-
-
-
-
-
-**Example**
-
-
-```ts
-Using Public URLs with Custom Headers:
-```typescript
-const kupmios = new KupmiosProvider(
-  "https://preprod-v2.kupo-m1.demeter.run", // Kupo API URL
-  "https://preprod-v6.ogmios-m1.demeter.run", // Ogmios API URL
-  {
-    kupoHeader: { "dmtr-api-key": "dmtr_kupoXXX" }, // Custom header for Kupo
-    ogmiosHeader: { "dmtr-api-key": "dmtr_ogmiosXXX" } // Custom header for Ogmios
-  }
-);
-````
+Added in v2.0.0
 
 ### Effect (property)
 

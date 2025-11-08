@@ -24,6 +24,7 @@ parent: Modules
   - [NullOr](#nullor)
   - [OneLiteral](#oneliteral)
   - [Struct](#struct)
+  - [StructOptions (interface)](#structoptions-interface)
   - [Tuple](#tuple)
   - [UndefinedOr](#undefinedor)
   - [Union](#union)
@@ -37,8 +38,8 @@ parent: Modules
 
 ## ByteArray
 
-ByteArray schema that transforms hex string to Data.ByteArray for PlutusData.
-This enables withSchema compatibility by transforming from hex string to Uint8Array.
+ByteArray schema for PlutusData hex strings.
+Since Data.ByteArray is now hex string based, this is just an alias to it.
 
 **Signature**
 
@@ -108,11 +109,7 @@ Added in v2.0.0
 **Signature**
 
 ```ts
-export interface ByteArray
-  extends Schema.transform<
-    Schema.SchemaClass<Uint8Array<ArrayBufferLike>, Uint8Array<ArrayBufferLike>, never>,
-    typeof Schema.String
-  > {}
+export interface ByteArray extends Schema.Schema<string, string, never> {}
 ```
 
 ## Integer (interface)
@@ -180,15 +177,70 @@ export declare const OneLiteral: <Single extends Exclude<SchemaAST.LiteralValue,
 ## Struct
 
 Creates a schema for struct types using Plutus Data Constructor
-Objects are represented as a constructor with index 0 and fields as an array
+Objects are represented as a constructor with index (default 0) and fields as an array
 
 **Signature**
 
 ```ts
-export declare const Struct: <Fields extends Schema.Struct.Fields>(fields: Fields) => Struct<Fields>
+export declare const Struct: <Fields extends Schema.Struct.Fields>(
+  fields: Fields,
+  options?: StructOptions
+) => Struct<Fields>
+```
+
+**Example**
+
+```typescript
+import { TSchema } from "@evolution-sdk/evolution"
+
+// Default: nested in Union, index 0
+TSchema.Struct({ name: TSchema.ByteArray, age: TSchema.Integer })
+```
+
+**Example**
+
+```typescript
+import { TSchema } from "@evolution-sdk/evolution"
+
+// Flat union variants with custom indices
+TSchema.Struct({ amount: TSchema.Integer }, { index: 121, flat: true })
+TSchema.Struct({ amount: TSchema.Integer }, { index: 122, flat: true })
+```
+
+**Example**
+
+```typescript
+import { TSchema } from "@evolution-sdk/evolution"
+
+// Custom index but stay nested (advanced use case)
+TSchema.Struct({ data: TSchema.Integer }, { index: 10, flat: false })
 ```
 
 Added in v2.0.0
+
+## StructOptions (interface)
+
+Options for Struct schema
+
+**Signature**
+
+```ts
+export interface StructOptions {
+  /**
+   * Custom Constr index for this struct (default: 0)
+   * Useful when creating union variants with specific indices
+   */
+  index?: number
+  /**
+   * When used in a Union, controls whether this Struct should be "flattened" (unwrapped).
+   * - true: Encodes as Constr(index, [fields]) directly
+   * - false: Encodes as Constr(unionPos, [Constr(index, [fields])]) (nested)
+   *
+   * Default: true when index is specified, false otherwise
+   */
+  flat?: boolean
+}
+```
 
 ## Tuple
 
@@ -221,12 +273,51 @@ Added in v2.0.0
 ## Union
 
 Creates a schema for union types using Plutus Data Constructor
-Unions are represented as a constructor with index 0 and fields as an array
+Unions are represented as a constructor with index 0, 1, 2... and fields as an array
+
+Members marked with flat: true will be encoded directly using their index
+instead of being wrapped in an additional Constr layer.
 
 **Signature**
 
 ```ts
 export declare const Union: <Members extends ReadonlyArray<Schema.Schema.Any>>(...members: Members) => Union<Members>
+```
+
+**Example**
+
+```typescript
+import { TSchema } from "@evolution-sdk/evolution"
+
+// Standard union with auto indices (nested)
+TSchema.Union(TSchema.Struct({ a: TSchema.Integer }), TSchema.Struct({ b: TSchema.Integer }))
+// Encodes to: Constr(0, [Constr(0, [a])]) or Constr(1, [Constr(0, [b])])
+```
+
+**Example**
+
+```typescript
+import { TSchema } from "@evolution-sdk/evolution"
+
+// Union with flat Structs (single-level encoding)
+TSchema.Union(
+  TSchema.Struct({ amount: TSchema.Integer }, { index: 121, flat: true }),
+  TSchema.Struct({ amount: TSchema.Integer }, { index: 122, flat: true })
+)
+// Encodes to: Constr(121, [amount]) or Constr(122, [amount]) - single level!
+```
+
+**Example**
+
+```typescript
+import { TSchema } from "@evolution-sdk/evolution"
+
+// Mixed union: some nested, some flat
+TSchema.Union(
+  TSchema.Struct({ a: TSchema.Integer }), // nested, auto index 0
+  TSchema.Struct({ b: TSchema.Integer }, { flat: true }), // flat, auto index 1
+  TSchema.Struct({ c: TSchema.Integer }, { index: 100, flat: true }) // flat, custom index 100
+)
 ```
 
 Added in v2.0.0

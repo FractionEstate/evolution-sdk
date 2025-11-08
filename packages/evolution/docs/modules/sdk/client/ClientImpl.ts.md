@@ -6,8 +6,6 @@ parent: Modules
 
 ## ClientImpl overview
 
-// ClientImpl.ts - Step-by-step implementation starting with MinimalClient
-
 ---
 
 <h2 class="text-delta">Table of contents</h2>
@@ -39,6 +37,11 @@ export declare function createClient(config: {
   network?: NetworkId
   provider: ProviderConfig
   wallet: SeedWalletConfig
+}): SigningClient
+export declare function createClient(config: {
+  network?: NetworkId
+  provider: ProviderConfig
+  wallet: PrivateKeyWalletConfig
 }): SigningClient
 export declare function createClient(config: {
   network?: NetworkId

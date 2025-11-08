@@ -10,8 +10,9 @@ parent: Modules
 
 <h2 class="text-delta">Table of contents</h2>
 
-- [utils](#utils)
+- [constructors](#constructors)
   - [MaestroProvider (class)](#maestroprovider-class)
+    - [Effect (property)](#effect-property)
     - [getProtocolParameters (property)](#getprotocolparameters-property)
     - [getUtxos (property)](#getutxos-property)
     - [getUtxosWithUnit (property)](#getutxoswithunit-property)
@@ -28,12 +29,11 @@ parent: Modules
 
 ---
 
-# utils
+# constructors
 
 ## MaestroProvider (class)
 
 Maestro provider for Cardano blockchain data access.
-
 Supports mainnet and testnet networks with API key authentication.
 Features cursor-based pagination and optional turbo submit for faster transaction processing.
 Implements rate limiting to respect Maestro API limits.
@@ -48,84 +48,15 @@ export declare class MaestroProvider { constructor(
   ) }
 ```
 
-**Example**
-
-````ts
-Basic usage with API key:
-```typescript
-const maestro = new MaestroProvider(
-  "https://api.maestro.org/v1",
-  "your-api-key"
-);
-
-// Using Promise API
-const params = await maestro.getProtocolParameters();
-
-// Using Effect API
-const paramsEffect = maestro.Effect.getProtocolParameters;
-````
-
-````
-
-
-
-
-
-
-**Example**
-
-
-```ts
-With turbo submit enabled:
-```typescript
-const maestro = new MaestroProvider(
-  "https://api.maestro.org/v1",
-  "your-api-key",
-  true // Enable turbo submit
-);
-
-// Transactions will use turbo submit endpoint
-const txHash = await maestro.submitTx(signedTx);
-````
-
-````
-
-
-
-
-
-
-**Example**
-
-
-```ts
-Testnet usage:
-```typescript
-const maestro = new MaestroProvider(
-  "https://preprod.api.maestro.org/v1",
-  "your-preprod-api-key"
-);
-````
-
-````
-
-
-
-
-
+Added in v2.0.0
 
 ### Effect (property)
 
-
-
-
-
 **Signature**
-
 
 ```ts
 readonly Effect: ProviderEffect
-````
+```
 
 ### getProtocolParameters (property)
 
@@ -214,7 +145,7 @@ evaluateTx: (tx: Parameters<Provider["evaluateTx"]>[0], additionalUTxOs?: Parame
 
 ## mainnet
 
-Pre-configured Maestro provider for Cardano mainnet
+Pre-configured Maestro provider for Cardano mainnet.
 
 **Signature**
 
@@ -222,9 +153,11 @@ Pre-configured Maestro provider for Cardano mainnet
 export declare const mainnet: (apiKey: string, turboSubmit?: boolean) => MaestroProvider
 ```
 
+Added in v2.0.0
+
 ## preprod
 
-Pre-configured Maestro provider for Cardano preprod testnet
+Pre-configured Maestro provider for Cardano preprod testnet.
 
 **Signature**
 
@@ -232,12 +165,16 @@ Pre-configured Maestro provider for Cardano preprod testnet
 export declare const preprod: (apiKey: string, turboSubmit?: boolean) => MaestroProvider
 ```
 
+Added in v2.0.0
+
 ## preview
 
-Pre-configured Maestro provider for Cardano preview testnet
+Pre-configured Maestro provider for Cardano preview testnet.
 
 **Signature**
 
 ```ts
 export declare const preview: (apiKey: string, turboSubmit?: boolean) => MaestroProvider
 ```
+
+Added in v2.0.0

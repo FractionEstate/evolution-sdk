@@ -10,8 +10,9 @@ parent: Modules
 
 <h2 className="text-delta">Table of contents</h2>
 
-- [utils](#utils)
+- [constructors](#constructors)
   - [BlockfrostProvider (class)](#blockfrostprovider-class)
+    - [Effect (property)](#effect-property)
     - [baseUrl (property)](#baseurl-property)
     - [projectId (property)](#projectid-property)
     - [getProtocolParameters (property)](#getprotocolparameters-property)
@@ -31,12 +32,11 @@ parent: Modules
 
 ---
 
-# utils
+# constructors
 
 ## BlockfrostProvider (class)
 
 Blockfrost provider for Cardano blockchain data access.
-
 Supports both mainnet and testnet networks with project-based authentication.
 Implements rate limiting to respect Blockfrost API limits.
 
@@ -48,79 +48,15 @@ export declare class BlockfrostProvider {
 }
 ```
 
-**Example**
-
-````ts
-Basic usage with project ID:
-```typescript
-const blockfrost = new BlockfrostProvider(
-  "https://cardano-mainnet.blockfrost.io/api/v0",
-  "your-project-id"
-);
-
-// Using Promise API
-const params = await blockfrost.getProtocolParameters();
-
-// Using Effect API
-const paramsEffect = blockfrost.Effect.getProtocolParameters;
-````
-
-````
-
-
-
-
-
-
-**Example**
-
-
-```ts
-Testnet usage:
-```typescript
-const blockfrost = new BlockfrostProvider(
-  "https://cardano-preprod.blockfrost.io/api/v0",
-  "your-preprod-project-id"
-);
-````
-
-````
-
-
-
-
-
-
-**Example**
-
-
-```ts
-Using without project ID (for public endpoints):
-```typescript
-const blockfrost = new BlockfrostProvider(
-  "https://cardano-mainnet.blockfrost.io/api/v0"
-);
-````
-
-````
-
-
-
-
-
+Added in v2.0.0
 
 ### Effect (property)
 
-
-
-
-
 **Signature**
-
 
 ```ts
 readonly Effect: ProviderEffect
-````
+```
 
 ### baseUrl (property)
 
@@ -225,7 +161,7 @@ evaluateTx: (tx: Parameters<Provider["evaluateTx"]>[0], additionalUTxOs?: Parame
 
 ## custom
 
-Create a custom Blockfrost provider with custom base URL
+Create a custom Blockfrost provider with custom base URL.
 
 **Signature**
 
@@ -233,9 +169,11 @@ Create a custom Blockfrost provider with custom base URL
 export declare const custom: (baseUrl: string, projectId?: string) => BlockfrostProvider
 ```
 
+Added in v2.0.0
+
 ## mainnet
 
-Pre-configured Blockfrost provider for Cardano mainnet
+Pre-configured Blockfrost provider for Cardano mainnet.
 
 **Signature**
 
@@ -243,9 +181,11 @@ Pre-configured Blockfrost provider for Cardano mainnet
 export declare const mainnet: (projectId: string) => BlockfrostProvider
 ```
 
+Added in v2.0.0
+
 ## preprod
 
-Pre-configured Blockfrost provider for Cardano preprod testnet
+Pre-configured Blockfrost provider for Cardano preprod testnet.
 
 **Signature**
 
@@ -253,12 +193,16 @@ Pre-configured Blockfrost provider for Cardano preprod testnet
 export declare const preprod: (projectId: string) => BlockfrostProvider
 ```
 
+Added in v2.0.0
+
 ## preview
 
-Pre-configured Blockfrost provider for Cardano preview testnet
+Pre-configured Blockfrost provider for Cardano preview testnet.
 
 **Signature**
 
 ```ts
 export declare const preview: (projectId: string) => BlockfrostProvider
 ```
+
+Added in v2.0.0

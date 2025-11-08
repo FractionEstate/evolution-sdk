@@ -10,8 +10,9 @@ parent: Modules
 
 <h2 className="text-delta">Table of contents</h2>
 
-- [utils](#utils)
+- [constructors](#constructors)
   - [Koios (class)](#koios-class)
+    - [Effect (property)](#effect-property)
     - [getProtocolParameters (property)](#getprotocolparameters-property)
     - [getUtxos (property)](#getutxos-property)
     - [getUtxosWithUnit (property)](#getutxoswithunit-property)
@@ -25,11 +26,13 @@ parent: Modules
 
 ---
 
-# utils
+# constructors
 
 ## Koios (class)
 
-Provides support for interacting with the Koios API
+Koios provider for Cardano blockchain data access.
+Provides support for interacting with the Koios API across multiple environments.
+Supports optional bearer token authentication.
 
 **Signature**
 
@@ -39,74 +42,15 @@ export declare class Koios {
 }
 ```
 
-**Example**
-
-````ts
-Using the Preprod API URL:
-```typescript
-const koios = new Koios(
-  "https://preview.koios.rest/api/v1", // Preprod Preview Environment
-  "optional-bearer-token" // Optional Bearer Token for authentication
-);
-````
-
-````
-
-
-
-
-
-
-**Example**
-
-
-```ts
-Using the Preprod Stable API URL:
-```typescript
-const koios = new Koios(
-  "https://preprod.koios.rest/api/v1", // Preprod Stable Environment
-  "optional-bearer-token" // Optional Bearer Token for authentication
-);
-````
-
-````
-
-
-
-
-
-
-**Example**
-
-
-```ts
-Using the Mainnet API URL:
-```typescript
-const koios = new Koios(
-  "https://api.koios.rest/api/v1", // Mainnet Environment
-  "optional-bearer-token" // Optional Bearer Token for authentication
-);
-````
-
-````
-
-
-
-
-
+Added in v2.0.0
 
 ### Effect (property)
 
-
-
-
-
 **Signature**
-
 
 ```ts
 readonly Effect: ProviderEffect
-````
+```
 
 ### getProtocolParameters (property)
 
