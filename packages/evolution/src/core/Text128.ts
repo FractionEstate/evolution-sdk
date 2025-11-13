@@ -1,19 +1,7 @@
-import { Data, FastCheck, Schema } from "effect"
+import { FastCheck, Schema } from "effect"
 
 import * as Bytes from "./Bytes.js"
-import * as Function from "./Function.js"
 import * as Text from "./Text.js"
-
-/**
- * Error class for Text128 related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class Text128Error extends Data.TaggedError("Text128Error")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Constants for Text128 validation.
@@ -79,7 +67,7 @@ export const arbitrary = FastCheck.string({
  * @since 2.0.0
  * @category parsing
  */
-export const fromBytes = Function.makeDecodeSync(FromVariableBytes, Text128Error, "Text128.fromBytes")
+export const fromBytes = (bytes: Uint8Array): Text128 => Schema.decodeSync(FromVariableBytes)(bytes)
 
 /**
  * Parse Text128 from hex string (unsafe)
@@ -87,7 +75,7 @@ export const fromBytes = Function.makeDecodeSync(FromVariableBytes, Text128Error
  * @since 2.0.0
  * @category parsing
  */
-export const fromHex = Function.makeDecodeSync(FromVariableHex, Text128Error, "Text128.fromHex")
+export const fromHex = (hex: string): Text128 => Schema.decodeSync(FromVariableHex)(hex)
 
 /**
  * Encode Text128 to bytes (unsafe)
@@ -95,7 +83,7 @@ export const fromHex = Function.makeDecodeSync(FromVariableHex, Text128Error, "T
  * @since 2.0.0
  * @category encoding
  */
-export const toBytes = Function.makeEncodeSync(FromVariableBytes, Text128Error, "Text128.toBytes")
+export const toBytes = (text: Text128): Uint8Array => Schema.encodeSync(FromVariableBytes)(text)
 
 /**
  * Encode Text128 to hex string (unsafe)
@@ -103,48 +91,4 @@ export const toBytes = Function.makeEncodeSync(FromVariableBytes, Text128Error, 
  * @since 2.0.0
  * @category encoding
  */
-export const toHex = Function.makeEncodeSync(FromVariableHex, Text128Error, "Text128.toHex")
-
-// ============================================================================
-// Effect Namespace
-// ============================================================================
-
-/**
- * Effect-based error handling variants for functions that can fail.
- *
- * @since 2.0.0
- * @category effect
- */
-export namespace Either {
-  /**
-   * Parse Text128 from bytes with Either error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromBytes = Function.makeDecodeEither(FromVariableBytes, Text128Error)
-
-  /**
-   * Parse Text128 from hex string with Either error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromHex = Function.makeDecodeEither(FromVariableHex, Text128Error)
-
-  /**
-   * Encode Text128 to bytes with Either error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toBytes = Function.makeEncodeEither(FromVariableBytes, Text128Error)
-
-  /**
-   * Encode Text128 to hex string with Either error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toHex = Function.makeEncodeEither(FromVariableHex, Text128Error)
-}
+export const toHex = (text: Text128): string => Schema.encodeSync(FromVariableHex)(text)

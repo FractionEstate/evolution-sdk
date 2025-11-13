@@ -1,18 +1,7 @@
-import { Data, FastCheck, Schema } from "effect"
+import { Equal, FastCheck, Hash, Inspectable, Schema } from "effect"
 
+import * as Bytes from "./Bytes.js"
 import * as Bytes32 from "./Bytes32.js"
-import * as Function from "./Function.js"
-
-/**
- * Error class for BlockBodyHash related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class BlockBodyHashError extends Data.TaggedError("BlockBodyHashError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Schema for BlockBodyHash representing a block body hash.
@@ -24,7 +13,30 @@ export class BlockBodyHashError extends Data.TaggedError("BlockBodyHashError")<{
  */
 export class BlockBodyHash extends Schema.TaggedClass<BlockBodyHash>()("BlockBodyHash", {
   bytes: Bytes32.BytesFromHex
-}) {}
+}) {
+  toJSON() {
+    return {
+      _tag: "BlockBodyHash" as const,
+      bytes: Bytes.toHex(this.bytes)
+    }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof BlockBodyHash && Bytes.equals(this.bytes, that.bytes)
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.array(Array.from(this.bytes)))
+  }
+}
 
 /**
  * Schema for transforming between Uint8Array and BlockBodyHash.
@@ -54,22 +66,6 @@ export const FromHex = Schema.compose(
 })
 
 /**
- * Smart constructor for BlockBodyHash that validates and applies branding.
- *
- * @since 2.0.0
- * @category constructors
- */
-export const make = (...args: ConstructorParameters<typeof BlockBodyHash>) => new BlockBodyHash(...args)
-
-/**
- * Check if two BlockBodyHash instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: BlockBodyHash, b: BlockBodyHash): boolean => Bytes32.equals(a.bytes, b.bytes)
-
-/**
  * Check if the given value is a valid BlockBodyHash
  *
  * @since 2.0.0
@@ -97,7 +93,7 @@ export const arbitrary = FastCheck.uint8Array({ minLength: 32, maxLength: 32 }).
  * @since 2.0.0
  * @category parsing
  */
-export const fromBytes = Function.makeDecodeSync(FromBytes, BlockBodyHashError, "BlockBodyHash.fromBytes")
+export const fromBytes = Schema.decodeSync(FromBytes)
 
 /**
  * Parse BlockBodyHash from hex string.
@@ -105,7 +101,7 @@ export const fromBytes = Function.makeDecodeSync(FromBytes, BlockBodyHashError, 
  * @since 2.0.0
  * @category parsing
  */
-export const fromHex = Function.makeDecodeSync(FromHex, BlockBodyHashError, "BlockBodyHash.fromHex")
+export const fromHex = Schema.decodeSync(FromHex)
 
 /**
  * Encode BlockBodyHash to bytes.
@@ -113,7 +109,7 @@ export const fromHex = Function.makeDecodeSync(FromHex, BlockBodyHashError, "Blo
  * @since 2.0.0
  * @category encoding
  */
-export const toBytes = Function.makeEncodeSync(FromBytes, BlockBodyHashError, "BlockBodyHash.toBytes")
+export const toBytes = Schema.encodeSync(FromBytes)
 
 /**
  * Encode BlockBodyHash to hex string.
@@ -121,15 +117,5 @@ export const toBytes = Function.makeEncodeSync(FromBytes, BlockBodyHashError, "B
  * @since 2.0.0
  * @category encoding
  */
-export const toHex = Function.makeEncodeSync(FromHex, BlockBodyHashError, "BlockBodyHash.toHex")
+export const toHex = Schema.encodeSync(FromHex)
 
-// ============================================================================
-// Either Namespace (composable non-throwing API)
-// ============================================================================
-
-export namespace Either {
-  export const fromBytes = Function.makeDecodeEither(FromBytes, BlockBodyHashError)
-  export const fromHex = Function.makeDecodeEither(FromHex, BlockBodyHashError)
-  export const toBytes = Function.makeEncodeEither(FromBytes, BlockBodyHashError)
-  export const toHex = Function.makeEncodeEither(FromHex, BlockBodyHashError)
-}

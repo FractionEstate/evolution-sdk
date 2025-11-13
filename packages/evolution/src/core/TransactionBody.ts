@@ -1,4 +1,4 @@
-import { Data, Either as E, FastCheck, ParseResult, Schema } from "effect"
+import { Either as E, Equal, FastCheck, Hash, Inspectable, ParseResult, Schema } from "effect"
 import type { NonEmptyArray } from "effect/Array"
 
 import * as Anchor from "./Anchor.js"
@@ -7,7 +7,6 @@ import * as Bytes from "./Bytes.js"
 import * as CBOR from "./CBOR.js"
 import * as Certificate from "./Certificate.js"
 import * as Coin from "./Coin.js"
-import * as Function from "./Function.js"
 import * as GovernanceAction from "./GovernanceAction.js"
 import * as KeyHash from "./KeyHash.js"
 import * as Mint from "./Mint.js"
@@ -57,11 +56,11 @@ export class TransactionBody extends Schema.TaggedClass<TransactionBody>()("Tran
   inputs: Schema.Array(TransactionInput.TransactionInput), // 0
   outputs: Schema.Array(TransactionOutput.TransactionOutput), // 1
   fee: Coin.Coin, // 2
-  ttl: Schema.optional(Schema.BigInt), // 3 - slot_no
+  ttl: Schema.optional(Schema.BigIntFromSelf), // 3 - slot_no
   certificates: Schema.optional(Schema.NonEmptyArray(Certificate.Certificate)), // 4
   withdrawals: Schema.optional(Withdrawals.Withdrawals), // 5
   auxiliaryDataHash: Schema.optional(AuxiliaryDataHash.AuxiliaryDataHash), // 7
-  validityIntervalStart: Schema.optional(Schema.BigInt), // 8 - slot_no
+  validityIntervalStart: Schema.optional(Schema.BigIntFromSelf), // 8 - slot_no
   mint: Schema.optional(Mint.Mint), // 9
   scriptDataHash: Schema.optional(ScriptDataHash.ScriptDataHash), // 11
   collateralInputs: Schema.optional(Schema.NonEmptyArray(TransactionInput.TransactionInput)), // 13
@@ -74,20 +73,71 @@ export class TransactionBody extends Schema.TaggedClass<TransactionBody>()("Tran
   proposalProcedures: Schema.optional(ProposalProcedures.ProposalProcedures), // 20
   currentTreasuryValue: Schema.optional(Coin.Coin), // 21
   donation: Schema.optional(PositiveCoin.PositiveCoinSchema) // 22
-}) {}
+}) {
+  toJSON() {
+    return {
+      _tag: this._tag,
+      inputs: this.inputs,
+      outputs: this.outputs,
+      fee: this.fee,
+      ttl: this.ttl,
+      certificates: this.certificates,
+      withdrawals: this.withdrawals,
+      auxiliaryDataHash: this.auxiliaryDataHash,
+      validityIntervalStart: this.validityIntervalStart,
+      mint: this.mint,
+      scriptDataHash: this.scriptDataHash,
+      collateralInputs: this.collateralInputs,
+      requiredSigners: this.requiredSigners,
+      networkId: this.networkId,
+      collateralReturn: this.collateralReturn,
+      totalCollateral: this.totalCollateral,
+      referenceInputs: this.referenceInputs,
+      votingProcedures: this.votingProcedures,
+      proposalProcedures: this.proposalProcedures,
+      currentTreasuryValue: this.currentTreasuryValue,
+      donation: this.donation
+    }
+  }
 
-export const make = (...args: ConstructorParameters<typeof TransactionBody>) => new TransactionBody(...args)
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
 
-/**
- * Error class for TransactionBody related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class TransactionBodyError extends Data.TaggedError("TransactionBodyError")<{
-  message?: string
-  cause?: unknown
-}> {}
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    if (!(that instanceof TransactionBody)) return false
+    return (
+      Equal.equals(this.inputs, that.inputs) &&
+      Equal.equals(this.outputs, that.outputs) &&
+      this.fee === that.fee &&
+      this.ttl === that.ttl &&
+      Equal.equals(this.certificates, that.certificates) &&
+      Equal.equals(this.withdrawals, that.withdrawals) &&
+      Equal.equals(this.auxiliaryDataHash, that.auxiliaryDataHash) &&
+      this.validityIntervalStart === that.validityIntervalStart &&
+      Equal.equals(this.mint, that.mint) &&
+      Equal.equals(this.scriptDataHash, that.scriptDataHash) &&
+      Equal.equals(this.collateralInputs, that.collateralInputs) &&
+      Equal.equals(this.requiredSigners, that.requiredSigners) &&
+      this.networkId === that.networkId &&
+      Equal.equals(this.collateralReturn, that.collateralReturn) &&
+      this.totalCollateral === that.totalCollateral &&
+      Equal.equals(this.referenceInputs, that.referenceInputs) &&
+      Equal.equals(this.votingProcedures, that.votingProcedures) &&
+      Equal.equals(this.proposalProcedures, that.proposalProcedures) &&
+      this.currentTreasuryValue === that.currentTreasuryValue &&
+      Equal.equals(this.donation, that.donation)
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.combine(Hash.array(this.inputs))(Hash.array(this.outputs)))
+  }
+}
 
 // Pre-bind hot ParseResult helpers
 const encodeTxInput = ParseResult.encodeEither(TransactionInput.FromCDDL)
@@ -324,7 +374,7 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Tra
         requiredSigners = arr as NonEmptyArray<KeyHash.KeyHash>
       }
       const networkIdBigInt = fromA.get(15n) as bigint | undefined
-      const networkId = networkIdBigInt !== undefined ? NetworkId.make(Number(networkIdBigInt)) : undefined
+      const networkId = networkIdBigInt !== undefined ? (Number(networkIdBigInt) as NetworkId.NetworkId) : undefined
       const collateralReturnData = fromA.get(16n) as typeof TransactionOutput.CDDLSchema.Type | undefined
       const collateralReturn = collateralReturnData ? yield* decodeTxOutput(collateralReturnData) : undefined
       const totalCollateral = fromA.get(17n) as Coin.Coin | undefined
@@ -402,7 +452,7 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Tra
  * @category schemas
  */
 export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
-  Schema.compose(CBOR.FromBytes(options), FromCDDL as any).annotations({
+  Schema.compose(CBOR.FromBytes(options), FromCDDL).annotations({
     identifier: "TransactionBody.FromCBORBytes",
     title: "TransactionBody from CBOR bytes",
     description: "Decode TransactionBody from CBOR-encoded bytes using Conway CDDL specification"
@@ -416,7 +466,7 @@ export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTI
  * @category schemas
  */
 export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
-  Schema.compose(CBOR.FromHex(options), FromCDDL as any).annotations({
+  Schema.compose(CBOR.FromHex(options), FromCDDL).annotations({
     identifier: "TransactionBody.FromCBORHex",
     title: "TransactionBody from CBOR hex",
     description: "Decode TransactionBody from CBOR-encoded hex string using Conway CDDL specification"
@@ -424,70 +474,41 @@ export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTION
 
 export const isTransactionBody = Schema.is(TransactionBody)
 
-// ============================================================================
-// Root Functions
-// ============================================================================
-
 /**
- * Parse a TransactionBody from CBOR bytes.
- * Default options use CML_DEFAULT_OPTIONS for CDDL/CML parity.
+ * Convert CBOR bytes to TransactionBody.
  *
  * @since 2.0.0
- * @category parsing
+ * @category conversion
  */
-export const fromCBORBytes = Function.makeCBORDecodeSync(
-  FromCDDL,
-  TransactionBodyError,
-  "TransactionBody.fromCBORBytes"
-)
+export const fromCBORBytes = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.decodeSync(FromCBORBytes(options))(bytes)
 
 /**
- * Parse a TransactionBody from CBOR hex string.
- * Default options use CML_DEFAULT_OPTIONS for CDDL/CML parity.
+ * Convert CBOR hex string to TransactionBody.
  *
  * @since 2.0.0
- * @category parsing
+ * @category conversion
  */
-export const fromCBORHex = Function.makeCBORDecodeHexSync(FromCDDL, TransactionBodyError, "TransactionBody.fromCBORHex")
-
-// ============================================================================
-// Encoding Functions
-// ============================================================================
+export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.decodeSync(FromCBORHex(options))(hex)
 
 /**
- * Convert a TransactionBody to CBOR bytes.
- * Default options use CML_DEFAULT_OPTIONS for CDDL/CML parity.
+ * Convert TransactionBody to CBOR bytes.
  *
  * @since 2.0.0
- * @category encoding
+ * @category conversion
  */
-export const toCBORBytes = Function.makeCBOREncodeSync(FromCDDL, TransactionBodyError, "TransactionBody.toCBORBytes")
+export const toCBORBytes = (data: TransactionBody, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.encodeSync(FromCBORBytes(options))(data)
 
 /**
- * Convert a TransactionBody to CBOR hex string.
- * Default options use CML_DEFAULT_OPTIONS for CDDL/CML parity.
+ * Convert TransactionBody to CBOR hex string.
  *
  * @since 2.0.0
- * @category encoding
+ * @category conversion
  */
-export const toCBORHex = Function.makeCBOREncodeHexSync(FromCDDL, TransactionBodyError, "TransactionBody.toCBORHex")
-
-// ============================================================================
-// Either Namespace - Either-based Error Handling
-// ============================================================================
-
-/**
- * Either-based error handling variants for functions that can fail.
- *
- * @since 2.0.0
- * @category either
- */
-export namespace Either {
-  export const fromCBORBytes = Function.makeCBORDecodeEither(FromCDDL, TransactionBodyError, CBOR.CML_DEFAULT_OPTIONS)
-  export const fromCBORHex = Function.makeCBORDecodeHexEither(FromCDDL, TransactionBodyError, CBOR.CML_DEFAULT_OPTIONS)
-  export const toCBORBytes = Function.makeCBOREncodeEither(FromCDDL, TransactionBodyError, CBOR.CML_DEFAULT_OPTIONS)
-  export const toCBORHex = Function.makeCBOREncodeHexEither(FromCDDL, TransactionBodyError, CBOR.CML_DEFAULT_OPTIONS)
-}
+export const toCBORHex = (data: TransactionBody, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.encodeSync(FromCBORHex(options))(data)
 
 // ============================================================================
 // FastCheck Arbitrary
@@ -513,7 +534,7 @@ export const arbitrary: FastCheck.Arbitrary<TransactionBody> =
     }),
     outputs: FastCheck.array(TransactionOutput.arbitrary, { minLength: 1, maxLength: 5 }),
     fee: Coin.arbitrary,
-    networkId: FastCheck.option(FastCheck.integer({ min: 0, max: 1 }).map(NetworkId.make), { nil: undefined }),
+    networkId: FastCheck.option(FastCheck.integer({ min: 0, max: 1 }), { nil: undefined }),
     // Optional extra (added first for iterative hardening)
     auxiliaryDataHash: FastCheck.option(AuxiliaryDataHash.arbitrary, { nil: undefined }),
     // Second optional extra: donation (positive_coin)
@@ -572,7 +593,7 @@ export const arbitrary: FastCheck.Arbitrary<TransactionBody> =
             rewardAccount: RewardAccount.arbitrary,
             governanceAction: GovernanceAction.arbitrary,
             anchor: Anchor.arbitrary
-          }).map((params) => ProposalProcedure.make(params)),
+          }).map((params) => new ProposalProcedure.ProposalProcedure(params)),
           { minLength: 1, maxLength: 3 }
         )
       }).map((params) => new ProposalProcedures.ProposalProcedures(params)),
@@ -618,7 +639,7 @@ export const arbitrary: FastCheck.Arbitrary<TransactionBody> =
         scriptDataHash: props.scriptDataHash,
         collateralInputs: props.collateralInputs as NonEmptyArray<TransactionInput.TransactionInput> | undefined,
         requiredSigners: props.requiredSigners as NonEmptyArray<KeyHash.KeyHash> | undefined,
-        networkId: props.networkId,
+        networkId: props.networkId as NetworkId.NetworkId | undefined,
         collateralReturn: props.collateralReturn,
         totalCollateral: props.totalCollateral,
         referenceInputs: props.referenceInputs as NonEmptyArray<TransactionInput.TransactionInput> | undefined,
@@ -628,65 +649,3 @@ export const arbitrary: FastCheck.Arbitrary<TransactionBody> =
         donation: props.donation
       })
     })
-
-export const equals = (self: TransactionBody, that: TransactionBody): boolean => {
-  // quick identity
-  if (self === that) return true
-
-  // helper for optional fields: both undefined => equal, one undefined => not equal, otherwise use provided comparator
-  const optionalEquals = <T>(x: T | undefined, y: T | undefined, cmp: (u: T, v: T) => boolean): boolean => {
-    if (x === undefined && y === undefined) return true
-    if (x === undefined || y === undefined) return false
-    return cmp(x, y)
-  }
-
-  // compare arrays elementwise using provided comparator
-  const arrayEquals = <T>(a: ReadonlyArray<T>, b: ReadonlyArray<T>, cmp: (u: T, v: T) => boolean): boolean => {
-    if (a.length !== b.length) return false
-    for (let i = 0; i < a.length; i++) {
-      if (!cmp(a[i], b[i])) return false
-    }
-    return true
-  }
-
-  // required fields
-  if (!arrayEquals(self.inputs, that.inputs, TransactionInput.equals)) return false
-  if (!arrayEquals(self.outputs, that.outputs, TransactionOutput.equals)) return false
-  if (!Coin.equals(self.fee, that.fee)) return false
-
-  // optional primitives
-  if (self.ttl !== that.ttl) return false
-  if (self.validityIntervalStart !== that.validityIntervalStart) return false
-
-  // optional complex fields
-  if (
-    !optionalEquals(
-      self.certificates,
-      that.certificates,
-      (a, b) => a.length === b.length && a.every((v, i) => Certificate.equals(v, b[i]))
-    )
-  )
-    return false
-  if (!optionalEquals(self.withdrawals, that.withdrawals, Withdrawals.equals)) return false
-  if (!optionalEquals(self.auxiliaryDataHash, that.auxiliaryDataHash, (a, b) => Bytes.equals(a.bytes, b.bytes)))
-    return false
-  if (!optionalEquals(self.mint, that.mint, Mint.equals)) return false
-  if (!optionalEquals(self.scriptDataHash, that.scriptDataHash, ScriptDataHash.equals)) return false
-  if (
-    !optionalEquals(self.collateralInputs, that.collateralInputs, (a, b) => arrayEquals(a, b, TransactionInput.equals))
-  )
-    return false
-  if (!optionalEquals(self.requiredSigners, that.requiredSigners, (a, b) => arrayEquals(a, b, KeyHash.equals)))
-    return false
-  if (!optionalEquals(self.networkId, that.networkId, NetworkId.equals)) return false
-  if (!optionalEquals(self.collateralReturn, that.collateralReturn, TransactionOutput.equals)) return false
-  if (!optionalEquals(self.totalCollateral, that.totalCollateral, Coin.equals)) return false
-  if (!optionalEquals(self.referenceInputs, that.referenceInputs, (a, b) => arrayEquals(a, b, TransactionInput.equals)))
-    return false
-  if (!optionalEquals(self.votingProcedures, that.votingProcedures, VotingProcedures.equals)) return false
-  if (!optionalEquals(self.proposalProcedures, that.proposalProcedures, ProposalProcedures.equals)) return false
-  if (!optionalEquals(self.currentTreasuryValue, that.currentTreasuryValue, Coin.equals)) return false
-  if (!optionalEquals(self.donation, that.donation, PositiveCoin.equals)) return false
-
-  return true
-}

@@ -7,25 +7,27 @@ import { bech32 } from "@scure/base"
 import * as BIP32 from "@scure/bip32"
 import * as BIP39 from "@scure/bip39"
 import { wordlist } from "@scure/bip39/wordlists/english"
-import { Data, Either as E, FastCheck, ParseResult, Schema } from "effect"
+import { Either as E, Equal, FastCheck, Hash, Inspectable, ParseResult, Schema } from "effect"
 
 import * as Bytes from "./Bytes.js"
 import * as Bytes32 from "./Bytes32.js"
 import * as Bytes64 from "./Bytes64.js"
 import * as Ed25519Signature from "./Ed25519Signature.js"
-import * as Function from "./Function.js"
 import * as VKey from "./VKey.js"
 
 /**
- * Error class for PrivateKey related operations.
+ * Error class for PrivateKey operations
  *
  * @since 2.0.0
  * @category errors
  */
-export class PrivateKeyError extends Data.TaggedError("PrivateKeyError")<{
-  message?: string
-  cause?: unknown
-}> {}
+export class PrivateKeyError extends Error {
+  readonly _tag = "PrivateKeyError"
+  constructor(message: string) {
+    super(message)
+    this.name = "PrivateKeyError"
+  }
+}
 
 /**
  * Schema for PrivateKey representing an Ed25519 private key.
@@ -37,7 +39,27 @@ export class PrivateKeyError extends Data.TaggedError("PrivateKeyError")<{
  */
 export class PrivateKey extends Schema.TaggedClass<PrivateKey>()("PrivateKey", {
   key: Schema.Union(Bytes64.BytesFromHex, Bytes32.BytesFromHex)
-}) {}
+}) {
+  toJSON() {
+    return { _tag: "PrivateKey" as const, key: Bytes.toHex(this.key) }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof PrivateKey && Bytes.equals(this.key, that.key)
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.array(Array.from(this.key)))
+  }
+}
 
 export const FromBytes = Schema.transform(
   Schema.typeSchema(Schema.Union(Bytes64.BytesFromHex, Bytes32.BytesFromHex)),
@@ -84,22 +106,6 @@ export const FromBech32 = Schema.transformOrFail(Schema.String, Schema.typeSchem
 })
 
 /**
- * Smart constructor for PrivateKey that validates and applies branding.
- *
- * @since 2.0.0
- * @category constructors
- */
-export const make = (...args: ConstructorParameters<typeof PrivateKey>) => new PrivateKey(...args)
-
-/**
- * Check if two PrivateKey instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: PrivateKey, b: PrivateKey): boolean => Bytes.equals(a.key, b.key)
-
-/**
  * FastCheck arbitrary for generating random PrivateKey instances.
  * Generates 32-byte private keys.
  *
@@ -107,7 +113,7 @@ export const equals = (a: PrivateKey, b: PrivateKey): boolean => Bytes.equals(a.
  * @category arbitrary
  */
 export const arbitrary = FastCheck.uint8Array({ minLength: 32, maxLength: 32 }).map((bytes) =>
-  make({ key: bytes }, { disableValidation: true })
+  new PrivateKey({ key: bytes }, { disableValidation: true })
 )
 
 // ============================================================================
@@ -121,7 +127,7 @@ export const arbitrary = FastCheck.uint8Array({ minLength: 32, maxLength: 32 }).
  * @since 2.0.0
  * @category parsing
  */
-export const fromBytes = Function.makeDecodeSync(FromBytes, PrivateKeyError, "PrivateKey.fromBytes")
+export const fromBytes = Schema.decodeSync(FromBytes)
 
 /**
  * Parse a PrivateKey from a hex string.
@@ -130,7 +136,7 @@ export const fromBytes = Function.makeDecodeSync(FromBytes, PrivateKeyError, "Pr
  * @since 2.0.0
  * @category parsing
  */
-export const fromHex = Function.makeDecodeSync(FromHex, PrivateKeyError, "PrivateKey.fromHex")
+export const fromHex = Schema.decodeSync(FromHex)
 
 /**
  * Parse a PrivateKey from a Bech32 string.
@@ -139,7 +145,7 @@ export const fromHex = Function.makeDecodeSync(FromHex, PrivateKeyError, "Privat
  * @since 2.0.0
  * @category parsing
  */
-export const fromBech32 = Function.makeDecodeSync(FromBech32, PrivateKeyError, "PrivateKey.fromBech32")
+export const fromBech32 = Schema.decodeSync(FromBech32)
 
 // ============================================================================
 // Encoding Functions
@@ -151,7 +157,7 @@ export const fromBech32 = Function.makeDecodeSync(FromBech32, PrivateKeyError, "
  * @since 2.0.0
  * @category encoding
  */
-export const toBytes = Function.makeEncodeSync(FromBytes, PrivateKeyError, "PrivateKey.toBytes")
+export const toBytes = Schema.encodeSync(FromBytes)
 
 /**
  * Convert a PrivateKey to a hex string.
@@ -159,7 +165,7 @@ export const toBytes = Function.makeEncodeSync(FromBytes, PrivateKeyError, "Priv
  * @since 2.0.0
  * @category encoding
  */
-export const toHex = Function.makeEncodeSync(FromHex, PrivateKeyError, "PrivateKey.toHex")
+export const toHex = Schema.encodeSync(FromHex)
 
 /**
  * Convert a PrivateKey to a Bech32 string.
@@ -168,7 +174,7 @@ export const toHex = Function.makeEncodeSync(FromHex, PrivateKeyError, "PrivateK
  * @since 2.0.0
  * @category encoding
  */
-export const toBech32 = Function.makeEncodeSync(FromBech32, PrivateKeyError, "PrivateKey.toBech32")
+export const toBech32 = Schema.encodeSync(FromBech32)
 
 // ============================================================================
 // Factory Functions
@@ -299,46 +305,6 @@ export const CardanoPath = {
  */
 export namespace Either {
   /**
-   * Parse a PrivateKey from raw bytes using Effect error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromBytes = Function.makeDecodeEither(FromBytes, PrivateKeyError)
-
-  /**
-   * Parse a PrivateKey from a hex string using Effect error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromHex = Function.makeDecodeEither(FromHex, PrivateKeyError)
-
-  /**
-   * Parse a PrivateKey from a Bech32 string using Effect error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromBech32 = Function.makeDecodeEither(FromBech32, PrivateKeyError)
-
-  /**
-   * Convert a PrivateKey to raw bytes using Effect error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toBytes = Function.makeEncodeEither(FromBytes, PrivateKeyError)
-
-  /**
-   * Convert a PrivateKey to a Bech32 string using Effect error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toBech32 = Function.makeEncodeEither(FromBech32, PrivateKeyError)
-
-  /**
    * Create a PrivateKey from a mnemonic phrase using Effect error handling.
    *
    * @since 2.0.0
@@ -347,14 +313,16 @@ export namespace Either {
   export const fromMnemonic = (mnemonic: string, password?: string): E.Either<PrivateKey, PrivateKeyError> =>
     E.gen(function* () {
       if (!validateMnemonic(mnemonic)) {
-        return yield* E.left(new PrivateKeyError({ message: "Invalid mnemonic phrase" }))
+        return yield* E.left(new PrivateKeyError("Invalid mnemonic phrase"))
       }
       const seed = BIP39.mnemonicToSeedSync(mnemonic, password || "")
       const hdKey = BIP32.HDKey.fromMasterSeed(seed)
       if (!hdKey.privateKey) {
-        return yield* E.left(new PrivateKeyError({ message: "No private key in HD key" }))
+        return yield* E.left(new PrivateKeyError("No private key in HD key"))
       }
-      return yield* fromBytes(hdKey.privateKey)
+      return yield* E.mapLeft(ParseResult.decodeEither(FromBytes)(hdKey.privateKey), (error) =>
+        new PrivateKeyError(`Failed to decode private key: ${error}`)
+      )
     })
 
   /**
@@ -365,13 +333,17 @@ export namespace Either {
    */
   export const derive = (privateKey: PrivateKey, path: string): E.Either<PrivateKey, PrivateKeyError> =>
     E.gen(function* () {
-      const privateKeyBytes = yield* toBytes(privateKey)
+      const privateKeyBytes = yield* E.mapLeft(ParseResult.encodeEither(FromBytes)(privateKey), (error) =>
+        new PrivateKeyError(`Failed to encode private key: ${error}`)
+      )
       const hdKey = BIP32.HDKey.fromMasterSeed(privateKeyBytes)
       const childKey = hdKey.derive(path)
       if (!childKey.privateKey) {
-        return yield* E.left(new PrivateKeyError({ message: "No private key in derived HD key" }))
+        return yield* E.left(new PrivateKeyError("No private key in derived HD key"))
       }
-      return yield* fromBytes(childKey.privateKey)
+      return yield* E.mapLeft(ParseResult.decodeEither(FromBytes)(childKey.privateKey), (error) =>
+        new PrivateKeyError(`Failed to decode derived private key: ${error}`)
+      )
     })
 
   /**
@@ -385,7 +357,9 @@ export namespace Either {
     message: Uint8Array
   ): E.Either<Ed25519Signature.Ed25519Signature, PrivateKeyError> =>
     E.gen(function* () {
-      const privateKeyBytes = yield* toBytes(privateKey)
+      const privateKeyBytes = yield* E.mapLeft(ParseResult.encodeEither(FromBytes)(privateKey), (error) =>
+        new PrivateKeyError(`Failed to encode private key: ${error}`)
+      )
 
       if (privateKeyBytes.length === 64) {
         // CML-compatible extended signing algorithm
@@ -419,11 +393,11 @@ export namespace Either {
         // Encode s as little-endian 32 bytes
         const sBytes = numberToBytesLE(s, 32)
         const signature = new Uint8Array([...r, ...sBytes])
-        return Ed25519Signature.make({ bytes: signature })
+        return new Ed25519Signature.Ed25519Signature({ bytes: signature })
       }
 
       // Standard 32-byte Ed25519 signing
       const signature = ed25519.sign(message, privateKeyBytes)
-      return Ed25519Signature.make({ bytes: signature })
+      return new Ed25519Signature.Ed25519Signature({ bytes: signature })
     })
 }

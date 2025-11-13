@@ -1,27 +1,15 @@
-import { Data, Effect as Eff, FastCheck, ParseResult, Schema } from "effect"
+import { Effect as Eff, Equal, FastCheck, Hash, Inspectable, ParseResult, Schema } from "effect"
 
 import * as Bootstrap from "./BootstrapWitness.js"
 import * as CBOR from "./CBOR.js"
 import * as PlutusData from "./Data.js"
 import * as Ed25519Signature from "./Ed25519Signature.js"
-import * as Function from "./Function.js"
 import * as NativeScripts from "./NativeScripts.js"
 import * as PlutusV1 from "./PlutusV1.js"
 import * as PlutusV2 from "./PlutusV2.js"
 import * as PlutusV3 from "./PlutusV3.js"
 import * as Redeemer from "./Redeemer.js"
 import * as VKey from "./VKey.js"
-
-/**
- * Error class for TransactionWitnessSet related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class TransactionWitnessSetError extends Data.TaggedError("TransactionWitnessSetError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * VKey witness for Ed25519 signatures.
@@ -34,7 +22,47 @@ export class TransactionWitnessSetError extends Data.TaggedError("TransactionWit
 export class VKeyWitness extends Schema.Class<VKeyWitness>("VKeyWitness")({
   vkey: VKey.VKey,
   signature: Ed25519Signature.Ed25519Signature
-}) {}
+}) {
+  /**
+   * @since 2.0.0
+   * @category json
+   */
+  toJSON() {
+    return { _tag: "VKeyWitness" as const, vkey: this.vkey, signature: this.signature }
+  }
+
+  /**
+   * @since 2.0.0
+   * @category string
+   */
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  /**
+   * @since 2.0.0
+   * @category inspect
+   */
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  /**
+   * @since 2.0.0
+   * @category equality
+   */
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof VKeyWitness && Equal.equals(this.vkey, that.vkey) && Equal.equals(this.signature, that.signature)
+  }
+
+  /**
+   * @since 2.0.0
+   * @category hash
+   */
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.combine(Hash.hash(this.vkey))(Hash.hash(this.signature)))
+  }
+}
 
 /**
  * Bootstrap witness for Byron-era addresses.
@@ -101,7 +129,82 @@ export class TransactionWitnessSet extends Schema.Class<TransactionWitnessSet>("
   redeemers: Schema.optional(Schema.Array(Redeemer.Redeemer)),
   plutusV2Scripts: Schema.optional(Schema.Array(PlutusV2.PlutusV2)),
   plutusV3Scripts: Schema.optional(Schema.Array(PlutusV3.PlutusV3))
-}) {}
+}) {
+  /**
+   * @since 2.0.0
+   * @category json
+   */
+  toJSON() {
+    return {
+      _tag: "TransactionWitnessSet" as const,
+      vkeyWitnesses: this.vkeyWitnesses,
+      nativeScripts: this.nativeScripts,
+      bootstrapWitnesses: this.bootstrapWitnesses,
+      plutusV1Scripts: this.plutusV1Scripts,
+      plutusData: this.plutusData,
+      redeemers: this.redeemers,
+      plutusV2Scripts: this.plutusV2Scripts,
+      plutusV3Scripts: this.plutusV3Scripts
+    }
+  }
+
+  /**
+   * @since 2.0.0
+   * @category string
+   */
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  /**
+   * @since 2.0.0
+   * @category inspect
+   */
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  /**
+   * @since 2.0.0
+   * @category equality
+   */
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof TransactionWitnessSet &&
+      Equal.equals(this.vkeyWitnesses, that.vkeyWitnesses) &&
+      Equal.equals(this.nativeScripts, that.nativeScripts) &&
+      Equal.equals(this.bootstrapWitnesses, that.bootstrapWitnesses) &&
+      Equal.equals(this.plutusV1Scripts, that.plutusV1Scripts) &&
+      Equal.equals(this.plutusData, that.plutusData) &&
+      Equal.equals(this.redeemers, that.redeemers) &&
+      Equal.equals(this.plutusV2Scripts, that.plutusV2Scripts) &&
+      Equal.equals(this.plutusV3Scripts, that.plutusV3Scripts)
+    )
+  }
+
+  /**
+   * @since 2.0.0
+   * @category hash
+   */
+  [Hash.symbol](): number {
+    return Hash.cached(
+      this,
+      Hash.combine(
+        Hash.combine(
+          Hash.combine(
+            Hash.combine(
+              Hash.combine(
+                Hash.combine(Hash.combine(Hash.hash(this.vkeyWitnesses))(Hash.hash(this.nativeScripts)))(
+                  Hash.hash(this.bootstrapWitnesses)
+                )
+              )(Hash.hash(this.plutusV1Scripts))
+            )(Hash.hash(this.plutusData))
+          )(Hash.hash(this.redeemers))
+        )(Hash.hash(this.plutusV2Scripts))
+      )(Hash.hash(this.plutusV3Scripts))
+    )
+  }
+}
 
 // Note: Individual tuple encodings are handled inline during encode/decode.
 
@@ -378,38 +481,6 @@ export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTION
   })
 
 /**
- * Smart constructor for TransactionWitnessSet that validates and applies branding.
- *
- * @since 2.0.0
- * @category constructors
- */
-// Wrap static make to preserve `this` binding from Schema.Class
-
-export const make = (...args: ConstructorParameters<typeof TransactionWitnessSet>) =>
-  TransactionWitnessSet.make(...args)
-
-/**
- * Check if two TransactionWitnessSet instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: TransactionWitnessSet, b: TransactionWitnessSet): boolean => {
-  // Use CBOR byte comparison to avoid JSON.stringify and handle all cases correctly
-  try {
-    const aBytes = toCBORBytes(a)
-    const bBytes = toCBORBytes(b)
-    if (aBytes.length !== bBytes.length) return false
-    for (let i = 0; i < aBytes.length; i++) {
-      if (aBytes[i] !== bBytes[i]) return false
-    }
-    return true
-  } catch {
-    return false
-  }
-}
-
-/**
  * FastCheck arbitrary for generating random TransactionWitnessSet instances.
  *
  * @since 2.0.0
@@ -472,11 +543,8 @@ export const arbitrary: FastCheck.Arbitrary<TransactionWitnessSet> = FastCheck.r
  * @since 2.0.0
  * @category parsing
  */
-export const fromCBORBytes = Function.makeCBORDecodeSync(
-  FromCDDL,
-  TransactionWitnessSetError,
-  "TransactionWitnessSet.fromCBORBytes"
-)
+export const fromCBORBytes = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.decodeSync(FromCBORBytes(options))(bytes)
 
 /**
  * Parse a TransactionWitnessSet from CBOR hex string.
@@ -484,11 +552,8 @@ export const fromCBORBytes = Function.makeCBORDecodeSync(
  * @since 2.0.0
  * @category parsing
  */
-export const fromCBORHex = Function.makeCBORDecodeHexSync(
-  FromCDDL,
-  TransactionWitnessSetError,
-  "TransactionWitnessSet.fromCBORHex"
-)
+export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.decodeSync(FromCBORHex(options))(hex)
 
 // ============================================================================
 // Encoding Functions
@@ -500,11 +565,8 @@ export const fromCBORHex = Function.makeCBORDecodeHexSync(
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORBytes = Function.makeCBOREncodeSync(
-  FromCDDL,
-  TransactionWitnessSetError,
-  "TransactionWitnessSet.toCBORBytes"
-)
+export const toCBORBytes = (data: TransactionWitnessSet, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.encodeSync(FromCBORBytes(options))(data)
 
 /**
  * Convert a TransactionWitnessSet to CBOR hex string.
@@ -512,11 +574,8 @@ export const toCBORBytes = Function.makeCBOREncodeSync(
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORHex = Function.makeCBOREncodeHexSync(
-  FromCDDL,
-  TransactionWitnessSetError,
-  "TransactionWitnessSet.toCBORHex"
-)
+export const toCBORHex = (data: TransactionWitnessSet, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.encodeSync(FromCBORHex(options))(data)
 
 // ============================================================================
 // Factory Functions
@@ -547,47 +606,3 @@ export const fromVKeyWitnesses = (witnesses: Array<VKeyWitness>): TransactionWit
  */
 export const fromNativeScripts = (scripts: Array<NativeScripts.NativeScript>): TransactionWitnessSet =>
   TransactionWitnessSet.make({ nativeScripts: scripts })
-
-// ============================================================================
-// Effect Namespace - Effect-based Error Handling
-// ============================================================================
-
-/**
- * Effect-based error handling variants for functions that can fail.
- *
- * @since 2.0.0
- * @category effect
- */
-export namespace Either {
-  /**
-   * Parse a TransactionWitnessSet from CBOR bytes with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category effect
-   */
-  export const fromCBORBytes = Function.makeCBORDecodeEither(FromCDDL, TransactionWitnessSetError)
-
-  /**
-   * Parse a TransactionWitnessSet from CBOR hex string with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category effect
-   */
-  export const fromCBORHex = Function.makeCBORDecodeHexEither(FromCDDL, TransactionWitnessSetError)
-
-  /**
-   * Convert a TransactionWitnessSet to CBOR bytes with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category effect
-   */
-  export const toCBORBytes = Function.makeCBOREncodeEither(FromCDDL, TransactionWitnessSetError)
-
-  /**
-   * Convert a TransactionWitnessSet to CBOR hex string with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category effect
-   */
-  export const toCBORHex = Function.makeCBOREncodeHexEither(FromCDDL, TransactionWitnessSetError)
-}

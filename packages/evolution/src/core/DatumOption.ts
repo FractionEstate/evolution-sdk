@@ -1,21 +1,9 @@
-import { Data, Either as E, FastCheck, ParseResult, Schema } from "effect"
+import { Either as E, Equal, FastCheck, Hash, Inspectable, ParseResult, Schema } from "effect"
 
 import * as Bytes from "./Bytes.js"
 import * as Bytes32 from "./Bytes32.js"
 import * as CBOR from "./CBOR.js"
 import * as PlutusData from "./Data.js"
-import * as Function from "./Function.js"
-
-/**
- * Error class for DatumOption related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class DatumOptionError extends Data.TaggedError("DatumOptionError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Schema for DatumHash variant of DatumOption.
@@ -26,7 +14,47 @@ export class DatumOptionError extends Data.TaggedError("DatumOptionError")<{
  */
 export class DatumHash extends Schema.TaggedClass<DatumHash>()("DatumHash", {
   hash: Bytes32.BytesFromHex
-}) {}
+}) {
+  /**
+   * @since 2.0.0
+   * @category json
+   */
+  toJSON() {
+    return { _tag: "DatumHash" as const, hash: this.hash }
+  }
+
+  /**
+   * @since 2.0.0
+   * @category string
+   */
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  /**
+   * @since 2.0.0
+   * @category inspect
+   */
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  /**
+   * @since 2.0.0
+   * @category equality
+   */
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof DatumHash && Equal.equals(this.hash, that.hash)
+  }
+
+  /**
+   * @since 2.0.0
+   * @category hash
+   */
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.hash(this.hash))
+  }
+}
 
 export const DatumHashFromBytes = Schema.transform(
   Schema.typeSchema(Bytes32.BytesFromHex),
@@ -50,12 +78,44 @@ export const DatumHashFromBytes = Schema.transform(
 export class InlineDatum extends Schema.TaggedClass<InlineDatum>()("InlineDatum", {
   data: PlutusData.DataSchema
 }) {
-  toString(): string {
-    return `InlineDatum { data: ${this.data} }`
+  /**
+   * @since 2.0.0
+   * @category json
+   */
+  toJSON() {
+    return { _tag: "InlineDatum" as const, data: this.data }
   }
 
-  [Symbol.for("nodejs.util.inspect.custom")](): string {
-    return this.toString()
+  /**
+   * @since 2.0.0
+   * @category string
+   */
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  /**
+   * @since 2.0.0
+   * @category inspect
+   */
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  /**
+   * @since 2.0.0
+   * @category equality
+   */
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof InlineDatum && Equal.equals(this.data, that.data)
+  }
+
+  /**
+   * @since 2.0.0
+   * @category hash
+   */
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.hash(this.data))
   }
 }
 
@@ -85,22 +145,6 @@ export const DatumOptionSchema = Schema.Union(DatumHash, InlineDatum).annotation
 export type DatumOption = typeof DatumOptionSchema.Type
 
 /**
- * Create a DatumOption with a datum hash.
- *
- * @since 2.0.0
- * @category constructors
- */
-export const makeDatumHash = (...args: ConstructorParameters<typeof DatumHash>) => new DatumHash(...args)
-
-/**
- * Create a DatumOption with inline data.
- *
- * @since 2.0.0
- * @category constructors
- */
-export const makeInlineDatum = (...args: ConstructorParameters<typeof InlineDatum>) => new InlineDatum(...args)
-
-/**
  * Check if a DatumOption is a datum hash.
  *
  * @since 2.0.0
@@ -115,23 +159,6 @@ export const isDatumHash = Schema.is(DatumHash)
  * @category predicates
  */
 export const isInlineDatum = Schema.is(InlineDatum)
-
-/**
- * Check if two DatumOption instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: DatumOption, b: DatumOption): boolean => {
-  if (a._tag !== b._tag) return false
-  if (a._tag === "DatumHash" && b._tag === "DatumHash") {
-    return Bytes32.equals(a.hash, b.hash)
-  }
-  if (a._tag === "InlineDatum" && b._tag === "InlineDatum") {
-    return PlutusData.equals(a.data, b.data)
-  }
-  return false
-}
 
 export const datumHashArbitrary = FastCheck.uint8Array({ minLength: 32, maxLength: 32 }).map(
   (hash) => new DatumHash({ hash })
@@ -238,73 +265,37 @@ export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTION
   })
 
 /**
- * Either namespace for DatumOption operations that can fail
- *
- * @since 2.0.0
- * @category either
- */
-export namespace Either {
-  /**
-   * Parse a DatumOption from CBOR bytes using Either error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromCBORBytes = Function.makeCBORDecodeEither(FromCDDL, DatumOptionError)
-
-  /**
-   * Parse a DatumOption from CBOR hex using Either error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromCBORHex = Function.makeCBORDecodeHexEither(FromCDDL, DatumOptionError)
-
-  /**
-   * Convert a DatumOption to CBOR bytes using Either error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toCBORBytes = Function.makeCBOREncodeEither(FromCDDL, DatumOptionError)
-
-  /**
-   * Convert a DatumOption to CBOR hex using Either error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toCBORHex = Function.makeCBOREncodeHexEither(FromCDDL, DatumOptionError)
-}
-
-/**
- * Convert DatumOption to CBOR bytes (unsafe).
+ * Convert DatumOption to CBOR bytes.
  *
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORBytes = Function.makeCBOREncodeSync(FromCDDL, DatumOptionError, "DatumOption.toCBORBytes")
+export const toCBORBytes = (data: DatumOption, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.encodeSync(FromCBORBytes(options))(data)
 
 /**
- * Convert DatumOption to CBOR hex (unsafe).
+ * Convert DatumOption to CBOR hex.
  *
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORHex = Function.makeCBOREncodeHexSync(FromCDDL, DatumOptionError, "DatumOption.toCBORHex")
+export const toCBORHex = (data: DatumOption, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.encodeSync(FromCBORHex(options))(data)
 
 /**
- * Convert CBOR bytes to DatumOption (unsafe)
+ * Convert CBOR bytes to DatumOption.
  *
  * @since 2.0.0
  * @category conversion
  */
-export const fromCBORBytes = Function.makeCBORDecodeSync(FromCDDL, DatumOptionError, "DatumOption.fromCBORBytes")
+export const fromCBORBytes = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.decodeSync(FromCBORBytes(options))(bytes)
 
 /**
- * Convert CBOR hex string to DatumOption (unsafe)
+ * Convert CBOR hex string to DatumOption.
  *
  * @since 2.0.0
  * @category conversion
  */
-export const fromCBORHex = Function.makeCBORDecodeHexSync(FromCDDL, DatumOptionError, "DatumOption.fromCBORHex")
+export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.decodeSync(FromCBORHex(options))(hex)

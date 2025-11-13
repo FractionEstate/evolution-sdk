@@ -1,21 +1,9 @@
-import { Data, Effect, FastCheck, Option, ParseResult, Schema } from "effect"
+import { Effect, Equal, FastCheck, Hash, Inspectable, ParseResult, Schema } from "effect"
 
 import * as Bytes from "./Bytes.js"
 import * as CBOR from "./CBOR.js"
 import * as DnsName from "./DnsName.js"
-import * as Function from "./Function.js"
 import * as Port from "./Port.js"
-
-/**
- * Error class for SingleHostName related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class SingleHostNameError extends Data.TaggedError("SingleHostNameError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Schema for SingleHostName representing a network host with DNS name.
@@ -27,9 +15,68 @@ export class SingleHostNameError extends Data.TaggedError("SingleHostNameError")
  * @category model
  */
 export class SingleHostName extends Schema.TaggedClass<SingleHostName>()("SingleHostName", {
-  port: Schema.OptionFromNullOr(Port.PortSchema),
+  port: Schema.optional(Port.PortSchema),
   dnsName: DnsName.DnsName
 }) {
+  /**
+   * Convert to JSON-serializable format.
+   * Relies on Option's built-in toJSON() for port serialization.
+   * Converts bigint port values to strings for JSON compatibility.
+   *
+   * @since 2.0.0
+   * @category serialization
+   */
+  toJSON() {
+    return {
+      _tag: "SingleHostName" as const,
+      port: this.port !== undefined ? String(this.port) : null,
+      dnsName: this.dnsName
+    }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof SingleHostName &&
+      this.port === that.port &&
+      Equal.equals(this.dnsName, that.dnsName)
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(
+      this,
+      Hash.combine(Hash.hash(this.port))(Hash.hash(this.dnsName))
+    )
+  }
+
+  /**
+   * Convert to CBOR bytes.
+   *
+   * @since 2.0.0
+   * @category serialization
+   */
+  toCBORBytes(): Uint8Array {
+    return toCBORBytes(this)
+  }
+
+  /**
+   * Convert to CBOR hex string.
+   *
+   * @since 2.0.0
+   * @category serialization
+   */
+  toCBORHex(): string {
+    return toCBORHex(this)
+  }
+
   [Symbol.for("nodejs.util.inspect.custom")]() {
     return {
       _tag: "SingleHostName",
@@ -47,7 +94,7 @@ export class SingleHostName extends Schema.TaggedClass<SingleHostName>()("Single
  */
 export const withPort = (port: Port.Port, dnsName: DnsName.DnsName): SingleHostName =>
   new SingleHostName({
-    port: Option.some(port),
+    port,
     dnsName
   })
 
@@ -59,7 +106,6 @@ export const withPort = (port: Port.Port, dnsName: DnsName.DnsName): SingleHostN
  */
 export const withoutPort = (dnsName: DnsName.DnsName): SingleHostName =>
   new SingleHostName({
-    port: Option.none(),
     dnsName
   })
 
@@ -69,7 +115,7 @@ export const withoutPort = (dnsName: DnsName.DnsName): SingleHostName =>
  * @since 2.0.0
  * @category predicates
  */
-export const hasPort = (hostName: SingleHostName): boolean => Option.isSome(hostName.port)
+export const hasPort = (hostName: SingleHostName): boolean => hostName.port !== undefined
 
 /**
  * Get the DNS name from a SingleHostName.
@@ -85,16 +131,7 @@ export const getDnsName = (hostName: SingleHostName): DnsName.DnsName => hostNam
  * @since 2.0.0
  * @category transformation
  */
-export const getPort = (hostName: SingleHostName): Option.Option<Port.Port> => hostName.port
-
-/**
- * Check if two SingleHostName instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: SingleHostName, b: SingleHostName): boolean =>
-  Option.getEquivalence(Port.equals)(a.port, b.port) && DnsName.equals(a.dnsName, b.dnsName)
+export const getPort = (hostName: SingleHostName): Port.Port | undefined => hostName.port
 
 /**
  * Generate a random SingleHostName.
@@ -108,7 +145,7 @@ export const generator = FastCheck.record({
 }).map(
   ({ dnsName, port }) =>
     new SingleHostName({
-      port: port ? Option.some(port) : Option.none(),
+      port: port === null ? undefined : port,
       dnsName
     })
 )
@@ -140,14 +177,14 @@ export const FromCDDL = Schema.transformOrFail(
     strict: true,
     encode: (toA) =>
       Effect.gen(function* () {
-        const port = Option.isSome(toA.port) ? BigInt(toA.port.value) : null
+        const port = toA.port !== undefined ? toA.port : null
         const dnsName = yield* ParseResult.encode(DnsName.DnsName)(toA.dnsName)
 
         return yield* Effect.succeed([1n, port, dnsName] as const)
       }),
     decode: ([, portValue, dnsNameValue]) =>
       Effect.gen(function* () {
-        const port = portValue === null || portValue === undefined ? Option.none() : Option.some(Port.make(portValue))
+        const port = portValue === null || portValue === undefined ? undefined : portValue
 
         const dnsName = yield* ParseResult.decode(DnsName.DnsName)(dnsNameValue)
 
@@ -190,7 +227,8 @@ export const FromHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =
  * @since 2.0.0
  * @category parsing
  */
-export const fromCBORBytes = Function.makeCBORDecodeSync(FromCDDL, SingleHostNameError, "SingleHostName.fromCBORBytes")
+export const fromCBORBytes = (bytes: Uint8Array, options?: CBOR.CodecOptions) =>
+  Schema.decodeSync(FromBytes(options))(bytes)
 
 /**
  * Parse a SingleHostName from CBOR hex string.
@@ -198,7 +236,7 @@ export const fromCBORBytes = Function.makeCBORDecodeSync(FromCDDL, SingleHostNam
  * @since 2.0.0
  * @category parsing
  */
-export const fromCBORHex = Function.makeCBORDecodeHexSync(FromCDDL, SingleHostNameError, "SingleHostName.fromCBORHex")
+export const fromCBORHex = (hex: string, options?: CBOR.CodecOptions) => Schema.decodeSync(FromHex(options))(hex)
 
 // ============================================================================
 // Encoding Functions
@@ -210,7 +248,8 @@ export const fromCBORHex = Function.makeCBORDecodeHexSync(FromCDDL, SingleHostNa
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORBytes = Function.makeCBOREncodeSync(FromCDDL, SingleHostNameError, "SingleHostName.toCBORBytes")
+export const toCBORBytes = (data: SingleHostName, options?: CBOR.CodecOptions) =>
+  Schema.encodeSync(FromBytes(options))(data)
 
 /**
  * Convert a SingleHostName to CBOR hex string.
@@ -218,48 +257,5 @@ export const toCBORBytes = Function.makeCBOREncodeSync(FromCDDL, SingleHostNameE
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORHex = Function.makeCBOREncodeHexSync(FromCDDL, SingleHostNameError, "SingleHostName.toCBORHex")
-
-// ============================================================================
-// Either Namespace - Either-based Error Handling
-// ============================================================================
-
-/**
- * Either-based error handling variants for functions that can fail.
- *
- * @since 2.0.0
- * @category either
- */
-export namespace Either {
-  /**
-   * Parse a SingleHostName from CBOR bytes.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromCBORBytes = Function.makeCBORDecodeEither(FromCDDL, SingleHostNameError)
-
-  /**
-   * Parse a SingleHostName from CBOR hex string.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromCBORHex = Function.makeCBORDecodeHexEither(FromCDDL, SingleHostNameError)
-
-  /**
-   * Convert a SingleHostName to CBOR bytes.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toCBORBytes = Function.makeCBOREncodeEither(FromCDDL, SingleHostNameError)
-
-  /**
-   * Convert a SingleHostName to CBOR hex string.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toCBORHex = Function.makeCBOREncodeHexEither(FromCDDL, SingleHostNameError)
-}
+export const toCBORHex = (data: SingleHostName, options?: CBOR.CodecOptions) =>
+  Schema.encodeSync(FromHex(options))(data)

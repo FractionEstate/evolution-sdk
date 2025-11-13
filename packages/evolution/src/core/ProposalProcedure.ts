@@ -1,23 +1,11 @@
-import { Data, Effect as Eff, ParseResult, Schema } from "effect"
+import { Effect as Eff, Equal, Hash, Inspectable, ParseResult, Schema } from "effect"
 
 import * as Anchor from "./Anchor.js"
 import * as Bytes from "./Bytes.js"
 import * as CBOR from "./CBOR.js"
 import * as Coin from "./Coin.js"
-import * as Function from "./Function.js"
 import * as GovernanceAction from "./GovernanceAction.js"
 import * as RewardAccount from "./RewardAccount.js"
-
-/**
- * Error class for ProposalProcedure related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class ProposalProcedureError extends Data.TaggedError("ProposalProcedureError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Schema for a single proposal procedure based on Conway CDDL specification.
@@ -41,7 +29,74 @@ export class ProposalProcedure extends Schema.Class<ProposalProcedure>("Proposal
   rewardAccount: RewardAccount.FromBech32,
   governanceAction: GovernanceAction.GovernanceAction,
   anchor: Schema.NullOr(Anchor.Anchor)
-}) {}
+}) {
+  /**
+   * Convert to JSON representation.
+   *
+   * @since 2.0.0
+   * @category conversions
+   */
+  toJSON() {
+    return {
+      _tag: "ProposalProcedure",
+      deposit: this.deposit,
+      rewardAccount: this.rewardAccount,
+      governanceAction: this.governanceAction,
+      anchor: this.anchor
+    }
+  }
+
+  /**
+   * Convert to string representation.
+   *
+   * @since 2.0.0
+   * @category conversions
+   */
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  /**
+   * Custom inspect for Node.js REPL.
+   *
+   * @since 2.0.0
+   * @category conversions
+   */
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  /**
+   * Structural equality check.
+   *
+   * @since 2.0.0
+   * @category equality
+   */
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof ProposalProcedure &&
+      Equal.equals(this.deposit, that.deposit) &&
+      Equal.equals(this.rewardAccount, that.rewardAccount) &&
+      Equal.equals(this.governanceAction, that.governanceAction) &&
+      Equal.equals(this.anchor, that.anchor)
+    )
+  }
+
+  /**
+   * Hash code generation.
+   *
+   * @since 2.0.0
+   * @category hashing
+   */
+  [Hash.symbol](): number {
+    return Hash.cached(
+      this,
+      Hash.combine(Hash.combine(Hash.combine(Hash.hash(this.deposit))(Hash.hash(this.rewardAccount)))(Hash.hash(this.governanceAction)))(
+        Hash.hash(this.anchor)
+      )
+    )
+  }
+}
 
 /**
  * CDDL schema for ProposalProcedure tuple structure.
@@ -75,7 +130,7 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Pro
   decode: (procedureTuple) =>
     Eff.gen(function* () {
       const [depositBigInt, rewardAccountBytes, governanceActionCDDL, anchorCDDL] = procedureTuple as any
-      const deposit = Coin.make(depositBigInt)
+      const deposit = yield* ParseResult.decode(Coin.Coin)(depositBigInt)
       const rewardAccount = yield* ParseResult.decode(RewardAccount.FromBytes)(rewardAccountBytes)
       const governanceAction = yield* ParseResult.decode(GovernanceAction.FromCDDL)(governanceActionCDDL)
       const anchor = anchorCDDL ? yield* ParseResult.decode(Anchor.FromCDDL)(anchorCDDL) : null
@@ -121,28 +176,6 @@ export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTION
     description: "Transforms CBOR hex string to ProposalProcedure"
   })
 
-/**
- * Check if two ProposalProcedure instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: ProposalProcedure, b: ProposalProcedure): boolean =>
-  a.deposit === b.deposit &&
-  RewardAccount.equals(a.rewardAccount, b.rewardAccount) &&
-  GovernanceAction.equals(a.governanceAction, b.governanceAction) &&
-  ((a.anchor === null && b.anchor === null) ||
-    (a.anchor !== null && b.anchor !== null && Anchor.equals(a.anchor, b.anchor)))
-
-/**
- * Create a single ProposalProcedure.
- *
- * @since 2.0.0
- * @category constructors
- */
-
-export const make = (...args: ConstructorParameters<typeof ProposalProcedure>) => new ProposalProcedure(...args)
-
 // ============================================================================
 // Root Functions
 // ============================================================================
@@ -153,12 +186,8 @@ export const make = (...args: ConstructorParameters<typeof ProposalProcedure>) =
  * @since 2.0.0
  * @category parsing
  */
-export const fromCBORBytes = Function.makeCBORDecodeSync(
-  FromCDDL,
-  ProposalProcedureError,
-  "ProposalProcedure.fromCBORBytes",
-  CBOR.CML_DEFAULT_OPTIONS
-)
+export const fromCBORBytes = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.decodeSync(FromCBORBytes(options))(bytes)
 
 /**
  * Parse individual ProposalProcedure from CBOR hex string.
@@ -166,12 +195,8 @@ export const fromCBORBytes = Function.makeCBORDecodeSync(
  * @since 2.0.0
  * @category parsing
  */
-export const fromCBORHex = Function.makeCBORDecodeHexSync(
-  FromCDDL,
-  ProposalProcedureError,
-  "ProposalProcedure.fromCBORHex",
-  CBOR.CML_DEFAULT_OPTIONS
-)
+export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.decodeSync(FromCBORHex(options))(hex)
 
 /**
  * Encode individual ProposalProcedure to CBOR bytes.
@@ -179,12 +204,8 @@ export const fromCBORHex = Function.makeCBORDecodeHexSync(
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORBytes = Function.makeCBOREncodeSync(
-  FromCDDL,
-  ProposalProcedureError,
-  "ProposalProcedure.toCBORBytes",
-  CBOR.CML_DEFAULT_OPTIONS
-)
+export const toCBORBytes = (procedure: ProposalProcedure, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.encodeSync(FromCBORBytes(options))(procedure)
 
 /**
  * Encode individual ProposalProcedure to CBOR hex string.
@@ -192,57 +213,5 @@ export const toCBORBytes = Function.makeCBOREncodeSync(
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORHex = Function.makeCBOREncodeHexSync(
-  FromCDDL,
-  ProposalProcedureError,
-  "ProposalProcedure.toCBORHex",
-  CBOR.CML_DEFAULT_OPTIONS
-)
-
-// ============================================================================
-// Effect Namespace
-// ============================================================================
-
-/**
- * Effect-based error handling variants for functions that can fail.
- *
- * @since 2.0.0
- * @category effect
- */
-export namespace Either {
-  /**
-   * Parse ProposalProcedure from CBOR bytes with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromCBORBytes = Function.makeCBORDecodeEither(FromCDDL, ProposalProcedureError, CBOR.CML_DEFAULT_OPTIONS)
-
-  /**
-   * Parse ProposalProcedure from CBOR hex string with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromCBORHex = Function.makeCBORDecodeHexEither(
-    FromCDDL,
-    ProposalProcedureError,
-    CBOR.CML_DEFAULT_OPTIONS
-  )
-
-  /**
-   * Encode ProposalProcedure to CBOR bytes with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toCBORBytes = Function.makeCBOREncodeEither(FromCDDL, ProposalProcedureError, CBOR.CML_DEFAULT_OPTIONS)
-
-  /**
-   * Encode ProposalProcedure to CBOR hex string with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toCBORHex = Function.makeCBOREncodeHexEither(FromCDDL, ProposalProcedureError, CBOR.CML_DEFAULT_OPTIONS)
-}
+export const toCBORHex = (procedure: ProposalProcedure, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.encodeSync(FromCBORHex(options))(procedure)

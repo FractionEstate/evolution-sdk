@@ -1,18 +1,7 @@
-import { Data, FastCheck, Schema } from "effect"
+import { Equal, FastCheck, Hash, Inspectable, Schema } from "effect"
 
+import * as Bytes from "./Bytes.js"
 import * as Bytes32 from "./Bytes32.js"
-import * as Function from "./Function.js"
-
-/**
- * Error class for TransactionHash related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class TransactionHashError extends Data.TaggedError("TransactionHashError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Schema for TransactionHash.
@@ -24,12 +13,27 @@ export class TransactionHashError extends Data.TaggedError("TransactionHashError
 export class TransactionHash extends Schema.TaggedClass<TransactionHash>()("TransactionHash", {
   hash: Bytes32.BytesFromHex
 }) {
-  toString(): string {
-    return `TransactionHash { hash: ${this.hash} }`
+  toJSON() {
+    return {
+      _tag: "TransactionHash" as const,
+      hash: Bytes.toHex(this.hash)
+    }
   }
 
-  [Symbol.for("nodejs.util.inspect.custom")](): string {
-    return this.toString()
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof TransactionHash && Bytes.equals(this.hash, that.hash)
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.array(Array.from(this.hash)))
   }
 }
 
@@ -53,22 +57,6 @@ export const FromHex = Schema.compose(
 ).annotations({
   identifier: "TransactionHash.FromHex"
 })
-
-/**
- * Smart constructor for TransactionHash that validates and applies branding.
- *
- * @since 2.0.0
- * @category constructors
- */
-export const make = (...args: ConstructorParameters<typeof TransactionHash>) => new TransactionHash(...args)
-
-/**
- * Check if two TransactionHash instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: TransactionHash, b: TransactionHash): boolean => Bytes32.equals(a.hash, b.hash)
 
 /**
  * Check if the given value is a valid TransactionHash
@@ -99,7 +87,7 @@ export const arbitrary = FastCheck.uint8Array({
  * @since 2.0.0
  * @category parsing
  */
-export const fromBytes = Function.makeDecodeSync(FromBytes, TransactionHashError, "TransactionHash.fromBytes")
+export const fromBytes = Schema.decodeSync(FromBytes)
 
 /**
  * Parse TransactionHash from hex string.
@@ -107,7 +95,7 @@ export const fromBytes = Function.makeDecodeSync(FromBytes, TransactionHashError
  * @since 2.0.0
  * @category parsing
  */
-export const fromHex = Function.makeDecodeSync(FromHex, TransactionHashError, "TransactionHash.fromHex")
+export const fromHex = Schema.decodeSync(FromHex)
 
 /**
  * Encode TransactionHash to bytes.
@@ -115,7 +103,7 @@ export const fromHex = Function.makeDecodeSync(FromHex, TransactionHashError, "T
  * @since 2.0.0
  * @category encoding
  */
-export const toBytes = Function.makeEncodeSync(FromBytes, TransactionHashError, "TransactionHash.toBytes")
+export const toBytes = Schema.encodeSync(FromBytes)
 
 /**
  * Encode TransactionHash to hex string.
@@ -123,48 +111,4 @@ export const toBytes = Function.makeEncodeSync(FromBytes, TransactionHashError, 
  * @since 2.0.0
  * @category encoding
  */
-export const toHex = Function.makeEncodeSync(FromHex, TransactionHashError, "TransactionHash.toHex")
-
-// ============================================================================
-// Effect Namespace
-// ============================================================================
-
-/**
- * Effect-based error handling variants for functions that can fail.
- *
- * @since 2.0.0
- * @category effect
- */
-export namespace Either {
-  /**
-   * Parse TransactionHash from bytes with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromBytes = Function.makeDecodeEither(FromBytes, TransactionHashError)
-
-  /**
-   * Parse TransactionHash from hex string with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromHex = Function.makeDecodeEither(FromHex, TransactionHashError)
-
-  /**
-   * Encode TransactionHash to bytes with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toBytes = Function.makeEncodeEither(FromBytes, TransactionHashError)
-
-  /**
-   * Encode TransactionHash to hex string with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toHex = Function.makeEncodeEither(FromHex, TransactionHashError)
-}
+export const toHex = Schema.encodeSync(FromHex)

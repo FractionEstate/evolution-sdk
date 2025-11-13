@@ -1,23 +1,11 @@
 import { mod } from "@noble/curves/abstract/modular.js"
 import { ed25519 } from "@noble/curves/ed25519.js"
 import { bytesToNumberLE } from "@noble/curves/utils.js"
-import { Data, FastCheck, Schema } from "effect"
+import { Equal, FastCheck, Hash, Inspectable, Schema } from "effect"
 
 import * as Bytes from "./Bytes.js"
 import * as Bytes32 from "./Bytes32.js"
-import * as Function from "./Function.js"
 import type * as PrivateKey from "./PrivateKey.js"
-
-/**
- * Error class for VKey related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class VKeyError extends Data.TaggedError("VKeyError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Schema for VKey representing a verification key.
@@ -29,7 +17,27 @@ export class VKeyError extends Data.TaggedError("VKeyError")<{
  */
 export class VKey extends Schema.TaggedClass<VKey>()("VKey", {
   bytes: Bytes32.BytesFromHex
-}) {}
+}) {
+  toJSON() {
+    return { _tag: "VKey" as const, bytes: Bytes.toHex(this.bytes) }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof VKey && Bytes.equals(this.bytes, that.bytes)
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.array(Array.from(this.bytes)))
+  }
+}
 
 export const FromBytes = Schema.transform(Schema.typeSchema(Bytes32.BytesFromHex), Schema.typeSchema(VKey), {
   strict: true,
@@ -45,22 +53,6 @@ export const FromHex = Schema.compose(
 ).annotations({
   identifier: "VKey.FromHex"
 })
-
-/**
- * Smart constructor for VKey that validates and applies branding.
- *
- * @since 2.0.0
- * @category constructors
- */
-export const make = (...args: ConstructorParameters<typeof VKey>) => new VKey(...args)
-
-/**
- * Check if two VKey instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: VKey, b: VKey): boolean => Bytes.equals(a.bytes, b.bytes)
 
 /**
  * Check if the given value is a valid VKey
@@ -81,7 +73,7 @@ export const isVKey = Schema.is(VKey)
  * @since 2.0.0
  * @category parsing
  */
-export const fromBytes = Function.makeDecodeSync(FromBytes, VKeyError, "VKey.fromBytes")
+export const fromBytes = Schema.decodeSync(FromBytes)
 
 /**
  * Parse a VKey from a hex string.
@@ -90,7 +82,7 @@ export const fromBytes = Function.makeDecodeSync(FromBytes, VKeyError, "VKey.fro
  * @since 2.0.0
  * @category parsing
  */
-export const fromHex = Function.makeDecodeSync(FromHex, VKeyError, "VKey.fromHex")
+export const fromHex = Schema.decodeSync(FromHex)
 
 // ============================================================================
 // Encoding Functions
@@ -102,7 +94,7 @@ export const fromHex = Function.makeDecodeSync(FromHex, VKeyError, "VKey.fromHex
  * @since 2.0.0
  * @category encoding
  */
-export const toBytes = Function.makeEncodeSync(FromBytes, VKeyError, "VKey.toBytes")
+export const toBytes = Schema.encodeSync(FromBytes)
 
 /**
  * Convert a VKey to a hex string.
@@ -110,7 +102,7 @@ export const toBytes = Function.makeEncodeSync(FromBytes, VKeyError, "VKey.toByt
  * @since 2.0.0
  * @category encoding
  */
-export const toHex = Function.makeEncodeSync(FromHex, VKeyError, "VKey.toHex")
+export const toHex = Schema.encodeSync(FromHex)
 
 /**
  * FastCheck arbitrary for generating random VKey instances.
@@ -122,7 +114,7 @@ export const toHex = Function.makeEncodeSync(FromHex, VKeyError, "VKey.toHex")
 export const arbitrary: FastCheck.Arbitrary<VKey> = FastCheck.uint8Array({
   minLength: Bytes32.BYTES_LENGTH,
   maxLength: Bytes32.BYTES_LENGTH
-}).map((bytes) => make({ bytes }, { disableValidation: true }))
+}).map((bytes) => new VKey({ bytes }, { disableValidation: true }))
 
 // ============================================================================
 // Cryptographic Operations
@@ -174,40 +166,4 @@ export const verify = (vkey: VKey, message: Uint8Array, signature: Uint8Array): 
   // Convert VKey to bytes
   const publicKeyBytes = vkey.bytes
   return ed25519.verify(signature, message, publicKeyBytes)
-}
-
-// ============================================================================
-// Effect Namespace - Effect-based Error Handling
-// ============================================================================
-
-/**
- * Effect-based error handling variants for functions that can fail.
- *
- * @since 2.0.0
- * @category effect
- */
-export namespace Either {
-  /**
-   * Parse a VKey from raw bytes using Effect error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromBytes = Function.makeDecodeEither(FromBytes, VKeyError)
-
-  /**
-   * Parse a VKey from a hex string using Effect error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromHex = Function.makeDecodeEither(FromHex, VKeyError)
-
-  /**
-   * Convert a VKey to raw bytes using Effect error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toBytes = Function.makeEncodeEither(FromBytes, VKeyError)
 }

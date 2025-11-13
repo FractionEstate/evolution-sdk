@@ -1,20 +1,8 @@
-import { Data, FastCheck, Schema } from "effect"
+import { Equal, FastCheck, Hash, Inspectable, Schema } from "effect"
 
 import * as Bytes from "./Bytes.js"
 import * as CBOR from "./CBOR.js"
-import * as Function from "./Function.js"
 import * as Url from "./Url.js"
-
-/**
- * Error class for PoolMetadata related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class PoolMetadataError extends Data.TaggedError("PoolMetadataError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Schema for PoolMetadata representing pool metadata information.
@@ -26,7 +14,61 @@ export class PoolMetadataError extends Data.TaggedError("PoolMetadataError")<{
 export class PoolMetadata extends Schema.TaggedClass<PoolMetadata>()("PoolMetadata", {
   url: Url.Url,
   hash: Schema.Uint8ArrayFromSelf
-}) {}
+}) {
+  /**
+   * Convert to JSON-serializable object.
+   *
+   * @since 2.0.0
+   * @category encoding
+   */
+  toJSON() {
+    return {
+      _tag: "PoolMetadata" as const,
+      url: this.url.href,
+      hash: Bytes.toHex(this.hash)
+    }
+  }
+
+  /**
+   * Convert to string representation.
+   *
+   * @since 2.0.0
+   * @category conversions
+   */
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  /**
+   * Custom inspect for Node.js REPL.
+   *
+   * @since 2.0.0
+   * @category conversions
+   */
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  /**
+   * Structural equality check.
+   *
+   * @since 2.0.0
+   * @category equality
+   */
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof PoolMetadata && Equal.equals(this.url, that.url) && Equal.equals(this.hash, that.hash)
+  }
+
+  /**
+   * Hash code generation.
+   *
+   * @since 2.0.0
+   * @category hashing
+   */
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.combine(Hash.hash(this.url))(Hash.hash(this.hash)))
+  }
+}
 
 /**
  * CDDL schema for PoolMetadata as defined in the specification:
@@ -59,23 +101,6 @@ export const FromCDDL = Schema.transform(
 })
 
 /**
- * Smart constructor for creating PoolMetadata instances
- *
- * @since 2.0.0
- * @category constructors
- */
-export const make = (props: { url: Url.Url; hash: Uint8Array }): PoolMetadata => new PoolMetadata(props)
-
-/**
- * Check if two PoolMetadata instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: PoolMetadata, b: PoolMetadata): boolean =>
-  a.url === b.url && a.hash.every((byte, index) => byte === b.hash[index])
-
-/**
  * FastCheck arbitrary for generating random PoolMetadata instances
  *
  * @since 2.0.0
@@ -84,7 +109,7 @@ export const equals = (a: PoolMetadata, b: PoolMetadata): boolean =>
 export const arbitrary = FastCheck.record({
   url: Url.arbitrary,
   hash: FastCheck.uint8Array({ minLength: 32, maxLength: 32 })
-}).map(make)
+}).map((props) => new PoolMetadata(props))
 
 /**
  * CBOR bytes transformation schema for PoolMetadata.
@@ -119,52 +144,13 @@ export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTION
   })
 
 /**
- * Effect namespace for PoolMetadata operations that can fail
- *
- * @since 2.0.0
- * @category effect
- */
-export namespace Either {
-  /**
-   * Convert CBOR bytes to PoolMetadata using Effect
-   *
-   * @since 2.0.0
-   * @category conversion
-   */
-  export const fromCBORBytes = Function.makeCBORDecodeEither(FromCDDL, PoolMetadataError)
-
-  /**
-   * Convert CBOR hex string to PoolMetadata using Effect
-   *
-   * @since 2.0.0
-   * @category conversion
-   */
-  export const fromCBORHex = Function.makeCBORDecodeHexEither(FromCDDL, PoolMetadataError)
-
-  /**
-   * Convert PoolMetadata to CBOR bytes using Effect
-   *
-   * @since 2.0.0
-   * @category conversion
-   */
-  export const toCBORBytes = Function.makeCBOREncodeEither(FromCDDL, PoolMetadataError)
-
-  /**
-   * Convert PoolMetadata to CBOR hex string using Effect
-   *
-   * @since 2.0.0
-   * @category conversion
-   */
-  export const toCBORHex = Function.makeCBOREncodeHexEither(FromCDDL, PoolMetadataError)
-}
-
-/**
  * Convert CBOR bytes to PoolMetadata (unsafe)
  *
  * @since 2.0.0
  * @category conversion
  */
-export const fromCBORBytes = Function.makeCBORDecodeSync(FromCDDL, PoolMetadataError, "PoolMetadata.fromCBORBytes")
+export const fromCBORBytes = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.decodeSync(FromCBORBytes(options))(bytes)
 
 /**
  * Convert CBOR hex string to PoolMetadata (unsafe)
@@ -172,7 +158,8 @@ export const fromCBORBytes = Function.makeCBORDecodeSync(FromCDDL, PoolMetadataE
  * @since 2.0.0
  * @category conversion
  */
-export const fromCBORHex = Function.makeCBORDecodeHexSync(FromCDDL, PoolMetadataError, "PoolMetadata.fromCBORHex")
+export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.decodeSync(FromCBORHex(options))(hex)
 
 /**
  * Convert PoolMetadata to CBOR bytes (unsafe)
@@ -180,7 +167,8 @@ export const fromCBORHex = Function.makeCBORDecodeHexSync(FromCDDL, PoolMetadata
  * @since 2.0.0
  * @category conversion
  */
-export const toCBORBytes = Function.makeCBOREncodeSync(FromCDDL, PoolMetadataError, "PoolMetadata.toCBORBytes")
+export const toCBORBytes = (poolMetadata: PoolMetadata, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.encodeSync(FromCBORBytes(options))(poolMetadata)
 
 /**
  * Convert PoolMetadata to CBOR hex string (unsafe)
@@ -188,4 +176,5 @@ export const toCBORBytes = Function.makeCBOREncodeSync(FromCDDL, PoolMetadataErr
  * @since 2.0.0
  * @category conversion
  */
-export const toCBORHex = Function.makeCBOREncodeHexSync(FromCDDL, PoolMetadataError, "PoolMetadata.toCBORHex")
+export const toCBORHex = (poolMetadata: PoolMetadata, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.encodeSync(FromCBORHex(options))(poolMetadata)

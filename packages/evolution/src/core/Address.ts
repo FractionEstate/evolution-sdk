@@ -3,21 +3,15 @@
  */
 
 import { bech32 } from "@scure/base"
-import { Data, Effect as Eff, FastCheck, ParseResult, Schema } from "effect"
+import { Effect as Eff, Equal, FastCheck, Hash, Inspectable, ParseResult, Schema } from "effect"
 
 import * as Bytes from "./Bytes.js"
 import * as Bytes29 from "./Bytes29.js"
 import * as Bytes57 from "./Bytes57.js"
 import * as Credential from "./Credential.js"
-import * as Function from "./Function.js"
 import * as KeyHash from "./KeyHash.js"
 import * as NetworkId from "./NetworkId.js"
 import * as ScriptHash from "./ScriptHash.js"
-
-export class AddressError extends Data.TaggedError("AddressError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * @since 1.0.0
@@ -28,13 +22,36 @@ export class Address extends Schema.Class<Address>("AddressStructure")({
   paymentCredential: Credential.CredentialSchema,
   stakingCredential: Schema.optional(Credential.CredentialSchema)
 }) {
-  toString(): string {
-    const staking = this.stakingCredential ? `, stakingCredential: ${this.stakingCredential}` : ""
-    return `AddressStructure(${this.networkId === 0 ? "testnet" : "mainnet"}:${this.paymentCredential}${staking})`
+  toJSON() {
+    return {
+      networkId: this.networkId,
+      paymentCredential: this.paymentCredential,
+      stakingCredential: this.stakingCredential
+    }
   }
 
-  [Symbol.for("nodejs.util.inspect.custom")](): string {
-    return this.toString()
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof Address &&
+      this.networkId === that.networkId &&
+      Equal.equals(this.paymentCredential, that.paymentCredential) &&
+      ((this.stakingCredential === undefined && that.stakingCredential === undefined) ||
+        (this.stakingCredential !== undefined &&
+          that.stakingCredential !== undefined &&
+          Equal.equals(this.stakingCredential, that.stakingCredential)))
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.hash(this.toJSON())
   }
 }
 
@@ -162,20 +179,6 @@ export const FromBech32 = Schema.transformOrFail(Schema.String, Schema.typeSchem
 })
 
 /**
- * Check if two AddressStructure instances are equal.
- *
- * @since 1.0.0
- * @category Utils
- */
-export const equals = (a: Address, b: Address): boolean =>
-  a.networkId === b.networkId &&
-  Credential.equals(a.paymentCredential, b.paymentCredential) &&
-  ((a.stakingCredential === undefined && b.stakingCredential === undefined) ||
-    (a.stakingCredential !== undefined &&
-      b.stakingCredential !== undefined &&
-      Credential.equals(a.stakingCredential, b.stakingCredential)))
-
-/**
  * Check if AddressStructure has staking credential (BaseAddress-like)
  *
  * @since 1.0.0
@@ -200,17 +203,17 @@ export const isEnterprise = (address: Address): boolean => address.stakingCreden
 export const getNetworkId = (address: Address): NetworkId.NetworkId => address.networkId
 
 /**
- * Sync functions using Function module utilities
+ * Sync functions using Schema utilities
  *
  * @since 1.0.0
  * @category Functions
  */
-export const fromBech32 = Function.makeDecodeSync(FromBech32, AddressError, "fromBech32")
-export const toBech32 = Function.makeEncodeSync(FromBech32, AddressError, "toBech32")
-export const fromHex = Function.makeDecodeSync(FromHex, AddressError, "fromHex")
-export const toHex = Function.makeEncodeSync(FromHex, AddressError, "toHex")
-export const fromBytes = Function.makeDecodeSync(FromBytes, AddressError, "fromBytes")
-export const toBytes = Function.makeEncodeSync(FromBytes, AddressError, "toBytes")
+export const fromBech32 = Schema.decodeSync(FromBech32)
+export const toBech32 = Schema.encodeSync(FromBech32)
+export const fromHex = Schema.decodeSync(FromHex)
+export const toHex = Schema.encodeSync(FromHex)
+export const fromBytes = Schema.decodeSync(FromBytes)
+export const toBytes = Schema.encodeSync(FromBytes)
 
 /**
  * FastCheck arbitrary generator for testing
@@ -229,53 +232,3 @@ export const arbitrary = FastCheck.record({
       stakingCredential: props.stakingCredential ?? undefined
     })
 )
-
-export namespace Either {
-  /**
-   * Parse an AddressStructure from bytes.
-   *
-   * @since 1.0.0
-   * @category parsing
-   */
-  export const fromBytes = Function.makeDecodeEither(FromBytes, AddressError)
-
-  /**
-   * Parse an AddressStructure from hex string.
-   *
-   * @since 1.0.0
-   * @category parsing
-   */
-  export const fromHex = Function.makeDecodeEither(FromHex, AddressError)
-
-  /**
-   * Convert an AddressStructure to bytes.
-   *
-   * @since 1.0.0
-   * @category encoding
-   */
-  export const toBytes = Function.makeEncodeEither(FromBytes, AddressError)
-
-  /**
-   * Convert an AddressStructure to hex string.
-   *
-   * @since 1.0.0
-   * @category encoding
-   */
-  export const toHex = Function.makeEncodeEither(FromHex, AddressError)
-
-  /**
-   * Convert AddressStructure to Bech32 string.
-   *
-   * @since 1.0.0
-   * @category encoding
-   */
-  export const toBech32 = Function.makeEncodeEither(FromBech32, AddressError)
-
-  /**
-   * Parse an AddressStructure from Bech32 string.
-   *
-   * @since 1.0.0
-   * @category parsing
-   */
-  export const fromBech32 = Function.makeDecodeEither(FromBech32, AddressError)
-}

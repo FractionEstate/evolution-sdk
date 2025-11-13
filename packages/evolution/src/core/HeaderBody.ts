@@ -1,11 +1,10 @@
-import { Data, Effect as Eff, FastCheck, ParseResult, Schema } from "effect"
+import { Effect as Eff, Equal, FastCheck, Hash, Inspectable, ParseResult, Schema } from "effect"
 
 import * as BlockBodyHash from "./BlockBodyHash.js"
 import * as BlockHeaderHash from "./BlockHeaderHash.js"
 import * as Bytes from "./Bytes.js"
 import * as CBOR from "./CBOR.js"
 import * as Ed25519Signature from "./Ed25519Signature.js"
-import * as Function from "./Function.js"
 import * as KESVkey from "./KESVkey.js"
 import * as Numeric from "./Numeric.js"
 import * as OperationalCert from "./OperationalCert.js"
@@ -13,17 +12,6 @@ import * as ProtocolVersion from "./ProtocolVersion.js"
 import * as VKey from "./VKey.js"
 import * as VrfCert from "./VrfCert.js"
 import * as VrfVkey from "./VrfVkey.js"
-
-/**
- * Error class for HeaderBody related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class HeaderBodyError extends Data.TaggedError("HeaderBodyError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Schema for HeaderBody representing a block header body.
@@ -54,33 +42,72 @@ export class HeaderBody extends Schema.TaggedClass<HeaderBody>()("HeaderBody", {
   blockBodyHash: BlockBodyHash.BlockBodyHash,
   operationalCert: OperationalCert.OperationalCert,
   protocolVersion: ProtocolVersion.ProtocolVersion
-}) {}
+}) {
+  toJSON() {
+    return {
+      _tag: "HeaderBody" as const,
+      blockNumber: this.blockNumber.toString(),
+      slot: this.slot.toString(),
+      prevHash: this.prevHash ? this.prevHash.toJSON() : null,
+      issuerVkey: this.issuerVkey.toJSON(),
+      vrfVkey: this.vrfVkey.toJSON(),
+      vrfResult: this.vrfResult.toString(),
+      blockBodySize: Number(this.blockBodySize),
+      blockBodyHash: this.blockBodyHash.toJSON(),
+      operationalCert: this.operationalCert.toString(),
+      protocolVersion: this.protocolVersion.toJSON()
+    }
+  }
 
-/**
- * Smart constructor for creating HeaderBody instances
- *
- * @since 2.0.0
- * @category constructors
- */
-export const make = (...args: ConstructorParameters<typeof HeaderBody>) => new HeaderBody(...args)
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
 
-/**
- * Check if two HeaderBody instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: HeaderBody, b: HeaderBody): boolean =>
-  a.blockNumber === b.blockNumber &&
-  a.slot === b.slot &&
-  a.prevHash === b.prevHash &&
-  VKey.equals(a.issuerVkey, b.issuerVkey) &&
-  VrfVkey.equals(a.vrfVkey, b.vrfVkey) &&
-  VrfCert.equals(a.vrfResult, b.vrfResult) &&
-  a.blockBodySize === b.blockBodySize &&
-  BlockBodyHash.equals(a.blockBodyHash, b.blockBodyHash) &&
-  OperationalCert.equals(a.operationalCert, b.operationalCert) &&
-  ProtocolVersion.equals(a.protocolVersion, b.protocolVersion)
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof HeaderBody &&
+      this.blockNumber === that.blockNumber &&
+      this.slot === that.slot &&
+      this.prevHash === that.prevHash &&
+      Equal.equals(this.issuerVkey, that.issuerVkey) &&
+      Equal.equals(this.vrfVkey, that.vrfVkey) &&
+      Equal.equals(this.vrfResult, that.vrfResult) &&
+      this.blockBodySize === that.blockBodySize &&
+      Equal.equals(this.blockBodyHash, that.blockBodyHash) &&
+      Equal.equals(this.operationalCert, that.operationalCert) &&
+      Equal.equals(this.protocolVersion, that.protocolVersion)
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(
+      this,
+      Hash.combine(Hash.hash("HeaderBody"))(
+        Hash.combine(Hash.hash(this.blockNumber))(
+          Hash.combine(Hash.hash(this.slot))(
+            Hash.combine(Hash.hash(this.prevHash))(
+              Hash.combine(Hash.hash(this.issuerVkey))(
+                Hash.combine(Hash.hash(this.vrfVkey))(
+                  Hash.combine(Hash.hash(this.vrfResult))(
+                    Hash.combine(Hash.hash(this.blockBodySize))(
+                      Hash.combine(Hash.hash(this.blockBodyHash))(
+                        Hash.combine(Hash.hash(this.operationalCert))(Hash.hash(this.protocolVersion))
+                      )
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+  }
+}
 
 /**
  * FastCheck arbitrary for generating random HeaderBody instances
@@ -281,73 +308,37 @@ export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTION
   })
 
 /**
- * Effect namespace for HeaderBody operations that can fail
- *
- * @since 2.0.0
- * @category effect
- */
-export namespace Either {
-  /**
-   * Convert CBOR bytes to HeaderBody using Effect
-   *
-   * @since 2.0.0
-   * @category conversion
-   */
-  export const fromCBORBytes = Function.makeCBORDecodeEither(FromCDDL, HeaderBodyError)
-
-  /**
-   * Convert CBOR hex string to HeaderBody using Effect
-   *
-   * @since 2.0.0
-   * @category conversion
-   */
-  export const fromCBORHex = Function.makeCBORDecodeHexEither(FromCDDL, HeaderBodyError)
-
-  /**
-   * Convert HeaderBody to CBOR bytes using Effect
-   *
-   * @since 2.0.0
-   * @category conversion
-   */
-  export const toCBORBytes = Function.makeCBOREncodeEither(FromCDDL, HeaderBodyError)
-
-  /**
-   * Convert HeaderBody to CBOR hex string using Effect
-   *
-   * @since 2.0.0
-   * @category conversion
-   */
-  export const toCBORHex = Function.makeCBOREncodeHexEither(FromCDDL, HeaderBodyError)
-}
-
-/**
- * Convert CBOR bytes to HeaderBody (unsafe)
+ * Convert CBOR bytes to HeaderBody
  *
  * @since 2.0.0
  * @category conversion
  */
-export const fromCBORBytes = Function.makeCBORDecodeSync(FromCDDL, HeaderBodyError, "HeaderBody.fromCBORBytes")
+export const fromCBORBytes = (bytes: Uint8Array, options?: CBOR.CodecOptions): HeaderBody =>
+  Schema.decodeSync(FromCBORBytes(options))(bytes)
 
 /**
- * Convert CBOR hex string to HeaderBody (unsafe)
+ * Convert CBOR hex string to HeaderBody
  *
  * @since 2.0.0
  * @category conversion
  */
-export const fromCBORHex = Function.makeCBORDecodeHexSync(FromCDDL, HeaderBodyError, "HeaderBody.fromCBORHex")
+export const fromCBORHex = (hex: string, options?: CBOR.CodecOptions): HeaderBody =>
+  Schema.decodeSync(FromCBORHex(options))(hex)
 
 /**
- * Convert HeaderBody to CBOR bytes (unsafe)
+ * Convert HeaderBody to CBOR bytes
  *
  * @since 2.0.0
  * @category conversion
  */
-export const toCBORBytes = Function.makeCBOREncodeSync(FromCDDL, HeaderBodyError, "HeaderBody.toCBORBytes")
+export const toCBORBytes = (headerBody: HeaderBody, options?: CBOR.CodecOptions): Uint8Array =>
+  Schema.encodeSync(FromCBORBytes(options))(headerBody)
 
 /**
- * Convert HeaderBody to CBOR hex string (unsafe)
+ * Convert HeaderBody to CBOR hex string
  *
  * @since 2.0.0
  * @category conversion
  */
-export const toCBORHex = Function.makeCBOREncodeHexSync(FromCDDL, HeaderBodyError, "HeaderBody.toCBORHex")
+export const toCBORHex = (headerBody: HeaderBody, options?: CBOR.CodecOptions): string =>
+  Schema.encodeSync(FromCBORHex(options))(headerBody)

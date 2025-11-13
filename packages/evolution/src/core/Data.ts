@@ -16,26 +16,6 @@ export class DataError extends EffectData.TaggedError("DataError")<{
   cause?: unknown
 }> {}
 
-
-/**
- * PlutusData encoded type definition (wire format)
- * Used for serialization/deserialization from JSON/CBOR
- *
- * @since 2.0.0
- * @category model
- */
-export type DataEncoded =
-  // Constr (encoded with string index)
-  | { readonly index: string; readonly fields: ReadonlyArray<DataEncoded> }
-  // Map (encoded as array of [key, value] pairs)
-  | ReadonlyArray<readonly [DataEncoded, DataEncoded]>
-  // List
-  | ReadonlyArray<DataEncoded>
-  // Int (encoded as string)
-  | string
-  // ByteArray (encoded as hex string)
-  | string
-
 /**
  * PlutusData type definition (runtime type)
  * Based on Conway CDDL specification
@@ -69,50 +49,22 @@ export type DataEncoded =
  * @category model
  */
 export type Data =
-  // Constr (runtime with bigint index)
   | Constr
-  // { readonly index: bigint; readonly fields: ReadonlyArray<Data> } |
-  // Map (using standard Map since Schema.Map produces Map<K,V>)
-  | globalThis.Map<Data, Data>
-  // List
+  | ReadonlyMap<Data, Data>
   | ReadonlyArray<Data>
-  // Int (runtime as bigint)
   | bigint
-  // ByteArray (runtime as hex string)
   | string
 
 /**
- * Constr type for constructor alternatives based on Conway CDDL specification
- *
- * ```
- * CDDL: constr<a0> =
- *   #6.121([* a0])    // index 0
- *   / #6.122([* a0])  // index 1
- *   / #6.123([* a0])  // index 2
- *   / #6.124([* a0])  // index 3
- *   / #6.125([* a0])  // index 4
- *   / #6.126([* a0])  // index 5
- *   / #6.127([* a0])  // index 6
- *   / #6.102([uint, [* a0]])  // general constructor with custom index
- * ```
- *
- * Constructor Index Range:
- * - Minimum: 0
- * - Maximum: 2^64 - 1 (18,446,744,073,709,551,615)
- *   as per CBOR RFC 8949 specification for unsigned integers
+ * PlutusMap type alias
  *
  * @since 2.0.0
  * @category model
  */
-// export interface Constr {
-//   readonly index: bigint;
-//   readonly fields: readonly Data[];
-// }
-
-export type Map = globalThis.Map<Data, Data>
+export type Map = ReadonlyMap<Data, Data>
 
 /**
- * PlutusList type for plutus data lists
+ * PlutusList type alias
  *
  * @since 2.0.0
  * @category model
@@ -120,23 +72,18 @@ export type Map = globalThis.Map<Data, Data>
 export type List = ReadonlyArray<Data>
 
 /**
- * Schema for Constr data type
+ * Constr schema for constructor alternatives
  *
  * @category schemas
- *
  * @since 2.0.0
  */
-// export const ConstrSchema: Schema.Schema<Constr> = Schema.Struct({
-//   index: Numeric.Uint64Schema,
-//   fields: Schema.Array(Schema.suspend((): Schema.Schema<Data> => DataSchema)),
-// });
 export class Constr extends Schema.Class<Constr>("Constr")({
   index: Numeric.Uint64Schema.annotations({
     identifier: "Data.Constr.Index",
     title: "Constructor Index",
     description: "The index of the constructor, must be a non-negative integer"
   }),
-  fields: Schema.Array(Schema.suspend((): Schema.Schema<Data, DataEncoded> => DataSchema)).annotations({
+  fields: Schema.Array(Schema.suspend((): Schema.Schema<Data> => DataSchema)).annotations({
     identifier: "Data.Constr.Fields",
     title: "Fields of Constr",
     description: "A list of PlutusData fields for the constructor"
@@ -150,13 +97,13 @@ export class Constr extends Schema.Class<Constr>("Constr")({
  *
  * @since 2.0.0
  */
-export const MapSchema = Schema.Map({
-  key: Schema.suspend((): Schema.Schema<Data, DataEncoded> => DataSchema).annotations({
+export const MapSchema = Schema.ReadonlyMapFromSelf({
+  key: Schema.suspend((): Schema.Schema<Data> => DataSchema).annotations({
     identifier: "Data.Map.Key",
     title: "Map Key",
     description: "The key of the PlutusMap, must be a PlutusData type"
   }),
-  value: Schema.suspend((): Schema.Schema<Data, DataEncoded> => DataSchema).annotations({
+  value: Schema.suspend((): Schema.Schema<Data> => DataSchema).annotations({
     identifier: "Data.Map.Value",
     title: "Map Value",
     description: "The value of the PlutusMap, must be a PlutusData type"
@@ -165,14 +112,16 @@ export const MapSchema = Schema.Map({
   identifier: "Data.Map",
   title: "PlutusMap",
   description: "A map of PlutusData key-value pairs"
-}) /**
+})
+
+/**
  * Schema for PlutusList data type
  *
  * @category schemas
  *
  * @since 2.0.0
  */
-export const ListSchema = Schema.Array(Schema.suspend((): Schema.Schema<Data, DataEncoded> => DataSchema)).annotations({
+export const ListSchema = Schema.Array(Schema.suspend((): Schema.Schema<Data> => DataSchema)).annotations({
   identifier: "Data.List"
 })
 
@@ -197,7 +146,7 @@ export const ListSchema = Schema.Array(Schema.suspend((): Schema.Schema<Data, Da
  *
  * @since 2.0.0
  */
-export const IntSchema = Schema.BigInt.annotations({
+export const IntSchema = Schema.BigIntFromSelf.annotations({
   identifier: "Data.Int"
 })
 export type Int = typeof IntSchema.Type
@@ -221,25 +170,12 @@ export type ByteArray = typeof ByteArray.Type
  *
  * @since 2.0.0
  */
-export const DataSchema: Schema.Schema<Data, DataEncoded> = Schema.Union(
-  // Map: ReadonlyArray<[DataEncoded, DataEncoded]> <-> ReadonlyMap<Data, Data>
+export const DataSchema = Schema.Union(
   MapSchema,
-
-  // List: ReadonlyArray<DataEncoded> <-> ReadonlyArray<Data>
   ListSchema,
-
-  // Int: string <-> bigint
   IntSchema,
-
-  // ByteArray: hex string <-> Uint8Array
   ByteArray,
-
-  // Constr: { index: string, fields: DataEncoded[] } <-> { index: bigint, fields: Data[] }
   Constr
-  // Schema.Struct({
-  //   fields: Schema.Array(Schema.suspend((): Schema.Schema<Data, DataEncoded> => DataSchema)),
-  //   index: Schema.BigInt
-  // })
 ).annotations({
   identifier: "DataSchema"
 })
@@ -251,10 +187,7 @@ export const DataSchema: Schema.Schema<Data, DataEncoded> = Schema.Union(
  *
  * @since 2.0.0
  */
-export const isConstr = (data: unknown): data is Constr => {
-  // Check if it's a valid Constr using the schema
-  return Schema.is(Constr)(data)
-}
+export const isConstr = (data: unknown): data is Constr => Schema.is(Constr)(data)
 
 /**
  * Type guard to check if a value is a PlutusMap
@@ -300,18 +233,13 @@ export const isBytes = Schema.is(ByteArray)
  */
 export const constr = (index: bigint, fields: Array<Data>): Constr => Constr.make({ index, fields })
 
-// new Constr({
-//   index: Numeric.Uint64Make(index),
-//   fields: data
-// })
-
 /**
  * Creates a Plutus map from key-value pairs
  *
  * @since 2.0.0
  * @category constructors
  */
-export const map = (entries: Array<[key: Data, value: Data]>): Map => new globalThis.Map(entries)
+export const map = (entries: Array<[key: Data, value: Data]>): Map => new globalThis.Map(entries) as ReadonlyMap<Data, Data>
 
 /**
  * Creates a Plutus list from items

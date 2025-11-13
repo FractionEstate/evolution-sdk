@@ -437,7 +437,7 @@ Represents: metadata = {* transaction_metadatum_label => transaction_metadatum}
 
 ```ts
 export declare const Metadata: Schema.MapFromSelf<
-  Schema.refine<bigint, typeof Schema.BigInt>,
+  Schema.refine<bigint, typeof Schema.BigIntFromSelf>,
   Schema.Union<
     [
       typeof TransactionMetadatum.TextMetadatum,
@@ -459,7 +459,7 @@ Schema for transaction metadatum label (uint .size 8).
 **Signature**
 
 ```ts
-export declare const MetadataLabel: Schema.refine<bigint, typeof Schema.BigInt>
+export declare const MetadataLabel: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
 ```
 
 Added in v2.0.0

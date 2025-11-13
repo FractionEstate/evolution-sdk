@@ -1,20 +1,8 @@
-import { Data, FastCheck, Schema } from "effect"
+import { Equal, FastCheck, Function, Hash, Inspectable, Schema } from "effect"
 
 import * as Bytes from "./Bytes.js"
 import * as CBOR from "./CBOR.js"
-import * as Function from "./Function.js"
 import * as Numeric from "./Numeric.js"
-
-/**
- * Error class for ProtocolVersion related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class ProtocolVersionError extends Data.TaggedError("ProtocolVersionError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * ProtocolVersion class based on Conway CDDL specification
@@ -27,23 +15,27 @@ export class ProtocolVersionError extends Data.TaggedError("ProtocolVersionError
 export class ProtocolVersion extends Schema.TaggedClass<ProtocolVersion>()("ProtocolVersion", {
   major: Numeric.Uint32Schema,
   minor: Numeric.Uint32Schema
-}) {}
+}) {
+  toJSON() {
+    return { _tag: "ProtocolVersion" as const, major: this.major, minor: this.minor }
+  }
 
-/**
- * Smart constructor for creating ProtocolVersion instances
- *
- * @since 2.0.0
- * @category constructors
- */
-export const make = (...args: ConstructorParameters<typeof ProtocolVersion>) => new ProtocolVersion(...args)
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
 
-/**
- * Check if two ProtocolVersion instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: ProtocolVersion, b: ProtocolVersion): boolean => a.major === b.major && a.minor === b.minor
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof ProtocolVersion && this.major === that.major && this.minor === that.minor
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.combine(Hash.number(Number(this.major)))(Hash.number(Number(this.minor))))
+  }
+}
 
 /**
  * FastCheck arbitrary for generating random ProtocolVersion instances
@@ -52,7 +44,7 @@ export const equals = (a: ProtocolVersion, b: ProtocolVersion): boolean => a.maj
  * @category testing
  */
 export const arbitrary = FastCheck.tuple(Numeric.Uint32Arbitrary, Numeric.Uint32Arbitrary).map(([major, minor]) =>
-  make({ major, minor })
+  new ProtocolVersion({ major, minor })
 )
 
 export const CDDLSchema = Schema.Tuple(
@@ -116,55 +108,32 @@ export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTION
   })
 
 /**
- * Either namespace for ProtocolVersion operations that can fail
- *
- * @since 2.0.0
- * @category either
- */
-export namespace Either {
-  /**
-   * Convert CBOR bytes to ProtocolVersion using Either
-   *
-   * @since 2.0.0
-   * @category conversion
-   */
-  export const fromCBORBytes = Function.makeCBORDecodeEither(FromCDDL, ProtocolVersionError)
-
-  /**
-   * Convert CBOR hex string to ProtocolVersion using Either
-   *
-   * @since 2.0.0
-   * @category conversion
-   */
-  export const fromCBORHex = Function.makeCBORDecodeHexEither(FromCDDL, ProtocolVersionError)
-
-  /**
-   * Convert ProtocolVersion to CBOR bytes using Either
-   *
-   * @since 2.0.0
-   * @category conversion
-   */
-  export const toCBORBytes = Function.makeCBOREncodeEither(FromCDDL, ProtocolVersionError)
-
-  /**
-   * Convert ProtocolVersion to CBOR hex string using Either
-   *
-   * @since 2.0.0
-   * @category conversion
-   */
-  export const toCBORHex = Function.makeCBOREncodeHexEither(FromCDDL, ProtocolVersionError)
-}
-
-/**
  * Convert CBOR bytes to ProtocolVersion (unsafe)
  *
  * @since 2.0.0
  * @category conversion
+ * 
+ * @example
+ * ```ts
+ * import { ProtocolVersion, CBOR } from "@evolution-sdk/evolution"
+ * 
+ * // With default options
+ * const decode1 = ProtocolVersion.fromCBORBytes()
+ * 
+ * // With custom options
+ * const decode2 = ProtocolVersion.fromCBORBytes({ maxDepth: 10 })
+ * 
+ * // Data-first style
+ * const version = ProtocolVersion.fromCBORBytes(bytes, { maxDepth: 10 })
+ * ```
  */
-export const fromCBORBytes = Function.makeCBORDecodeSync(
-  FromCDDL,
-  ProtocolVersionError,
-  "ProtocolVersion.fromCBORBytes"
+export const fromCBORBytes: {
+  (options?: CBOR.CodecOptions): (bytes: Uint8Array) => ProtocolVersion
+  (bytes: Uint8Array, options?: CBOR.CodecOptions): ProtocolVersion
+} = Function.dual(
+  (args) => args.length >= 1 && args[0] instanceof Uint8Array,
+  (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+    Schema.decodeSync(FromCBORBytes(options))(bytes)
 )
 
 /**
@@ -172,21 +141,84 @@ export const fromCBORBytes = Function.makeCBORDecodeSync(
  *
  * @since 2.0.0
  * @category conversion
+ * 
+ * @example
+ * ```ts
+ * import { ProtocolVersion, CBOR } from "@evolution-sdk/evolution"
+ * 
+ * // With default options
+ * const decode1 = ProtocolVersion.fromCBORHex()
+ * 
+ * // With custom options
+ * const decode2 = ProtocolVersion.fromCBORHex({ maxDepth: 10 })
+ * 
+ * // Data-first style
+ * const version = ProtocolVersion.fromCBORHex("820304", { maxDepth: 10 })
+ * ```
  */
-export const fromCBORHex = Function.makeCBORDecodeHexSync(FromCDDL, ProtocolVersionError, "ProtocolVersion.fromCBORHex")
+export const fromCBORHex: {
+  (options?: CBOR.CodecOptions): (hex: string) => ProtocolVersion
+  (hex: string, options?: CBOR.CodecOptions): ProtocolVersion
+} = Function.dual(
+  (args) => args.length >= 1 && typeof args[0] === "string",
+  (hex: string, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+    Schema.decodeSync(FromCBORHex(options))(hex)
+)
 
 /**
  * Convert ProtocolVersion to CBOR bytes (unsafe)
  *
  * @since 2.0.0
  * @category conversion
+ * 
+ * @example
+ * ```ts
+ * import { ProtocolVersion, CBOR } from "@evolution-sdk/evolution"
+ * 
+ * // With default options
+ * const encode1 = ProtocolVersion.toCBORBytes()
+ * 
+ * // With custom options
+ * const encode2 = ProtocolVersion.toCBORBytes({ maxDepth: 10 })
+ * 
+ * // Data-first style
+ * const bytes = ProtocolVersion.toCBORBytes(version, { maxDepth: 10 })
+ * ```
  */
-export const toCBORBytes = Function.makeCBOREncodeSync(FromCDDL, ProtocolVersionError, "ProtocolVersion.toCBORBytes")
+export const toCBORBytes: {
+  (options?: CBOR.CodecOptions): (version: ProtocolVersion) => Uint8Array
+  (version: ProtocolVersion, options?: CBOR.CodecOptions): Uint8Array
+} = Function.dual(
+  (args) => args.length >= 1 && args[0] instanceof ProtocolVersion,
+  (version: ProtocolVersion, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+    Schema.encodeSync(FromCBORBytes(options))(version)
+)
 
 /**
  * Convert ProtocolVersion to CBOR hex string (unsafe)
  *
  * @since 2.0.0
  * @category conversion
+ * 
+ * @example
+ * ```ts
+ * import { ProtocolVersion, CBOR } from "@evolution-sdk/evolution"
+ * 
+ * // With default options
+ * const encode1 = ProtocolVersion.toCBORHex()
+ * 
+ * // With custom options
+ * const encode2 = ProtocolVersion.toCBORHex({ maxDepth: 10 })
+ * 
+ * // Data-first style
+ * const hex = ProtocolVersion.toCBORHex(version, { maxDepth: 10 })
+ * ```
  */
-export const toCBORHex = Function.makeCBOREncodeHexSync(FromCDDL, ProtocolVersionError, "ProtocolVersion.toCBORHex")
+export const toCBORHex: {
+  (options?: CBOR.CodecOptions): (version: ProtocolVersion) => string
+  (version: ProtocolVersion, options?: CBOR.CodecOptions): string
+} = Function.dual(
+  (args) => args.length >= 1 && args[0] instanceof ProtocolVersion,
+  (version: ProtocolVersion, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+    Schema.encodeSync(FromCBORHex(options))(version)
+)

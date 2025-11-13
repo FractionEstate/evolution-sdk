@@ -1,4 +1,4 @@
-import { FastCheck, Schema } from "effect"
+import { Equal, FastCheck, Hash, Inspectable, Schema } from "effect"
 
 import * as Natural from "./Natural.js"
 
@@ -14,12 +14,34 @@ export class Pointer extends Schema.TaggedClass<Pointer>("Pointer")("Pointer", {
   txIndex: Natural.Natural,
   certIndex: Natural.Natural
 }) {
-  toString(): string {
-    return `Pointer { slot: ${this.slot}, txIndex: ${this.txIndex}, certIndex: ${this.certIndex} }`
+  toJSON() {
+    return {
+      _tag: "Pointer" as const,
+      slot: this.slot,
+      txIndex: this.txIndex,
+      certIndex: this.certIndex
+    }
   }
 
-  [Symbol.for("nodejs.util.inspect.custom")](): string {
-    return this.toString()
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof Pointer &&
+      Equal.equals(this.slot, that.slot) &&
+      Equal.equals(this.txIndex, that.txIndex) &&
+      Equal.equals(this.certIndex, that.certIndex)
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.combine(Hash.hash(this.slot))(Hash.combine(Hash.hash(this.txIndex))(Hash.hash(this.certIndex))))
   }
 }
 
@@ -33,38 +55,11 @@ export class Pointer extends Schema.TaggedClass<Pointer>("Pointer")("Pointer", {
 export const isPointer = Schema.is(Pointer)
 
 /**
- * Create a new Pointer instance
- *
- * @since 2.0.0
- * @category constructors
- */
-export const make = (slot: Natural.Natural, txIndex: Natural.Natural, certIndex: Natural.Natural): Pointer => {
-  return new Pointer(
-    {
-      slot,
-      txIndex,
-      certIndex
-    },
-    { disableValidation: true }
-  )
-}
-
-/**
- * Check if two Pointer instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: Pointer, b: Pointer): boolean => {
-  return a.slot === b.slot && a.txIndex === b.txIndex && a.certIndex === b.certIndex
-}
-
-/**
  * FastCheck arbitrary for generating random Pointer instances
  *
  * @since 2.0.0
  * @category generators
  */
 export const arbitrary = FastCheck.tuple(Natural.arbitrary, Natural.arbitrary, Natural.arbitrary).map(
-  ([slot, txIndex, certIndex]) => make(slot, txIndex, certIndex)
+  ([slot, txIndex, certIndex]) => new Pointer({ slot, txIndex, certIndex }, { disableValidation: true })
 )

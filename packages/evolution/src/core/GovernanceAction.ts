@@ -1,14 +1,12 @@
-import { Data, Effect as Eff, FastCheck, ParseResult, Schema } from "effect"
+import { Effect as Eff, Equal, FastCheck, Hash, Inspectable, ParseResult, Schema } from "effect"
 
 import * as Bytes from "./Bytes.js"
 import * as CBOR from "./CBOR.js"
 import * as Coin from "./Coin.js"
 import * as CommiteeColdCredential from "./CommitteeColdCredential.js"
 import * as Constituion from "./Constitution.js"
-import type { CredentialSchema as CredentialT } from "./Credential.js"
 import * as Credential from "./Credential.js"
 import * as EpochNo from "./EpochNo.js"
-import * as Function from "./Function.js"
 import * as ProtocolParamUpdate from "./ProtocolParamUpdate.js"
 import * as ProtocolVersion from "./ProtocolVersion.js"
 import * as RewardAccount from "./RewardAccount.js"
@@ -16,17 +14,6 @@ import * as ScriptHash from "./ScriptHash.js"
 import * as TransactionHash from "./TransactionHash.js"
 import * as TransactionIndex from "./TransactionIndex.js"
 import * as UnitInterval from "./UnitInterval.js"
-
-/**
- * Error class for GovernanceAction related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class GovernanceActionError extends Data.TaggedError("GovernanceActionError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * GovActionId schema representing a governance action identifier.
@@ -40,17 +27,35 @@ export class GovernanceActionError extends Data.TaggedError("GovernanceActionErr
 export class GovActionId extends Schema.TaggedClass<GovActionId>()("GovActionId", {
   transactionId: TransactionHash.TransactionHash, // transaction_id (hash32)
   govActionIndex: TransactionIndex.TransactionIndex // uint .size 2 (governance action index)
-}) {}
+}) {
+  toJSON() {
+    return {
+      _tag: this._tag,
+      transactionId: this.transactionId,
+      govActionIndex: this.govActionIndex
+    }
+  }
 
-/**
- * Check if two GovActionId instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const govActionIdEquals = (a: GovActionId, b: GovActionId): boolean =>
-  TransactionHash.equals(a.transactionId, b.transactionId) &&
-  TransactionIndex.equals(a.govActionIndex, b.govActionIndex)
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof GovActionId &&
+      Equal.equals(this.transactionId, that.transactionId) &&
+      Equal.equals(this.govActionIndex, that.govActionIndex)
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.combine(Hash.hash(this.transactionId))(Hash.hash(this.govActionIndex)))
+  }
+}
 
 /**
  * CDDL schema for GovActionId tuple structure.
@@ -111,7 +116,42 @@ export class ParameterChangeAction extends Schema.TaggedClass<ParameterChangeAct
   govActionId: Schema.NullOr(GovActionId), // gov_action_id / nil
   protocolParamUpdate: ProtocolParamUpdate.ProtocolParamUpdate, // protocol_param_update
   policyHash: Schema.NullOr(ScriptHash.ScriptHash) // policy_hash / nil
-}) {}
+}) {
+  toJSON() {
+    return {
+      _tag: this._tag,
+      govActionId: this.govActionId,
+      protocolParamUpdate: this.protocolParamUpdate,
+      policyHash: this.policyHash
+    }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof ParameterChangeAction &&
+      Equal.equals(this.govActionId, that.govActionId) &&
+      Equal.equals(this.protocolParamUpdate, that.protocolParamUpdate) &&
+      Equal.equals(this.policyHash, that.policyHash)
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(
+      this,
+      Hash.combine(Hash.combine(Hash.hash(this.govActionId))(Hash.hash(this.protocolParamUpdate)))(
+        Hash.hash(this.policyHash)
+      )
+    )
+  }
+}
 
 /**
  * CDDL schema for ParameterChangeAction tuple structure.
@@ -185,7 +225,35 @@ export class HardForkInitiationAction extends Schema.TaggedClass<HardForkInitiat
     govActionId: Schema.NullOr(GovActionId), // gov_action_id / nil
     protocolVersion: ProtocolVersion.ProtocolVersion // protocol_version = [major, minor]
   }
-) {}
+) {
+  toJSON() {
+    return {
+      _tag: this._tag,
+      govActionId: this.govActionId,
+      protocolVersion: this.protocolVersion
+    }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof HardForkInitiationAction &&
+      Equal.equals(this.govActionId, that.govActionId) &&
+      Equal.equals(this.protocolVersion, that.protocolVersion)
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.combine(Hash.hash(this.govActionId))(Hash.hash(this.protocolVersion)))
+  }
+}
 
 /**
  * CDDL schema for HardForkInitiationAction tuple structure.
@@ -256,7 +324,35 @@ export class TreasuryWithdrawalsAction extends Schema.TaggedClass<TreasuryWithdr
     }),
     policyHash: Schema.NullOr(ScriptHash.ScriptHash) // policy_hash / nil
   }
-) {}
+) {
+  toJSON() {
+    return {
+      _tag: this._tag,
+      withdrawals: this.withdrawals,
+      policyHash: this.policyHash
+    }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof TreasuryWithdrawalsAction &&
+      Equal.equals(this.withdrawals, that.withdrawals) &&
+      Equal.equals(this.policyHash, that.policyHash)
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.combine(Hash.hash(this.withdrawals))(Hash.hash(this.policyHash)))
+  }
+}
 
 /**
  * CDDL schema for TreasuryWithdrawalsAction tuple structure.
@@ -329,7 +425,30 @@ export const TreasuryWithdrawalsActionFromCDDL = Schema.transformOrFail(
  */
 export class NoConfidenceAction extends Schema.TaggedClass<NoConfidenceAction>()("NoConfidenceAction", {
   govActionId: Schema.NullOr(GovActionId) // gov_action_id / nil
-}) {}
+}) {
+  toJSON() {
+    return {
+      _tag: this._tag,
+      govActionId: this.govActionId
+    }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof NoConfidenceAction && Equal.equals(this.govActionId, that.govActionId)
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.hash(this.govActionId))
+  }
+}
 
 /**
  * CDDL schema for NoConfidenceAction tuple structure.
@@ -393,7 +512,46 @@ export class UpdateCommitteeAction extends Schema.TaggedClass<UpdateCommitteeAct
     value: EpochNo.EpochNoSchema // epoch_no
   }),
   threshold: UnitInterval.UnitInterval
-}) {}
+}) {
+  toJSON() {
+    return {
+      _tag: this._tag,
+      govActionId: this.govActionId,
+      membersToRemove: this.membersToRemove,
+      membersToAdd: this.membersToAdd,
+      threshold: this.threshold
+    }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof UpdateCommitteeAction &&
+      Equal.equals(this.govActionId, that.govActionId) &&
+      Equal.equals(this.membersToRemove, that.membersToRemove) &&
+      Equal.equals(this.membersToAdd, that.membersToAdd) &&
+      Equal.equals(this.threshold, that.threshold)
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(
+      this,
+      Hash.combine(
+        Hash.combine(Hash.combine(Hash.hash(this.govActionId))(Hash.hash(this.membersToRemove)))(
+          Hash.hash(this.membersToAdd)
+        )
+      )(Hash.hash(this.threshold))
+    )
+  }
+}
 
 /**
  * CDDL schema for UpdateCommitteeAction tuple structure.
@@ -513,7 +671,35 @@ export const UpdateCommitteeActionFromCDDL = Schema.transformOrFail(
 export class NewConstitutionAction extends Schema.TaggedClass<NewConstitutionAction>()("NewConstitutionAction", {
   govActionId: Schema.NullOr(GovActionId), // gov_action_id / nil
   constitution: Constituion.Constitution // constitution as CBOR
-}) {}
+}) {
+  toJSON() {
+    return {
+      _tag: this._tag,
+      govActionId: this.govActionId,
+      constitution: this.constitution
+    }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof NewConstitutionAction &&
+      Equal.equals(this.govActionId, that.govActionId) &&
+      Equal.equals(this.constitution, that.constitution)
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.combine(Hash.hash(this.govActionId))(Hash.hash(this.constitution)))
+  }
+}
 
 /**
  * CDDL schema for NewConstitutionAction tuple structure.
@@ -576,7 +762,29 @@ export const NewConstitutionActionFromCDDL = Schema.transformOrFail(
  */
 export class InfoAction extends Schema.TaggedClass<InfoAction>()("InfoAction", {
   // Info action has no additional data
-}) {}
+}) {
+  toJSON() {
+    return {
+      _tag: this._tag
+    }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof InfoAction
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.string("InfoAction"))
+  }
+}
 
 /**
  * CDDL schema for InfoAction tuple structure.
@@ -677,216 +885,6 @@ export const FromCDDL = Schema.Union(
 )
 
 /**
- * Check if two GovernanceAction instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: GovernanceAction, b: GovernanceAction): boolean => {
-  if (a._tag !== b._tag) return false
-
-  const eqGovActionId = (x: GovActionId | null, y: GovActionId | null) =>
-    x === y || (x !== null && y !== null && govActionIdEquals(x, y))
-
-  const eqNullableScriptHash = (x: ScriptHash.ScriptHash | null, y: ScriptHash.ScriptHash | null) =>
-    x === y || (x !== null && y !== null && ScriptHash.equals(x, y))
-
-  const eqProtocolParamUpdate = (
-    x: ProtocolParamUpdate.ProtocolParamUpdate,
-    y: ProtocolParamUpdate.ProtocolParamUpdate
-  ) => Bytes.equals(ProtocolParamUpdate.toCBORBytes(x), ProtocolParamUpdate.toCBORBytes(y))
-
-  const eqWithdrawals = (
-    aMap: ReadonlyMap<RewardAccount.RewardAccount, Coin.Coin>,
-    bMap: ReadonlyMap<RewardAccount.RewardAccount, Coin.Coin>
-  ): boolean => {
-    if (aMap.size !== bMap.size) return false
-    // For each entry in aMap, find a key-equal entry in bMap with same coin
-    for (const [aKey, aVal] of aMap) {
-      let found = false
-      for (const [bKey, bVal] of bMap) {
-        if (RewardAccount.equals(aKey, bKey)) {
-          if (aVal !== bVal) return false
-          found = true
-          break
-        }
-      }
-      if (!found) return false
-    }
-    return true
-  }
-
-  const eqCredential = (a: CredentialT, b: CredentialT): boolean => a._tag === b._tag && Bytes.equals(a.hash, b.hash)
-
-  const eqCredentialsArray = (xs: ReadonlyArray<CredentialT>, ys: ReadonlyArray<CredentialT>): boolean => {
-    if (xs.length !== ys.length) return false
-    for (let i = 0; i < xs.length; i++) {
-      if (!eqCredential(xs[i], ys[i])) return false
-    }
-    return true
-  }
-
-  const eqCredentialEpochMap = (
-    aMap: ReadonlyMap<CredentialT, EpochNo.EpochNo>,
-    bMap: ReadonlyMap<CredentialT, EpochNo.EpochNo>
-  ): boolean => {
-    if (aMap.size !== bMap.size) return false
-    for (const [aKey, aVal] of aMap) {
-      let matched = false
-      for (const [bKey, bVal] of bMap) {
-        if (eqCredential(aKey, bKey)) {
-          if (aVal !== bVal) return false
-          matched = true
-          break
-        }
-      }
-      if (!matched) return false
-    }
-    return true
-  }
-
-  switch (a._tag) {
-    case "ParameterChangeAction":
-      return (
-        b._tag === "ParameterChangeAction" &&
-        eqProtocolParamUpdate(a.protocolParamUpdate, b.protocolParamUpdate) &&
-        eqNullableScriptHash(a.policyHash, b.policyHash) &&
-        eqGovActionId(a.govActionId, b.govActionId)
-      )
-    case "HardForkInitiationAction":
-      return (
-        b._tag === "HardForkInitiationAction" &&
-        ProtocolVersion.equals(a.protocolVersion, b.protocolVersion) &&
-        eqGovActionId(a.govActionId, b.govActionId)
-      )
-    case "TreasuryWithdrawalsAction":
-      return (
-        b._tag === "TreasuryWithdrawalsAction" &&
-        eqWithdrawals(a.withdrawals, b.withdrawals) &&
-        eqNullableScriptHash(a.policyHash, b.policyHash)
-      )
-    case "NoConfidenceAction":
-      return b._tag === "NoConfidenceAction" && eqGovActionId(a.govActionId, b.govActionId)
-    case "UpdateCommitteeAction":
-      return (
-        b._tag === "UpdateCommitteeAction" &&
-        eqCredentialsArray(a.membersToRemove, b.membersToRemove) &&
-        eqCredentialEpochMap(a.membersToAdd, b.membersToAdd) &&
-        UnitInterval.equals(a.threshold, b.threshold) &&
-        eqGovActionId(a.govActionId, b.govActionId)
-      )
-    case "NewConstitutionAction":
-      return (
-        b._tag === "NewConstitutionAction" &&
-        Constituion.equals(a.constitution, b.constitution) &&
-        eqGovActionId(a.govActionId, b.govActionId)
-      )
-    case "InfoAction":
-      return b._tag === "InfoAction"
-  }
-}
-
-/**
- * Create a parameter change governance action.
- *
- * @since 2.0.0
- * @category constructors
- */
-export const makeParameterChange = (
-  govActionId: GovActionId | null,
-  protocolParamUpdate: ProtocolParamUpdate.ProtocolParamUpdate,
-  policyHash: ScriptHash.ScriptHash | null = null
-): ParameterChangeAction =>
-  new ParameterChangeAction({
-    govActionId,
-    protocolParamUpdate,
-    policyHash
-  })
-
-/**
- * Create a hard fork initiation governance action.
- *
- * @since 2.0.0
- * @category constructors
- */
-export const makeHardForkInitiation = (
-  govActionId: GovActionId | null,
-  protocolVersion: ProtocolVersion.ProtocolVersion
-): HardForkInitiationAction =>
-  new HardForkInitiationAction({
-    govActionId,
-    protocolVersion
-  })
-
-/**
- * Create a treasury withdrawals governance action.
- *
- * @since 2.0.0
- * @category constructors
- */
-export const makeTreasuryWithdrawals = (
-  withdrawals: Map<RewardAccount.RewardAccount, Coin.Coin>,
-  policyHash: ScriptHash.ScriptHash | null = null
-): TreasuryWithdrawalsAction =>
-  new TreasuryWithdrawalsAction({
-    withdrawals,
-    policyHash
-  })
-
-/**
- * Create a no confidence governance action.
- *
- * @since 2.0.0
- * @category constructors
- */
-export const makeNoConfidence = (govActionId: GovActionId | null): NoConfidenceAction =>
-  new NoConfidenceAction({
-    govActionId
-  })
-
-/**
- * Create an update committee governance action.
- *
- * @since 2.0.0
- * @category constructors
- */
-export const makeUpdateCommittee = (
-  govActionId: GovActionId | null,
-  membersToRemove: ReadonlyArray<typeof CommiteeColdCredential.CommitteeColdCredential.CredentialSchema.Type>,
-  membersToAdd: Map<typeof CommiteeColdCredential.CommitteeColdCredential.CredentialSchema.Type, EpochNo.EpochNo>,
-  threshold: UnitInterval.UnitInterval
-): UpdateCommitteeAction =>
-  new UpdateCommitteeAction({
-    govActionId,
-    membersToRemove,
-    membersToAdd,
-    threshold
-  })
-
-/**
- * Create a new constitution governance action.
- *
- * @since 2.0.0
- * @category constructors
- */
-export const makeNewConstitution = (
-  govActionId: GovActionId | null,
-  constitution: Constituion.Constitution
-): NewConstitutionAction =>
-  new NewConstitutionAction({
-    govActionId,
-    constitution
-  })
-
-/**
- * Create an info governance action.
- *
- * @since 2.0.0
- * @category constructors
- */
-export const makeInfo = (): InfoAction => new InfoAction({})
-
-/**
  * FastCheck arbitrary for GovernanceAction.
  *
  * @since 2.0.0
@@ -950,7 +948,7 @@ const membersToAddMapArbitrary: FastCheck.Arbitrary<Map<Credential.CredentialSch
       minLength: colds.length,
       maxLength: colds.length
     }).map((epochsRaw) => {
-      const epochs = epochsRaw.map((e) => EpochNo.make(e))
+      const epochs = epochsRaw
       const m = new Map<Credential.CredentialSchema, EpochNo.EpochNo>()
       for (let i = 0; i < colds.length; i++) m.set(colds[i], epochs[i])
       return m
@@ -1066,27 +1064,46 @@ export const match = <R>(
   }
 }
 
-export const fromCBORHex = Function.makeCBORDecodeHexSync(
-  FromCDDL as unknown as Schema.Schema<any, any, never>,
-  GovernanceActionError,
-  "GovernanceAction.fromCBORHex",
-  CBOR.CML_DEFAULT_OPTIONS
-)
-export const toCBORHex = Function.makeCBOREncodeHexSync(
-  FromCDDL as unknown as Schema.Schema<any, any, never>,
-  GovernanceActionError,
-  "GovernanceAction.toCBORHex",
-  CBOR.CML_DEFAULT_OPTIONS
-)
-export const fromCBOR = Function.makeCBORDecodeSync(
-  FromCDDL as unknown as Schema.Schema<any, any, never>,
-  GovernanceActionError,
-  "GovernanceAction.fromCBORBytes",
-  CBOR.CML_DEFAULT_OPTIONS
-)
-export const toCBOR = Function.makeCBOREncodeSync(
-  FromCDDL as unknown as Schema.Schema<any, any, never>,
-  GovernanceActionError,
-  "GovernanceAction.toCBORBytes",
-  CBOR.CML_DEFAULT_OPTIONS
-)
+/**
+ * Parse GovernanceAction from CBOR hex string.
+ *
+ * @since 2.0.0
+ * @category parsing
+ */
+export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): GovernanceAction => {
+  const bytes = Bytes.fromHex(hex)
+  return fromCBOR(bytes, options)
+}
+
+/**
+ * Encode GovernanceAction to CBOR hex string.
+ *
+ * @since 2.0.0
+ * @category encoding
+ */
+export const toCBORHex = (data: GovernanceAction, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): string => {
+  const bytes = toCBOR(data, options)
+  return Bytes.toHex(bytes)
+}
+
+/**
+ * Parse GovernanceAction from CBOR bytes.
+ *
+ * @since 2.0.0
+ * @category parsing
+ */
+export const fromCBOR = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): GovernanceAction => {
+  const cddl = CBOR.fromCBORBytes(bytes, options)
+  return Schema.decodeSync(FromCDDL)(cddl as any)
+}
+
+/**
+ * Encode GovernanceAction to CBOR bytes.
+ *
+ * @since 2.0.0
+ * @category encoding
+ */
+export const toCBOR = (data: GovernanceAction, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): Uint8Array => {
+  const cddl = Schema.encodeSync(FromCDDL)(data)
+  return CBOR.toCBORBytes(cddl, options)
+}

@@ -70,71 +70,71 @@ export declare const DRepVotingThresholds: Schema.Tuple<
     Schema.refine<
       { readonly numerator: bigint; readonly denominator: bigint },
       Schema.Struct<{
-        numerator: Schema.refine<bigint, typeof Schema.BigInt>
-        denominator: Schema.refine<bigint, typeof Schema.BigInt>
+        numerator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
+        denominator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
       }>
     >,
     Schema.refine<
       { readonly numerator: bigint; readonly denominator: bigint },
       Schema.Struct<{
-        numerator: Schema.refine<bigint, typeof Schema.BigInt>
-        denominator: Schema.refine<bigint, typeof Schema.BigInt>
+        numerator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
+        denominator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
       }>
     >,
     Schema.refine<
       { readonly numerator: bigint; readonly denominator: bigint },
       Schema.Struct<{
-        numerator: Schema.refine<bigint, typeof Schema.BigInt>
-        denominator: Schema.refine<bigint, typeof Schema.BigInt>
+        numerator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
+        denominator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
       }>
     >,
     Schema.refine<
       { readonly numerator: bigint; readonly denominator: bigint },
       Schema.Struct<{
-        numerator: Schema.refine<bigint, typeof Schema.BigInt>
-        denominator: Schema.refine<bigint, typeof Schema.BigInt>
+        numerator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
+        denominator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
       }>
     >,
     Schema.refine<
       { readonly numerator: bigint; readonly denominator: bigint },
       Schema.Struct<{
-        numerator: Schema.refine<bigint, typeof Schema.BigInt>
-        denominator: Schema.refine<bigint, typeof Schema.BigInt>
+        numerator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
+        denominator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
       }>
     >,
     Schema.refine<
       { readonly numerator: bigint; readonly denominator: bigint },
       Schema.Struct<{
-        numerator: Schema.refine<bigint, typeof Schema.BigInt>
-        denominator: Schema.refine<bigint, typeof Schema.BigInt>
+        numerator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
+        denominator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
       }>
     >,
     Schema.refine<
       { readonly numerator: bigint; readonly denominator: bigint },
       Schema.Struct<{
-        numerator: Schema.refine<bigint, typeof Schema.BigInt>
-        denominator: Schema.refine<bigint, typeof Schema.BigInt>
+        numerator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
+        denominator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
       }>
     >,
     Schema.refine<
       { readonly numerator: bigint; readonly denominator: bigint },
       Schema.Struct<{
-        numerator: Schema.refine<bigint, typeof Schema.BigInt>
-        denominator: Schema.refine<bigint, typeof Schema.BigInt>
+        numerator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
+        denominator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
       }>
     >,
     Schema.refine<
       { readonly numerator: bigint; readonly denominator: bigint },
       Schema.Struct<{
-        numerator: Schema.refine<bigint, typeof Schema.BigInt>
-        denominator: Schema.refine<bigint, typeof Schema.BigInt>
+        numerator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
+        denominator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
       }>
     >,
     Schema.refine<
       { readonly numerator: bigint; readonly denominator: bigint },
       Schema.Struct<{
-        numerator: Schema.refine<bigint, typeof Schema.BigInt>
-        denominator: Schema.refine<bigint, typeof Schema.BigInt>
+        numerator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
+        denominator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
       }>
     >
   ]
@@ -160,15 +160,15 @@ export declare const ExUnitPrices: Schema.Tuple2<
   Schema.refine<
     { readonly numerator: bigint; readonly denominator: bigint },
     Schema.Struct<{
-      numerator: Schema.refine<bigint, typeof Schema.BigInt>
-      denominator: Schema.refine<bigint, typeof Schema.BigInt>
+      numerator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
+      denominator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
     }>
   >,
   Schema.refine<
     { readonly numerator: bigint; readonly denominator: bigint },
     Schema.Struct<{
-      numerator: Schema.refine<bigint, typeof Schema.BigInt>
-      denominator: Schema.refine<bigint, typeof Schema.BigInt>
+      numerator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
+      denominator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
     }>
   >
 >
@@ -190,8 +190,8 @@ ex_units = [mem : uint, steps : uint]
 
 ```ts
 export declare const ExUnits: Schema.Tuple2<
-  Schema.refine<bigint, typeof Schema.BigInt>,
-  Schema.refine<bigint, typeof Schema.BigInt>
+  Schema.refine<bigint, typeof Schema.BigIntFromSelf>,
+  Schema.refine<bigint, typeof Schema.BigIntFromSelf>
 >
 ```
 
@@ -227,36 +227,36 @@ export declare const PoolVotingThresholds: Schema.Tuple<
     Schema.refine<
       { readonly numerator: bigint; readonly denominator: bigint },
       Schema.Struct<{
-        numerator: Schema.refine<bigint, typeof Schema.BigInt>
-        denominator: Schema.refine<bigint, typeof Schema.BigInt>
+        numerator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
+        denominator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
       }>
     >,
     Schema.refine<
       { readonly numerator: bigint; readonly denominator: bigint },
       Schema.Struct<{
-        numerator: Schema.refine<bigint, typeof Schema.BigInt>
-        denominator: Schema.refine<bigint, typeof Schema.BigInt>
+        numerator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
+        denominator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
       }>
     >,
     Schema.refine<
       { readonly numerator: bigint; readonly denominator: bigint },
       Schema.Struct<{
-        numerator: Schema.refine<bigint, typeof Schema.BigInt>
-        denominator: Schema.refine<bigint, typeof Schema.BigInt>
+        numerator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
+        denominator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
       }>
     >,
     Schema.refine<
       { readonly numerator: bigint; readonly denominator: bigint },
       Schema.Struct<{
-        numerator: Schema.refine<bigint, typeof Schema.BigInt>
-        denominator: Schema.refine<bigint, typeof Schema.BigInt>
+        numerator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
+        denominator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
       }>
     >,
     Schema.refine<
       { readonly numerator: bigint; readonly denominator: bigint },
       Schema.Struct<{
-        numerator: Schema.refine<bigint, typeof Schema.BigInt>
-        denominator: Schema.refine<bigint, typeof Schema.BigInt>
+        numerator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
+        denominator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
       }>
     >
   ]

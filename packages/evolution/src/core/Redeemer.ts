@@ -1,21 +1,9 @@
-import { Data, Effect, FastCheck, ParseResult, Schema } from "effect"
+import { Effect, Equal, FastCheck, Hash, Inspectable, ParseResult, Schema } from "effect"
 
 import * as Bytes from "./Bytes.js"
 import * as CBOR from "./CBOR.js"
 import * as PlutusData from "./Data.js"
-import * as Function from "./Function.js"
 import * as Numeric from "./Numeric.js"
-
-/**
- * Error class for Redeemer related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class RedeemerError extends Data.TaggedError("RedeemerError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Redeemer tag enum for different script execution contexts.
@@ -86,7 +74,74 @@ export class Redeemer extends Schema.Class<Redeemer>("Redeemer")({
     description: "PlutusData passed to the script for validation"
   }),
   exUnits: ExUnits
-}) {}
+}) {
+  /**
+   * Convert to JSON representation.
+   *
+   * @since 2.0.0
+   * @category conversions
+   */
+  toJSON() {
+    return {
+      _tag: "Redeemer",
+      tag: this.tag,
+      index: this.index,
+      data: this.data,
+      exUnits: this.exUnits
+    }
+  }
+
+  /**
+   * Convert to string representation.
+   *
+   * @since 2.0.0
+   * @category conversions
+   */
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  /**
+   * Custom inspect for Node.js REPL.
+   *
+   * @since 2.0.0
+   * @category conversions
+   */
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  /**
+   * Structural equality check.
+   *
+   * @since 2.0.0
+   * @category equality
+   */
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof Redeemer &&
+      this.tag === that.tag &&
+      this.index === that.index &&
+      Equal.equals(this.data, that.data) &&
+      Equal.equals(this.exUnits, that.exUnits)
+    )
+  }
+
+  /**
+   * Hash code generation.
+   *
+   * @since 2.0.0
+   * @category hashing
+   */
+  [Hash.symbol](): number {
+    return Hash.cached(
+      this,
+      Hash.combine(
+        Hash.combine(Hash.combine(Hash.string(this.tag))(Hash.hash(this.index)))(Hash.hash(this.data))
+      )(Hash.hash(this.exUnits))
+    )
+  }
+}
 
 /**
  * Helper function to convert RedeemerTag string to CBOR integer.
@@ -124,9 +179,9 @@ export const integerToTag = (value: bigint): RedeemerTag => {
     case 3n:
       return "reward"
     default:
-      throw new RedeemerError({
-        message: `Invalid redeemer tag: ${value}. Must be 0 (spend), 1 (mint), 2 (cert), or 3 (reward)`
-      })
+      throw new Error(
+        `Invalid redeemer tag: ${value}. Must be 0 (spend), 1 (mint), 2 (cert), or 3 (reward)`
+      )
   }
 }
 
@@ -312,7 +367,8 @@ export const isReward = (redeemer: Redeemer): boolean => redeemer.tag === "rewar
  * @since 2.0.0
  * @category transformation
  */
-export const toCBORBytes = Function.makeCBOREncodeSync(FromCDDL, RedeemerError, "Redeemer.toCBORBytes")
+export const toCBORBytes = (redeemer: Redeemer, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): Uint8Array =>
+  Schema.encodeSync(FromCBORBytes(options))(redeemer)
 
 /**
  * Encode Redeemer to CBOR hex string.
@@ -320,7 +376,8 @@ export const toCBORBytes = Function.makeCBOREncodeSync(FromCDDL, RedeemerError, 
  * @since 2.0.0
  * @category transformation
  */
-export const toCBORHex = Function.makeCBOREncodeHexSync(FromCDDL, RedeemerError, "Redeemer.toCBORHex")
+export const toCBORHex = (redeemer: Redeemer, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): string =>
+  Schema.encodeSync(FromCBORHex(options))(redeemer)
 
 /**
  * Decode Redeemer from CBOR bytes.
@@ -328,7 +385,8 @@ export const toCBORHex = Function.makeCBOREncodeHexSync(FromCDDL, RedeemerError,
  * @since 2.0.0
  * @category transformation
  */
-export const fromCBORBytes = Function.makeCBORDecodeSync(FromCDDL, RedeemerError, "Redeemer.fromCBORBytes")
+export const fromCBORBytes = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): Redeemer =>
+  Schema.decodeSync(FromCBORBytes(options))(bytes)
 
 /**
  * Decode Redeemer from CBOR hex string.
@@ -336,16 +394,8 @@ export const fromCBORBytes = Function.makeCBORDecodeSync(FromCDDL, RedeemerError
  * @since 2.0.0
  * @category transformation
  */
-export const fromCBORHex = (hex: string, options?: CBOR.CodecOptions): Redeemer => {
-  try {
-    return Schema.decodeSync(FromCBORHex(options))(hex)
-  } catch (cause) {
-    throw new RedeemerError({
-      message: "Failed to decode Redeemer from CBOR hex",
-      cause
-    })
-  }
-}
+export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): Redeemer =>
+  Schema.decodeSync(FromCBORHex(options))(hex)
 
 // ============================================================================
 // Generators

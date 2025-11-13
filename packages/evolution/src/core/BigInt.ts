@@ -1,15 +1,4 @@
-import { Data, Schema } from "effect"
-
-/**
- * Error class for BigInt related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class BigIntError extends Data.TaggedError("BigIntError")<{
-  message?: string
-  reason?: "InvalidFormat" | "OutOfRange"
-}> {}
+import { Schema } from "effect"
 
 /**
  * BigUInt schema based on Conway CDDL specification
@@ -133,8 +122,6 @@ export const match = <T>(
     case "BigNInt":
       return cases.BigNInt(bigInt.bytes)
     default:
-      throw new BigIntError({
-        message: `Unknown BigInt variant: ${(bigInt as any)._tag}`
-      })
+      throw new Error(`Unknown BigInt variant: ${(bigInt as any)._tag}`)
   }
 }

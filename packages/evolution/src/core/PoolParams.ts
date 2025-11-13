@@ -1,9 +1,8 @@
-import { BigDecimal, Data, Effect as Eff, FastCheck, ParseResult, Schema } from "effect"
+import { BigDecimal, Effect as Eff, Equal, FastCheck, Hash, Inspectable, ParseResult, Schema } from "effect"
 
 import * as Bytes from "./Bytes.js"
 import * as CBOR from "./CBOR.js"
 import * as Coin from "./Coin.js"
-import * as Function from "./Function.js"
 import * as KeyHash from "./KeyHash.js"
 import * as PoolKeyHash from "./PoolKeyHash.js"
 import * as PoolMetadata from "./PoolMetadata.js"
@@ -11,17 +10,6 @@ import * as Relay from "./Relay.js"
 import * as RewardAccount from "./RewardAccount.js"
 import * as UnitInterval from "./UnitInterval.js"
 import * as VrfKeyHash from "./VrfKeyHash.js"
-
-/**
- * Error class for PoolParams related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class PoolParamsError extends Data.TaggedError("PoolParamsError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Schema for PoolParams representing stake pool registration parameters.
@@ -55,7 +43,104 @@ export class PoolParams extends Schema.TaggedClass<PoolParams>()("PoolParams", {
   poolMetadata: Schema.optionalWith(PoolMetadata.PoolMetadata, {
     nullable: true
   })
-}) {}
+}) {
+  /**
+   * Convert to JSON-serializable object.
+   * Converts bigint fields to strings and delegates to contained types' toJSON methods.
+   *
+   * @since 2.0.0
+   * @category encoding
+   */
+  toJSON() {
+    return {
+      _tag: "PoolParams" as const,
+      operator: this.operator.toJSON(),
+      vrfKeyhash: this.vrfKeyhash.toJSON(),
+      pledge: String(this.pledge),
+      cost: String(this.cost),
+      margin: {
+        numerator: String(this.margin.numerator),
+        denominator: String(this.margin.denominator)
+      },
+      rewardAccount: this.rewardAccount.toJSON(),
+      poolOwners: this.poolOwners.map((owner) => owner.toJSON()),
+      relays: this.relays.map((relay) => relay.toJSON()),
+      poolMetadata: this.poolMetadata ? this.poolMetadata.toJSON() : null
+    }
+  }
+
+  /**
+   * Encode to CBOR bytes.
+   *
+   * @since 2.0.0
+   * @category encoding
+   */
+  toCBORBytes(): Uint8Array {
+    return toBytes(this)
+  }
+
+  /**
+   * Encode to CBOR hex string.
+   *
+   * @since 2.0.0
+   * @category encoding
+   */
+  toCBORHex(): string {
+    return toHex(this)
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    if (!(that instanceof PoolParams)) return false
+
+    return (
+      Equal.equals(this.operator, that.operator) &&
+      Equal.equals(this.vrfKeyhash, that.vrfKeyhash) &&
+      this.pledge === that.pledge &&
+      this.cost === that.cost &&
+      Equal.equals(this.margin, that.margin) &&
+      Equal.equals(this.rewardAccount, that.rewardAccount) &&
+      this.poolOwners.length === that.poolOwners.length &&
+      this.poolOwners.every((owner, i) => Equal.equals(owner, that.poolOwners[i])) &&
+      this.relays.length === that.relays.length &&
+      this.relays.every((relay, i) => Equal.equals(relay, that.relays[i])) &&
+      ((this.poolMetadata === undefined && that.poolMetadata === undefined) ||
+        (this.poolMetadata !== undefined &&
+          that.poolMetadata !== undefined &&
+          Equal.equals(this.poolMetadata, that.poolMetadata)))
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(
+      this,
+      Hash.combine(Hash.hash(this.operator))(
+        Hash.combine(Hash.hash(this.vrfKeyhash))(
+          Hash.combine(Hash.hash(this.pledge))(
+            Hash.combine(Hash.hash(this.cost))(
+              Hash.combine(Hash.hash(this.margin))(
+                Hash.combine(Hash.hash(this.rewardAccount))(
+                  Hash.combine(Hash.array(this.poolOwners.map((o) => Hash.hash(o))))(
+                    Hash.combine(Hash.array(this.relays.map((r) => Hash.hash(r))))(
+                      Hash.hash(this.poolMetadata)
+                    )
+                  )
+                )
+              )
+            )
+          )
+        )
+      )
+    )
+  }
+}
 
 export const CDDLSchema = Schema.Tuple(
   CBOR.ByteArray, // operator (pool_keyhash as bytes)
@@ -191,75 +276,6 @@ export const FromHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =
   )
 
 /**
- * Check if two PoolParams instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: PoolParams, b: PoolParams): boolean => {
-  if (!PoolKeyHash.equals(a.operator, b.operator)) return false
-
-  if (!VrfKeyHash.equals(a.vrfKeyhash, b.vrfKeyhash)) return false
-
-  if (a.pledge !== b.pledge) return false
-
-  if (a.cost !== b.cost) return false
-
-  if (!UnitInterval.equals(a.margin, b.margin)) return false
-
-  // compare reward accounts structurally
-  if (!RewardAccount.equals(a.rewardAccount, b.rewardAccount)) return false
-
-  if (a.poolOwners.length !== b.poolOwners.length) return false
-
-  for (let i = 0; i < a.poolOwners.length; i++) {
-    if (!KeyHash.equals(a.poolOwners[i], b.poolOwners[i])) return false
-  }
-
-  if (a.relays.length !== b.relays.length) return false
-
-  for (let i = 0; i < a.relays.length; i++) {
-    // Relay.equals exists and performs structural equality
-    if (!Relay.equals(a.relays[i], b.relays[i])) return false
-  }
-
-  if (a.poolMetadata === undefined && b.poolMetadata === undefined) return true
-
-  if (a.poolMetadata !== undefined && b.poolMetadata !== undefined) {
-    // Prefer structural PoolMetadata.equals when available
-    if (typeof (PoolMetadata as any).equals === "function") {
-      return (PoolMetadata as any).equals(a.poolMetadata, b.poolMetadata)
-    }
-
-    // Fallback to url equality
-    if (a.poolMetadata.url !== b.poolMetadata.url) return false
-
-    return true
-  }
-
-  // One side has poolMetadata while the other doesn't
-  return false
-}
-
-/**
- * Create a PoolParams instance with validation.
- *
- * @since 2.0.0
- * @category constructors
- */
-export const make = (params: {
-  operator: PoolKeyHash.PoolKeyHash
-  vrfKeyhash: VrfKeyHash.VrfKeyHash
-  pledge: Coin.Coin
-  cost: Coin.Coin
-  margin: UnitInterval.UnitInterval
-  rewardAccount: RewardAccount.RewardAccount
-  poolOwners: Array<KeyHash.KeyHash>
-  relays: Array<Relay.Relay>
-  poolMetadata?: PoolMetadata.PoolMetadata
-}): PoolParams => new PoolParams(params)
-
-/**
  * Get total effective stake for pool rewards calculation.
  *
  * @since 2.0.0
@@ -350,7 +366,8 @@ export const arbitrary = FastCheck.record({
  * @since 2.0.0
  * @category parsing
  */
-export const fromBytes = Function.makeCBORDecodeSync(FromCDDL, PoolParamsError, "PoolParams.fromBytes")
+export const fromBytes = (bytes: Uint8Array, options?: CBOR.CodecOptions): PoolParams =>
+  Schema.decodeSync(FromBytes(options))(bytes)
 
 /**
  * Parse PoolParams from CBOR hex string.
@@ -358,7 +375,8 @@ export const fromBytes = Function.makeCBORDecodeSync(FromCDDL, PoolParamsError, 
  * @since 2.0.0
  * @category parsing
  */
-export const fromHex = Function.makeCBORDecodeHexSync(FromCDDL, PoolParamsError, "PoolParams.fromHex")
+export const fromHex = (hex: string, options?: CBOR.CodecOptions): PoolParams =>
+  Schema.decodeSync(FromHex(options))(hex)
 
 /**
  * Encode PoolParams to CBOR bytes.
@@ -366,7 +384,8 @@ export const fromHex = Function.makeCBORDecodeHexSync(FromCDDL, PoolParamsError,
  * @since 2.0.0
  * @category encoding
  */
-export const toBytes = Function.makeCBOREncodeSync(FromCDDL, PoolParamsError, "PoolParams.toBytes")
+export const toBytes = (params: PoolParams, options?: CBOR.CodecOptions): Uint8Array =>
+  Schema.encodeSync(FromBytes(options))(params)
 
 /**
  * Encode PoolParams to CBOR hex string.
@@ -374,48 +393,5 @@ export const toBytes = Function.makeCBOREncodeSync(FromCDDL, PoolParamsError, "P
  * @since 2.0.0
  * @category encoding
  */
-export const toHex = Function.makeCBOREncodeHexSync(FromCDDL, PoolParamsError, "PoolParams.toHex")
-
-// ============================================================================
-// Effect Namespace
-// ============================================================================
-
-/**
- * Effect-based error handling variants for functions that can fail.
- *
- * @since 2.0.0
- * @category effect
- */
-export namespace Either {
-  /**
-   * Parse PoolParams from CBOR bytes with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromBytes = Function.makeCBORDecodeEither(FromCDDL, PoolParamsError)
-
-  /**
-   * Parse PoolParams from CBOR hex string with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromHex = Function.makeCBORDecodeHexEither(FromCDDL, PoolParamsError)
-
-  /**
-   * Encode PoolParams to CBOR bytes with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toBytes = Function.makeCBOREncodeEither(FromCDDL, PoolParamsError)
-
-  /**
-   * Encode PoolParams to CBOR hex string with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toHex = Function.makeCBOREncodeHexEither(FromCDDL, PoolParamsError)
-}
+export const toHex = (params: PoolParams, options?: CBOR.CodecOptions): string =>
+  Schema.encodeSync(FromHex(options))(params)

@@ -1,28 +1,87 @@
-import { Data, Effect, FastCheck, ParseResult, Schema } from "effect"
+import { Effect, Equal, FastCheck, Hash, Inspectable, ParseResult, Schema } from "effect"
 
 import * as Bytes from "./Bytes.js"
 import * as CBOR from "./CBOR.js"
 import * as Numeric from "./Numeric.js"
 
 /**
- * Error class for NonnegativeInterval related operations.
- */
-export class NonnegativeIntervalError extends Data.TaggedError("NonnegativeIntervalError")<{
-  message?: string
-  cause?: unknown
-}> {}
-
-/**
  * Schema for NonnegativeInterval representing a fractional value >= 0.
  *
  * CDDL: nonnegative_interval = #6.30([uint, positive_int])
+ *
+ * @since 2.0.0
+ * @category model
  */
-export const NonnegativeInterval = Schema.Struct({
+export class NonnegativeInterval extends Schema.Class<NonnegativeInterval>("NonnegativeInterval")({
   numerator: Numeric.Uint64Schema,
   denominator: Numeric.Uint64Schema // positive_int (we enforce > 0 below)
-})
-  .pipe(
-    Schema.filter((interval) => {
+}) {
+  /**
+   * Convert to JSON representation.
+   *
+   * @since 2.0.0
+   * @category conversions
+   */
+  toJSON() {
+    return {
+      _tag: "NonnegativeInterval",
+      numerator: this.numerator,
+      denominator: this.denominator
+    }
+  }
+
+  /**
+   * Convert to string representation.
+   *
+   * @since 2.0.0
+   * @category conversions
+   */
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  /**
+   * Custom inspect for Node.js REPL.
+   *
+   * @since 2.0.0
+   * @category conversions
+   */
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  /**
+   * Structural equality check.
+   *
+   * @since 2.0.0
+   * @category equality
+   */
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof NonnegativeInterval &&
+      this.numerator === that.numerator &&
+      this.denominator === that.denominator
+    )
+  }
+
+  /**
+   * Hash code generation.
+   *
+   * @since 2.0.0
+   * @category hashing
+   */
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.combine(Hash.hash(this.numerator))(Hash.hash(this.denominator)))
+  }
+
+  /**
+   * Static filter for validation.
+   *
+   * @since 2.0.0
+   * @category validation
+   */
+  static get schema() {
+    return Schema.filter((interval: NonnegativeInterval) => {
       if (interval.denominator <= 0n) {
         return {
           path: ["denominator"],
@@ -30,11 +89,9 @@ export const NonnegativeInterval = Schema.Struct({
         }
       }
       return true
-    })
-  )
-  .annotations({ identifier: "NonnegativeInterval" })
-
-export type NonnegativeInterval = typeof NonnegativeInterval.Type
+    })(NonnegativeInterval)
+  }
+}
 
 export const CDDLSchema = CBOR.tag(30, Schema.Tuple(CBOR.Integer, CBOR.Integer))
 
@@ -59,7 +116,7 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Non
       const [numerator, denominator] = yield* ParseResult.decodeUnknown(Schema.Tuple(CBOR.Integer, CBOR.Integer))(
         taggedValue.value
       )
-      return NonnegativeInterval.make({ numerator, denominator })
+      return new NonnegativeInterval({ numerator, denominator })
     })
 }).annotations({ identifier: "NonnegativeInterval.CDDL" })
 
@@ -73,4 +130,4 @@ export const arbitrary: FastCheck.Arbitrary<NonnegativeInterval> = FastCheck.big
   .chain((denominator) =>
     FastCheck.bigInt({ min: 0n, max: denominator }).map((numerator) => ({ numerator, denominator }))
   )
-  .map((v) => NonnegativeInterval.make(v))
+  .map((v) => new NonnegativeInterval(v))

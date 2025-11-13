@@ -1,4 +1,4 @@
-import { Data, Schema } from "effect"
+import { Schema } from "effect"
 
 import * as CBOR from "./CBOR.js"
 import * as Numeric from "./Numeric.js"
@@ -12,23 +12,15 @@ import * as Numeric from "./Numeric.js"
  */
 
 /**
- * Error class for EpochNo related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class EpochNoError extends Data.TaggedError("EpochNoError")<{
-  message?: string
-  cause?: unknown
-}> {}
-
-/**
  * Schema for validating epoch numbers (0-255).
  *
  * @since 2.0.0
  * @category schemas
  */
-export const EpochNoSchema = Numeric.Uint64Schema.pipe(Schema.brand("EpochNo"))
+export const EpochNoSchema = Numeric.Uint64Schema.annotations({
+  identifier: "EpochNo",
+  description: "Blockchain epoch number (64-bit unsigned integer)"
+})
 
 /**
  * Type alias for EpochNo representing blockchain epoch numbers.
@@ -39,28 +31,12 @@ export const EpochNoSchema = Numeric.Uint64Schema.pipe(Schema.brand("EpochNo"))
 export type EpochNo = typeof EpochNoSchema.Type
 
 /**
- * Smart constructor for creating EpochNo values.
- *
- * @since 2.0.0
- * @category constructors
- */
-export const make = EpochNoSchema.make
-
-/**
  * Check if a value is a valid EpochNo.
  *
  * @since 2.0.0
  * @category predicates
  */
 export const is = Schema.is(EpochNoSchema)
-
-/**
- * Check if two EpochNo instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: EpochNo, b: EpochNo): boolean => a === b
 
 /**
  * Compare two EpochNo values.

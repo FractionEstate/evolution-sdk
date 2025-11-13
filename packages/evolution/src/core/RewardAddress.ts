@@ -1,15 +1,4 @@
-import { Data, FastCheck, Schema } from "effect"
-
-/**
- * Error class for RewardAddress related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class RewardAddressError extends Data.TaggedError("RewardAddressError")<{
-  message?: string
-  cause?: unknown
-}> {}
+import { FastCheck, Schema } from "effect"
 
 /**
  * Reward address format schema (human-readable addresses)
@@ -34,22 +23,6 @@ export const RewardAddress = Schema.String.pipe(
 export type RewardAddress = typeof RewardAddress.Type
 
 /**
- * Smart constructor for RewardAddress that validates and applies branding.
- *
- * @since 2.0.0
- * @category constructors
- */
-export const make = RewardAddress.make
-
-/**
- * Check if two RewardAddress instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: RewardAddress, b: RewardAddress): boolean => a === b
-
-/**
  * Check if the given value is a valid RewardAddress
  *
  * @since 2.0.0
@@ -65,4 +38,4 @@ export const isRewardAddress = Schema.is(RewardAddress)
  */
 export const arbitrary = FastCheck.string({ minLength: 50, maxLength: 100 })
   .filter((str) => /^(stake|stake_test)[1][a-z0-9]+$/i.test(str))
-  .map((str) => make(str))
+  .map((str) => RewardAddress.make(str))

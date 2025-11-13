@@ -4,12 +4,11 @@ import { bytesToNumberLE } from "@noble/curves/utils.js"
 import { hmac } from "@noble/hashes/hmac.js"
 import { pbkdf2 } from "@noble/hashes/pbkdf2"
 import { sha512 } from "@noble/hashes/sha2"
-import { Data, Effect, FastCheck, Schema } from "effect"
+import { Data, Effect, Equal, FastCheck, Hash, Inspectable, Schema } from "effect"
 
 import * as Bip32PublicKey from "./Bip32PublicKey.js"
 import * as Bytes from "./Bytes.js"
 import * as Bytes96 from "./Bytes96.js"
-import * as Function from "./Function.js"
 import * as PrivateKey from "./PrivateKey.js"
 
 /**
@@ -34,11 +33,24 @@ export class Bip32PrivateKeyError extends Data.TaggedError("Bip32PrivateKeyError
 export class Bip32PrivateKey extends Schema.TaggedClass<Bip32PrivateKey>()("Bip32PrivateKey", {
   bytes: Bytes96.BytesSchema
 }) {
-  toJSON(): string {
-    return toHex(this)
+  toJSON() {
+    return { _tag: "Bip32PrivateKey" as const, bytes: Bytes.toHex(this.bytes) }
   }
+
   toString(): string {
-    return toHex(this)
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof Bip32PrivateKey && Bytes.equals(this.bytes, that.bytes)
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.array(Array.from(this.bytes)))
   }
 }
 
@@ -131,13 +143,6 @@ const add256 = (a: Uint8Array, b: Uint8Array): Uint8Array => {
 }
 
 // ============================================================================
-// Constructors / Equality
-// ============================================================================
-
-export const make = (...args: ConstructorParameters<typeof Bip32PrivateKey>) => new Bip32PrivateKey(...args)
-export const equals = (a: Bip32PrivateKey, b: Bip32PrivateKey) => Bytes.equals(a.bytes, b.bytes)
-
-// ============================================================================
 // Root Functions (Sync API)
 // ============================================================================
 
@@ -147,7 +152,7 @@ export const equals = (a: Bip32PrivateKey, b: Bip32PrivateKey) => Bytes.equals(a
  * @since 2.0.0
  * @category parsing
  */
-export const fromBytes = Function.makeDecodeSync(FromBytes, Bip32PrivateKeyError, "Bip32PrivateKey.fromBytes")
+export const fromBytes = Schema.decodeSync(FromBytes)
 
 /**
  * Parse a Bip32PrivateKey from hex string.
@@ -155,7 +160,7 @@ export const fromBytes = Function.makeDecodeSync(FromBytes, Bip32PrivateKeyError
  * @since 2.0.0
  * @category parsing
  */
-export const fromHex = Function.makeDecodeSync(FromHex, Bip32PrivateKeyError, "Bip32PrivateKey.fromHex")
+export const fromHex = Schema.decodeSync(FromHex)
 
 /**
  * Convert a Bip32PrivateKey to raw bytes.
@@ -163,7 +168,7 @@ export const fromHex = Function.makeDecodeSync(FromHex, Bip32PrivateKeyError, "B
  * @since 2.0.0
  * @category encoding
  */
-export const toBytes = Function.makeEncodeSync(FromBytes, Bip32PrivateKeyError, "Bip32PrivateKey.toBytes")
+export const toBytes = Schema.encodeSync(FromBytes)
 
 /**
  * Convert a Bip32PrivateKey to hex string.
@@ -171,7 +176,7 @@ export const toBytes = Function.makeEncodeSync(FromBytes, Bip32PrivateKeyError, 
  * @since 2.0.0
  * @category encoding
  */
-export const toHex = Function.makeEncodeSync(FromHex, Bip32PrivateKeyError, "Bip32PrivateKey.toHex")
+export const toHex = Schema.encodeSync(FromHex)
 
 /**
  * Create a Bip32PrivateKey from BIP39 entropy with PBKDF2 key stretching.
@@ -255,24 +260,11 @@ export const from128XPRV = (bytes: Uint8Array): Bip32PrivateKey => {
   return Effect.runSync(Either.from_128_xprv(bytes))
 }
 
-// ============================================================================
-// FastCheck Arbitrary
-// ============================================================================
-
 export const arbitrary = FastCheck.uint8Array({ minLength: 96, maxLength: 96 }).map(
   (bytes) => new Bip32PrivateKey({ bytes }, { disableValidation: true })
 )
 
-// ============================================================================
-// Either Namespace (Composable API - for backward compatibility)
-// ============================================================================
-
 export namespace Either {
-  export const fromBytes = Function.makeDecodeEither(FromBytes, Bip32PrivateKeyError)
-  export const fromHex = Function.makeDecodeEither(FromHex, Bip32PrivateKeyError)
-  export const toBytes = Function.makeEncodeEither(FromBytes, Bip32PrivateKeyError)
-  export const toHex = Function.makeEncodeEither(FromHex, Bip32PrivateKeyError)
-
   export const fromBip39Entropy = (entropy: Uint8Array, password: string = "") =>
     Effect.gen(function* () {
       const keyMaterial = pbkdf2(sha512, password, entropy, { c: PBKDF2_ITERATIONS, dkLen: PBKDF2_KEY_SIZE })
@@ -286,10 +278,7 @@ export namespace Either {
 
   export const deriveChild = (bip32PrivateKey: Bip32PrivateKey, index: number) =>
     Effect.gen(function* () {
-      const keyBytes = yield* Effect.try({
-        try: () => Schema.encodeSync(FromBytes)(bip32PrivateKey),
-        catch: (cause) => new Bip32PrivateKeyError({ message: "toBytes failed", cause })
-      })
+      const keyBytes = bip32PrivateKey.bytes
       const scalar = extractScalar(keyBytes)
       const iv = extractIV(keyBytes)
       const chainCode = extractChainCode(keyBytes)
@@ -482,10 +471,6 @@ export namespace Either {
       return new Bip32PrivateKey({ bytes: internal }, { disableValidation: true })
     })
 }
-
-// ============================================================================
-// Cardano Path Utilities (indices)
-// ============================================================================
 
 /**
  * Utility functions to build Cardano BIP44 derivation indices.

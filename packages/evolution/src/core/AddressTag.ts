@@ -1,14 +1,3 @@
-import { Data } from "effect"
-
-/**
- * @since 2.0.0
- * @category model
- */
-export class AddressTagError extends Data.TaggedError("AddressTagError")<{
-  message: string
-  cause?: unknown
-}> {}
-
 /**
  * Address header kind - used to determine the type of address from its header
  * Following CIP-0019 address types

@@ -1,21 +1,139 @@
-import { Data, Effect as Eff, FastCheck, ParseResult, Schema } from "effect"
+import { Effect as Eff, Equal, FastCheck, Hash, Inspectable, ParseResult, Schema } from "effect"
 
 import * as Bytes from "./Bytes.js"
 import * as CBOR from "./CBOR.js"
-import * as Function from "./Function.js"
 import * as KeyHash from "./KeyHash.js"
 import * as ScriptHash from "./ScriptHash.js"
 
 /**
- * Error class for DRep related operations.
+ * KeyHashDRep variant of DRep.
+ * drep = [0, addr_keyhash]
  *
  * @since 2.0.0
- * @category errors
+ * @category model
  */
-export class DRepError extends Data.TaggedError("DRepError")<{
-  message?: string
-  cause?: unknown
-}> {}
+export class KeyHashDRep extends Schema.TaggedClass<KeyHashDRep>()("KeyHashDRep", {
+  keyHash: KeyHash.KeyHash
+}) {
+  toJSON() {
+    return {
+      _tag: "KeyHashDRep" as const,
+      keyHash: this.keyHash.toJSON()
+    }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof KeyHashDRep && Equal.equals(this.keyHash, that.keyHash)
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.combine(Hash.hash("KeyHashDRep"))(Hash.hash(this.keyHash)))
+  }
+}
+
+/**
+ * ScriptHashDRep variant of DRep.
+ * drep = [1, script_hash]
+ *
+ * @since 2.0.0
+ * @category model
+ */
+export class ScriptHashDRep extends Schema.TaggedClass<ScriptHashDRep>()("ScriptHashDRep", {
+  scriptHash: ScriptHash.ScriptHash
+}) {
+  toJSON() {
+    return {
+      _tag: "ScriptHashDRep" as const,
+      scriptHash: this.scriptHash.toJSON()
+    }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof ScriptHashDRep && Equal.equals(this.scriptHash, that.scriptHash)
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.combine(Hash.hash("ScriptHashDRep"))(Hash.hash(this.scriptHash)))
+  }
+}
+
+/**
+ * AlwaysAbstainDRep variant of DRep.
+ * drep = [2]
+ *
+ * @since 2.0.0
+ * @category model
+ */
+export class AlwaysAbstainDRep extends Schema.TaggedClass<AlwaysAbstainDRep>()("AlwaysAbstainDRep", {}) {
+  toJSON() {
+    return {
+      _tag: "AlwaysAbstainDRep" as const
+    }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof AlwaysAbstainDRep
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.hash("AlwaysAbstainDRep"))
+  }
+}
+
+/**
+ * AlwaysNoConfidenceDRep variant of DRep.
+ * drep = [3]
+ *
+ * @since 2.0.0
+ * @category model
+ */
+export class AlwaysNoConfidenceDRep extends Schema.TaggedClass<AlwaysNoConfidenceDRep>()("AlwaysNoConfidenceDRep", {}) {
+  toJSON() {
+    return {
+      _tag: "AlwaysNoConfidenceDRep" as const
+    }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof AlwaysNoConfidenceDRep
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.hash("AlwaysNoConfidenceDRep"))
+  }
+}
 
 /**
  * Union schema for DRep representing different DRep types.
@@ -25,16 +143,7 @@ export class DRepError extends Data.TaggedError("DRepError")<{
  * @since 2.0.0
  * @category schemas
  */
-export const DRep = Schema.Union(
-  Schema.TaggedStruct("KeyHashDRep", {
-    keyHash: KeyHash.KeyHash
-  }),
-  Schema.TaggedStruct("ScriptHashDRep", {
-    scriptHash: ScriptHash.ScriptHash
-  }),
-  Schema.TaggedStruct("AlwaysAbstainDRep", {}),
-  Schema.TaggedStruct("AlwaysNoConfidenceDRep", {})
-)
+export const DRep = Schema.Union(KeyHashDRep, ScriptHashDRep, AlwaysAbstainDRep, AlwaysNoConfidenceDRep)
 
 /**
  * Type alias for DRep.
@@ -83,20 +192,16 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(DRe
       switch (tag) {
         case 0n: {
           const keyHash = yield* ParseResult.decode(KeyHash.FromBytes)(rest[0] as Uint8Array)
-          return DRep.members[0].make({
-            keyHash
-          })
+          return new KeyHashDRep({ keyHash })
         }
         case 1n: {
           const scriptHash = yield* ParseResult.decode(ScriptHash.FromBytes)(rest[0] as Uint8Array)
-          return DRep.members[1].make({
-            scriptHash
-          })
+          return new ScriptHashDRep({ scriptHash })
         }
         case 2n:
-          return DRep.members[2].make({})
+          return new AlwaysAbstainDRep({})
         case 3n:
-          return DRep.members[3].make({})
+          return new AlwaysNoConfidenceDRep({})
         default:
           return yield* ParseResult.fail(
             new ParseResult.Type(Schema.typeSchema(DRep).ast, fromA, `Invalid DRep tag: ${tag}`)
@@ -105,60 +210,16 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(DRe
     })
 })
 
-/**
- * Type alias for KeyHashDRep.
- *
- * @since 2.0.0
- * @category model
- */
-export type KeyHashDRep = Extract<DRep, { _tag: "KeyHashDRep" }>
-
-/**
- * Type alias for ScriptHashDRep.
- *
- * @since 2.0.0
- * @category model
- */
-export type ScriptHashDRep = Extract<DRep, { _tag: "ScriptHashDRep" }>
-
-/**
- * Type alias for AlwaysAbstainDRep.
- *
- * @since 2.0.0
- * @category model
- */
-export type AlwaysAbstainDRep = Extract<DRep, { _tag: "AlwaysAbstainDRep" }>
-
-/**
- * Type alias for AlwaysNoConfidenceDRep.
- *
- * @since 2.0.0
- * @category model
- */
-export type AlwaysNoConfidenceDRep = Extract<DRep, { _tag: "AlwaysNoConfidenceDRep" }>
-
-/**
- * CBOR bytes transformation schema for DRep.
- *
- * @since 2.0.0
- * @category schemas
- */
-export const FromBytes = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.compose(
     CBOR.FromBytes(options), // Uint8Array → CBOR
     FromCDDL // CBOR → DRep
   )
 
-/**
- * CBOR hex transformation schema for DRep.
- *
- * @since 2.0.0
- * @category schemas
- */
-export const FromHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.compose(
     Bytes.FromHex, // string → Uint8Array
-    FromBytes(options) // Uint8Array → DRep
+    FromCBORBytes(options) // Uint8Array → DRep
   )
 
 /**
@@ -176,18 +237,14 @@ export const isDRep = Schema.is(DRep)
  * @category arbitrary
  */
 export const arbitrary = FastCheck.oneof(
-  FastCheck.record({
-    keyHash: KeyHash.arbitrary
-  }).map((props) => ({ _tag: "KeyHashDRep" as const, ...props })),
-  FastCheck.record({
-    scriptHash: ScriptHash.arbitrary
-  }).map((props) => ({ _tag: "ScriptHashDRep" as const, ...props })),
-  FastCheck.record({}).map(() => ({ _tag: "AlwaysAbstainDRep" as const })),
-  FastCheck.record({}).map(() => ({ _tag: "AlwaysNoConfidenceDRep" as const }))
+  KeyHash.arbitrary.map((keyHash) => new KeyHashDRep({ keyHash })),
+  ScriptHash.arbitrary.map((scriptHash) => new ScriptHashDRep({ scriptHash })),
+  FastCheck.constant(new AlwaysAbstainDRep({})),
+  FastCheck.constant(new AlwaysNoConfidenceDRep({}))
 )
 
 // ============================================================================
-// Root Functions
+// Decoding Functions
 // ============================================================================
 
 /**
@@ -196,7 +253,8 @@ export const arbitrary = FastCheck.oneof(
  * @since 2.0.0
  * @category parsing
  */
-export const fromCBORBytes = Function.makeCBORDecodeSync(FromCDDL, DRepError, "DRep.fromBytes")
+export const fromCBORBytes = (bytes: Uint8Array, options?: CBOR.CodecOptions): DRep =>
+  Schema.decodeSync(FromCBORBytes(options))(bytes)
 
 /**
  * Parse DRep from CBOR hex string.
@@ -204,7 +262,12 @@ export const fromCBORBytes = Function.makeCBORDecodeSync(FromCDDL, DRepError, "D
  * @since 2.0.0
  * @category parsing
  */
-export const fromHex = Function.makeCBORDecodeHexSync(FromCDDL, DRepError, "DRep.fromHex")
+export const fromCBORHex = (hex: string, options?: CBOR.CodecOptions): DRep =>
+  Schema.decodeSync(FromCBORHex(options))(hex)
+
+// ============================================================================
+// Encoding Functions
+// ============================================================================
 
 /**
  * Encode DRep to CBOR bytes.
@@ -212,7 +275,8 @@ export const fromHex = Function.makeCBORDecodeHexSync(FromCDDL, DRepError, "DRep
  * @since 2.0.0
  * @category encoding
  */
-export const toBytes = Function.makeCBOREncodeSync(FromCDDL, DRepError, "DRep.toBytes")
+export const toCBORBytes = (drep: DRep, options?: CBOR.CodecOptions): Uint8Array =>
+  Schema.encodeSync(FromCBORBytes(options))(drep)
 
 /**
  * Encode DRep to CBOR hex string.
@@ -220,73 +284,8 @@ export const toBytes = Function.makeCBOREncodeSync(FromCDDL, DRepError, "DRep.to
  * @since 2.0.0
  * @category encoding
  */
-export const toHex = Function.makeCBOREncodeHexSync(FromCDDL, DRepError, "DRep.toHex")
-
-// ============================================================================
-// Effect Namespace
-// ============================================================================
-
-/**
- * Effect-based error handling variants for functions that can fail.
- *
- * @since 2.0.0
- * @category effect
- */
-export namespace Either {
-  /**
-   * Parse DRep from CBOR bytes with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromBytes = Function.makeCBORDecodeEither(FromCDDL, DRepError)
-
-  /**
-   * Parse DRep from CBOR hex string with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromHex = Function.makeCBORDecodeHexEither(FromCDDL, DRepError)
-
-  /**
-   * Encode DRep to CBOR bytes with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toBytes = Function.makeCBOREncodeEither(FromCDDL, DRepError)
-
-  /**
-   * Encode DRep to CBOR hex string with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toHex = Function.makeCBOREncodeHexEither(FromCDDL, DRepError)
-}
-
-/**
- * Check if two DRep instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (self: DRep, that: DRep): boolean => {
-  if (self._tag !== that._tag) return false
-
-  switch (self._tag) {
-    case "KeyHashDRep":
-      return KeyHash.equals(self.keyHash, (that as KeyHashDRep).keyHash)
-    case "ScriptHashDRep":
-      return ScriptHash.equals(self.scriptHash, (that as ScriptHashDRep).scriptHash)
-    case "AlwaysAbstainDRep":
-    case "AlwaysNoConfidenceDRep":
-      return true // These have no additional data to compare
-    default:
-      return false
-  }
-}
+export const toCBORHex = (drep: DRep, options?: CBOR.CodecOptions): string =>
+  Schema.encodeSync(FromCBORHex(options))(drep)
 
 /**
  * Create a KeyHashDRep from a KeyHash.
@@ -294,10 +293,7 @@ export const equals = (self: DRep, that: DRep): boolean => {
  * @since 2.0.0
  * @category constructors
  */
-export const fromKeyHash = (keyHash: KeyHash.KeyHash): KeyHashDRep => ({
-  _tag: "KeyHashDRep",
-  keyHash
-})
+export const fromKeyHash = (keyHash: KeyHash.KeyHash): KeyHashDRep => new KeyHashDRep({ keyHash })
 
 /**
  * Create a ScriptHashDRep from a ScriptHash.
@@ -305,10 +301,7 @@ export const fromKeyHash = (keyHash: KeyHash.KeyHash): KeyHashDRep => ({
  * @since 2.0.0
  * @category constructors
  */
-export const fromScriptHash = (scriptHash: ScriptHash.ScriptHash): ScriptHashDRep => ({
-  _tag: "ScriptHashDRep",
-  scriptHash
-})
+export const fromScriptHash = (scriptHash: ScriptHash.ScriptHash): ScriptHashDRep => new ScriptHashDRep({ scriptHash })
 
 /**
  * Create an AlwaysAbstainDRep.
@@ -316,9 +309,7 @@ export const fromScriptHash = (scriptHash: ScriptHash.ScriptHash): ScriptHashDRe
  * @since 2.0.0
  * @category constructors
  */
-export const alwaysAbstain = (): AlwaysAbstainDRep => ({
-  _tag: "AlwaysAbstainDRep"
-})
+export const alwaysAbstain = (): AlwaysAbstainDRep => new AlwaysAbstainDRep({})
 
 /**
  * Create an AlwaysNoConfidenceDRep.
@@ -326,9 +317,7 @@ export const alwaysAbstain = (): AlwaysAbstainDRep => ({
  * @since 2.0.0
  * @category constructors
  */
-export const alwaysNoConfidence = (): AlwaysNoConfidenceDRep => ({
-  _tag: "AlwaysNoConfidenceDRep"
-})
+export const alwaysNoConfidence = (): AlwaysNoConfidenceDRep => new AlwaysNoConfidenceDRep({})
 
 /**
  * Pattern match over DRep.

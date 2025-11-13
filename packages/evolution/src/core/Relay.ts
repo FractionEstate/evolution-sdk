@@ -1,22 +1,10 @@
-import { Data, FastCheck, Schema } from "effect"
+import { FastCheck, Schema } from "effect"
 
 import * as Bytes from "./Bytes.js"
 import * as CBOR from "./CBOR.js"
-import * as Function from "./Function.js"
 import * as MultiHostName from "./MultiHostName.js"
 import * as SingleHostAddr from "./SingleHostAddr.js"
 import * as SingleHostName from "./SingleHostName.js"
-
-/**
- * Error class for Relay related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class RelayError extends Data.TaggedError("RelayError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Union schema for Relay representing various relay configurations.
@@ -76,27 +64,6 @@ export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTION
   })
 
 /**
- * Check if two Relay instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (self: Relay, that: Relay): boolean => {
-  if (self._tag !== that._tag) return false
-
-  switch (self._tag) {
-    case "SingleHostAddr":
-      return SingleHostAddr.equals(self, that as SingleHostAddr.SingleHostAddr)
-    case "SingleHostName":
-      return SingleHostName.equals(self, that as SingleHostName.SingleHostName)
-    case "MultiHostName":
-      return MultiHostName.equals(self, that as MultiHostName.MultiHostName)
-    default:
-      return false
-  }
-}
-
-/**
  * @since 2.0.0
  * @category FastCheck
  */
@@ -127,76 +94,38 @@ export const fromSingleHostName = (singleHostName: SingleHostName.SingleHostName
 export const fromMultiHostName = (multiHostName: MultiHostName.MultiHostName): Relay => multiHostName
 
 /**
- * Effect namespace containing schema decode and encode operations.
+ * Parse Relay from CBOR bytes.
  *
  * @since 2.0.0
- * @category Effect
+ * @category parsing
  */
-export namespace Either {
-  /**
-   * Parse a Relay from CBOR bytes using Effect error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromCBORBytes = Function.makeCBORDecodeEither(FromCDDL, RelayError)
-
-  /**
-   * Parse a Relay from CBOR hex using Effect error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromCBORHex = Function.makeCBORDecodeHexEither(FromCDDL, RelayError)
-
-  /**
-   * Convert a Relay to CBOR bytes using Effect error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toCBORBytes = Function.makeCBOREncodeEither(FromCDDL, RelayError)
-
-  /**
-   * Convert a Relay to CBOR hex using Effect error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toCBORHex = Function.makeCBOREncodeHexEither(FromCDDL, RelayError)
-}
+export const fromCBORBytes = (bytes: Uint8Array, options?: CBOR.CodecOptions) =>
+  Schema.decodeSync(FromCBORBytes(options))(bytes)
 
 /**
- * Convert Relay to CBOR bytes (unsafe).
+ * Parse Relay from CBOR hex.
+ *
+ * @since 2.0.0
+ * @category parsing
+ */
+export const fromCBORHex = (hex: string, options?: CBOR.CodecOptions) => Schema.decodeSync(FromCBORHex(options))(hex)
+
+/**
+ * Convert Relay to CBOR bytes.
  *
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORBytes = Function.makeCBOREncodeSync(FromCDDL, RelayError, "Relay.toCBORBytes")
+export const toCBORBytes = (data: Relay, options?: CBOR.CodecOptions) =>
+  Schema.encodeSync(FromCBORBytes(options))(data)
 
 /**
- * Convert Relay to CBOR hex (unsafe).
+ * Convert Relay to CBOR hex.
  *
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORHex = Function.makeCBOREncodeHexSync(FromCDDL, RelayError, "Relay.toCBORHex")
-
-/**
- * Parse Relay from CBOR bytes (unsafe).
- *
- * @since 2.0.0
- * @category decoding
- */
-export const fromCBORBytes = Function.makeCBORDecodeSync(FromCDDL, RelayError, "Relay.fromCBORBytes")
-
-/**
- * Parse Relay from CBOR hex (unsafe).
- *
- * @since 2.0.0
- * @category decoding
- */
-export const fromCBORHex = Function.makeCBORDecodeHexSync(FromCDDL, RelayError, "Relay.fromCBORHex")
+export const toCBORHex = (data: Relay, options?: CBOR.CodecOptions) => Schema.encodeSync(FromCBORHex(options))(data)
 
 /**
  * Pattern match on a Relay to handle different relay types.

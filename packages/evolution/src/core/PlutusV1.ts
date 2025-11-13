@@ -1,17 +1,6 @@
-import { Data, FastCheck, Schema } from "effect"
+import { Equal, FastCheck, Hash, Inspectable, Schema } from "effect"
 
 import * as CBOR from "./CBOR.js"
-
-/**
- * Error class for PlutusV1 related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class PlutusV1Error extends Data.TaggedError("PlutusV1Error")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Plutus V1 script wrapper (raw bytes).
@@ -21,7 +10,60 @@ export class PlutusV1Error extends Data.TaggedError("PlutusV1Error")<{
  */
 export class PlutusV1 extends Schema.TaggedClass<PlutusV1>("PlutusV1")("PlutusV1", {
   bytes: Schema.Uint8ArrayFromHex
-}) {}
+}) {
+  /**
+   * Convert to JSON representation.
+   *
+   * @since 2.0.0
+   * @category conversions
+   */
+  toJSON() {
+    return {
+      _tag: "PlutusV1",
+      bytes: this.bytes
+    }
+  }
+
+  /**
+   * Convert to string representation.
+   *
+   * @since 2.0.0
+   * @category conversions
+   */
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  /**
+   * Custom inspect for Node.js REPL.
+   *
+   * @since 2.0.0
+   * @category conversions
+   */
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  /**
+   * Structural equality check.
+   *
+   * @since 2.0.0
+   * @category equality
+   */
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof PlutusV1 && Equal.equals(this.bytes, that.bytes)
+  }
+
+  /**
+   * Hash code generation.
+   *
+   * @since 2.0.0
+   * @category hashing
+   */
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.hash(this.bytes))
+  }
+}
 
 /**
  * CDDL schema for PlutusV1 scripts as raw bytes.
@@ -42,27 +84,6 @@ export const FromCDDL = Schema.transform(CDDLSchema, Schema.typeSchema(PlutusV1)
   encode: (toI) => toI.bytes,
   decode: (fromA) => new PlutusV1({ bytes: fromA })
 })
-
-/**
- * Smart constructor for PlutusV1.
- *
- * @since 2.0.0
- * @category constructors
- */
-export const make = PlutusV1.make
-
-/**
- * Check equality of two raw script byte arrays.
- */
-const eqBytes = (a: Uint8Array, b: Uint8Array): boolean => a.length === b.length && a.every((v, i) => v === b[i])
-
-/**
- * Check if two PlutusV1 instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: PlutusV1, b: PlutusV1): boolean => eqBytes(a.bytes, b.bytes)
 
 /**
  * FastCheck arbitrary for PlutusV1.

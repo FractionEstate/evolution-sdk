@@ -1,17 +1,11 @@
-import { Data, Effect as Eff, FastCheck, ParseResult, Schema } from "effect"
+import { Effect as Eff, Equal, FastCheck, Hash, Inspectable, ParseResult, Schema } from "effect"
 
 import * as Bytes from "./Bytes.js"
 import * as Bytes29 from "./Bytes29.js"
 import * as Credential from "./Credential.js"
-import * as Function from "./Function.js"
 import * as KeyHash from "./KeyHash.js"
 import * as NetworkId from "./NetworkId.js"
 import * as ScriptHash from "./ScriptHash.js"
-
-export class EnterpriseAddressError extends Data.TaggedError("EnterpriseAddressError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Enterprise address with only payment credential
@@ -23,12 +17,35 @@ export class EnterpriseAddress extends Schema.TaggedClass<EnterpriseAddress>("En
   networkId: NetworkId.NetworkId,
   paymentCredential: Credential.CredentialSchema
 }) {
-  toString(): string {
-    return `EnterpriseAddress { networkId: ${this.networkId}, paymentCredential: ${this.paymentCredential} }`
+  toJSON() {
+    return {
+      _tag: "EnterpriseAddress" as const,
+      networkId: this.networkId,
+      paymentCredential: this.paymentCredential
+    }
   }
 
-  [Symbol.for("nodejs.util.inspect.custom")](): string {
-    return this.toString()
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof EnterpriseAddress &&
+      Equal.equals(this.networkId, that.networkId) &&
+      Equal.equals(this.paymentCredential, that.paymentCredential)
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(
+      this,
+      Hash.combine(Hash.hash(this.networkId))(Hash.hash(this.paymentCredential))
+    )
   }
 }
 
@@ -83,24 +100,6 @@ export const FromHex = Schema.compose(
 })
 
 /**
- * Smart constructor for EnterpriseAddress.
- *
- * @since 2.0.0
- * @category constructors
- */
-export const make = Schema.decodeSync(EnterpriseAddress)
-
-/**
- * Check if two EnterpriseAddress instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: EnterpriseAddress, b: EnterpriseAddress): boolean => {
-  return a.networkId === b.networkId && Credential.equals(a.paymentCredential, b.paymentCredential)
-}
-
-/**
  * FastCheck arbitrary for generating random EnterpriseAddress instances
  *
  * @since 2.0.0
@@ -120,7 +119,7 @@ export const arbitrary = FastCheck.tuple(NetworkId.arbitrary, Credential.arbitra
  * @since 2.0.0
  * @category parsing
  */
-export const fromBytes = Function.makeDecodeSync(FromBytes, EnterpriseAddressError, "EnterpriseAddress.fromBytes")
+export const fromBytes = (bytes: Uint8Array) => Schema.decodeSync(FromBytes)(bytes)
 
 /**
  * Parse a EnterpriseAddress from hex string.
@@ -128,7 +127,7 @@ export const fromBytes = Function.makeDecodeSync(FromBytes, EnterpriseAddressErr
  * @since 2.0.0
  * @category parsing
  */
-export const fromHex = Function.makeDecodeSync(FromHex, EnterpriseAddressError, "EnterpriseAddress.fromHex")
+export const fromHex = (hex: string) => Schema.decodeSync(FromHex)(hex)
 
 // ============================================================================
 // Encoding Functions
@@ -140,7 +139,7 @@ export const fromHex = Function.makeDecodeSync(FromHex, EnterpriseAddressError, 
  * @since 2.0.0
  * @category encoding
  */
-export const toBytes = Function.makeEncodeSync(FromBytes, EnterpriseAddressError, "EnterpriseAddress.toBytes")
+export const toBytes = (data: EnterpriseAddress) => Schema.encodeSync(FromBytes)(data)
 
 /**
  * Convert a EnterpriseAddress to hex string.
@@ -148,48 +147,4 @@ export const toBytes = Function.makeEncodeSync(FromBytes, EnterpriseAddressError
  * @since 2.0.0
  * @category encoding
  */
-export const toHex = Function.makeEncodeSync(FromHex, EnterpriseAddressError, "EnterpriseAddress.toHex")
-
-// ============================================================================
-// Either Namespace - Either-based Error Handling
-// ============================================================================
-
-/**
- * Either-based error handling variants for functions that can fail.
- *
- * @since 2.0.0
- * @category either
- */
-export namespace Either {
-  /**
-   * Parse a EnterpriseAddress from bytes.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromBytes = Function.makeDecodeEither(FromBytes, EnterpriseAddressError)
-
-  /**
-   * Parse a EnterpriseAddress from hex string.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromHex = Function.makeDecodeEither(FromHex, EnterpriseAddressError)
-
-  /**
-   * Convert a EnterpriseAddress to bytes.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toBytes = Function.makeEncodeEither(FromBytes, EnterpriseAddressError)
-
-  /**
-   * Convert a EnterpriseAddress to hex string.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toHex = Function.makeEncodeEither(FromHex, EnterpriseAddressError)
-}
+export const toHex = (data: EnterpriseAddress) => Schema.encodeSync(FromHex)(data)

@@ -1,20 +1,8 @@
-import { BigDecimal, Data, Effect, FastCheck, ParseResult, Schema } from "effect"
+import { BigDecimal, Effect, Equal, FastCheck, Hash, Inspectable, ParseResult, Schema } from "effect"
 
 import * as Bytes from "./Bytes.js"
 import * as CBOR from "./CBOR.js"
-import { createEncoders } from "./Codec.js"
 import * as Numeric from "./Numeric.js"
-
-/**
- * Error class for UnitInterval related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class UnitIntervalError extends Data.TaggedError("UnitIntervalError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Schema for UnitInterval representing a fractional value between 0 and 1.
@@ -32,14 +20,76 @@ export class UnitIntervalError extends Data.TaggedError("UnitIntervalError")<{
  * ```
  *
  * @since 2.0.0
- * @category schemas
+ * @category model
  */
-export const UnitInterval = Schema.Struct({
+export class UnitInterval extends Schema.Class<UnitInterval>("UnitInterval")({
   numerator: Numeric.Uint64Schema,
   denominator: Numeric.Uint64Schema
-})
-  .pipe(
-    Schema.filter((interval) => {
+}) {
+  /**
+   * Convert to JSON representation.
+   *
+   * @since 2.0.0
+   * @category conversions
+   */
+  toJSON() {
+    return {
+      _tag: "UnitInterval",
+      numerator: this.numerator,
+      denominator: this.denominator
+    }
+  }
+
+  /**
+   * Convert to string representation.
+   *
+   * @since 2.0.0
+   * @category conversions
+   */
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  /**
+   * Custom inspect for Node.js REPL.
+   *
+   * @since 2.0.0
+   * @category conversions
+   */
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  /**
+   * Structural equality check.
+   *
+   * @since 2.0.0
+   * @category equality
+   */
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof UnitInterval && this.numerator === that.numerator && this.denominator === that.denominator
+    )
+  }
+
+  /**
+   * Hash code generation.
+   *
+   * @since 2.0.0
+   * @category hashing
+   */
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.combine(Hash.hash(this.numerator))(Hash.hash(this.denominator)))
+  }
+
+  /**
+   * Static filter for validation.
+   *
+   * @since 2.0.0
+   * @category validation
+   */
+  static get schema() {
+    return Schema.filter((interval: UnitInterval) => {
       if (interval.denominator <= 0n) {
         return {
           path: ["denominator"],
@@ -53,24 +103,9 @@ export const UnitInterval = Schema.Struct({
         }
       }
       return true
-    })
-  )
-  .annotations({
-    identifier: "UnitInterval"
-  })
-
-export type UnitInterval = typeof UnitInterval.Type
-
-/**
- * Smart constructor for creating UnitInterval values.
- * ```
- * Validates that denominator > 0 and numerator <= denominator.
- * ```
- *
- * @since 2.0.0
- * @category constructors
- */
-export const make = UnitInterval.make
+    })(UnitInterval)
+  }
+}
 
 export const CDDLSchema = CBOR.tag(30, Schema.Tuple(CBOR.Integer, CBOR.Integer))
 
@@ -113,7 +148,7 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Uni
       const [numerator, denominator] = tupleValue
 
       // Create and validate UnitInterval using the validated schema
-      return UnitInterval.make({ numerator, denominator })
+      return new UnitInterval({ numerator, denominator })
     })
 }).annotations({
   identifier: "UnitInterval.CDDL"
@@ -150,15 +185,6 @@ export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTION
   })
 
 /**
- * Check if two UnitInterval instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: UnitInterval, b: UnitInterval): boolean =>
-  a.numerator === b.numerator && a.denominator === b.denominator
-
-/**
  * Convert UnitInterval to BigDecimal value.
  *
  * @since 2.0.0
@@ -178,7 +204,7 @@ export const fromBigDecimal = (value: BigDecimal.BigDecimal): UnitInterval => {
   const denominator = BigInt(10) ** BigInt(Math.max(0, normalized.scale))
   const numerator = normalized.value
 
-  return UnitInterval.make({ numerator, denominator })
+  return new UnitInterval({ numerator, denominator })
 }
 
 /**
@@ -188,20 +214,5 @@ export const fromBigDecimal = (value: BigDecimal.BigDecimal): UnitInterval => {
  * @category arbitrary
  */
 export const arbitrary = FastCheck.bigInt({ min: 1n, max: 1000000n }).chain((denominator) =>
-  FastCheck.bigInt({ min: 0n, max: denominator }).map((numerator) => UnitInterval.make({ numerator, denominator }))
+  FastCheck.bigInt({ min: 0n, max: denominator }).map((numerator) => new UnitInterval({ numerator, denominator }))
 )
-
-/**
- * CBOR codec utilities for UnitInterval.
- *
- * @since 2.0.0
- * @category codecs
- */
-export const CBORCodec = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
-  createEncoders(
-    {
-      cborBytes: FromCBORBytes(options),
-      cborHex: FromCBORHex(options)
-    },
-    UnitIntervalError
-  )

@@ -962,6 +962,25 @@ export interface BuildOptions {
    * @default false
    */
   readonly useStateMachine?: boolean
+
+  /**
+   * Enable debug logging during transaction build.
+   *
+   * When `true`, applies pretty logger with DEBUG level:
+   * - Coin selection details
+   * - Change creation steps
+   * - Fee calculation progress
+   * - Fiber termination messages with stack traces
+   *
+   * When `false` or `undefined` (default), no log layer is applied:
+   * - Effect.logDebug calls are not visible
+   * - Fiber termination logs are suppressed
+   * - Clean output for production use
+   *
+   * @default false
+   * @since 2.0.0
+   */
+  readonly debug?: boolean
 }
 
 // ============================================================================
@@ -1655,18 +1674,19 @@ export function makeTxBuilder(config: TxBuilderConfig) {
     },
 
     build: (options?: BuildOptions) => {
+      const effect = makeBuild(config, programs, options)
       return runEffectPromise(
-        makeBuild(config, programs, options).pipe(
-          Effect.provide(Layer.merge(Logger.pretty, Logger.minimumLogLevel(LogLevel.Debug)))
-        )
+        options?.debug
+          ? effect.pipe(Effect.provide(Layer.merge(Logger.pretty, Logger.minimumLogLevel(LogLevel.Debug))))
+          : effect
       )
     },
     buildEither: (options?: BuildOptions) => {
+      const effect = makeBuild(config, programs, options).pipe(Effect.either)
       return runEffectPromise(
-        makeBuild(config, programs, options).pipe(
-          Effect.either,
-          Effect.provide(Layer.merge(Logger.pretty, Logger.minimumLogLevel(LogLevel.Debug)))
-        )
+        options?.debug
+          ? effect.pipe(Effect.provide(Layer.merge(Logger.pretty, Logger.minimumLogLevel(LogLevel.Debug))))
+          : effect
       )
     },
 

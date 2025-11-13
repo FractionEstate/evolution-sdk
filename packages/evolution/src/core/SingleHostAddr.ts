@@ -1,22 +1,10 @@
-import { Data, Effect as Eff, FastCheck, Option, ParseResult, Schema } from "effect"
+import { Effect as Eff, Equal, FastCheck, Hash, Inspectable, ParseResult, Schema } from "effect"
 
 import * as Bytes from "./Bytes.js"
 import * as CBOR from "./CBOR.js"
-import * as Function from "./Function.js"
 import * as IPv4 from "./IPv4.js"
 import * as IPv6 from "./IPv6.js"
 import * as Port from "./Port.js"
-
-/**
- * Error class for SingleHostAddr related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class SingleHostAddrError extends Data.TaggedError("SingleHostAddrError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Schema for SingleHostAddr representing a network host with IP addresses.
@@ -26,10 +14,76 @@ export class SingleHostAddrError extends Data.TaggedError("SingleHostAddrError")
  * @category model
  */
 export class SingleHostAddr extends Schema.TaggedClass<SingleHostAddr>()("SingleHostAddr", {
-  port: Schema.OptionFromNullOr(Port.PortSchema),
-  ipv4: Schema.OptionFromNullOr(IPv4.IPv4),
-  ipv6: Schema.OptionFromNullOr(IPv6.IPv6)
-}) {}
+  port: Schema.optional(Port.PortSchema),
+  ipv4: Schema.optional(IPv4.IPv4),
+  ipv6: Schema.optional(IPv6.IPv6)
+}) {
+  /**
+   * Convert to JSON-serializable format.
+   * Converts bigint port values to strings for JSON compatibility.
+   *
+   * @since 2.0.0
+   * @category serialization
+   */
+  toJSON() {
+    return {
+      _tag: "SingleHostAddr" as const,
+      port: this.port !== undefined ? String(this.port) : null,
+      ipv4: this.ipv4 !== undefined ? this.ipv4.toJSON() : null,
+      ipv6: this.ipv6 !== undefined ? this.ipv6.toJSON() : null
+    }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof SingleHostAddr &&
+      this.port === that.port &&
+      ((this.ipv4 === undefined && that.ipv4 === undefined) ||
+        (this.ipv4 !== undefined && that.ipv4 !== undefined && Equal.equals(this.ipv4, that.ipv4))) &&
+      ((this.ipv6 === undefined && that.ipv6 === undefined) ||
+        (this.ipv6 !== undefined && that.ipv6 !== undefined && Equal.equals(this.ipv6, that.ipv6)))
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(
+      this,
+      Hash.combine(Hash.hash(this.port))(
+        Hash.combine(this.ipv4 !== undefined ? Hash.hash(this.ipv4) : Hash.hash(undefined))(
+          this.ipv6 !== undefined ? Hash.hash(this.ipv6) : Hash.hash(undefined)
+        )
+      )
+    )
+  }
+
+  /**
+   * Convert to CBOR bytes.
+   *
+   * @since 2.0.0
+   * @category serialization
+   */
+  toCBORBytes(): Uint8Array {
+    return toCBORBytes(this)
+  }
+
+  /**
+   * Convert to CBOR hex string.
+   *
+   * @since 2.0.0
+   * @category serialization
+   */
+  toCBORHex(): string {
+    return toCBORHex(this)
+  }
+}
 
 /**
  * Create a SingleHostAddr with IPv4 address.
@@ -37,11 +91,10 @@ export class SingleHostAddr extends Schema.TaggedClass<SingleHostAddr>()("Single
  * @since 2.0.0
  * @category constructors
  */
-export const withIPv4 = (port: Option.Option<Port.Port>, ipv4: IPv4.IPv4): SingleHostAddr =>
+export const withIPv4 = (port: Port.Port, ipv4: IPv4.IPv4): SingleHostAddr =>
   new SingleHostAddr({
     port,
-    ipv4: Option.some(ipv4),
-    ipv6: Option.none()
+    ipv4
   })
 
 /**
@@ -50,11 +103,10 @@ export const withIPv4 = (port: Option.Option<Port.Port>, ipv4: IPv4.IPv4): Singl
  * @since 2.0.0
  * @category constructors
  */
-export const withIPv6 = (port: Option.Option<Port.Port>, ipv6: IPv6.IPv6): SingleHostAddr =>
+export const withIPv6 = (port: Port.Port, ipv6: IPv6.IPv6): SingleHostAddr =>
   new SingleHostAddr({
     port,
-    ipv4: Option.none(),
-    ipv6: Option.some(ipv6)
+    ipv6
   })
 
 /**
@@ -63,11 +115,11 @@ export const withIPv6 = (port: Option.Option<Port.Port>, ipv6: IPv6.IPv6): Singl
  * @since 2.0.0
  * @category constructors
  */
-export const withBothIPs = (port: Option.Option<Port.Port>, ipv4: IPv4.IPv4, ipv6: IPv6.IPv6): SingleHostAddr =>
+export const withBothIPs = (port: Port.Port, ipv4: IPv4.IPv4, ipv6: IPv6.IPv6): SingleHostAddr =>
   new SingleHostAddr({
     port,
-    ipv4: Option.some(ipv4),
-    ipv6: Option.some(ipv6)
+    ipv4,
+    ipv6
   })
 
 /**
@@ -76,7 +128,7 @@ export const withBothIPs = (port: Option.Option<Port.Port>, ipv4: IPv4.IPv4, ipv
  * @since 2.0.0
  * @category predicates
  */
-export const hasIPv4 = (hostAddr: SingleHostAddr): boolean => Option.isSome(hostAddr.ipv4)
+export const hasIPv4 = (hostAddr: SingleHostAddr): boolean => hostAddr.ipv4 !== undefined
 
 /**
  * Check if the host address has an IPv6 address.
@@ -84,7 +136,7 @@ export const hasIPv4 = (hostAddr: SingleHostAddr): boolean => Option.isSome(host
  * @since 2.0.0
  * @category predicates
  */
-export const hasIPv6 = (hostAddr: SingleHostAddr): boolean => Option.isSome(hostAddr.ipv6)
+export const hasIPv6 = (hostAddr: SingleHostAddr): boolean => hostAddr.ipv6 !== undefined
 
 /**
  * Check if the host address has a port.
@@ -92,18 +144,7 @@ export const hasIPv6 = (hostAddr: SingleHostAddr): boolean => Option.isSome(host
  * @since 2.0.0
  * @category predicates
  */
-export const hasPort = (hostAddr: SingleHostAddr): boolean => Option.isSome(hostAddr.port)
-
-/**
- * Check if two SingleHostAddr instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: SingleHostAddr, b: SingleHostAddr): boolean =>
-  Option.getEquivalence(Port.equals)(a.port, b.port) &&
-  Option.getEquivalence(IPv4.equals)(a.ipv4, b.ipv4) &&
-  Option.getEquivalence(IPv6.equals)(a.ipv6, b.ipv6)
+export const hasPort = (hostAddr: SingleHostAddr): boolean => hostAddr.port !== undefined
 
 /**
  * CDDL schema for SingleHostAddr.
@@ -124,27 +165,30 @@ export const FromCDDL = Schema.transformOrFail(
     strict: true,
     encode: (toA) =>
       Eff.gen(function* () {
-        const port = Option.isSome(toA.port) ? BigInt(toA.port.value) : null
+        const port = toA.port !== undefined ? toA.port : null
 
-        const ipv4 = Option.isSome(toA.ipv4) ? toA.ipv4.value.bytes : null
+        const ipv4 = toA.ipv4 !== undefined ? toA.ipv4.bytes : null
 
-        const ipv6 = Option.isSome(toA.ipv6) ? yield* ParseResult.encode(IPv6.FromBytes)(toA.ipv6.value) : null
+        const ipv6 = toA.ipv6 !== undefined ? toA.ipv6.bytes : null
 
         return yield* Eff.succeed([0n, port, ipv4, ipv6] as const)
       }),
     decode: ([, portValue, ipv4Value, ipv6Value]) =>
       Eff.gen(function* () {
-        const port = portValue === null || portValue === undefined ? Option.none() : Option.some(Port.make(portValue))
+        const port =
+          portValue === null || portValue === undefined
+            ? undefined
+            : yield* ParseResult.decode(Port.PortSchema)(portValue)
 
         const ipv4 =
           ipv4Value === null || ipv4Value === undefined
-            ? Option.none()
-            : Option.some(yield* ParseResult.decode(IPv4.FromBytes)(ipv4Value))
+            ? undefined
+            : yield* ParseResult.decode(IPv4.FromBytes)(ipv4Value)
 
         const ipv6 =
           ipv6Value === null || ipv6Value === undefined
-            ? Option.none()
-            : Option.some(yield* ParseResult.decode(IPv6.FromBytes)(ipv6Value))
+            ? undefined
+            : yield* ParseResult.decode(IPv6.FromBytes)(ipv6Value)
 
         return new SingleHostAddr({ port, ipv4, ipv6 }, { disableValidation: true })
       })
@@ -153,18 +197,6 @@ export const FromCDDL = Schema.transformOrFail(
   identifier: "SingleHostAddr.SingleHostAddrCDDLSchema",
   description: "Transforms CBOR structure to SingleHostAddr"
 })
-
-/**
- * Smart constructor for creating SingleHostAddr instances
- *
- * @since 2.0.0
- * @category constructors
- */
-export const make = (props: {
-  port: Option.Option<Port.Port>
-  ipv4: Option.Option<IPv4.IPv4>
-  ipv6: Option.Option<IPv6.IPv6>
-}): SingleHostAddr => new SingleHostAddr(props)
 
 /**
  * FastCheck arbitrary for generating random SingleHostAddr instances
@@ -177,10 +209,10 @@ export const arbitrary = FastCheck.record({
   ipv4: FastCheck.option(IPv4.arbitrary),
   ipv6: FastCheck.option(IPv6.arbitrary)
 }).map(({ ipv4, ipv6, port }) =>
-  make({
-    port: port ? Option.some(port) : Option.none(),
-    ipv4: ipv4 ? Option.some(ipv4) : Option.none(),
-    ipv6: ipv6 ? Option.some(ipv6) : Option.none()
+  new SingleHostAddr({
+    port: port === null ? undefined : port,
+    ipv4: ipv4 === null ? undefined : ipv4,
+    ipv6: ipv6 === null ? undefined : ipv6
   })
 )
 
@@ -215,73 +247,36 @@ export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTION
   })
 
 /**
- * Either namespace for SingleHostAddr operations that can fail
+ * Parse SingleHostAddr from CBOR bytes.
  *
  * @since 2.0.0
- * @category either
+ * @category parsing
  */
-export namespace Either {
-  /**
-   * Convert CBOR bytes to SingleHostAddr using Either
-   *
-   * @since 2.0.0
-   * @category conversion
-   */
-  export const fromCBORBytes = Function.makeCBORDecodeEither(FromCDDL, SingleHostAddrError)
-
-  /**
-   * Convert CBOR hex string to SingleHostAddr using Either
-   *
-   * @since 2.0.0
-   * @category conversion
-   */
-  export const fromCBORHex = Function.makeCBORDecodeHexEither(FromCDDL, SingleHostAddrError)
-
-  /**
-   * Convert SingleHostAddr to CBOR bytes using Either
-   *
-   * @since 2.0.0
-   * @category conversion
-   */
-  export const toCBORBytes = Function.makeCBOREncodeEither(FromCDDL, SingleHostAddrError)
-
-  /**
-   * Convert SingleHostAddr to CBOR hex string using Either
-   *
-   * @since 2.0.0
-   * @category conversion
-   */
-  export const toCBORHex = Function.makeCBOREncodeHexEither(FromCDDL, SingleHostAddrError)
-}
+export const fromCBORBytes = (bytes: Uint8Array, options?: CBOR.CodecOptions) =>
+  Schema.decodeSync(FromCBORBytes(options))(bytes)
 
 /**
- * Convert CBOR bytes to SingleHostAddr (unsafe)
+ * Parse SingleHostAddr from CBOR hex string.
  *
  * @since 2.0.0
- * @category conversion
+ * @category parsing
  */
-export const fromCBORBytes = Function.makeCBORDecodeSync(FromCDDL, SingleHostAddrError, "SingleHostAddr.fromCBORBytes")
+export const fromCBORHex = (hex: string, options?: CBOR.CodecOptions) => Schema.decodeSync(FromCBORHex(options))(hex)
 
 /**
- * Convert CBOR hex string to SingleHostAddr (unsafe)
+ * Encode SingleHostAddr to CBOR bytes.
  *
  * @since 2.0.0
- * @category conversion
+ * @category encoding
  */
-export const fromCBORHex = Function.makeCBORDecodeHexSync(FromCDDL, SingleHostAddrError, "SingleHostAddr.fromCBORHex")
+export const toCBORBytes = (data: SingleHostAddr, options?: CBOR.CodecOptions) =>
+  Schema.encodeSync(FromCBORBytes(options))(data)
 
 /**
- * Convert SingleHostAddr to CBOR bytes (unsafe)
+ * Encode SingleHostAddr to CBOR hex string.
  *
  * @since 2.0.0
- * @category conversion
+ * @category encoding
  */
-export const toCBORBytes = Function.makeCBOREncodeSync(FromCDDL, SingleHostAddrError, "SingleHostAddr.toCBORBytes")
-
-/**
- * Convert SingleHostAddr to CBOR hex string (unsafe)
- *
- * @since 2.0.0
- * @category conversion
- */
-export const toCBORHex = Function.makeCBOREncodeHexSync(FromCDDL, SingleHostAddrError, "SingleHostAddr.toCBORHex")
+export const toCBORHex = (data: SingleHostAddr, options?: CBOR.CodecOptions) =>
+  Schema.encodeSync(FromCBORHex(options))(data)

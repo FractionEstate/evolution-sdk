@@ -1,22 +1,9 @@
-import { Data, Effect as Eff, FastCheck, ParseResult, Schema } from "effect"
+import { Effect as Eff, FastCheck, ParseResult, Schema } from "effect"
 
 import * as Bytes from "./Bytes.js"
 import * as CBOR from "./CBOR.js"
-import * as Function from "./Function.js"
 import * as KeyHash from "./KeyHash.js"
 import * as ScriptHash from "./ScriptHash.js"
-
-/**
- * Extends TaggedError for better error handling and categorization
- *
- * @since 2.0.0
- * @category errors
- */
-
-export class CredentialError extends Data.TaggedError("CredentialError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Credential schema representing either a key hash or script hash
@@ -38,8 +25,8 @@ export const CredentialSchema = Schema.Union(KeyHash.KeyHash, ScriptHash.ScriptH
 export type CredentialSchema = typeof CredentialSchema.Type
 export type Credential = typeof CredentialSchema.Encoded
 
-export const makeKeyHash = (hash: Uint8Array): CredentialSchema => KeyHash.make({ hash })
-export const makeScriptHash = (hash: Uint8Array): CredentialSchema => ScriptHash.make({ hash })
+export const makeKeyHash = (hash: Uint8Array): CredentialSchema => new KeyHash.KeyHash({ hash })
+export const makeScriptHash = (hash: Uint8Array): CredentialSchema => new ScriptHash.ScriptHash({ hash })
 
 /**
  * Check if the given value is a valid Credential
@@ -102,16 +89,6 @@ export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTION
   )
 
 /**
- * Check if two Credential instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: CredentialSchema, b: CredentialSchema): boolean => {
-  return a._tag === b._tag && Bytes.equals(a.hash, b.hash)
-}
-
-/**
  * FastCheck arbitrary for generating random Credential instances.
  * Randomly selects between generating a KeyHash or ScriptHash credential.
  *
@@ -121,7 +98,7 @@ export const equals = (a: CredentialSchema, b: CredentialSchema): boolean => {
 export const arbitrary = FastCheck.oneof(KeyHash.arbitrary, ScriptHash.arbitrary)
 
 // ============================================================================
-// Root Functions
+// Decoding Functions
 // ============================================================================
 
 /**
@@ -130,7 +107,8 @@ export const arbitrary = FastCheck.oneof(KeyHash.arbitrary, ScriptHash.arbitrary
  * @since 2.0.0
  * @category parsing
  */
-export const fromCBORBytes = Function.makeCBORDecodeSync(FromCDDL, CredentialError, "Credential.fromCBORBytes")
+export const fromCBORBytes = (bytes: Uint8Array, options?: CBOR.CodecOptions): CredentialSchema =>
+  Schema.decodeSync(FromCBORBytes(options))(bytes)
 
 /**
  * Parse a Credential from CBOR hex string.
@@ -138,7 +116,12 @@ export const fromCBORBytes = Function.makeCBORDecodeSync(FromCDDL, CredentialErr
  * @since 2.0.0
  * @category parsing
  */
-export const fromCBORHex = Function.makeCBORDecodeHexSync(FromCDDL, CredentialError, "Credential.fromCBORHex")
+export const fromCBORHex = (hex: string, options?: CBOR.CodecOptions): CredentialSchema =>
+  Schema.decodeSync(FromCBORHex(options))(hex)
+
+// ============================================================================
+// Encoding Functions
+// ============================================================================
 
 /**
  * Convert a Credential to CBOR bytes.
@@ -146,7 +129,8 @@ export const fromCBORHex = Function.makeCBORDecodeHexSync(FromCDDL, CredentialEr
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORBytes = Function.makeCBOREncodeSync(FromCDDL, CredentialError, "Credential.toCBORBytes")
+export const toCBORBytes = (credential: CredentialSchema, options?: CBOR.CodecOptions): Uint8Array =>
+  Schema.encodeSync(FromCBORBytes(options))(credential)
 
 /**
  * Convert a Credential to CBOR hex string.
@@ -154,48 +138,5 @@ export const toCBORBytes = Function.makeCBOREncodeSync(FromCDDL, CredentialError
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORHex = Function.makeCBOREncodeHexSync(FromCDDL, CredentialError, "Credential.toCBORHex")
-
-// ============================================================================
-// Effect Namespace
-// ============================================================================
-
-/**
- * Effect-based error handling variants for functions that can fail.
- *
- * @since 2.0.0
- * @category effect
- */
-export namespace Either {
-  /**
-   * Parse a Credential from CBOR bytes with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromCBORBytes = Function.makeCBORDecodeEither(FromCDDL, CredentialError)
-
-  /**
-   * Parse a Credential from CBOR hex string with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromCBORHex = Function.makeCBORDecodeHexEither(FromCDDL, CredentialError)
-
-  /**
-   * Convert a Credential to CBOR bytes with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toCBORBytes = Function.makeCBOREncodeEither(FromCDDL, CredentialError)
-
-  /**
-   * Convert a Credential to CBOR hex string with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toCBORHex = Function.makeCBOREncodeHexEither(FromCDDL, CredentialError)
-}
+export const toCBORHex = (credential: CredentialSchema, options?: CBOR.CodecOptions): string =>
+  Schema.encodeSync(FromCBORHex(options))(credential)

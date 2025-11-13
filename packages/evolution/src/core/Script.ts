@@ -1,23 +1,11 @@
-import { Data, Effect as Eff, FastCheck, ParseResult, Schema } from "effect"
+import { Effect as Eff, FastCheck, ParseResult, Schema } from "effect"
 
 import * as Bytes from "./Bytes.js"
 import * as CBOR from "./CBOR.js"
-import * as Function from "./Function.js"
 import * as NativeScripts from "./NativeScripts.js"
 import * as PlutusV1 from "./PlutusV1.js"
 import * as PlutusV2 from "./PlutusV2.js"
 import * as PlutusV3 from "./PlutusV3.js"
-
-/**
- * Error class for Script related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class ScriptError extends Data.TaggedError("ScriptError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Script union type following Conway CDDL specification.
@@ -131,29 +119,6 @@ export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTION
   Schema.compose(Bytes.FromHex, FromCBORBytes(options))
 
 /**
- * Check if two Script instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: Script, b: Script): boolean => {
-  if (a._tag !== b._tag) return false
-
-  switch (a._tag) {
-    case "NativeScript":
-      return NativeScripts.equals(a, b as NativeScripts.NativeScript)
-    case "PlutusV1":
-      return PlutusV1.equals(a, b as PlutusV1.PlutusV1)
-    case "PlutusV2":
-      return PlutusV2.equals(a, b as PlutusV2.PlutusV2)
-    case "PlutusV3":
-      return PlutusV3.equals(a, b as PlutusV3.PlutusV3)
-    default:
-      return false
-  }
-}
-
-/**
  * FastCheck arbitrary for Script.
  *
  * @since 2.0.0
@@ -167,7 +132,14 @@ export const arbitrary: FastCheck.Arbitrary<Script> = FastCheck.oneof(
   PlutusV3.arbitrary
 )
 
-export const fromCBOR = Function.makeCBORDecodeSync(FromCDDL, ScriptError, "Script.fromCBOR")
-export const fromCBORHex = Function.makeCBORDecodeHexSync(FromCDDL, ScriptError, "Script.fromCBORHex")
-export const toCBOR = Function.makeCBOREncodeSync(FromCDDL, ScriptError, "Script.toCBOR")
-export const toCBORHex = Function.makeCBOREncodeHexSync(FromCDDL, ScriptError, "Script.toCBORHex")
+export const fromCBOR = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.decodeSync(FromCBORBytes(options))(bytes)
+
+export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.decodeSync(FromCBORHex(options))(hex)
+
+export const toCBOR = (data: Script, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.encodeSync(FromCBORBytes(options))(data)
+
+export const toCBORHex = (data: Script, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.encodeSync(FromCBORHex(options))(data)

@@ -3,11 +3,10 @@ import { ed25519 } from "@noble/curves/ed25519.js"
 import { bytesToNumberLE } from "@noble/curves/utils.js"
 import { hmac } from "@noble/hashes/hmac.js"
 import { sha512 } from "@noble/hashes/sha2.js"
-import { Data, Either as E, FastCheck, Schema } from "effect"
+import { Data, Either as E, Equal, FastCheck, Hash, Inspectable, Schema } from "effect"
 
 import * as Bytes from "./Bytes.js"
 import * as Bytes64 from "./Bytes64.js"
-import * as Function from "./Function.js"
 
 /**
  * Error class for Bip32PublicKey related operations.
@@ -32,12 +31,24 @@ export class Bip32PublicKeyError extends Data.TaggedError("Bip32PublicKeyError")
 export class Bip32PublicKey extends Schema.TaggedClass<Bip32PublicKey>()("Bip32PublicKey", {
   bytes: Bytes64.BytesFromHex
 }) {
-  toJSON(): string {
-    return toHex(this)
+  toJSON() {
+    return { _tag: "Bip32PublicKey" as const, bytes: Bytes.toHex(this.bytes) }
   }
 
   toString(): string {
-    return toHex(this)
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof Bip32PublicKey && Bytes.equals(this.bytes, that.bytes)
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.array(Array.from(this.bytes)))
   }
 }
 
@@ -69,50 +80,6 @@ export const FromHex = Schema.compose(
 })
 
 /**
- * Smart constructor for Bip32PublicKey that validates and applies branding.
- *
- * @since 2.0.0
- * @category constructors
- */
-export const make = (...args: ConstructorParameters<typeof Bip32PublicKey>) => new Bip32PublicKey(...args)
-
-/**
- * Check if two Bip32PublicKey instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: Bip32PublicKey, b: Bip32PublicKey): boolean => Bytes.equals(a.bytes, b.bytes)
-
-// Helper functions for extracting data from the 64-byte format
-
-/**
- * Extract the public key (first 32 bytes) from a Bip32PublicKey.
- *
- * @since 2.0.0
- * @category accessors
- */
-const extractPublicKey = (keyBytes: Uint8Array): Uint8Array => {
-  if (keyBytes.length !== 64) {
-    throw new Error(`Expected 64 bytes for Bip32PublicKey, got ${keyBytes.length}`)
-  }
-  return keyBytes.slice(0, 32)
-}
-
-/**
- * Extract the chain code (last 32 bytes) from a Bip32PublicKey.
- *
- * @since 2.0.0
- * @category accessors
- */
-const extractChainCode = (keyBytes: Uint8Array): Uint8Array => {
-  if (keyBytes.length !== 64) {
-    throw new Error(`Expected 64 bytes for Bip32PublicKey, got ${keyBytes.length}`)
-  }
-  return keyBytes.slice(32, 64)
-}
-
-/**
  * FastCheck arbitrary for generating random Bip32PublicKey instances.
  *
  * @since 2.0.0
@@ -134,7 +101,7 @@ export const arbitrary = FastCheck.uint8Array({
  * @category parsing
  */
 // Standard single-argument decoder (64 bytes)
-export const fromBytes = Function.makeDecodeSync(FromBytes, Bip32PublicKeyError, "Bip32PublicKey.fromBytes")
+export const fromBytes = Schema.decodeSync(FromBytes)
 
 /**
  * Parse Bip32PublicKey from hex string.
@@ -142,7 +109,7 @@ export const fromBytes = Function.makeDecodeSync(FromBytes, Bip32PublicKeyError,
  * @since 2.0.0
  * @category parsing
  */
-export const fromHex = Function.makeDecodeSync(FromHex, Bip32PublicKeyError, "Bip32PublicKey.fromHex")
+export const fromHex = Schema.decodeSync(FromHex)
 
 /**
  * Convert a Bip32PublicKey to raw bytes (64 bytes).
@@ -150,7 +117,7 @@ export const fromHex = Function.makeDecodeSync(FromHex, Bip32PublicKeyError, "Bi
  * @since 2.0.0
  * @category encoding
  */
-export const toBytes = Function.makeEncodeSync(FromBytes, Bip32PublicKeyError, "Bip32PublicKey.toBytes")
+export const toBytes = Schema.encodeSync(FromBytes)
 
 /**
  * Convert a Bip32PublicKey to hex string.
@@ -158,7 +125,7 @@ export const toBytes = Function.makeEncodeSync(FromBytes, Bip32PublicKeyError, "
  * @since 2.0.0
  * @category encoding
  */
-export const toHex = Function.makeEncodeSync(FromHex, Bip32PublicKeyError, "Bip32PublicKey.toHex")
+export const toHex = Schema.encodeSync(FromHex)
 
 /**
  * Convert a Bip32PublicKey to raw public key bytes (32 bytes only).
@@ -167,8 +134,7 @@ export const toHex = Function.makeEncodeSync(FromHex, Bip32PublicKeyError, "Bip3
  * @category encoding
  */
 export const toRawBytes = (bip32PublicKey: Bip32PublicKey): Uint8Array => {
-  const keyBytes = toBytes(bip32PublicKey)
-  return extractPublicKey(keyBytes)
+  return bip32PublicKey.bytes.slice(0, 32)
 }
 
 /**
@@ -190,8 +156,7 @@ export const deriveChild = (bip32PublicKey: Bip32PublicKey, index: number): Bip3
  * @category accessors
  */
 export const chainCode = (bip32PublicKey: Bip32PublicKey): Uint8Array => {
-  const keyBytes = toBytes(bip32PublicKey)
-  return extractChainCode(keyBytes)
+  return bip32PublicKey.bytes.slice(32, 64)
 }
 
 /**
@@ -201,8 +166,7 @@ export const chainCode = (bip32PublicKey: Bip32PublicKey): Uint8Array => {
  * @category accessors
  */
 export const publicKey = (bip32PublicKey: Bip32PublicKey): Uint8Array => {
-  const keyBytes = toBytes(bip32PublicKey)
-  return extractPublicKey(keyBytes)
+  return bip32PublicKey.bytes.slice(0, 32)
 }
 
 // ============================================================================
@@ -216,38 +180,6 @@ export const publicKey = (bip32PublicKey: Bip32PublicKey): Uint8Array => {
  * @category either
  */
 export namespace Either {
-  /**
-   * Create a BIP32 public key from public key and chain code bytes with Either error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromBytes = Function.makeDecodeEither(FromBytes, Bip32PublicKeyError)
-
-  /**
-   * Parse Bip32PublicKey from hex string with Either error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromHex = Function.makeDecodeEither(FromHex, Bip32PublicKeyError)
-
-  /**
-   * Convert Bip32PublicKey to bytes with Either error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toBytes = Function.makeEncodeEither(FromBytes, Bip32PublicKeyError)
-
-  /**
-   * Convert Bip32PublicKey to hex string with Either error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toHex = Function.makeEncodeEither(FromHex, Bip32PublicKeyError)
-
   /**
    * Derive a child public key using the specified index with Either error handling.
    * Only supports soft derivation (index < 0x80000000).
@@ -265,10 +197,9 @@ export namespace Either {
         )
       }
 
-      // Get the key bytes first
-      const keyBytes = yield* toBytes(bip32PublicKey)
-      const parentPublicKey = extractPublicKey(keyBytes)
-      const parentChainCode = extractChainCode(keyBytes)
+      // Get the key bytes directly from the instance
+      const parentPublicKey = bip32PublicKey.bytes.slice(0, 32)
+      const parentChainCode = bip32PublicKey.bytes.slice(32, 64)
 
       const derivedBytes = yield* E.try(() => {
         // Serialize index in little-endian (V2 scheme) - CML compatible

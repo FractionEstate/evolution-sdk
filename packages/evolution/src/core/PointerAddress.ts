@@ -1,24 +1,12 @@
-import { Data, Effect as Eff, FastCheck, ParseResult, Schema } from "effect"
+import { Effect as Eff, Equal, FastCheck, Hash, Inspectable, ParseResult, Schema } from "effect"
 
 import * as Bytes from "./Bytes.js"
 import * as Credential from "./Credential.js"
-import * as Function from "./Function.js"
 import * as KeyHash from "./KeyHash.js"
 import * as Natural from "./Natural.js"
 import * as NetworkId from "./NetworkId.js"
 import * as Pointer from "./Pointer.js"
 import * as ScriptHash from "./ScriptHash.js"
-
-/**
- * Error thrown when address operations fail
- *
- * @since 2.0.0
- * @category model
- */
-export class PointerAddressError extends Data.TaggedError("PointerAddressError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Pointer address with payment credential and pointer to stake registration
@@ -31,12 +19,37 @@ export class PointerAddress extends Schema.TaggedClass<PointerAddress>("PointerA
   paymentCredential: Credential.CredentialSchema,
   pointer: Pointer.Pointer
 }) {
-  toString(): string {
-    return `PointerAddress { networkId: ${this.networkId}, paymentCredential: ${this.paymentCredential}, pointer: ${this.pointer} }`
+  toJSON() {
+    return {
+      _tag: "PointerAddress" as const,
+      networkId: this.networkId,
+      paymentCredential: this.paymentCredential,
+      pointer: this.pointer
+    }
   }
 
-  [Symbol.for("nodejs.util.inspect.custom")](): string {
-    return this.toString()
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof PointerAddress &&
+      Equal.equals(this.networkId, that.networkId) &&
+      Equal.equals(this.paymentCredential, that.paymentCredential) &&
+      Equal.equals(this.pointer, that.pointer)
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(
+      this,
+      Hash.combine(Hash.combine(Hash.hash(this.networkId))(Hash.hash(this.paymentCredential)))(Hash.hash(this.pointer))
+    )
   }
 }
 
@@ -202,31 +215,6 @@ export const FromHex = Schema.compose(
 /**
  * Smart constructor for creating PointerAddress instances
  *
- * @since 2.0.0
- * @category constructors
- */
-export const make = (props: {
-  networkId: NetworkId.NetworkId
-  paymentCredential: Credential.CredentialSchema
-  pointer: Pointer.Pointer
-}): PointerAddress => new PointerAddress(props)
-
-/**
- * Check if two PointerAddress instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: PointerAddress, b: PointerAddress): boolean => {
-  return (
-    a.networkId === b.networkId &&
-    Credential.equals(a.paymentCredential, b.paymentCredential) &&
-    a.pointer.slot === b.pointer.slot &&
-    a.pointer.txIndex === b.pointer.txIndex &&
-    a.pointer.certIndex === b.pointer.certIndex
-  )
-}
-
 /**
  * FastCheck arbitrary for generating random PointerAddress instances
  *
@@ -235,56 +223,12 @@ export const equals = (a: PointerAddress, b: PointerAddress): boolean => {
  */
 export const arbitrary = FastCheck.tuple(NetworkId.arbitrary, Credential.arbitrary, Pointer.arbitrary).map(
   ([networkId, paymentCredential, pointer]) =>
-    make({
+    new PointerAddress({
       networkId,
       paymentCredential,
       pointer
     })
 )
-
-// ============================================================================
-// Effect Namespace - Effect-based Error Handling
-// ============================================================================
-
-/**
- * Effect-based error handling variants for functions that can fail.
- *
- * @since 2.0.0
- * @category effect
- */
-export namespace Either {
-  /**
-   * Parse a PointerAddress from bytes.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromBytes = Function.makeDecodeEither(FromBytes, PointerAddressError)
-
-  /**
-   * Parse a PointerAddress from hex string.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromHex = Function.makeDecodeEither(FromHex, PointerAddressError)
-
-  /**
-   * Convert a PointerAddress to bytes.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toBytes = Function.makeEncodeEither(FromBytes, PointerAddressError)
-
-  /**
-   * Convert a PointerAddress to hex string.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toHex = Function.makeEncodeEither(FromHex, PointerAddressError)
-}
 
 // ============================================================================
 // Parsing Functions
@@ -296,7 +240,7 @@ export namespace Either {
  * @since 2.0.0
  * @category parsing
  */
-export const fromBytes = Function.makeDecodeSync(FromBytes, PointerAddressError, "PointerAddress.fromBytes")
+export const fromBytes = (bytes: Uint8Array) => Schema.decodeSync(FromBytes)(bytes)
 
 /**
  * Parse a PointerAddress from hex string.
@@ -304,7 +248,7 @@ export const fromBytes = Function.makeDecodeSync(FromBytes, PointerAddressError,
  * @since 2.0.0
  * @category parsing
  */
-export const fromHex = Function.makeDecodeSync(FromHex, PointerAddressError, "PointerAddress.fromHex")
+export const fromHex = (hex: string) => Schema.decodeSync(FromHex)(hex)
 
 // ============================================================================
 // Encoding Functions
@@ -316,7 +260,7 @@ export const fromHex = Function.makeDecodeSync(FromHex, PointerAddressError, "Po
  * @since 2.0.0
  * @category encoding
  */
-export const toBytes = Function.makeEncodeSync(FromBytes, PointerAddressError, "PointerAddress.toBytes")
+export const toBytes = (data: PointerAddress) => Schema.encodeSync(FromBytes)(data)
 
 /**
  * Convert a PointerAddress to hex string.
@@ -324,4 +268,4 @@ export const toBytes = Function.makeEncodeSync(FromBytes, PointerAddressError, "
  * @since 2.0.0
  * @category encoding
  */
-export const toHex = Function.makeEncodeSync(FromHex, PointerAddressError, "PointerAddress.toHex")
+export const toHex = (data: PointerAddress) => Schema.encodeSync(FromHex)(data)

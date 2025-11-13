@@ -30,17 +30,11 @@ describe("Devnet Integration Tests", () => {
   const createdClusters: Array<Devnet.DevNetCluster> = []
 
   afterAll(async () => {
-    // eslint-disable-next-line no-console
-    console.log(`[Cleanup] Removing ${createdClusters.length} test clusters...`)
-    
     for (const cluster of createdClusters) {
       try {
         await Devnet.Cluster.remove(cluster)
-        // eslint-disable-next-line no-console
-        console.log(`[Cleanup] ✓ Removed cluster: ${cluster.cardanoNode.name}`)
-      } catch (error) {
-        // eslint-disable-next-line no-console
-        console.warn(`[Cleanup] Failed to remove cluster ${cluster.cardanoNode.name}:`, error)
+      } catch {
+        // Silently ignore cleanup errors
       }
     }
   }, 120_000)

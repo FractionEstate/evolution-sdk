@@ -1,4 +1,4 @@
-import { Data, Either as E, FastCheck, ParseResult, Schema } from "effect"
+import { Either as E, Equal, FastCheck, Hash, Inspectable, ParseResult, Schema } from "effect"
 
 import * as Anchor from "./Anchor.js"
 import * as Bytes from "./Bytes.js"
@@ -7,63 +7,277 @@ import * as Coin from "./Coin.js"
 import * as Credential from "./Credential.js"
 import * as DRep from "./DRep.js"
 import * as EpochNo from "./EpochNo.js"
-import * as Function from "./Function.js"
 import * as PoolKeyHash from "./PoolKeyHash.js"
 import * as PoolMetadata from "./PoolMetadata.js"
 import * as PoolParams from "./PoolParams.js"
 import * as Relay from "./Relay.js"
 import * as UnitInterval from "./UnitInterval.js"
 
-/**
- * Error class for Certificate related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class CertificateError extends Data.TaggedError("CertificateError")<{
-  message?: string
-  cause?: unknown
-}> {}
-
 export class StakeRegistration extends Schema.TaggedClass<StakeRegistration>("StakeRegistration")("StakeRegistration", {
   stakeCredential: Credential.CredentialSchema
-}) {}
+}) {
+  toJSON() {
+    return {
+      _tag: "StakeRegistration" as const,
+      stakeCredential: this.stakeCredential.toJSON()
+    }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof StakeRegistration && Equal.equals(this.stakeCredential, that.stakeCredential)
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.combine(Hash.hash("StakeRegistration"))(Hash.hash(this.stakeCredential)))
+  }
+}
 
 export class StakeDeregistration extends Schema.TaggedClass<StakeDeregistration>("StakeDeregistration")(
   "StakeDeregistration",
   {
     stakeCredential: Credential.CredentialSchema
   }
-) {}
+) {
+  toJSON() {
+    return {
+      _tag: "StakeDeregistration" as const,
+      stakeCredential: this.stakeCredential.toJSON()
+    }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof StakeDeregistration && Equal.equals(this.stakeCredential, that.stakeCredential)
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.combine(Hash.hash("StakeDeregistration"))(Hash.hash(this.stakeCredential)))
+  }
+}
 
 export class StakeDelegation extends Schema.TaggedClass<StakeDelegation>("StakeDelegation")("StakeDelegation", {
   stakeCredential: Credential.CredentialSchema,
   poolKeyHash: PoolKeyHash.PoolKeyHash
-}) {}
+}) {
+  toJSON() {
+    return {
+      _tag: "StakeDelegation" as const,
+      stakeCredential: this.stakeCredential.toJSON(),
+      poolKeyHash: this.poolKeyHash.toJSON()
+    }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof StakeDelegation &&
+      Equal.equals(this.stakeCredential, that.stakeCredential) &&
+      Equal.equals(this.poolKeyHash, that.poolKeyHash)
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(
+      this,
+      Hash.combine(Hash.hash("StakeDelegation"))(
+        Hash.combine(Hash.hash(this.stakeCredential))(Hash.hash(this.poolKeyHash))
+      )
+    )
+  }
+}
 
 export class PoolRegistration extends Schema.TaggedClass<PoolRegistration>("PoolRegistration")("PoolRegistration", {
   poolParams: PoolParams.PoolParams
-}) {}
+}) {
+  toJSON() {
+    return {
+      _tag: "PoolRegistration" as const,
+      poolParams: this.poolParams.toJSON()
+    }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof PoolRegistration && Equal.equals(this.poolParams, that.poolParams)
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.combine(Hash.hash("PoolRegistration"))(Hash.hash(this.poolParams)))
+  }
+}
 
 export class PoolRetirement extends Schema.TaggedClass<PoolRetirement>("PoolRetirement")("PoolRetirement", {
   poolKeyHash: PoolKeyHash.PoolKeyHash,
   epoch: EpochNo.EpochNoSchema
-}) {}
+}) {
+  toJSON() {
+    return {
+      _tag: "PoolRetirement" as const,
+      poolKeyHash: this.poolKeyHash.toJSON(),
+      epoch: this.epoch.toString()
+    }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof PoolRetirement &&
+      Equal.equals(this.poolKeyHash, that.poolKeyHash) &&
+      Equal.equals(this.epoch, that.epoch)
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(
+      this,
+      Hash.combine(Hash.hash("PoolRetirement"))(Hash.combine(Hash.hash(this.poolKeyHash))(Hash.hash(this.epoch)))
+    )
+  }
+}
 
 export class RegCert extends Schema.TaggedClass<RegCert>("RegCert")("RegCert", {
   stakeCredential: Credential.CredentialSchema,
   coin: Coin.Coin
-}) {}
+}) {
+  toJSON() {
+    return {
+      _tag: "RegCert" as const,
+      stakeCredential: this.stakeCredential.toJSON(),
+      coin: this.coin.toString()
+    }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof RegCert &&
+      Equal.equals(this.stakeCredential, that.stakeCredential) &&
+      Equal.equals(this.coin, that.coin)
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(
+      this,
+      Hash.combine(Hash.hash("RegCert"))(Hash.combine(Hash.hash(this.stakeCredential))(Hash.hash(this.coin)))
+    )
+  }
+}
 
 export class UnregCert extends Schema.TaggedClass<UnregCert>("UnregCert")("UnregCert", {
   stakeCredential: Credential.CredentialSchema,
   coin: Coin.Coin
-}) {}
+}) {
+  toJSON() {
+    return {
+      _tag: "UnregCert" as const,
+      stakeCredential: this.stakeCredential.toJSON(),
+      coin: this.coin.toString()
+    }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof UnregCert &&
+      Equal.equals(this.stakeCredential, that.stakeCredential) &&
+      Equal.equals(this.coin, that.coin)
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(
+      this,
+      Hash.combine(Hash.hash("UnregCert"))(Hash.combine(Hash.hash(this.stakeCredential))(Hash.hash(this.coin)))
+    )
+  }
+}
 
 export class VoteDelegCert extends Schema.TaggedClass<VoteDelegCert>("VoteDelegCert")("VoteDelegCert", {
   stakeCredential: Credential.CredentialSchema,
   drep: DRep.DRep
-}) {}
+}) {
+  toJSON() {
+    return {
+      _tag: "VoteDelegCert" as const,
+      stakeCredential: this.stakeCredential.toJSON(),
+      drep: this.drep
+    }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof VoteDelegCert &&
+      Equal.equals(this.stakeCredential, that.stakeCredential) &&
+      Equal.equals(this.drep, that.drep)
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(
+      this,
+      Hash.combine(Hash.hash("VoteDelegCert"))(Hash.combine(Hash.hash(this.stakeCredential))(Hash.hash(this.drep)))
+    )
+  }
+}
 
 export class StakeVoteDelegCert extends Schema.TaggedClass<StakeVoteDelegCert>("StakeVoteDelegCert")(
   "StakeVoteDelegCert",
@@ -72,19 +286,124 @@ export class StakeVoteDelegCert extends Schema.TaggedClass<StakeVoteDelegCert>("
     poolKeyHash: PoolKeyHash.PoolKeyHash,
     drep: DRep.DRep
   }
-) {}
+) {
+  toJSON() {
+    return {
+      _tag: "StakeVoteDelegCert" as const,
+      stakeCredential: this.stakeCredential.toJSON(),
+      poolKeyHash: this.poolKeyHash.toJSON(),
+      drep: this.drep
+    }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof StakeVoteDelegCert &&
+      Equal.equals(this.stakeCredential, that.stakeCredential) &&
+      Equal.equals(this.poolKeyHash, that.poolKeyHash) &&
+      Equal.equals(this.drep, that.drep)
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(
+      this,
+      Hash.combine(Hash.hash("StakeVoteDelegCert"))(
+        Hash.combine(Hash.hash(this.stakeCredential))(Hash.combine(Hash.hash(this.poolKeyHash))(Hash.hash(this.drep)))
+      )
+    )
+  }
+}
 
 export class StakeRegDelegCert extends Schema.TaggedClass<StakeRegDelegCert>("StakeRegDelegCert")("StakeRegDelegCert", {
   stakeCredential: Credential.CredentialSchema,
   poolKeyHash: PoolKeyHash.PoolKeyHash,
   coin: Coin.Coin
-}) {}
+}) {
+  toJSON() {
+    return {
+      _tag: "StakeRegDelegCert" as const,
+      stakeCredential: this.stakeCredential.toJSON(),
+      poolKeyHash: this.poolKeyHash.toJSON(),
+      coin: this.coin.toString()
+    }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof StakeRegDelegCert &&
+      Equal.equals(this.stakeCredential, that.stakeCredential) &&
+      Equal.equals(this.poolKeyHash, that.poolKeyHash) &&
+      Equal.equals(this.coin, that.coin)
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(
+      this,
+      Hash.combine(Hash.hash("StakeRegDelegCert"))(
+        Hash.combine(Hash.hash(this.stakeCredential))(Hash.combine(Hash.hash(this.poolKeyHash))(Hash.hash(this.coin)))
+      )
+    )
+  }
+}
 
 export class VoteRegDelegCert extends Schema.TaggedClass<VoteRegDelegCert>("VoteRegDelegCert")("VoteRegDelegCert", {
   stakeCredential: Credential.CredentialSchema,
   drep: DRep.DRep,
   coin: Coin.Coin
-}) {}
+}) {
+  toJSON() {
+    return {
+      _tag: "VoteRegDelegCert" as const,
+      stakeCredential: this.stakeCredential.toJSON(),
+      drep: this.drep,
+      coin: this.coin.toString()
+    }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof VoteRegDelegCert &&
+      Equal.equals(this.stakeCredential, that.stakeCredential) &&
+      Equal.equals(this.drep, that.drep) &&
+      Equal.equals(this.coin, that.coin)
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(
+      this,
+      Hash.combine(Hash.hash("VoteRegDelegCert"))(
+        Hash.combine(Hash.hash(this.stakeCredential))(Hash.combine(Hash.hash(this.drep))(Hash.hash(this.coin)))
+      )
+    )
+  }
+}
 
 export class StakeVoteRegDelegCert extends Schema.TaggedClass<StakeVoteRegDelegCert>("StakeVoteRegDelegCert")(
   "StakeVoteRegDelegCert",
@@ -94,7 +413,46 @@ export class StakeVoteRegDelegCert extends Schema.TaggedClass<StakeVoteRegDelegC
     drep: DRep.DRep,
     coin: Coin.Coin
   }
-) {}
+) {
+  toJSON() {
+    return {
+      _tag: "StakeVoteRegDelegCert" as const,
+      stakeCredential: this.stakeCredential.toJSON(),
+      poolKeyHash: this.poolKeyHash.toJSON(),
+      drep: this.drep,
+      coin: this.coin.toString()
+    }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof StakeVoteRegDelegCert &&
+      Equal.equals(this.stakeCredential, that.stakeCredential) &&
+      Equal.equals(this.poolKeyHash, that.poolKeyHash) &&
+      Equal.equals(this.drep, that.drep) &&
+      Equal.equals(this.coin, that.coin)
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(
+      this,
+      Hash.combine(Hash.hash("StakeVoteRegDelegCert"))(
+        Hash.combine(Hash.hash(this.stakeCredential))(
+          Hash.combine(Hash.hash(this.poolKeyHash))(Hash.combine(Hash.hash(this.drep))(Hash.hash(this.coin)))
+        )
+      )
+    )
+  }
+}
 
 export class AuthCommitteeHotCert extends Schema.TaggedClass<AuthCommitteeHotCert>("AuthCommitteeHotCert")(
   "AuthCommitteeHotCert",
@@ -102,7 +460,40 @@ export class AuthCommitteeHotCert extends Schema.TaggedClass<AuthCommitteeHotCer
     committeeColdCredential: Credential.CredentialSchema,
     committeeHotCredential: Credential.CredentialSchema
   }
-) {}
+) {
+  toJSON() {
+    return {
+      _tag: "AuthCommitteeHotCert" as const,
+      committeeColdCredential: this.committeeColdCredential.toJSON(),
+      committeeHotCredential: this.committeeHotCredential.toJSON()
+    }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof AuthCommitteeHotCert &&
+      Equal.equals(this.committeeColdCredential, that.committeeColdCredential) &&
+      Equal.equals(this.committeeHotCredential, that.committeeHotCredential)
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(
+      this,
+      Hash.combine(Hash.hash("AuthCommitteeHotCert"))(
+        Hash.combine(Hash.hash(this.committeeColdCredential))(Hash.hash(this.committeeHotCredential))
+      )
+    )
+  }
+}
 
 export class ResignCommitteeColdCert extends Schema.TaggedClass<ResignCommitteeColdCert>("ResignCommitteeColdCert")(
   "ResignCommitteeColdCert",
@@ -110,23 +501,153 @@ export class ResignCommitteeColdCert extends Schema.TaggedClass<ResignCommitteeC
     committeeColdCredential: Credential.CredentialSchema,
     anchor: Schema.NullishOr(Anchor.Anchor)
   }
-) {}
+) {
+  toJSON() {
+    return {
+      _tag: "ResignCommitteeColdCert" as const,
+      committeeColdCredential: this.committeeColdCredential.toJSON(),
+      anchor: this.anchor
+    }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof ResignCommitteeColdCert &&
+      Equal.equals(this.committeeColdCredential, that.committeeColdCredential) &&
+      Equal.equals(this.anchor, that.anchor)
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(
+      this,
+      Hash.combine(Hash.hash("ResignCommitteeColdCert"))(
+        Hash.combine(Hash.hash(this.committeeColdCredential))(Hash.hash(this.anchor))
+      )
+    )
+  }
+}
 
 export class RegDrepCert extends Schema.TaggedClass<RegDrepCert>("RegDrepCert")("RegDrepCert", {
   drepCredential: Credential.CredentialSchema,
   coin: Coin.Coin,
   anchor: Schema.NullishOr(Anchor.Anchor)
-}) {}
+}) {
+  toJSON() {
+    return {
+      _tag: "RegDrepCert" as const,
+      drepCredential: this.drepCredential.toJSON(),
+      coin: this.coin.toString(),
+      anchor: this.anchor
+    }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof RegDrepCert &&
+      Equal.equals(this.drepCredential, that.drepCredential) &&
+      Equal.equals(this.coin, that.coin) &&
+      Equal.equals(this.anchor, that.anchor)
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(
+      this,
+      Hash.combine(Hash.hash("RegDrepCert"))(
+        Hash.combine(Hash.hash(this.drepCredential))(Hash.combine(Hash.hash(this.coin))(Hash.hash(this.anchor)))
+      )
+    )
+  }
+}
 
 export class UnregDrepCert extends Schema.TaggedClass<UnregDrepCert>("UnregDrepCert")("UnregDrepCert", {
   drepCredential: Credential.CredentialSchema,
   coin: Coin.Coin
-}) {}
+}) {
+  toJSON() {
+    return {
+      _tag: "UnregDrepCert" as const,
+      drepCredential: this.drepCredential.toJSON(),
+      coin: this.coin.toString()
+    }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof UnregDrepCert &&
+      Equal.equals(this.drepCredential, that.drepCredential) &&
+      Equal.equals(this.coin, that.coin)
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(
+      this,
+      Hash.combine(Hash.hash("UnregDrepCert"))(Hash.combine(Hash.hash(this.drepCredential))(Hash.hash(this.coin)))
+    )
+  }
+}
 
 export class UpdateDrepCert extends Schema.TaggedClass<UpdateDrepCert>("UpdateDrepCert")("UpdateDrepCert", {
   drepCredential: Credential.CredentialSchema,
   anchor: Schema.NullishOr(Anchor.Anchor)
-}) {}
+}) {
+  toJSON() {
+    return {
+      _tag: "UpdateDrepCert" as const,
+      drepCredential: this.drepCredential.toJSON(),
+      anchor: this.anchor
+    }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof UpdateDrepCert &&
+      Equal.equals(this.drepCredential, that.drepCredential) &&
+      Equal.equals(this.anchor, that.anchor)
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(
+      this,
+      Hash.combine(Hash.hash("UpdateDrepCert"))(Hash.combine(Hash.hash(this.drepCredential))(Hash.hash(this.anchor)))
+    )
+  }
+}
 
 /**
  * Certificate union schema based on Conway CDDL specification
@@ -427,21 +948,21 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Cer
           // pool_retirement = (4, pool_keyhash, epoch_no)
           const [, poolKeyHashBytes, epochBigInt] = fromA
           const poolKeyHash = yield* ParseResult.decodeEither(PoolKeyHash.FromBytes)(poolKeyHashBytes)
-          const epoch = EpochNo.make(epochBigInt)
+          const epoch = epochBigInt as EpochNo.EpochNo
           return new PoolRetirement({ poolKeyHash, epoch }, { disableValidation: true })
         }
         case 7n: {
           // reg_cert = (7, stake_credential, coin)
           const [, credentialCDDL, coinBigInt] = fromA
           const stakeCredential = yield* ParseResult.decodeEither(Credential.FromCDDL)(credentialCDDL)
-          const coin = Coin.make(coinBigInt)
+          const coin = yield* ParseResult.decodeEither(Coin.Coin)(coinBigInt)
           return new RegCert({ stakeCredential, coin }, { disableValidation: true })
         }
         case 8n: {
           // unreg_cert = (8, stake_credential, coin)
           const [, credentialCDDL, coinBigInt] = fromA
           const stakeCredential = yield* ParseResult.decodeEither(Credential.FromCDDL)(credentialCDDL)
-          const coin = Coin.make(coinBigInt)
+          const coin = yield* ParseResult.decodeEither(Coin.Coin)(coinBigInt)
           return new UnregCert({ stakeCredential, coin }, { disableValidation: true })
         }
         case 9n: {
@@ -471,7 +992,7 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Cer
           const [, credentialCDDL, poolKeyHashBytes, coinBigInt] = fromA
           const stakeCredential = yield* ParseResult.decodeEither(Credential.FromCDDL)(credentialCDDL)
           const poolKeyHash = yield* ParseResult.decodeEither(PoolKeyHash.FromBytes)(poolKeyHashBytes)
-          const coin = Coin.make(coinBigInt)
+          const coin = yield* ParseResult.decodeEither(Coin.Coin)(coinBigInt)
           return new StakeRegDelegCert(
             {
               stakeCredential,
@@ -486,7 +1007,7 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Cer
           const [, credentialCDDL, drepCDDL, coinBigInt] = fromA
           const stakeCredential = yield* ParseResult.decodeEither(Credential.FromCDDL)(credentialCDDL)
           const drep = yield* ParseResult.decodeEither(DRep.FromCDDL)(drepCDDL)
-          const coin = Coin.make(coinBigInt)
+          const coin = yield* ParseResult.decodeEither(Coin.Coin)(coinBigInt)
           return new VoteRegDelegCert({ stakeCredential, drep, coin }, { disableValidation: true })
         }
         case 13n: {
@@ -495,7 +1016,7 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Cer
           const stakeCredential = yield* ParseResult.decodeEither(Credential.FromCDDL)(credentialCDDL)
           const poolKeyHash = yield* ParseResult.decodeEither(PoolKeyHash.FromBytes)(poolKeyHashBytes)
           const drep = yield* ParseResult.decodeEither(DRep.FromCDDL)(drepCDDL)
-          const coin = Coin.make(coinBigInt)
+          const coin = yield* ParseResult.decodeEither(Coin.Coin)(coinBigInt)
           return new StakeVoteRegDelegCert(
             {
               stakeCredential,
@@ -536,7 +1057,7 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Cer
           // reg_drep_cert = (16, drep_credential, coin, anchor/ nil)
           const [, credentialCDDL, coinBigInt, anchorCDDL] = fromA
           const drepCredential = yield* ParseResult.decodeEither(Credential.FromCDDL)(credentialCDDL)
-          const coin = Coin.make(coinBigInt)
+          const coin = yield* ParseResult.decodeEither(Coin.Coin)(coinBigInt)
           const anchor = anchorCDDL ? yield* ParseResult.decodeEither(Anchor.FromCDDL)(anchorCDDL) : undefined
           return new RegDrepCert({ drepCredential, coin, anchor }, { disableValidation: true })
         }
@@ -544,7 +1065,7 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Cer
           // unreg_drep_cert = (17, drep_credential, coin)
           const [, credentialCDDL, coinBigInt] = fromA
           const drepCredential = yield* ParseResult.decodeEither(Credential.FromCDDL)(credentialCDDL)
-          const coin = Coin.make(coinBigInt)
+          const coin = yield* ParseResult.decodeEither(Coin.Coin)(coinBigInt)
           return new UnregDrepCert({ drepCredential, coin }, { disableValidation: true })
         }
         case 18n: {
@@ -621,7 +1142,7 @@ export const arbitrary = FastCheck.oneof(
   PoolParams.arbitrary.map((poolParams) => new PoolRegistration({ poolParams })),
   // PoolRetirement
   FastCheck.tuple(PoolKeyHash.arbitrary, EpochNo.generator).map(
-    ([poolKeyHash, epoch]) => new PoolRetirement({ poolKeyHash, epoch: EpochNo.make(epoch) })
+    ([poolKeyHash, epoch]) => new PoolRetirement({ poolKeyHash, epoch: epoch as EpochNo.EpochNo })
   ),
   // RegCert
   FastCheck.tuple(Credential.arbitrary, Coin.arbitrary).map(
@@ -676,132 +1197,13 @@ export const arbitrary = FastCheck.oneof(
 )
 
 /**
- * Check if two Certificate instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: Certificate, b: Certificate): boolean => {
-  if (a._tag !== b._tag) return false
-
-  switch (a._tag) {
-    case "StakeRegistration":
-      return b._tag === "StakeRegistration" && Credential.equals(a.stakeCredential, b.stakeCredential)
-    case "StakeDeregistration":
-      return b._tag === "StakeDeregistration" && Credential.equals(a.stakeCredential, b.stakeCredential)
-    case "StakeDelegation":
-      return (
-        b._tag === "StakeDelegation" &&
-        Credential.equals(a.stakeCredential, b.stakeCredential) &&
-        PoolKeyHash.equals(a.poolKeyHash, b.poolKeyHash)
-      )
-    case "PoolRegistration":
-      return (
-        b._tag === "PoolRegistration" &&
-        // Delegate to PoolParams.equals for deep comparison
-        PoolParams.equals(a.poolParams, (b as any).poolParams)
-      )
-    case "PoolRetirement":
-      return (
-        b._tag === "PoolRetirement" &&
-        PoolKeyHash.equals(a.poolKeyHash, b.poolKeyHash) &&
-        EpochNo.equals(a.epoch, b.epoch)
-      )
-    case "RegCert":
-      return (
-        b._tag === "RegCert" && Credential.equals(a.stakeCredential, b.stakeCredential) && Coin.equals(a.coin, b.coin)
-      )
-    case "UnregCert":
-      return (
-        b._tag === "UnregCert" && Credential.equals(a.stakeCredential, b.stakeCredential) && Coin.equals(a.coin, b.coin)
-      )
-    case "VoteDelegCert":
-      return (
-        b._tag === "VoteDelegCert" &&
-        Credential.equals(a.stakeCredential, b.stakeCredential) &&
-        DRep.equals(a.drep, b.drep)
-      )
-    case "StakeVoteDelegCert":
-      return (
-        b._tag === "StakeVoteDelegCert" &&
-        Credential.equals(a.stakeCredential, b.stakeCredential) &&
-        PoolKeyHash.equals(a.poolKeyHash, b.poolKeyHash) &&
-        DRep.equals(a.drep, b.drep)
-      )
-    case "StakeRegDelegCert":
-      return (
-        b._tag === "StakeRegDelegCert" &&
-        Credential.equals(a.stakeCredential, b.stakeCredential) &&
-        PoolKeyHash.equals(a.poolKeyHash, b.poolKeyHash) &&
-        Coin.equals(a.coin, b.coin)
-      )
-    case "VoteRegDelegCert":
-      return (
-        b._tag === "VoteRegDelegCert" &&
-        Credential.equals(a.stakeCredential, b.stakeCredential) &&
-        DRep.equals(a.drep, b.drep) &&
-        Coin.equals(a.coin, b.coin)
-      )
-    case "StakeVoteRegDelegCert":
-      return (
-        b._tag === "StakeVoteRegDelegCert" &&
-        Credential.equals(a.stakeCredential, b.stakeCredential) &&
-        PoolKeyHash.equals(a.poolKeyHash, b.poolKeyHash) &&
-        DRep.equals(a.drep, b.drep) &&
-        Coin.equals(a.coin, b.coin)
-      )
-    case "AuthCommitteeHotCert":
-      return (
-        b._tag === "AuthCommitteeHotCert" &&
-        Credential.equals(a.committeeColdCredential, b.committeeColdCredential) &&
-        Credential.equals(a.committeeHotCredential, b.committeeHotCredential)
-      )
-    case "ResignCommitteeColdCert":
-      return (
-        b._tag === "ResignCommitteeColdCert" &&
-        Credential.equals(a.committeeColdCredential, b.committeeColdCredential) &&
-        // anchor may be null/undefined
-        ((a.anchor === undefined && b.anchor === undefined) ||
-          (a.anchor !== undefined && b.anchor !== undefined && Anchor.equals(a.anchor as any, b.anchor as any)))
-      )
-    case "RegDrepCert":
-      return (
-        b._tag === "RegDrepCert" &&
-        Credential.equals(a.drepCredential, b.drepCredential) &&
-        Coin.equals(a.coin, b.coin) &&
-        ((a.anchor === undefined && b.anchor === undefined) ||
-          (a.anchor !== undefined && b.anchor !== undefined && Anchor.equals(a.anchor as any, b.anchor as any)))
-      )
-    case "UnregDrepCert":
-      return (
-        b._tag === "UnregDrepCert" &&
-        Credential.equals(a.drepCredential, b.drepCredential) &&
-        Coin.equals(a.coin, b.coin)
-      )
-    case "UpdateDrepCert":
-      return (
-        b._tag === "UpdateDrepCert" &&
-        Credential.equals(a.drepCredential, b.drepCredential) &&
-        ((a.anchor === undefined && b.anchor === undefined) ||
-          (a.anchor !== undefined && b.anchor !== undefined && Anchor.equals(a.anchor as any, b.anchor as any)))
-      )
-    // Add other cases as needed
-    default:
-      return false
-  }
-}
-
-// ============================================================================
-// Parsing Functions
-// ============================================================================
-
-/**
  * Parse a Certificate from CBOR bytes.
  *
  * @since 2.0.0
  * @category parsing
  */
-export const fromCBORBytes = Function.makeCBORDecodeSync(FromCDDL, CertificateError, "Certificate.fromCBORBytes")
+export const fromCBORBytes = (bytes: Uint8Array, options?: CBOR.CodecOptions): Certificate =>
+  Schema.decodeSync(FromCBORBytes(options))(bytes)
 
 /**
  * Parse a Certificate from CBOR hex string.
@@ -809,7 +1211,8 @@ export const fromCBORBytes = Function.makeCBORDecodeSync(FromCDDL, CertificateEr
  * @since 2.0.0
  * @category parsing
  */
-export const fromCBORHex = Function.makeCBORDecodeHexSync(FromCDDL, CertificateError, "Certificate.fromCBORHex")
+export const fromCBORHex = (hex: string, options?: CBOR.CodecOptions): Certificate =>
+  Schema.decodeSync(FromCBORHex(options))(hex)
 
 // ============================================================================
 // Encoding Functions
@@ -821,7 +1224,8 @@ export const fromCBORHex = Function.makeCBORDecodeHexSync(FromCDDL, CertificateE
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORBytes = Function.makeCBOREncodeSync(FromCDDL, CertificateError, "Certificate.toCBORBytes")
+export const toCBORBytes = (certificate: Certificate, options?: CBOR.CodecOptions): Uint8Array =>
+  Schema.encodeSync(FromCBORBytes(options))(certificate)
 
 /**
  * Convert a Certificate to CBOR hex string.
@@ -829,48 +1233,5 @@ export const toCBORBytes = Function.makeCBOREncodeSync(FromCDDL, CertificateErro
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORHex = Function.makeCBOREncodeHexSync(FromCDDL, CertificateError, "Certificate.toCBORHex")
-
-// ============================================================================
-// Effect Namespace - Effect-based Error Handling
-// ============================================================================
-
-/**
- * Effect-based error handling variants for functions that can fail.
- *
- * @since 2.0.0
- * @category effect
- */
-export namespace Either {
-  /**
-   * Parse a Certificate from CBOR bytes.
-   *
-   * @since 2.0.0
-   * @category effect
-   */
-  export const fromCBORBytes = Function.makeCBORDecodeEither(FromCDDL, CertificateError)
-
-  /**
-   * Parse a Certificate from CBOR hex string.
-   *
-   * @since 2.0.0
-   * @category effect
-   */
-  export const fromCBORHex = Function.makeCBORDecodeHexEither(FromCDDL, CertificateError)
-
-  /**
-   * Convert a Certificate to CBOR bytes.
-   *
-   * @since 2.0.0
-   * @category effect
-   */
-  export const toCBORBytes = Function.makeCBOREncodeEither(FromCDDL, CertificateError)
-
-  /**
-   * Convert a Certificate to CBOR hex string.
-   *
-   * @since 2.0.0
-   * @category effect
-   */
-  export const toCBORHex = Function.makeCBOREncodeHexEither(FromCDDL, CertificateError)
-}
+export const toCBORHex = (certificate: Certificate, options?: CBOR.CodecOptions): string =>
+  Schema.encodeSync(FromCBORHex(options))(certificate)

@@ -1,17 +1,6 @@
-import { Data, Schema } from "effect"
+import { Schema } from "effect"
 
-import * as NetworkId from "./NetworkId.js"
-
-/**
- * Error class for Network related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class NetworkError extends Data.TaggedError("NetworkError")<{
-  message?: string
-  cause?: unknown
-}> {}
+import type * as NetworkId from "./NetworkId.js"
 
 /**
  * Schema for Network representing Cardano network types.
@@ -29,22 +18,6 @@ export const Network = Schema.Literal("Mainnet", "Preview", "Preprod", "Custom")
  * @category model
  */
 export type Network = typeof Network.Type
-
-/**
- * Smart constructor for Network that validates and applies branding.
- *
- * @since 2.0.0
- * @category constructors
- */
-export const make = Schema.decodeSync(Network)
-
-/**
- * Check if two Network instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: Network, b: Network): boolean => a === b
 
 /**
  * Check if a value is a valid Network.
@@ -65,9 +38,9 @@ export const toId = <T extends Network>(network: T): NetworkId.NetworkId => {
     case "Preview":
     case "Preprod":
     case "Custom":
-      return NetworkId.make(0)
+      return 0 as NetworkId.NetworkId
     case "Mainnet":
-      return NetworkId.make(1)
+      return 1 as NetworkId.NetworkId
     default:
       throw new Error(`Exhaustive check failed: Unhandled case ${network}`)
   }
@@ -82,9 +55,9 @@ export const toId = <T extends Network>(network: T): NetworkId.NetworkId => {
 export const fromId = (id: NetworkId.NetworkId): Network => {
   switch (id) {
     case 0:
-      return make("Preview")
+      return "Preview"
     case 1:
-      return make("Mainnet")
+      return "Mainnet"
     default:
       throw new Error(`Exhaustive check failed: Unhandled case ${id}`)
   }

@@ -1,8 +1,7 @@
-import { Data, Effect as Eff, FastCheck, ParseResult, Schema } from "effect"
+import { Effect as Eff, Equal, FastCheck, Hash, Inspectable, ParseResult, Schema } from "effect"
 
 import * as AuxiliaryData from "./AuxiliaryData.js"
 import * as CBOR from "./CBOR.js"
-import * as Function from "./Function.js"
 import * as TransactionBody from "./TransactionBody.js"
 import * as TransactionWitnessSet from "./TransactionWitnessSet.js"
 
@@ -20,20 +19,44 @@ export class Transaction extends Schema.TaggedClass<Transaction>()("Transaction"
   witnessSet: TransactionWitnessSet.TransactionWitnessSet,
   isValid: Schema.Boolean,
   auxiliaryData: Schema.NullOr(AuxiliaryData.AuxiliaryData)
-}) {}
+}) {
+  toJSON() {
+    return {
+      _tag: this._tag,
+      body: this.body,
+      witnessSet: this.witnessSet,
+      isValid: this.isValid,
+      auxiliaryData: this.auxiliaryData
+    }
+  }
 
-export const make = (...args: ConstructorParameters<typeof Transaction>) => new Transaction(...args)
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
 
-/**
- * Error class for Transaction related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class TransactionError extends Data.TaggedError("TransactionError")<{
-  message?: string
-  cause?: unknown
-}> {}
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof Transaction &&
+      Equal.equals(this.body, that.body) &&
+      Equal.equals(this.witnessSet, that.witnessSet) &&
+      this.isValid === that.isValid &&
+      Equal.equals(this.auxiliaryData, that.auxiliaryData)
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(
+      this,
+      Hash.combine(
+        Hash.combine(Hash.combine(Hash.hash(this.body))(Hash.hash(this.witnessSet)))(Hash.hash(this.isValid))
+      )(Hash.hash(this.auxiliaryData))
+    )
+  }
+}
 
 /**
  * Conway CDDL schema for Transaction tuple structure.
@@ -100,37 +123,17 @@ export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTION
 // Parsing / Encoding Functions
 // ============================================================================
 
-export const fromCBORBytes = Function.makeCBORDecodeSync(FromCDDL, TransactionError, "Transaction.fromCBORBytes")
-export const fromCBORHex = Function.makeCBORDecodeHexSync(FromCDDL, TransactionError, "Transaction.fromCBORHex")
-export const toCBORBytes = Function.makeCBOREncodeSync(FromCDDL, TransactionError, "Transaction.toCBORBytes")
-export const toCBORHex = Function.makeCBOREncodeHexSync(FromCDDL, TransactionError, "Transaction.toCBORHex")
+export const fromCBORBytes = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.decodeSync(FromCBORBytes(options))(bytes)
 
-// Either variants
-export namespace Either {
-  export const fromCBORBytes = Function.makeCBORDecodeEither(FromCDDL, TransactionError, CBOR.CML_DEFAULT_OPTIONS)
-  export const fromCBORHex = Function.makeCBORDecodeHexEither(FromCDDL, TransactionError, CBOR.CML_DEFAULT_OPTIONS)
-  export const toCBORBytes = Function.makeCBOREncodeEither(FromCDDL, TransactionError, CBOR.CML_DEFAULT_OPTIONS)
-  export const toCBORHex = Function.makeCBOREncodeHexEither(FromCDDL, TransactionError, CBOR.CML_DEFAULT_OPTIONS)
-}
+export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.decodeSync(FromCBORHex(options))(hex)
 
-// ============================================================================
-// Equality
-// ============================================================================
+export const toCBORBytes = (data: Transaction, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.encodeSync(FromCBORBytes(options))(data)
 
-export const equals = (a: Transaction, b: Transaction): boolean => {
-  if (a === b) return true
-  try {
-    const aBytes = toCBORBytes(a)
-    const bBytes = toCBORBytes(b)
-    if (aBytes.length !== bBytes.length) return false
-    for (let i = 0; i < aBytes.length; i++) {
-      if (aBytes[i] !== bBytes[i]) return false
-    }
-    return true
-  } catch {
-    return false
-  }
-}
+export const toCBORHex = (data: Transaction, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.encodeSync(FromCBORHex(options))(data)
 
 // ============================================================================
 // Arbitrary (FastCheck)

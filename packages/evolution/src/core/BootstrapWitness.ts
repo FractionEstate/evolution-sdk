@@ -1,9 +1,9 @@
-import { Effect as Eff, FastCheck, ParseResult, Schema } from "effect"
+import { Effect as Eff, Equal, FastCheck, Hash, Inspectable, ParseResult, Schema } from "effect"
 
+import * as Bytes from "./Bytes.js"
 import * as Bytes32 from "./Bytes32.js"
 import * as CBOR from "./CBOR.js"
 import * as Ed25519Signature from "./Ed25519Signature.js"
-import * as Function from "./Function.js"
 import * as VKey from "./VKey.js"
 
 /**
@@ -24,7 +24,74 @@ export class BootstrapWitness extends Schema.Class<BootstrapWitness>("BootstrapW
   signature: Ed25519Signature.Ed25519Signature,
   chainCode: Bytes32.BytesFromHex,
   attributes: Schema.Uint8ArrayFromHex
-}) {}
+}) {
+  /**
+   * Convert to JSON representation.
+   *
+   * @since 2.0.0
+   * @category conversions
+   */
+  toJSON() {
+    return {
+      _tag: "BootstrapWitness",
+      publicKey: this.publicKey,
+      signature: this.signature,
+      chainCode: this.chainCode,
+      attributes: this.attributes
+    }
+  }
+
+  /**
+   * Convert to string representation.
+   *
+   * @since 2.0.0
+   * @category conversions
+   */
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  /**
+   * Custom inspect for Node.js REPL.
+   *
+   * @since 2.0.0
+   * @category conversions
+   */
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  /**
+   * Structural equality check.
+   *
+   * @since 2.0.0
+   * @category equality
+   */
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof BootstrapWitness &&
+      Equal.equals(this.publicKey, that.publicKey) &&
+      Equal.equals(this.signature, that.signature) &&
+      Equal.equals(this.chainCode, that.chainCode) &&
+      Equal.equals(this.attributes, that.attributes)
+    )
+  }
+
+  /**
+   * Hash code generation.
+   *
+   * @since 2.0.0
+   * @category hashing
+   */
+  [Hash.symbol](): number {
+    return Hash.cached(
+      this,
+      Hash.combine(
+        Hash.combine(Hash.combine(Hash.hash(this.publicKey))(Hash.hash(this.signature)))(Hash.hash(this.chainCode))
+      )(Hash.hash(this.attributes))
+    )
+  }
+}
 
 // Tuple schema as per CDDL
 export const CDDLSchema = Schema.Tuple(
@@ -54,31 +121,75 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Boo
     })
 }).annotations({ identifier: "BootstrapWitness.FromCDDL" })
 
-// Parsing helpers
-export const fromCBORBytes = Function.makeCBORDecodeSync(
-  FromCDDL,
-  Ed25519Signature.Ed25519SignatureError, // reuse an existing error type; callers typically wrap
-  "BootstrapWitness.fromCBORBytes"
-)
+/**
+ * CBOR bytes transformation schema for BootstrapWitness.
+ * Transforms between Uint8Array and BootstrapWitness using CBOR encoding.
+ *
+ * @since 2.0.0
+ * @category schemas
+ */
+export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.compose(
+    CBOR.FromBytes(options), // Uint8Array → CBOR
+    FromCDDL // CBOR → BootstrapWitness
+  ).annotations({
+    identifier: "BootstrapWitness.FromCBORBytes",
+    title: "BootstrapWitness from CBOR Bytes",
+    description: "Transforms CBOR bytes to BootstrapWitness"
+  })
 
-export const fromCBORHex = Function.makeCBORDecodeHexSync(
-  FromCDDL,
-  Ed25519Signature.Ed25519SignatureError,
-  "BootstrapWitness.fromCBORHex"
-)
+/**
+ * CBOR hex transformation schema for BootstrapWitness.
+ * Transforms between hex string and BootstrapWitness using CBOR encoding.
+ *
+ * @since 2.0.0
+ * @category schemas
+ */
+export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.compose(
+    Bytes.FromHex, // string → Uint8Array
+    FromCBORBytes(options) // Uint8Array → BootstrapWitness
+  ).annotations({
+    identifier: "BootstrapWitness.FromCBORHex",
+    title: "BootstrapWitness from CBOR Hex",
+    description: "Transforms CBOR hex string to BootstrapWitness"
+  })
 
-// Encoding helpers
-export const toCBORBytes = Function.makeCBOREncodeSync(
-  FromCDDL,
-  Ed25519Signature.Ed25519SignatureError,
-  "BootstrapWitness.toCBORBytes"
-)
+/**
+ * Parse BootstrapWitness from CBOR bytes.
+ *
+ * @since 2.0.0
+ * @category parsing
+ */
+export const fromCBORBytes = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): BootstrapWitness =>
+  Schema.decodeSync(FromCBORBytes(options))(bytes)
 
-export const toCBORHex = Function.makeCBOREncodeHexSync(
-  FromCDDL,
-  Ed25519Signature.Ed25519SignatureError,
-  "BootstrapWitness.toCBORHex"
-)
+/**
+ * Parse BootstrapWitness from CBOR hex string.
+ *
+ * @since 2.0.0
+ * @category parsing
+ */
+export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): BootstrapWitness =>
+  Schema.decodeSync(FromCBORHex(options))(hex)
+
+/**
+ * Encode BootstrapWitness to CBOR bytes.
+ *
+ * @since 2.0.0
+ * @category encoding
+ */
+export const toCBORBytes = (witness: BootstrapWitness, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): Uint8Array =>
+  Schema.encodeSync(FromCBORBytes(options))(witness)
+
+/**
+ * Encode BootstrapWitness to CBOR hex string.
+ *
+ * @since 2.0.0
+ * @category encoding
+ */
+export const toCBORHex = (witness: BootstrapWitness, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): string =>
+  Schema.encodeSync(FromCBORHex(options))(witness)
 
 /**
  * Arbitrary generator for BootstrapWitness instances.

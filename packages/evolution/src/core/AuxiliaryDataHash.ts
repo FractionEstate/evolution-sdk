@@ -7,21 +7,10 @@
  * @since 2.0.0
  */
 
-import { Data, FastCheck, Schema } from "effect"
+import { Equal, FastCheck, Hash, Inspectable, Schema } from "effect"
 
+import * as Bytes from "./Bytes.js"
 import * as Bytes32 from "./Bytes32.js"
-import * as Function from "./Function.js"
-
-/**
- * Error class for AuxiliaryDataHash related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class AuxiliaryDataHashError extends Data.TaggedError("AuxiliaryDataHashError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Schema for AuxiliaryDataHash representing auxiliary data hashes.
@@ -32,7 +21,27 @@ export class AuxiliaryDataHashError extends Data.TaggedError("AuxiliaryDataHashE
  */
 export class AuxiliaryDataHash extends Schema.TaggedClass<AuxiliaryDataHash>()("AuxiliaryDataHash", {
   bytes: Bytes32.BytesFromHex
-}) {}
+}) {
+  toJSON() {
+    return { _tag: "AuxiliaryDataHash" as const, bytes: Bytes.toHex(this.bytes) }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof AuxiliaryDataHash && Bytes.equals(this.bytes, that.bytes)
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.array(Array.from(this.bytes)))
+  }
+}
 
 export const FromBytes = Schema.transform(
   Schema.typeSchema(Bytes32.BytesFromHex),
@@ -56,22 +65,6 @@ export const FromHex = Schema.compose(
 // Back-compat aliases used in TransactionBody and elsewhere
 export const BytesSchema = FromBytes
 export const HexSchema = FromHex
-
-/**
- * Smart constructor for AuxiliaryDataHash that validates and applies branding.
- *
- * @since 2.0.0
- * @category constructors
- */
-export const make = (...args: ConstructorParameters<typeof AuxiliaryDataHash>) => new AuxiliaryDataHash(...args)
-
-/**
- * Check if two AuxiliaryDataHash instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: AuxiliaryDataHash, b: AuxiliaryDataHash): boolean => Bytes32.equals(a.bytes, b.bytes)
 
 /**
  * Check if the given value is a valid AuxiliaryDataHash
@@ -101,7 +94,7 @@ export const arbitrary = FastCheck.uint8Array({ minLength: 32, maxLength: 32 }).
  * @since 2.0.0
  * @category parsing
  */
-export const fromBytes = Function.makeDecodeSync(FromBytes, AuxiliaryDataHashError, "AuxiliaryDataHash.fromBytes")
+export const fromBytes = Schema.decodeSync(FromBytes)
 
 /**
  * Parse AuxiliaryDataHash from hex string.
@@ -109,7 +102,7 @@ export const fromBytes = Function.makeDecodeSync(FromBytes, AuxiliaryDataHashErr
  * @since 2.0.0
  * @category parsing
  */
-export const fromHex = Function.makeDecodeSync(FromHex, AuxiliaryDataHashError, "AuxiliaryDataHash.fromHex")
+export const fromHex = Schema.decodeSync(FromHex)
 
 /**
  * Encode AuxiliaryDataHash to bytes.
@@ -117,7 +110,7 @@ export const fromHex = Function.makeDecodeSync(FromHex, AuxiliaryDataHashError, 
  * @since 2.0.0
  * @category encoding
  */
-export const toBytes = Function.makeEncodeSync(FromBytes, AuxiliaryDataHashError, "AuxiliaryDataHash.toBytes")
+export const toBytes = Schema.encodeSync(FromBytes)
 
 /**
  * Encode AuxiliaryDataHash to hex string.
@@ -125,15 +118,4 @@ export const toBytes = Function.makeEncodeSync(FromBytes, AuxiliaryDataHashError
  * @since 2.0.0
  * @category encoding
  */
-export const toHex = Function.makeEncodeSync(FromHex, AuxiliaryDataHashError, "AuxiliaryDataHash.toHex")
-
-// ============================================================================
-// Either Namespace (composable non-throwing API)
-// ============================================================================
-
-export namespace Either {
-  export const fromBytes = Function.makeDecodeEither(FromBytes, AuxiliaryDataHashError)
-  export const fromHex = Function.makeDecodeEither(FromHex, AuxiliaryDataHashError)
-  export const toBytes = Function.makeEncodeEither(FromBytes, AuxiliaryDataHashError)
-  export const toHex = Function.makeEncodeEither(FromHex, AuxiliaryDataHashError)
-}
+export const toHex = Schema.encodeSync(FromHex)

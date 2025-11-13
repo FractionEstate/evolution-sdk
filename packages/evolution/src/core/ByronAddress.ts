@@ -1,18 +1,7 @@
-import { Data, Effect as Eff, ParseResult, Schema } from "effect"
+import { Effect as Eff, Equal, Hash, Inspectable, ParseResult, Schema } from "effect"
 
 import * as Bytes from "./Bytes.js"
 import * as NetworkId from "./NetworkId.js"
-
-/**
- * Error class for ByronAddress related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class ByronAddressError extends Data.TaggedError("ByronAddressError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Byron legacy address format
@@ -24,12 +13,30 @@ export class ByronAddress extends Schema.TaggedClass<ByronAddress>("ByronAddress
   networkId: NetworkId.NetworkId,
   bytes: Bytes.HexSchema
 }) {
-  [Symbol.for("nodejs.util.inspect.custom")]() {
+  toJSON() {
     return {
-      _tag: "ByronAddress",
+      _tag: "ByronAddress" as const,
       networkId: this.networkId,
       bytes: this.bytes
     }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof ByronAddress && this.networkId === that.networkId && this.bytes === that.bytes
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.hash(this.toJSON())
   }
 }
 
@@ -59,13 +66,3 @@ export const BytesSchema = Schema.transformOrFail(Schema.Uint8ArrayFromSelf, Byr
  * @category schemas
  */
 export const FromHex = Schema.compose(Bytes.FromHex, BytesSchema)
-
-/**
- * Checks if two Byron addresses are equal.
- *
- * @since 2.0.0
- * @category utils
- */
-export const equals = (a: ByronAddress, b: ByronAddress): boolean => {
-  return a.networkId === b.networkId && a.bytes === b.bytes
-}

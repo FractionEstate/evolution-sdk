@@ -1,20 +1,8 @@
-import { Data, Effect as Eff, FastCheck, ParseResult, Schema } from "effect"
+import { Effect as Eff, Equal, FastCheck, Hash, Inspectable, ParseResult, Schema } from "effect"
 
 import * as Bytes from "./Bytes.js"
 import * as CBOR from "./CBOR.js"
 import * as DnsName from "./DnsName.js"
-import * as Function from "./Function.js"
-
-/**
- * Error class for MultiHostName related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class MultiHostNameError extends Data.TaggedError("MultiHostNameError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Schema for MultiHostName representing a multiple host name record.
@@ -25,7 +13,56 @@ export class MultiHostNameError extends Data.TaggedError("MultiHostNameError")<{
  */
 export class MultiHostName extends Schema.TaggedClass<MultiHostName>()("MultiHostName", {
   dnsName: DnsName.DnsName
-}) {}
+}) {
+  /**
+   * Convert to JSON-serializable format.
+   *
+   * @since 2.0.0
+   * @category serialization
+   */
+  toJSON() {
+    return {
+      _tag: "MultiHostName" as const,
+      dnsName: this.dnsName
+    }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof MultiHostName && Equal.equals(this.dnsName, that.dnsName)
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.hash(this.dnsName))
+  }
+
+  /**
+   * Convert to CBOR bytes.
+   *
+   * @since 2.0.0
+   * @category serialization
+   */
+  toCBORBytes(): Uint8Array {
+    return toCBORBytes(this)
+  }
+
+  /**
+   * Convert to CBOR hex string.
+   *
+   * @since 2.0.0
+   * @category serialization
+   */
+  toCBORHex(): string {
+    return toCBORHex(this)
+  }
+}
 
 /**
  * CDDL schema for MultiHostName.
@@ -89,22 +126,6 @@ export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTION
   })
 
 /**
- * Create a MultiHostName instance.
- *
- * @since 2.0.0
- * @category constructors
- */
-export const make = (dnsName: DnsName.DnsName): MultiHostName => new MultiHostName({ dnsName })
-
-/**
- * Check if two MultiHostName instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (self: MultiHostName, that: MultiHostName): boolean => DnsName.equals(self.dnsName, that.dnsName)
-
-/**
  * FastCheck arbitrary for MultiHostName instances.
  *
  * @since 2.0.0
@@ -115,73 +136,36 @@ export const arbitrary = FastCheck.record({
 }).map((props) => new MultiHostName(props))
 
 /**
- * Effect namespace for MultiHostName operations that can fail
+ * Parse MultiHostName from CBOR bytes.
  *
  * @since 2.0.0
- * @category effect
+ * @category parsing
  */
-export namespace Either {
-  /**
-   * Convert CBOR bytes to MultiHostName using Effect
-   *
-   * @since 2.0.0
-   * @category conversion
-   */
-  export const fromCBORBytes = Function.makeCBORDecodeEither(FromCDDL, MultiHostNameError)
-
-  /**
-   * Convert CBOR hex string to MultiHostName using Effect
-   *
-   * @since 2.0.0
-   * @category conversion
-   */
-  export const fromCBORHex = Function.makeCBORDecodeHexEither(FromCDDL, MultiHostNameError)
-
-  /**
-   * Convert MultiHostName to CBOR bytes using Effect
-   *
-   * @since 2.0.0
-   * @category conversion
-   */
-  export const toCBORBytes = Function.makeCBOREncodeEither(FromCDDL, MultiHostNameError)
-
-  /**
-   * Convert MultiHostName to CBOR hex string using Effect
-   *
-   * @since 2.0.0
-   * @category conversion
-   */
-  export const toCBORHex = Function.makeCBOREncodeHexEither(FromCDDL, MultiHostNameError)
-}
+export const fromCBORBytes = (bytes: Uint8Array, options?: CBOR.CodecOptions) =>
+  Schema.decodeSync(FromCBORBytes(options))(bytes)
 
 /**
- * Convert CBOR bytes to MultiHostName (unsafe)
+ * Parse MultiHostName from CBOR hex string.
  *
  * @since 2.0.0
- * @category conversion
+ * @category parsing
  */
-export const fromCBORBytes = Function.makeCBORDecodeSync(FromCDDL, MultiHostNameError, "MultiHostName.fromCBORBytes")
+export const fromCBORHex = (hex: string, options?: CBOR.CodecOptions) => Schema.decodeSync(FromCBORHex(options))(hex)
 
 /**
- * Convert CBOR hex string to MultiHostName (unsafe)
+ * Encode MultiHostName to CBOR bytes.
  *
  * @since 2.0.0
- * @category conversion
+ * @category encoding
  */
-export const fromCBORHex = Function.makeCBORDecodeHexSync(FromCDDL, MultiHostNameError, "MultiHostName.fromCBORHex")
+export const toCBORBytes = (data: MultiHostName, options?: CBOR.CodecOptions) =>
+  Schema.encodeSync(FromCBORBytes(options))(data)
 
 /**
- * Convert MultiHostName to CBOR bytes (unsafe)
+ * Encode MultiHostName to CBOR hex string.
  *
  * @since 2.0.0
- * @category conversion
+ * @category encoding
  */
-export const toCBORBytes = Function.makeCBOREncodeSync(FromCDDL, MultiHostNameError, "MultiHostName.toCBORBytes")
-
-/**
- * Convert MultiHostName to CBOR hex string (unsafe)
- *
- * @since 2.0.0
- * @category conversion
- */
-export const toCBORHex = Function.makeCBOREncodeHexSync(FromCDDL, MultiHostNameError, "MultiHostName.toCBORHex")
+export const toCBORHex = (data: MultiHostName, options?: CBOR.CodecOptions) =>
+  Schema.encodeSync(FromCBORHex(options))(data)

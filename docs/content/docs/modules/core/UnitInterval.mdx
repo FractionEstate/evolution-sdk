@@ -296,8 +296,8 @@ means there are two extra constraints:
 export declare const UnitInterval: Schema.refine<
   { readonly numerator: bigint; readonly denominator: bigint },
   Schema.Struct<{
-    numerator: Schema.refine<bigint, typeof Schema.BigInt>
-    denominator: Schema.refine<bigint, typeof Schema.BigInt>
+    numerator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
+    denominator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
   }>
 >
 ```

@@ -217,7 +217,7 @@ Schema for 8-bit unsigned integers.
 **Signature**
 
 ```ts
-export declare const Uint8Schema: Schema.refine<bigint, typeof Schema.BigInt>
+export declare const Uint8Schema: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
 ```
 
 Added in v2.0.0
@@ -293,7 +293,7 @@ export declare const INT8_MIN: -128n
 **Signature**
 
 ```ts
-export declare const Int16: Schema.refine<bigint, typeof Schema.BigInt>
+export declare const Int16: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
 ```
 
 ## Int16 (type alias)
@@ -317,7 +317,7 @@ export declare const Int16Generator: FastCheck.Arbitrary<bigint>
 **Signature**
 
 ```ts
-export declare const Int32: Schema.refine<bigint, typeof Schema.BigInt>
+export declare const Int32: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
 ```
 
 ## Int32 (type alias)
@@ -341,7 +341,7 @@ export declare const Int32Generator: FastCheck.Arbitrary<bigint>
 **Signature**
 
 ```ts
-export declare const Int64: Schema.refine<bigint, typeof Schema.BigInt>
+export declare const Int64: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
 ```
 
 ## Int64 (type alias)
@@ -365,7 +365,7 @@ export declare const Int64Generator: FastCheck.Arbitrary<bigint>
 **Signature**
 
 ```ts
-export declare const Int8: Schema.refine<bigint, typeof Schema.BigInt>
+export declare const Int8: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
 ```
 
 ## Int8 (type alias)
@@ -469,7 +469,7 @@ export declare const Uint16Arbitrary: FastCheck.Arbitrary<bigint>
 **Signature**
 
 ```ts
-export declare const Uint16Schema: Schema.refine<bigint, typeof Schema.BigInt>
+export declare const Uint16Schema: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
 ```
 
 ## Uint32 (type alias)
@@ -493,7 +493,7 @@ export declare const Uint32Arbitrary: FastCheck.Arbitrary<bigint>
 **Signature**
 
 ```ts
-export declare const Uint32Schema: Schema.refine<bigint, typeof Schema.BigInt>
+export declare const Uint32Schema: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
 ```
 
 ## Uint64 (type alias)
@@ -517,5 +517,5 @@ export declare const Uint64Arbitrary: FastCheck.Arbitrary<bigint>
 **Signature**
 
 ```ts
-export declare const Uint64Schema: Schema.refine<bigint, typeof Schema.BigInt>
+export declare const Uint64Schema: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
 ```

@@ -1,8 +1,7 @@
-import { Data, FastCheck, Schema } from "effect"
+import { Equal, FastCheck, Hash, Inspectable, Schema } from "effect"
 
 import * as Bytes from "./Bytes.js"
 import * as Bytes64 from "./Bytes64.js"
-import * as Function from "./Function.js"
 
 /**
  * Class-based Ed25519Signature with compile-time and runtime safety.
@@ -15,16 +14,24 @@ import * as Function from "./Function.js"
 export class Ed25519Signature extends Schema.Class<Ed25519Signature>("Ed25519Signature")({
   bytes: Bytes64.BytesFromHex
 }) {
-  toJSON(): string {
-    return toHex(this)
+  toJSON() {
+    return { _tag: "Ed25519Signature" as const, bytes: Bytes.toHex(this.bytes) }
   }
 
   toString(): string {
-    return toHex(this)
+    return Inspectable.format(this.toJSON())
   }
 
-  [Symbol.for("nodejs.util.inspect.custom")](): string {
-    return `Ed25519Signature(${toHex(this)})`
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof Ed25519Signature && Bytes.equals(this.bytes, that.bytes)
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.array(Array.from(this.bytes)))
   }
 }
 
@@ -40,7 +47,7 @@ export const FromBytes = Schema.transform(
   {
     strict: true,
     decode: (bytes) =>
-      make(
+      new Ed25519Signature(
         { bytes },
         { disableValidation: true } // Disable validation since we already check length in Bytes64
       ),
@@ -64,25 +71,8 @@ export const FromHex = Schema.compose(
 })
 
 // ============================================================================
-// Schema Integration (for Effect Schema compatibility)
-// ============================================================================
-
-/**
- * Error class for Ed25519SignatureClass related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class Ed25519SignatureError extends Data.TaggedError("Ed25519SignatureError")<{
-  message?: string
-  cause?: unknown
-}> {}
-
-// ============================================================================
 // Core Functions (functional interface)
 // ============================================================================
-
-export const make = (...args: ConstructorParameters<typeof Ed25519Signature>) => new Ed25519Signature(...args)
 
 /**
  * Parse Ed25519Signature from bytes (unsafe - throws on error).
@@ -90,7 +80,7 @@ export const make = (...args: ConstructorParameters<typeof Ed25519Signature>) =>
  * @since 2.0.0
  * @category constructors
  */
-export const fromBytes = Function.makeDecodeSync(FromBytes, Ed25519SignatureError, "Ed25519Signature.fromBytes")
+export const fromBytes = Schema.decodeSync(FromBytes)
 
 /**
  * Parse Ed25519Signature from hex string (unsafe - throws on error).
@@ -98,7 +88,7 @@ export const fromBytes = Function.makeDecodeSync(FromBytes, Ed25519SignatureErro
  * @since 2.0.0
  * @category constructors
  */
-export const fromHex = Function.makeDecodeSync(FromHex, Ed25519SignatureError, "Ed25519Signature.fromHex")
+export const fromHex = Schema.decodeSync(FromHex)
 
 /**
  * Convert to hex string using optimized lookup table.
@@ -106,7 +96,7 @@ export const fromHex = Function.makeDecodeSync(FromHex, Ed25519SignatureError, "
  * @since 2.0.0
  * @category encoding
  */
-export const toHex = Function.makeEncodeSync(FromHex, Ed25519SignatureError, "Ed25519Signature.toHex")
+export const toHex = Schema.encodeSync(FromHex)
 
 /**
  * Get the underlying bytes (returns a copy for safety).
@@ -114,15 +104,7 @@ export const toHex = Function.makeEncodeSync(FromHex, Ed25519SignatureError, "Ed
  * @since 2.0.0
  * @category encoding
  */
-export const toBytes = Function.makeEncodeSync(FromBytes, Ed25519SignatureError, "Ed25519Signature.toBytes")
-
-/**
- * Check equality with another Ed25519Signature.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: Ed25519Signature, b: Ed25519Signature): boolean => Bytes.equals(a.bytes, b.bytes)
+export const toBytes = Schema.encodeSync(FromBytes)
 
 /**
  * Check if value is an Ed25519Signature instance.
@@ -141,11 +123,4 @@ export const is = Schema.is(Ed25519Signature)
 export const arbitrary: FastCheck.Arbitrary<Ed25519Signature> = FastCheck.uint8Array({
   minLength: 64,
   maxLength: 64
-}).map((bytes) => make({ bytes }, { disableValidation: true }))
-
-export namespace Either {
-  export const fromBytes = Function.makeDecodeEither(FromBytes, Ed25519SignatureError)
-  export const fromHex = Function.makeDecodeEither(FromHex, Ed25519SignatureError)
-  export const toBytes = Function.makeEncodeEither(FromBytes, Ed25519SignatureError)
-  export const toHex = Function.makeEncodeEither(FromHex, Ed25519SignatureError)
-}
+}).map((bytes) => new Ed25519Signature({ bytes }, { disableValidation: true }))

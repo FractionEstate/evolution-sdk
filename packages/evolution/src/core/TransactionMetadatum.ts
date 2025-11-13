@@ -14,7 +14,7 @@ export class TransactionMetadatumError extends Data.TaggedError("TransactionMeta
   cause?: unknown
 }> {}
 
-export type TransactionMetadatum = TextMetadatum | IntMetadatum | BytesMetadatum | MetadatumMap | ArrayMetadatum
+export type TransactionMetadatumVariants = TextMetadatum | IntMetadatum | BytesMetadatum | MetadatumMap | ArrayMetadatum
 
 /**
  * Schema for text-based transaction metadata.
@@ -55,8 +55,8 @@ export class BytesMetadatum extends Schema.TaggedClass<BytesMetadatum>("BytesMet
 export class MetadatumMap extends Schema.TaggedClass<MetadatumMap>("MetadatumMap")("MetadatumMap", {
   value: Schema.typeSchema(
     Schema.MapFromSelf({
-      key: Schema.suspend((): Schema.Schema<TransactionMetadatum> => TransactionMetadatum),
-      value: Schema.suspend((): Schema.Schema<TransactionMetadatum> => TransactionMetadatum)
+      key: Schema.suspend((): Schema.Schema<TransactionMetadatumVariants> => TransactionMetadatumVariants),
+      value: Schema.suspend((): Schema.Schema<TransactionMetadatumVariants> => TransactionMetadatumVariants)
     })
   )
 }) {}
@@ -68,7 +68,7 @@ export class MetadatumMap extends Schema.TaggedClass<MetadatumMap>("MetadatumMap
  * @category schemas
  */
 export class ArrayMetadatum extends Schema.TaggedClass<ArrayMetadatum>("ArrayMetadatum")("ArrayMetadatum", {
-  value: Schema.Array(Schema.suspend((): Schema.Schema<TransactionMetadatum> => TransactionMetadatum))
+  value: Schema.Array(Schema.suspend((): Schema.Schema<TransactionMetadatumVariants> => TransactionMetadatumVariants))
 }) {}
 
 /**
@@ -77,7 +77,7 @@ export class ArrayMetadatum extends Schema.TaggedClass<ArrayMetadatum>("ArrayMet
  * @since 2.0.0
  * @category schemas
  */
-export const TransactionMetadatum = Schema.Union(
+export const TransactionMetadatumVariants = Schema.Union(
   TextMetadatum,
   IntMetadatum,
   BytesMetadatum,
@@ -87,6 +87,10 @@ export const TransactionMetadatum = Schema.Union(
   identifier: "TransactionMetadatum",
   description: "A transaction metadata value supporting text, integers, bytes, arrays, and maps"
 })
+
+export class TransactionMetadatum extends Schema.Class<TransactionMetadatum>("TransactionMetadatum")({
+  variants: TransactionMetadatumVariants
+}) {}
 
 /**
  * Type representing the CDDL-compatible format for transaction metadata.
@@ -165,7 +169,7 @@ const decode: decode = (fromA, fromI) => {
   throw new TransactionMetadatumError({ message: "Invalid CDDL format" })
 }
 
-export const FromCDDL = Schema.transform(CDDLSchema, Schema.typeSchema(TransactionMetadatum), {
+export const FromCDDL = Schema.transform(CDDLSchema, Schema.typeSchema(TransactionMetadatumVariants), {
   strict: true,
   encode,
   decode
@@ -208,7 +212,7 @@ export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTION
  * @since 2.0.0
  * @category utilities
  */
-export const equals = (a: TransactionMetadatum, b: TransactionMetadatum): boolean => {
+export const equals = (a: TransactionMetadatumVariants, b: TransactionMetadatumVariants): boolean => {
   if (a._tag !== b._tag) return false
 
   switch (a._tag) {
@@ -247,7 +251,7 @@ const I64_MIN = -(1n << 63n)
 const I64_MAX = (1n << 63n) - 1n
 const int64Arbitrary = FastCheck.bigInt({ min: I64_MIN, max: I64_MAX })
 
-export const arbitrary: FastCheck.Arbitrary<TransactionMetadatum> = FastCheck.oneof(
+export const arbitrary: FastCheck.Arbitrary<TransactionMetadatumVariants> = FastCheck.oneof(
   FastCheck.string().map((value) => new TextMetadatum({ value })),
   int64Arbitrary.map((value) => new IntMetadatum({ value })),
   FastCheck.uint8Array({ minLength: 1, maxLength: 10 }).map((value) => new BytesMetadatum({ value })),
@@ -366,7 +370,7 @@ export const bytes = (value: Uint8Array): BytesMetadatum => new BytesMetadatum({
  * @since 2.0.0
  * @category constructors
  */
-export const array = (value: Array<TransactionMetadatum>): ArrayMetadatum => new ArrayMetadatum({ value })
+export const array = (value: Array<TransactionMetadatumVariants>): ArrayMetadatum => new ArrayMetadatum({ value })
 
 /**
  * Create a MetadatumMap from a Map of TransactionMetadatum key-value pairs.
@@ -374,7 +378,8 @@ export const array = (value: Array<TransactionMetadatum>): ArrayMetadatum => new
  * @since 2.0.0
  * @category constructors
  */
-export const map = (value: Map<TransactionMetadatum, TransactionMetadatum>): MetadatumMap => new MetadatumMap({ value })
+export const map = (value: Map<TransactionMetadatumVariants, TransactionMetadatumVariants>): MetadatumMap =>
+  new MetadatumMap({ value })
 
 // ============================================================================
 // Effect Namespace - Effect-based Error Handling

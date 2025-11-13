@@ -1,19 +1,7 @@
-import { Data, FastCheck, Schema } from "effect"
+import { Equal, FastCheck, Hash, Inspectable, Schema } from "effect"
 
 import * as Bytes from "./Bytes.js"
 import * as Bytes448 from "./Bytes448.js"
-import * as Function from "./Function.js"
-
-/**
- * Error class for KesSignature related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class KesSignatureError extends Data.TaggedError("KesSignatureError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * KesSignature model stored as 448 raw bytes.
@@ -25,11 +13,24 @@ export class KesSignatureError extends Data.TaggedError("KesSignatureError")<{
 export class KesSignature extends Schema.TaggedClass<KesSignature>()("KesSignature", {
   bytes: Bytes448.BytesSchema
 }) {
-  toJSON(): string {
-    return toHex(this)
+  toJSON() {
+    return { _tag: "KesSignature" as const, bytes: Bytes.toHex(this.bytes) }
   }
+
   toString(): string {
-    return toHex(this)
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof KesSignature && Bytes.equals(this.bytes, that.bytes)
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.array(Array.from(this.bytes)))
   }
 }
 
@@ -48,14 +49,6 @@ export const FromHex = Schema.compose(
 ).annotations({
   identifier: "KesSignature.FromHex"
 })
-
-/**
- * Equality on bytes
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: KesSignature, b: KesSignature): boolean => Bytes.equals(a.bytes, b.bytes)
 
 /**
  * Predicate for KesSignature instances
@@ -85,7 +78,7 @@ export const arbitrary = FastCheck.uint8Array({ minLength: 448, maxLength: 448 }
  * @since 2.0.0
  * @category parsing
  */
-export const fromBytes = Function.makeDecodeSync(FromBytes, KesSignatureError, "KesSignature.fromBytes")
+export const fromBytes = Schema.decodeSync(FromBytes)
 
 /**
  * Parse KesSignature from hex string.
@@ -93,7 +86,7 @@ export const fromBytes = Function.makeDecodeSync(FromBytes, KesSignatureError, "
  * @since 2.0.0
  * @category parsing
  */
-export const fromHex = Function.makeDecodeSync(FromHex, KesSignatureError, "KesSignature.fromHex")
+export const fromHex = Schema.decodeSync(FromHex)
 
 /**
  * Encode KesSignature to bytes.
@@ -101,7 +94,7 @@ export const fromHex = Function.makeDecodeSync(FromHex, KesSignatureError, "KesS
  * @since 2.0.0
  * @category encoding
  */
-export const toBytes = Function.makeEncodeSync(FromBytes, KesSignatureError, "KesSignature.toBytes")
+export const toBytes = Schema.encodeSync(FromBytes)
 
 /**
  * Encode KesSignature to hex string.
@@ -109,48 +102,4 @@ export const toBytes = Function.makeEncodeSync(FromBytes, KesSignatureError, "Ke
  * @since 2.0.0
  * @category encoding
  */
-export const toHex = Function.makeEncodeSync(FromHex, KesSignatureError, "KesSignature.toHex")
-
-// ============================================================================
-// Either Namespace
-// ============================================================================
-
-/**
- * Either-based error handling variants for functions that can fail.
- *
- * @since 2.0.0
- * @category either
- */
-export namespace Either {
-  /**
-   * Parse KesSignature from bytes with Either error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromBytes = Function.makeDecodeEither(FromBytes, KesSignatureError)
-
-  /**
-   * Parse KesSignature from hex string with Either error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromHex = Function.makeDecodeEither(FromHex, KesSignatureError)
-
-  /**
-   * Encode KesSignature to bytes with Either error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toBytes = Function.makeEncodeEither(FromBytes, KesSignatureError)
-
-  /**
-   * Encode KesSignature to hex string with Either error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toHex = Function.makeEncodeEither(FromHex, KesSignatureError)
-}
+export const toHex = Schema.encodeSync(FromHex)

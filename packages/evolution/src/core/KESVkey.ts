@@ -1,18 +1,7 @@
-import { Data, FastCheck, Schema } from "effect"
+import { Equal, FastCheck, Hash, Inspectable, Schema } from "effect"
 
+import * as Bytes from "./Bytes.js"
 import * as Bytes32 from "./Bytes32.js"
-import * as Function from "./Function.js"
-
-/**
- * Error class for KESVkey related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class KESVkeyError extends Data.TaggedError("KESVkeyError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Schema for KESVkey representing a KES verification key.
@@ -24,7 +13,27 @@ export class KESVkeyError extends Data.TaggedError("KESVkeyError")<{
  */
 export class KESVkey extends Schema.TaggedClass<KESVkey>()("KESVkey", {
   bytes: Bytes32.BytesFromHex
-}) {}
+}) {
+  toJSON() {
+    return { _tag: "KESVkey" as const, bytes: Bytes.toHex(this.bytes) }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof KESVkey && Bytes.equals(this.bytes, that.bytes)
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.array(Array.from(this.bytes)))
+  }
+}
 
 /**
  * Schema for transforming between Uint8Array and KESVkey.
@@ -54,22 +63,6 @@ export const FromHex = Schema.compose(
 })
 
 /**
- * Smart constructor for KESVkey.
- *
- * @since 2.0.0
- * @category constructors
- */
-export const make = (...args: ConstructorParameters<typeof KESVkey>) => new KESVkey(...args)
-
-/**
- * Check if two KESVkey instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: KESVkey, b: KESVkey): boolean => Bytes32.equals(a.bytes, b.bytes)
-
-/**
  * Check if the given value is a valid KESVkey
  *
  * @since 2.0.0
@@ -97,7 +90,7 @@ export const arbitrary = FastCheck.uint8Array({ minLength: 32, maxLength: 32 }).
  * @since 2.0.0
  * @category parsing
  */
-export const fromBytes = Function.makeDecodeSync(FromBytes, KESVkeyError, "KESVkey.fromBytes")
+export const fromBytes = Schema.decodeSync(FromBytes)
 
 /**
  * Parse KESVkey from hex string.
@@ -105,7 +98,7 @@ export const fromBytes = Function.makeDecodeSync(FromBytes, KESVkeyError, "KESVk
  * @since 2.0.0
  * @category parsing
  */
-export const fromHex = Function.makeDecodeSync(FromHex, KESVkeyError, "KESVkey.fromHex")
+export const fromHex = Schema.decodeSync(FromHex)
 
 /**
  * Encode KESVkey to bytes.
@@ -113,7 +106,7 @@ export const fromHex = Function.makeDecodeSync(FromHex, KESVkeyError, "KESVkey.f
  * @since 2.0.0
  * @category encoding
  */
-export const toBytes = Function.makeEncodeSync(FromBytes, KESVkeyError, "KESVkey.toBytes")
+export const toBytes = Schema.encodeSync(FromBytes)
 
 /**
  * Encode KESVkey to hex string.
@@ -121,15 +114,4 @@ export const toBytes = Function.makeEncodeSync(FromBytes, KESVkeyError, "KESVkey
  * @since 2.0.0
  * @category encoding
  */
-export const toHex = Function.makeEncodeSync(FromHex, KESVkeyError, "KESVkey.toHex")
-
-// ============================================================================
-// Either Namespace (composable non-throwing API)
-// ============================================================================
-
-export namespace Either {
-  export const fromBytes = Function.makeDecodeEither(FromBytes, KESVkeyError)
-  export const fromHex = Function.makeDecodeEither(FromHex, KESVkeyError)
-  export const toBytes = Function.makeEncodeEither(FromBytes, KESVkeyError)
-  export const toHex = Function.makeEncodeEither(FromHex, KESVkeyError)
-}
+export const toHex = Schema.encodeSync(FromHex)

@@ -1,8 +1,7 @@
-import { Effect } from "effect"
+import { Effect, Equal, ParseResult } from "effect"
 
 import * as KeyHash from "../../core/KeyHash.js"
 import * as PrivateKey from "../../core/PrivateKey.js"
-import * as CoreRewardAccount from "../../core/RewardAccount.js"
 import * as Transaction from "../../core/Transaction.js"
 import * as TransactionHash from "../../core/TransactionHash.js"
 import * as TransactionWitnessSet from "../../core/TransactionWitnessSet.js"
@@ -236,7 +235,7 @@ const computeRequiredKeyHashesSync = (params: {
   if (params.tx.body.withdrawals && params.rewardAddress && params.stakeKhHex) {
     const ourReward = RewardAddress.toRewardAccount(params.rewardAddress)
     for (const [rewardAcc] of params.tx.body.withdrawals.withdrawals.entries()) {
-      if (CoreRewardAccount.equals(ourReward, rewardAcc)) {
+      if (Equal.equals(ourReward, rewardAcc)) {
         required.add(params.stakeKhHex)
         break
       }
@@ -289,8 +288,10 @@ const createSigningWallet = (network: WalletNew.Network, config: SeedWalletConfi
 
         const tx =
           typeof txOrHex === "string"
-            ? yield* Transaction.Either.fromCBORHex(txOrHex).pipe(
-                Effect.mapError((cause) => new WalletNew.WalletError({ message: cause.message, cause }))
+            ? yield* ParseResult.decodeUnknownEither(Transaction.FromCBORHex())(txOrHex).pipe(
+                Effect.mapError(
+                  (cause) => new WalletNew.WalletError({ message: `Failed to decode transaction: ${cause}`, cause })
+                )
               )
             : txOrHex
         const utxos = context?.utxos ?? []
@@ -371,8 +372,10 @@ const createPrivateKeyWallet = (
 
         const tx =
           typeof txOrHex === "string"
-            ? yield* Transaction.Either.fromCBORHex(txOrHex).pipe(
-                Effect.mapError((cause) => new WalletNew.WalletError({ message: cause.message, cause }))
+            ? yield* ParseResult.decodeUnknownEither(Transaction.FromCBORHex())(txOrHex).pipe(
+                Effect.mapError(
+                  (cause) => new WalletNew.WalletError({ message: `Failed to decode transaction: ${cause}`, cause })
+                )
               )
             : txOrHex
         const utxos = context?.utxos ?? []
@@ -474,8 +477,10 @@ const createApiWallet = (_network: WalletNew.Network, config: ApiWalletConfig): 
           try: () => api.signTx(cbor, true),
           catch: (cause) => new WalletNew.WalletError({ message: "User rejected transaction signing", cause })
         })
-        return yield* TransactionWitnessSet.Either.fromCBORHex(witnessHex).pipe(
-          Effect.mapError((cause) => new WalletNew.WalletError({ message: cause.message, cause }))
+        return yield* ParseResult.decodeUnknownEither(TransactionWitnessSet.FromCBORHex())(witnessHex).pipe(
+          Effect.mapError(
+            (cause) => new WalletNew.WalletError({ message: `Failed to decode witness set: ${cause}`, cause })
+          )
         )
       }),
     signMessage: (address: Address.Address | RewardAddress.RewardAddress, payload: WalletNew.Payload) =>

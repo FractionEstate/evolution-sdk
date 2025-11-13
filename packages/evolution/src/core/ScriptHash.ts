@@ -1,22 +1,10 @@
 import { blake2b } from "@noble/hashes/blake2"
-import { Data, FastCheck, Schema } from "effect"
+import { Equal, FastCheck, Hash, Inspectable, Schema } from "effect"
 
 import * as Bytes from "./Bytes.js"
-import * as Function from "./Function.js"
 import * as Hash28 from "./Hash28.js"
 import * as NativeScripts from "./NativeScripts.js"
 import type * as Script from "./Script.js"
-
-/**
- * Error class for ScriptHash related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class ScriptHashError extends Data.TaggedError("ScriptHashError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Schema for ScriptHash representing a script hash credential.
@@ -33,12 +21,27 @@ export class ScriptHashError extends Data.TaggedError("ScriptHashError")<{
 export class ScriptHash extends Schema.TaggedClass<ScriptHash>()("ScriptHash", {
   hash: Hash28.BytesFromHex
 }) {
-  toJSON(): string {
-    return toHex(this)
+  toJSON() {
+    return {
+      _tag: "ScriptHash" as const,
+      hash: Bytes.toHex(this.hash)
+    }
   }
 
   toString(): string {
-    return `ScriptHash({ hash: ${this.hash} })`
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof ScriptHash && Bytes.equals(this.hash, that.hash)
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.array(Array.from(this.hash)))
   }
 }
 
@@ -67,20 +70,39 @@ export const FromHex = Schema.compose(Hash28.BytesFromHex, FromBytes).annotation
 })
 
 /**
- * Smart constructor for ScriptHash that validates and applies branding.
+ * Parse a ScriptHash from raw bytes.
+ * Expects exactly 28 bytes.
  *
  * @since 2.0.0
- * @category constructors
+ * @category parsing
  */
-export const make = (...args: ConstructorParameters<typeof ScriptHash>) => new ScriptHash(...args)
+export const fromBytes = Schema.decodeSync(FromBytes)
 
 /**
- * Check if two ScriptHash instances are equal.
+ * Parse a ScriptHash from a hex string.
+ * Expects exactly 56 hex characters (28 bytes).
  *
  * @since 2.0.0
- * @category equality
+ * @category parsing
  */
-export const equals = (a: ScriptHash, b: ScriptHash): boolean => Bytes.equals(a.hash, b.hash)
+export const fromHex = Schema.decodeSync(FromHex)
+
+/**
+ * Convert a ScriptHash to raw bytes.
+ *
+ * @since 2.0.0
+ * @category encoding
+ */
+export const toBytes = Schema.encodeSync(FromBytes)
+
+/**
+ * Convert a ScriptHash to a hex string.
+ *
+ * @since 2.0.0
+ * @category encoding
+ */
+export const toHex = Schema.encodeSync(FromHex)
+
 
 /**
  * FastCheck arbitrary for generating random ScriptHash instances.
@@ -90,54 +112,9 @@ export const equals = (a: ScriptHash, b: ScriptHash): boolean => Bytes.equals(a.
  * @category arbitrary
  */
 export const arbitrary: FastCheck.Arbitrary<ScriptHash> = FastCheck.uint8Array({ minLength: 28, maxLength: 28 }).map(
-  (bytes) => make({ hash: bytes }, { disableValidation: true })
+  (bytes) => new ScriptHash({ hash: bytes }, { disableValidation: true })
 )
 
-// ============================================================================
-// Parsing Functions
-// ============================================================================
-
-/**
- * Parse a ScriptHash from raw bytes.
- * Expects exactly 28 bytes.
- *
- * @since 2.0.0
- * @category parsing
- */
-export const fromBytes = Function.makeDecodeSync(FromBytes, ScriptHashError, "ScriptHash.fromBytes")
-
-/**
- * Parse a ScriptHash from a hex string.
- * Expects exactly 56 hex characters (28 bytes).
- *
- * @since 2.0.0
- * @category parsing
- */
-export const fromHex = Function.makeDecodeSync(FromHex, ScriptHashError, "ScriptHash.fromHex")
-
-// ============================================================================
-// Encoding Functions
-// ============================================================================
-
-/**
- * Convert a ScriptHash to raw bytes.
- *
- * @since 2.0.0
- * @category encoding
- */
-export const toBytes = (scriptHash: ScriptHash): Uint8Array => new Uint8Array(scriptHash.hash) // Return a copy of the underlying bytes
-
-/**
- * Convert a ScriptHash to a hex string.
- *
- * @since 2.0.0
- * @category encoding
- */
-export const toHex = (scriptHash: ScriptHash): string => Bytes.toHex(scriptHash.hash)
-
-// ============================================================================
-// Script Hash Computation
-// ============================================================================
 
 /**
  * Compute a script hash (policy id) from any Script variant.
@@ -186,22 +163,5 @@ export const fromScript = (script: Script.Script): ScriptHash => {
   prefixed[0] = tag
   prefixed.set(body, 1)
   const hashBytes = blake2b(prefixed, { dkLen: 28 })
-  return make({ hash: new Uint8Array(hashBytes) }, { disableValidation: true })
-}
-
-// ============================================================================
-// Either Namespace - Either-based Error Handling
-// ============================================================================
-
-/**
- * Either-based error handling variants for functions that can fail.
- *
- * @since 2.0.0
- * @category either
- */
-export namespace Either {
-  export const fromBytes = Function.makeDecodeEither(FromBytes, ScriptHashError)
-  export const fromHex = Function.makeDecodeEither(FromHex, ScriptHashError)
-  export const toBytes = Function.makeEncodeEither(FromBytes, ScriptHashError)
-  export const toHex = Function.makeEncodeEither(FromHex, ScriptHashError)
+  return new ScriptHash({ hash: hashBytes }, { disableValidation: true })
 }

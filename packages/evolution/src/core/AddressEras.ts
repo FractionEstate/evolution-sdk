@@ -1,11 +1,10 @@
 import { bech32 } from "@scure/base"
-import { Data, Effect as Eff, FastCheck, ParseResult, Schema } from "effect"
+import { Effect as Eff, FastCheck, ParseResult, Schema } from "effect"
 
 import * as BaseAddress from "./BaseAddress.js"
 import * as ByronAddress from "./ByronAddress.js"
 import * as Bytes from "./Bytes.js"
 import * as EnterpriseAddress from "./EnterpriseAddress.js"
-import * as Function from "./Function.js"
 import * as PointerAddress from "./PointerAddress.js"
 import * as RewardAccount from "./RewardAccount.js"
 
@@ -41,20 +40,9 @@ import * as RewardAccount from "./RewardAccount.js"
  * ;      1000: byron address
  * ;      1110: reward account: keyhash28
  * ;      1111: reward account: scripthash28
- * ;      1001-1101: future formats
+ *      1001-1101: future formats
  * ```
  */
-
-/**
- * Error thrown when address operations fail
- *
- * @since 2.0.0
- * @category model
- */
-export class AddressErasError extends Data.TaggedError("AddressErasError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Union type representing all possible address types.
@@ -203,30 +191,6 @@ export const FromBech32 = Schema.transformOrFail(Schema.String, Schema.typeSchem
 })
 
 /**
- * Checks if two addresses are equal.
- *
- * @since 2.0.0
- * @category utils
- */
-export const equals = (a: AddressEras, b: AddressEras): boolean => {
-  if (a._tag !== b._tag) {
-    return false
-  }
-  switch (a._tag) {
-    case "BaseAddress":
-      return BaseAddress.equals(a, b as BaseAddress.BaseAddress)
-    case "EnterpriseAddress":
-      return EnterpriseAddress.equals(a, b as EnterpriseAddress.EnterpriseAddress)
-    case "PointerAddress":
-      return PointerAddress.equals(a, b as PointerAddress.PointerAddress)
-    case "RewardAccount":
-      return RewardAccount.equals(a, b as RewardAccount.RewardAccount)
-    case "ByronAddress":
-      return false
-  }
-}
-
-/**
  * FastCheck arbitrary for Address instances.
  *
  * @since 2.0.0
@@ -250,7 +214,7 @@ export const arbitrary = FastCheck.oneof(
  * @since 2.0.0
  * @category parsing
  */
-export const fromBytes = Function.makeDecodeSync(FromBytes, AddressErasError, "Address.fromBytes")
+export const fromBytes = Schema.decodeSync(FromBytes)
 
 /**
  * Parse an Address from hex string.
@@ -258,7 +222,7 @@ export const fromBytes = Function.makeDecodeSync(FromBytes, AddressErasError, "A
  * @since 2.0.0
  * @category parsing
  */
-export const fromHex = Function.makeDecodeSync(FromHex, AddressErasError, "Address.fromHex")
+export const fromHex = Schema.decodeSync(FromHex)
 
 /**
  * Parse an Address from Bech32 string.
@@ -266,7 +230,7 @@ export const fromHex = Function.makeDecodeSync(FromHex, AddressErasError, "Addre
  * @since 2.0.0
  * @category parsing
  */
-export const fromBech32 = Function.makeDecodeSync(FromBech32, AddressErasError, "Address.fromBech32")
+export const fromBech32 = Schema.decodeSync(FromBech32)
 
 // ============================================================================
 // Encoding Functions
@@ -278,7 +242,7 @@ export const fromBech32 = Function.makeDecodeSync(FromBech32, AddressErasError, 
  * @since 2.0.0
  * @category encoding
  */
-export const toBytes = Function.makeEncodeSync(FromBytes, AddressErasError, "Address.toBytes")
+export const toBytes = Schema.encodeSync(FromBytes)
 
 /**
  * Convert an Address to hex string.
@@ -286,7 +250,7 @@ export const toBytes = Function.makeEncodeSync(FromBytes, AddressErasError, "Add
  * @since 2.0.0
  * @category encoding
  */
-export const toHex = Function.makeEncodeSync(FromHex, AddressErasError, "Address.toHex")
+export const toHex = Schema.encodeSync(FromHex)
 
 /**
  * Convert an Address to Bech32 string.
@@ -294,20 +258,5 @@ export const toHex = Function.makeEncodeSync(FromHex, AddressErasError, "Address
  * @since 2.0.0
  * @category encoding
  */
-export const toBech32 = Function.makeEncodeSync(FromBech32, AddressErasError, "Address.toBech32")
+export const toBech32 = Schema.encodeSync(FromBech32)
 
-/**
- * Effect-based error handling variants for functions that can fail.
- *
- * @since 2.0.0
- * @category effect
- */
-export namespace Either {
-  export const fromBytes = Function.makeDecodeEither(FromBytes, AddressErasError)
-  export const fromHex = Function.makeDecodeEither(FromHex, AddressErasError)
-  export const fromBech32 = Function.makeDecodeEither(FromBech32, AddressErasError)
-
-  export const toBytes = Function.makeEncodeEither(FromBytes, AddressErasError)
-  export const toHex = Function.makeEncodeEither(FromHex, AddressErasError)
-  export const toBech32 = Function.makeEncodeEither(FromBech32, AddressErasError)
-}

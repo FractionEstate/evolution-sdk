@@ -1,18 +1,6 @@
-import { Data, FastCheck, Schema } from "effect"
+import { Equal, FastCheck, Hash, Inspectable, Schema } from "effect"
 
-import * as Function from "./Function.js"
 import * as Hash28 from "./Hash28.js"
-
-/**
- * Error class for PolicyId related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class PolicyIdError extends Data.TaggedError("PolicyIdError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * PolicyId as a TaggedClass representing a minting policy identifier.
@@ -28,12 +16,27 @@ export class PolicyIdError extends Data.TaggedError("PolicyIdError")<{
 export class PolicyId extends Schema.TaggedClass<PolicyId>()("PolicyId", {
   hash: Hash28.BytesFromHex
 }) {
-  toJSON(): string {
-    return toHex(this)
+  toJSON() {
+    return {
+      _tag: "PolicyId" as const,
+      hash: Hash28.toHex(this.hash)
+    }
   }
 
   toString(): string {
-    return toHex(this)
+    return Hash28.toHex(this.hash)
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof PolicyId && Equal.equals(this.hash, that.hash)
+  }
+
+  [Hash.symbol](): number {
+    return Hash.hash(this.hash)
   }
 }
 
@@ -60,22 +63,6 @@ export const FromHex = Schema.compose(Hash28.BytesFromHex, FromBytes).annotation
 })
 
 /**
- * Smart constructor for PolicyId that validates and applies branding.
- *
- * @since 2.0.0
- * @category constructors
- */
-export const make = (...args: ConstructorParameters<typeof PolicyId>) => new PolicyId(...args)
-
-/**
- * Check if two PolicyId instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: PolicyId, b: PolicyId): boolean => Hash28.equals(a.hash, b.hash)
-
-/**
  * Check if the given value is a valid PolicyId
  *
  * @since 2.0.0
@@ -92,7 +79,7 @@ export const isPolicyId = Schema.is(PolicyId)
 export const arbitrary: FastCheck.Arbitrary<PolicyId> = FastCheck.uint8Array({
   minLength: Hash28.BYTES_LENGTH,
   maxLength: Hash28.BYTES_LENGTH
-}).map((bytes) => make({ hash: bytes }, { disableValidation: true }))
+}).map((bytes) => new PolicyId({ hash: bytes }, { disableValidation: true }))
 
 // ============================================================================
 // Root Functions
@@ -104,7 +91,7 @@ export const arbitrary: FastCheck.Arbitrary<PolicyId> = FastCheck.uint8Array({
  * @since 2.0.0
  * @category parsing
  */
-export const fromBytes = Function.makeDecodeSync(FromBytes, PolicyIdError, "PolicyId.fromBytes")
+export const fromBytes = Schema.decodeSync(FromBytes)
 
 /**
  * Parse PolicyId from hex string.
@@ -112,7 +99,7 @@ export const fromBytes = Function.makeDecodeSync(FromBytes, PolicyIdError, "Poli
  * @since 2.0.0
  * @category parsing
  */
-export const fromHex = Function.makeDecodeSync(FromHex, PolicyIdError, "PolicyId.fromHex")
+export const fromHex = Schema.decodeSync(FromHex)
 
 /**
  * Encode PolicyId to bytes.
@@ -120,7 +107,7 @@ export const fromHex = Function.makeDecodeSync(FromHex, PolicyIdError, "PolicyId
  * @since 2.0.0
  * @category encoding
  */
-export const toBytes = Function.makeEncodeSync(FromBytes, PolicyIdError, "PolicyId.toBytes")
+export const toBytes = Schema.encodeSync(FromBytes)
 
 /**
  * Encode PolicyId to hex string.
@@ -128,48 +115,5 @@ export const toBytes = Function.makeEncodeSync(FromBytes, PolicyIdError, "Policy
  * @since 2.0.0
  * @category encoding
  */
-export const toHex = Function.makeEncodeSync(FromHex, PolicyIdError, "PolicyId.toHex")
+export const toHex = Schema.encodeSync(FromHex)
 
-// ============================================================================
-// Either Namespace
-// ============================================================================
-
-/**
- * Either-based error handling variants for functions that can fail.
- *
- * @since 2.0.0
- * @category either
- */
-export namespace Either {
-  /**
-   * Parse PolicyId from bytes using Either error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromBytes = Function.makeDecodeEither(FromBytes, PolicyIdError)
-
-  /**
-   * Parse PolicyId from hex string using Either error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromHex = Function.makeDecodeEither(FromHex, PolicyIdError)
-
-  /**
-   * Encode PolicyId to bytes using Either error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toBytes = Function.makeEncodeEither(FromBytes, PolicyIdError)
-
-  /**
-   * Encode PolicyId to hex string using Either error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toHex = Function.makeEncodeEither(FromHex, PolicyIdError)
-}

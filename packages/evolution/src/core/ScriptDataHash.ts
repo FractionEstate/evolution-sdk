@@ -1,18 +1,7 @@
-import { Data, FastCheck, Schema } from "effect"
+import { Equal, FastCheck, Hash, Inspectable, Schema } from "effect"
 
+import * as Bytes from "./Bytes.js"
 import * as Bytes32 from "./Bytes32.js"
-import * as Function from "./Function.js"
-
-/**
- * Error class for ScriptDataHash related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class ScriptDataHashError extends Data.TaggedError("ScriptDataHashError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * ScriptDataHash based on Conway CDDL specification
@@ -31,7 +20,27 @@ export class ScriptDataHashError extends Data.TaggedError("ScriptDataHashError")
  */
 export class ScriptDataHash extends Schema.TaggedClass<ScriptDataHash>()("ScriptDataHash", {
   hash: Bytes32.BytesFromHex
-}) {}
+}) {
+  toJSON() {
+    return { _tag: "ScriptDataHash" as const, hash: Bytes.toHex(this.hash) }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof ScriptDataHash && Bytes.equals(this.hash, that.hash)
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.array(Array.from(this.hash)))
+  }
+}
 
 /**
  * Schema for transforming between Uint8Array and ScriptDataHash.
@@ -61,22 +70,6 @@ export const FromHex = Schema.compose(
 })
 
 /**
- * Smart constructor for ScriptDataHash.
- *
- * @since 2.0.0
- * @category constructors
- */
-export const make = (...args: ConstructorParameters<typeof ScriptDataHash>) => new ScriptDataHash(...args)
-
-/**
- * Check if two ScriptDataHash instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: ScriptDataHash, b: ScriptDataHash): boolean => Bytes32.equals(a.hash, b.hash)
-
-/**
  * Check if the given value is a valid ScriptDataHash
  *
  * @since 2.0.0
@@ -104,7 +97,7 @@ export const arbitrary = FastCheck.uint8Array({ minLength: 32, maxLength: 32 }).
  * @since 2.0.0
  * @category parsing
  */
-export const fromBytes = Function.makeDecodeSync(FromBytes, ScriptDataHashError, "ScriptDataHash.fromBytes")
+export const fromBytes = Schema.decodeSync(FromBytes)
 
 /**
  * Parse ScriptDataHash from hex string.
@@ -112,7 +105,7 @@ export const fromBytes = Function.makeDecodeSync(FromBytes, ScriptDataHashError,
  * @since 2.0.0
  * @category parsing
  */
-export const fromHex = Function.makeDecodeSync(FromHex, ScriptDataHashError, "ScriptDataHash.fromHex")
+export const fromHex = Schema.decodeSync(FromHex)
 
 /**
  * Encode ScriptDataHash to bytes.
@@ -120,7 +113,7 @@ export const fromHex = Function.makeDecodeSync(FromHex, ScriptDataHashError, "Sc
  * @since 2.0.0
  * @category encoding
  */
-export const toBytes = Function.makeEncodeSync(FromBytes, ScriptDataHashError, "ScriptDataHash.toBytes")
+export const toBytes = Schema.encodeSync(FromBytes)
 
 /**
  * Encode ScriptDataHash to hex string.
@@ -128,30 +121,4 @@ export const toBytes = Function.makeEncodeSync(FromBytes, ScriptDataHashError, "
  * @since 2.0.0
  * @category encoding
  */
-export const toHex = Function.makeEncodeSync(FromHex, ScriptDataHashError, "ScriptDataHash.toHex")
-
-// ============================================================================
-// Either Namespace (composable non-throwing API)
-// ============================================================================
-
-export namespace Either {
-  /**
-   * Parse ScriptDataHash from bytes with composable error handling.
-   */
-  export const fromBytes = Function.makeDecodeEither(FromBytes, ScriptDataHashError)
-
-  /**
-   * Parse ScriptDataHash from hex string with composable error handling.
-   */
-  export const fromHex = Function.makeDecodeEither(FromHex, ScriptDataHashError)
-
-  /**
-   * Encode ScriptDataHash to bytes with composable error handling.
-   */
-  export const toBytes = Function.makeEncodeEither(FromBytes, ScriptDataHashError)
-
-  /**
-   * Encode ScriptDataHash to hex string with composable error handling.
-   */
-  export const toHex = Function.makeEncodeEither(FromHex, ScriptDataHashError)
-}
+export const toHex = Schema.encodeSync(FromHex)

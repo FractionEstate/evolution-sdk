@@ -1,17 +1,11 @@
-import { Data, Effect as Eff, FastCheck, ParseResult, Schema } from "effect"
+import { Effect as Eff, Equal, FastCheck, Hash, Inspectable, ParseResult, Schema } from "effect"
 
 import * as Bytes from "./Bytes.js"
 import * as Bytes57 from "./Bytes57.js"
 import * as Credential from "./Credential.js"
-import * as Function from "./Function.js"
 import * as KeyHash from "./KeyHash.js"
 import * as NetworkId from "./NetworkId.js"
 import * as ScriptHash from "./ScriptHash.js"
-
-export class BaseAddressError extends Data.TaggedError("BaseAddressError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Base address with both payment and staking credentials
@@ -24,12 +18,39 @@ export class BaseAddress extends Schema.TaggedClass<BaseAddress>("BaseAddress")(
   paymentCredential: Credential.CredentialSchema,
   stakeCredential: Credential.CredentialSchema
 }) {
-  toString(): string {
-    return `BaseAddress { networkId: ${this.networkId}, paymentCredential: ${this.paymentCredential}, stakeCredential: ${this.stakeCredential} }`
+  toJSON() {
+    return {
+      _tag: "BaseAddress" as const,
+      networkId: this.networkId,
+      paymentCredential: this.paymentCredential,
+      stakeCredential: this.stakeCredential
+    }
   }
 
-  [Symbol.for("nodejs.util.inspect.custom")](): string {
-    return this.toString()
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof BaseAddress &&
+      Equal.equals(this.networkId, that.networkId) &&
+      Equal.equals(this.paymentCredential, that.paymentCredential) &&
+      Equal.equals(this.stakeCredential, that.stakeCredential)
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(
+      this,
+      Hash.combine(Hash.combine(Hash.hash(this.networkId))(Hash.hash(this.paymentCredential)))(
+        Hash.hash(this.stakeCredential)
+      )
+    )
   }
 }
 
@@ -87,28 +108,6 @@ export const FromHex = Schema.compose(Bytes.FromHex, FromBytes).annotations({
 })
 
 /**
- * Check if two BaseAddress instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: BaseAddress, b: BaseAddress): boolean => {
-  return (
-    a.networkId === b.networkId &&
-    Credential.equals(a.paymentCredential, b.paymentCredential) &&
-    Credential.equals(a.stakeCredential, b.stakeCredential)
-  )
-}
-
-/**
- * Smart constructor for BaseAddress.
- *
- * @since 2.0.0
- * @category constructors
- */
-export const make = Schema.decodeSync(BaseAddress)
-
-/**
  * FastCheck arbitrary for BaseAddress instances.
  *
  * @since 2.0.0
@@ -133,7 +132,7 @@ export const arbitrary = FastCheck.tuple(NetworkId.arbitrary, Credential.arbitra
  * @since 2.0.0
  * @category parsing
  */
-export const fromBytes = Function.makeDecodeSync(FromBytes, BaseAddressError, "BaseAddress.fromBytes")
+export const fromBytes = (bytes: Uint8Array) => Schema.decodeSync(FromBytes)(bytes)
 
 /**
  * Parse a BaseAddress from hex string.
@@ -141,7 +140,7 @@ export const fromBytes = Function.makeDecodeSync(FromBytes, BaseAddressError, "B
  * @since 2.0.0
  * @category parsing
  */
-export const fromHex = Function.makeDecodeSync(FromHex, BaseAddressError, "BaseAddress.fromHex")
+export const fromHex = (hex: string) => Schema.decodeSync(FromHex)(hex)
 
 // ============================================================================
 // Encoding Functions
@@ -153,7 +152,7 @@ export const fromHex = Function.makeDecodeSync(FromHex, BaseAddressError, "BaseA
  * @since 2.0.0
  * @category encoding
  */
-export const toBytes = Function.makeEncodeSync(FromBytes, BaseAddressError, "BaseAddress.toBytes")
+export const toBytes = (data: BaseAddress) => Schema.encodeSync(FromBytes)(data)
 
 /**
  * Convert a BaseAddress to hex string.
@@ -161,48 +160,4 @@ export const toBytes = Function.makeEncodeSync(FromBytes, BaseAddressError, "Bas
  * @since 2.0.0
  * @category encoding
  */
-export const toHex = Function.makeEncodeSync(FromHex, BaseAddressError, "BaseAddress.toHex")
-
-// ============================================================================
-// Effect Namespace - Effect-based Error Handling
-// ============================================================================
-
-/**
- * Effect-based error handling variants for functions that can fail.
- *
- * @since 2.0.0
- * @category effect
- */
-export namespace Either {
-  /**
-   * Parse a BaseAddress from bytes.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromBytes = Function.makeDecodeEither(FromBytes, BaseAddressError)
-
-  /**
-   * Parse a BaseAddress from hex string.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromHex = Function.makeDecodeEither(FromHex, BaseAddressError)
-
-  /**
-   * Convert a BaseAddress to bytes.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toBytes = Function.makeEncodeEither(FromBytes, BaseAddressError)
-
-  /**
-   * Convert a BaseAddress to hex string.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toHex = Function.makeEncodeEither(FromHex, BaseAddressError)
-}
+export const toHex = (data: BaseAddress) => Schema.encodeSync(FromHex)(data)

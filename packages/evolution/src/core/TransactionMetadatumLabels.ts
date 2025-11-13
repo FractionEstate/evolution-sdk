@@ -1,4 +1,4 @@
-import { Data, Inspectable, Schema } from "effect"
+import { Equal, Hash, Inspectable, Schema } from "effect"
 
 /**
  * CDDL spec:
@@ -20,17 +20,6 @@ export const TransactionMetadatumLabel = Schema.Uint8
 export type TransactionMetadatumLabel = typeof TransactionMetadatumLabel.Type
 
 /**
- * Error thrown when transaction metadatum labels operations fail
- *
- * @since 2.0.0
- * @category model
- */
-export class TransactionMetadatumLabelsError extends Data.TaggedError("TransactionMetadatumLabelsError")<{
-  message: string
-  cause?: unknown
-}> {}
-
-/**
  * Transaction metadatum labels from an array of `TransactionMetadatumLabel`
  *
  * @since 2.0.0
@@ -41,11 +30,31 @@ export class TransactionMetadatumLabels extends Schema.TaggedClass<TransactionMe
 )("TransactionMetadatumLabels", {
   fromLabels: Schema.mutable(Schema.Array(TransactionMetadatumLabel))
 }) {
-  [Inspectable.NodeInspectSymbol]() {
+  toJSON() {
     return {
-      _tag: "TransactionMetadatumLabels",
+      _tag: "TransactionMetadatumLabels" as const,
       fromLabels: this.fromLabels
     }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol]() {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof TransactionMetadatumLabels &&
+      this.fromLabels.length === that.fromLabels.length &&
+      this.fromLabels.every((label, i) => label === that.fromLabels[i])
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.array(this.fromLabels))
   }
 
   /**

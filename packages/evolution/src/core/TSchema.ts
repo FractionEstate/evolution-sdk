@@ -102,7 +102,7 @@ export const Array = <S extends Schema.Schema.Any>(items: S): Array<S> => Schema
 
 interface Map<K extends Schema.Schema.Any, V extends Schema.Schema.Any>
   extends Schema.transform<
-    Schema.SchemaClass<globalThis.Map<Data.Data, Data.Data>, globalThis.Map<Data.Data, Data.Data>, never>,
+    Schema.SchemaClass<ReadonlyMap<Data.Data, Data.Data>, ReadonlyMap<Data.Data, Data.Data>, never>,
     Schema.MapFromSelf<K, V>
   > {}
 
@@ -119,7 +119,7 @@ export const Map = <K extends Schema.Schema.Any, V extends Schema.Schema.Any>(ke
     encode: (tsMap) => {
       // Transform TypeScript Map<K_TS, V_TS> to Data Map<K_Data, V_Data>
       // The individual key/value transformations are handled by the schema framework
-      return new globalThis.Map([...tsMap])
+      return new globalThis.Map([...tsMap]) as ReadonlyMap<Data.Data, Data.Data>
     },
     decode: (dataMap) => {
       // Transform Data Map<K_Data, V_Data> to TypeScript Map<K_TS, V_TS>

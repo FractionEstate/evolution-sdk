@@ -163,8 +163,8 @@ CDDL: ex_units = [mem: uint64, steps: uint64]
 
 ```ts
 export declare const ExUnits: Schema.Tuple2<
-  Schema.refine<bigint, typeof Schema.BigInt>,
-  Schema.refine<bigint, typeof Schema.BigInt>
+  Schema.refine<bigint, typeof Schema.BigIntFromSelf>,
+  Schema.refine<bigint, typeof Schema.BigIntFromSelf>
 >
 ```
 

@@ -5,24 +5,12 @@
  *
  * @since 2.0.0
  */
-import { Data, Effect, ParseResult, Schema } from "effect"
+import { Effect, Equal, Hash, Inspectable, ParseResult, Schema } from "effect"
 
 import * as Bytes from "./Bytes.js"
 import * as CBOR from "./CBOR.js"
-import * as Function from "./Function.js"
 import * as HeaderBody from "./HeaderBody.js"
 import * as KesSignature from "./KesSignature.js"
-
-/**
- * Error class for Header operations
- *
- * @since 2.0.0
- * @category errors
- */
-export class HeaderError extends Data.TaggedError("HeaderError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Header implementation using HeaderBody and KesSignature
@@ -35,16 +23,35 @@ export class HeaderError extends Data.TaggedError("HeaderError")<{
 export class Header extends Schema.TaggedClass<Header>()("Header", {
   headerBody: HeaderBody.HeaderBody,
   bodySignature: KesSignature.KesSignature
-}) {}
+}) {
+  toJSON() {
+    return {
+      _tag: "Header" as const,
+      headerBody: this.headerBody.toJSON(),
+      bodySignature: this.bodySignature.toJSON()
+    }
+  }
 
-/**
- * Check if two Header instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: Header, b: Header): boolean =>
-  HeaderBody.equals(a.headerBody, b.headerBody) && KesSignature.equals(a.bodySignature, b.bodySignature)
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof Header &&
+      Equal.equals(this.headerBody, that.headerBody) &&
+      Equal.equals(this.bodySignature, that.bodySignature)
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.combine(Hash.hash(this.headerBody))(Hash.hash(this.bodySignature)))
+  }
+}
 
 /**
  * Predicate to check if a value is a Header instance.
@@ -121,7 +128,8 @@ export const FromHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =
  * @since 2.0.0
  * @category parsing
  */
-export const fromCBORBytes = Function.makeCBORDecodeSync(FromCDDL, HeaderError, "Header.fromCBORBytes")
+export const fromCBORBytes = (bytes: Uint8Array, options?: CBOR.CodecOptions): Header =>
+  Schema.decodeSync(FromBytes(options))(bytes)
 
 /**
  * Parse a Header from CBOR hex string.
@@ -129,7 +137,8 @@ export const fromCBORBytes = Function.makeCBORDecodeSync(FromCDDL, HeaderError, 
  * @since 2.0.0
  * @category parsing
  */
-export const fromCBORHex = Function.makeCBORDecodeHexSync(FromCDDL, HeaderError, "Header.fromCBORHex")
+export const fromCBORHex = (hex: string, options?: CBOR.CodecOptions): Header =>
+  Schema.decodeSync(FromHex(options))(hex)
 
 // ============================================================================
 // Encoding Functions
@@ -141,7 +150,8 @@ export const fromCBORHex = Function.makeCBORDecodeHexSync(FromCDDL, HeaderError,
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORBytes = Function.makeCBOREncodeSync(FromCDDL, HeaderError, "Header.toCBORBytes")
+export const toCBORBytes = (header: Header, options?: CBOR.CodecOptions): Uint8Array =>
+  Schema.encodeSync(FromBytes(options))(header)
 
 /**
  * Convert a Header to CBOR hex string.
@@ -149,48 +159,5 @@ export const toCBORBytes = Function.makeCBOREncodeSync(FromCDDL, HeaderError, "H
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORHex = Function.makeCBOREncodeHexSync(FromCDDL, HeaderError, "Header.toCBORHex")
-
-// ============================================================================
-// Either Namespace - Either-based Error Handling
-// ============================================================================
-
-/**
- * Either-based error handling variants for functions that can fail.
- *
- * @since 2.0.0
- * @category either
- */
-export namespace Either {
-  /**
-   * Parse a Header from CBOR bytes.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromCBORBytes = Function.makeCBORDecodeEither(FromCDDL, HeaderError)
-
-  /**
-   * Parse a Header from CBOR hex string.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromCBORHex = Function.makeCBORDecodeHexEither(FromCDDL, HeaderError)
-
-  /**
-   * Convert a Header to CBOR bytes.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toCBORBytes = Function.makeCBOREncodeEither(FromCDDL, HeaderError)
-
-  /**
-   * Convert a Header to CBOR hex string.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toCBORHex = Function.makeCBOREncodeHexEither(FromCDDL, HeaderError)
-}
+export const toCBORHex = (header: Header, options?: CBOR.CodecOptions): string =>
+  Schema.encodeSync(FromHex(options))(header)

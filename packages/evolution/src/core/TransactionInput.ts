@@ -1,21 +1,9 @@
-import { Data, Either as E, FastCheck, Schema } from "effect"
+import { Either as E, Equal, FastCheck, Hash, Inspectable, Schema } from "effect"
 
 import * as Bytes from "./Bytes.js"
 import * as CBOR from "./CBOR.js"
-import * as Function from "./Function.js"
 import * as Numeric from "./Numeric.js"
 import * as TransactionHash from "./TransactionHash.js"
-
-/**
- * Error class for TransactionInput related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class TransactionInputError extends Data.TaggedError("TransactionInputError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Schema for TransactionInput representing a transaction input with transaction id and index.
@@ -31,11 +19,35 @@ export class TransactionInput extends Schema.TaggedClass<TransactionInput>()("Tr
   transactionId: TransactionHash.TransactionHash,
   index: Numeric.Uint16Schema
 }) {
-  toString(): string {
-    return `{ transactionId: ${this.transactionId}, index: ${this.index} }`
+  toJSON() {
+    return {
+      _tag: this._tag,
+      transactionId: this.transactionId,
+      index: this.index
+    }
   }
-  [Symbol.for("nodejs.util.inspect.custom")](): string {
-    return this.toString()
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof TransactionInput &&
+      this.index === that.index &&
+      Equal.equals(this.transactionId, that.transactionId)
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(
+      this,
+      Hash.combine(Hash.hash(this.transactionId))(Hash.number(Number(this.index)))
+    )
   }
 }
 
@@ -64,7 +76,7 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Tra
   decode: ([txHashBytes, indexBigInt]) =>
     E.right(
       new TransactionInput({
-        transactionId: TransactionHash.make({ hash: txHashBytes }),
+        transactionId: new TransactionHash.TransactionHash({ hash: txHashBytes }),
         index: indexBigInt
       })
     )
@@ -104,23 +116,6 @@ export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTION
   })
 
 /**
- * Smart constructor for creating TransactionInput instances
- *
- * @since 2.0.0
- * @category constructors
- */
-export const make = (...args: ConstructorParameters<typeof TransactionInput>) => new TransactionInput(...args)
-
-/**
- * Check if two TransactionInput instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: TransactionInput, b: TransactionInput): boolean =>
-  a._tag === b._tag && a.index === b.index && TransactionHash.equals(a.transactionId, b.transactionId)
-
-/**
  * FastCheck arbitrary for TransactionInput instances.
  *
  * @since 2.0.0
@@ -128,88 +123,44 @@ export const equals = (a: TransactionInput, b: TransactionInput): boolean =>
  */
 export const arbitrary = FastCheck.tuple(TransactionHash.arbitrary, Numeric.Uint16Arbitrary).map(
   ([transactionId, index]) =>
-    make({
+    new TransactionInput({
       transactionId,
       index
     })
 )
 
 /**
- * Effect namespace for TransactionInput operations that can fail
- *
- * @since 2.0.0
- * @category effect
- */
-export namespace Either {
-  /**
-   * Convert CBOR bytes to TransactionInput using Effect
-   *
-   * @since 2.0.0
-   * @category conversion
-   */
-  export const fromCBORBytes = Function.makeCBORDecodeEither(FromCDDL, TransactionInputError)
-
-  /**
-   * Convert CBOR hex string to TransactionInput using Effect
-   *
-   * @since 2.0.0
-   * @category conversion
-   */
-  export const fromCBORHex = Function.makeCBORDecodeHexEither(FromCDDL, TransactionInputError)
-
-  /**
-   * Convert TransactionInput to CBOR bytes using Effect
-   *
-   * @since 2.0.0
-   * @category conversion
-   */
-  export const toCBORBytes = Function.makeCBOREncodeEither(FromCDDL, TransactionInputError)
-
-  /**
-   * Convert TransactionInput to CBOR hex string using Effect
-   *
-   * @since 2.0.0
-   * @category conversion
-   */
-  export const toCBORHex = Function.makeCBOREncodeHexEither(FromCDDL, TransactionInputError)
-}
-
-/**
- * Convert CBOR bytes to TransactionInput (unsafe)
+ * Convert CBOR bytes to TransactionInput.
  *
  * @since 2.0.0
  * @category conversion
  */
-export const fromCBORBytes = Function.makeCBORDecodeSync(
-  FromCDDL,
-  TransactionInputError,
-  "TransactionInput.fromCBORBytes"
-)
+export const fromCBORBytes = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.decodeSync(FromCBORBytes(options))(bytes)
 
 /**
- * Convert CBOR hex string to TransactionInput (unsafe)
+ * Convert CBOR hex string to TransactionInput.
  *
  * @since 2.0.0
  * @category conversion
  */
-export const fromCBORHex = Function.makeCBORDecodeHexSync(
-  FromCDDL,
-  TransactionInputError,
-  "TransactionInput.fromCBORHex"
-)
+export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.decodeSync(FromCBORHex(options))(hex)
 
 /**
- * Convert TransactionInput to CBOR bytes (unsafe)
+ * Convert TransactionInput to CBOR bytes.
  *
  * @since 2.0.0
  * @category conversion
  */
-export const toCBORBytes = Function.makeCBOREncodeSync(FromCDDL, TransactionInputError, "TransactionInput.toCBORBytes")
+export const toCBORBytes = (data: TransactionInput, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.encodeSync(FromCBORBytes(options))(data)
 
 /**
- * Convert TransactionInput to CBOR hex string (unsafe)
+ * Convert TransactionInput to CBOR hex string.
  *
  * @since 2.0.0
  * @category conversion
  */
-export const toCBORHex = Function.makeCBOREncodeHexSync(FromCDDL, TransactionInputError, "TransactionInput.toCBORHex")
+export const toCBORHex = (data: TransactionInput, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.encodeSync(FromCBORHex(options))(data)

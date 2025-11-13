@@ -1,20 +1,7 @@
-import { Data, Schema } from "effect"
+import { Equal, Hash, Inspectable, Schema } from "effect"
 
 import * as Bytes from "./Bytes.js"
-import * as Function from "./Function.js"
 import * as Text128 from "./Text128.js"
-
-/**
- * Error class for Url related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class UrlError extends Data.TaggedError("UrlError")<{
-  message?: string
-  reason?: "InvalidLength" | "InvalidFormat" | "TooLong"
-  cause?: unknown
-}> {}
 
 /**
  * Schema for Url representing URLs as branded text.
@@ -25,9 +12,60 @@ export class UrlError extends Data.TaggedError("UrlError")<{
  */
 export class Url extends Schema.TaggedClass<Url>("Url")("Url", {
   href: Text128.Text128
-}) {}
+}) {
+  /**
+   * Convert to JSON representation.
+   *
+   * @since 2.0.0
+   * @category conversions
+   */
+  toJSON() {
+    return {
+      _tag: "Url",
+      href: this.href
+    }
+  }
 
-export const make = (...args: ConstructorParameters<typeof Url>) => new Url(...args)
+  /**
+   * Convert to string representation.
+   *
+   * @since 2.0.0
+   * @category conversions
+   */
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  /**
+   * Custom inspect for Node.js REPL.
+   *
+   * @since 2.0.0
+   * @category conversions
+   */
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  /**
+   * Structural equality check.
+   *
+   * @since 2.0.0
+   * @category equality
+   */
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof Url && Equal.equals(this.href, that.href)
+  }
+
+  /**
+   * Hash code generation.
+   *
+   * @since 2.0.0
+   * @category hashing
+   */
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.hash(this.href))
+  }
+}
 
 export const FromBytes = Schema.transform(Text128.FromVariableBytes, Url, {
   strict: true,
@@ -41,14 +79,6 @@ export const FromHex = Schema.compose(
 ).annotations({
   identifier: "Url.Hex"
 })
-
-/**
- * Check if two Url instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: Url, b: Url): boolean => a.href === b.href
 
 /**
  * Check if the given value is a valid Url
@@ -76,7 +106,7 @@ export const arbitrary = Text128.arbitrary.map((text) => Url.make({ href: text }
  * @since 2.0.0
  * @category parsing
  */
-export const fromBytes = Function.makeDecodeSync(FromBytes, UrlError, "Url.fromBytes")
+export const fromBytes = (bytes: Uint8Array) => Schema.decodeSync(FromBytes)(bytes)
 
 /**
  * Parse Url from hex string.
@@ -84,7 +114,7 @@ export const fromBytes = Function.makeDecodeSync(FromBytes, UrlError, "Url.fromB
  * @since 2.0.0
  * @category parsing
  */
-export const fromHex = Function.makeDecodeSync(FromHex, UrlError, "Url.fromHex")
+export const fromHex = (hex: string) => Schema.decodeSync(FromHex)(hex)
 
 /**
  * Encode Url to bytes.
@@ -92,7 +122,7 @@ export const fromHex = Function.makeDecodeSync(FromHex, UrlError, "Url.fromHex")
  * @since 2.0.0
  * @category encoding
  */
-export const toBytes = Function.makeEncodeSync(FromBytes, UrlError, "Url.toBytes")
+export const toBytes = (url: Url) => Schema.encodeSync(FromBytes)(url)
 
 /**
  * Encode Url to hex string.
@@ -100,48 +130,4 @@ export const toBytes = Function.makeEncodeSync(FromBytes, UrlError, "Url.toBytes
  * @since 2.0.0
  * @category encoding
  */
-export const toHex = Function.makeEncodeSync(FromHex, UrlError, "Url.toHex")
-
-// ============================================================================
-// Either Namespace
-// ============================================================================
-
-/**
- * Either-based error handling variants for functions that can fail.
- *
- * @since 2.0.0
- * @category effect
- */
-export namespace Either {
-  /**
-   * Parse Url from bytes with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromBytes = Function.makeCBORDecodeEither(FromBytes, UrlError)
-
-  /**
-   * Parse Url from hex string with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromHex = Function.makeCBORDecodeEither(FromHex, UrlError)
-
-  /**
-   * Encode Url to bytes with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toBytes = Function.makeEncodeSync(FromBytes, UrlError, "Url.toBytes")
-
-  /**
-   * Encode Url to hex string with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toHex = Function.makeEncodeSync(FromHex, UrlError, "Url.toHex")
-}
+export const toHex = (url: Url) => Schema.encodeSync(FromHex)(url)

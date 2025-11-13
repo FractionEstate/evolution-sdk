@@ -1,18 +1,7 @@
-import { Data, FastCheck, Schema } from "effect"
+import { Equal, FastCheck, Hash, Inspectable, Schema } from "effect"
 
+import * as Bytes from "./Bytes.js"
 import * as Bytes32 from "./Bytes32.js"
-import * as Function from "./Function.js"
-
-/**
- * Error class for BlockHeaderHash related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class BlockHeaderHashError extends Data.TaggedError("BlockHeaderHashError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Schema for BlockHeaderHash representing a block header hash.
@@ -24,7 +13,30 @@ export class BlockHeaderHashError extends Data.TaggedError("BlockHeaderHashError
  */
 export class BlockHeaderHash extends Schema.TaggedClass<BlockHeaderHash>()("BlockHeaderHash", {
   bytes: Bytes32.BytesFromHex
-}) {}
+}) {
+  toJSON() {
+    return {
+      _tag: "BlockHeaderHash" as const,
+      bytes: Bytes.toHex(this.bytes)
+    }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof BlockHeaderHash && Bytes.equals(this.bytes, that.bytes)
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.array(Array.from(this.bytes)))
+  }
+}
 
 /**
  * Schema for transforming between Uint8Array and BlockHeaderHash.
@@ -54,22 +66,6 @@ export const FromHex = Schema.compose(
 })
 
 /**
- * Smart constructor for BlockHeaderHash.
- *
- * @since 2.0.0
- * @category constructors
- */
-export const make = (...args: ConstructorParameters<typeof BlockHeaderHash>) => new BlockHeaderHash(...args)
-
-/**
- * Check if two BlockHeaderHash instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: BlockHeaderHash, b: BlockHeaderHash): boolean => Bytes32.equals(a.bytes, b.bytes)
-
-/**
  * Check if the given value is a valid BlockHeaderHash
  *
  * @since 2.0.0
@@ -97,7 +93,7 @@ export const arbitrary = FastCheck.uint8Array({ minLength: 32, maxLength: 32 }).
  * @since 2.0.0
  * @category parsing
  */
-export const fromBytes = Function.makeDecodeSync(FromBytes, BlockHeaderHashError, "BlockHeaderHash.fromBytes")
+export const fromBytes = Schema.decodeSync(FromBytes)
 
 /**
  * Parse BlockHeaderHash from hex string.
@@ -105,7 +101,7 @@ export const fromBytes = Function.makeDecodeSync(FromBytes, BlockHeaderHashError
  * @since 2.0.0
  * @category parsing
  */
-export const fromHex = Function.makeDecodeSync(FromHex, BlockHeaderHashError, "BlockHeaderHash.fromHex")
+export const fromHex = Schema.decodeSync(FromHex)
 
 /**
  * Encode BlockHeaderHash to bytes.
@@ -113,7 +109,7 @@ export const fromHex = Function.makeDecodeSync(FromHex, BlockHeaderHashError, "B
  * @since 2.0.0
  * @category encoding
  */
-export const toBytes = Function.makeEncodeSync(FromBytes, BlockHeaderHashError, "BlockHeaderHash.toBytes")
+export const toBytes = Schema.encodeSync(FromBytes)
 
 /**
  * Encode BlockHeaderHash to hex string.
@@ -121,15 +117,4 @@ export const toBytes = Function.makeEncodeSync(FromBytes, BlockHeaderHashError, 
  * @since 2.0.0
  * @category encoding
  */
-export const toHex = Function.makeEncodeSync(FromHex, BlockHeaderHashError, "BlockHeaderHash.toHex")
-
-// ============================================================================
-// Either Namespace (composable non-throwing API)
-// ============================================================================
-
-export namespace Either {
-  export const fromBytes = Function.makeDecodeEither(FromBytes, BlockHeaderHashError)
-  export const fromHex = Function.makeDecodeEither(FromHex, BlockHeaderHashError)
-  export const toBytes = Function.makeEncodeEither(FromBytes, BlockHeaderHashError)
-  export const toHex = Function.makeEncodeEither(FromHex, BlockHeaderHashError)
-}
+export const toHex = Schema.encodeSync(FromHex)

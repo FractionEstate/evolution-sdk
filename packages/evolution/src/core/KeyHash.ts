@@ -1,22 +1,10 @@
 import { blake2b } from "@noble/hashes/blake2"
-import { Data, FastCheck, Schema } from "effect"
+import { Equal, FastCheck, Hash, Inspectable, Schema } from "effect"
 
 import * as Bytes from "./Bytes.js"
-import * as Function from "./Function.js"
 import * as Hash28 from "./Hash28.js"
 import type { PrivateKey } from "./PrivateKey.js"
 import * as VKey from "./VKey.js"
-
-/**
- * Error class for KeyHash related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class KeyHashError extends Data.TaggedError("KeyHashError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * KeyHash
@@ -40,10 +28,23 @@ export class KeyHash extends Schema.TaggedClass<KeyHash>()("KeyHash", {
   }
 
   toString(): string {
-    return `KeyHash({ hash: ${this.hash} })`
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof KeyHash && Bytes.equals(this.hash, that.hash)
+  }
+
+  [Hash.symbol](): number {
+    // Hash the content of the bytes, not the Uint8Array reference
+    // Cache the result to avoid recomputing on every call
+    return Hash.cached(this, Hash.array(Array.from(this.hash)))
   }
 }
-
 
 /**
  * Schema transformer from bytes to KeyHash.
@@ -70,32 +71,12 @@ export const FromHex = Schema.compose(Hash28.BytesFromHex, FromBytes).annotation
 })
 
 /**
- * Smart constructor for KeyHash
- *
- * @since 2.0.0
- * @category constructors
- */
-export const make = (...args: ConstructorParameters<typeof KeyHash>) => new KeyHash(...args)
-
-/**
- * Check if two KeyHash instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: KeyHash, b: KeyHash): boolean => Bytes.equals(a.hash, b.hash)
-
-// ============================================================================
-// Decoding Functions
-// ============================================================================
-
-/**
  * Decode a KeyHash from raw bytes.
  *
  * @since 2.0.0
  * @category encoding/decoding
  */
-export const fromBytes = Function.makeDecodeSync(FromBytes, KeyHashError, "KeyHash.fromBytes")
+export const fromBytes = Schema.decodeSync(FromBytes)
 
 /**
  * Decode a KeyHash from a hex string.
@@ -103,7 +84,23 @@ export const fromBytes = Function.makeDecodeSync(FromBytes, KeyHashError, "KeyHa
  * @since 2.0.0
  * @category encoding/decoding
  */
-export const fromHex = Function.makeDecodeSync(FromHex, KeyHashError, "KeyHash.fromHex")
+export const fromHex = Schema.decodeSync(FromHex)
+
+/**
+ * Convert a KeyHash to raw bytes.
+ *
+ * @since 2.0.0
+ * @category encoding/decoding
+ */
+export const toBytes = Schema.encodeSync(FromBytes)
+
+/**
+ * Convert a KeyHash to a hex string.
+ *
+ * @since 2.0.0
+ * @category encoding/decoding
+ */
+export const toHex = Schema.encodeSync(FromHex)
 
 /**
  * FastCheck arbitrary for generating random KeyHash instances.
@@ -112,29 +109,8 @@ export const fromHex = Function.makeDecodeSync(FromHex, KeyHashError, "KeyHash.f
  * @category arbitrary
  */
 export const arbitrary: FastCheck.Arbitrary<KeyHash> = FastCheck.uint8Array({ minLength: 28, maxLength: 28 }).map(
-  (bytes) => make({ hash: bytes }, { disableValidation: true })
+  (bytes) => new KeyHash({ hash: bytes }, { disableValidation: true })
 )
-
-// ============================================================================
-// Encoding Functions
-// ============================================================================
-
-/**
- * Convert a KeyHash to raw bytes.
- *
- * @since 2.0.0
- * @category encoding/decoding
- */
-export const toBytes = (keyhash: KeyHash): Uint8Array => new Uint8Array(keyhash.hash) // Return a copy of the underlying bytes
-
-/**
- * Convert a KeyHash to a hex string.
- *
- * @since 2.0.0
- * @category encoding/decoding
- */
-export const toHex = (keyhash: KeyHash): string => Bytes.toHex(keyhash.hash)
-
 
 /**
  * Create a KeyHash from a PrivateKey
@@ -159,23 +135,4 @@ export const fromVKey = (vkey: VKey.VKey): KeyHash => {
   const publicKeyBytes = vkey.bytes
   const keyHashBytes = blake2b(publicKeyBytes, { dkLen: 28 })
   return KeyHash.make({ hash: keyHashBytes }, { disableValidation: true })
-}
-
-// ============================================================================
-// Either Namespace - Either-based Error Handling
-// ============================================================================
-
-/**
- * Either-based error handling variants for functions that can fail.
- *
- * @since 2.0.0
- * @category either
- */
-export namespace Either {
-  export const fromBytes = Function.makeDecodeEither(FromBytes, KeyHashError)
-  export const fromHex = Function.makeDecodeEither(FromHex, KeyHashError)
-  export const toBytes = Function.makeEncodeEither(FromBytes, KeyHashError)
-  export const toHex = Function.makeEncodeEither(FromHex, KeyHashError)
-  export const encode = Schema.encodeEither(KeyHash)
-  export const decode = Schema.decodeEither(KeyHash)
 }

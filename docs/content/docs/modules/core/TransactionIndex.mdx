@@ -107,7 +107,7 @@ CDDL: transaction_index = uint .size 2
 **Signature**
 
 ```ts
-export declare const TransactionIndex: Schema.refine<bigint, typeof Schema.BigInt>
+export declare const TransactionIndex: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
 ```
 
 Added in v2.0.0

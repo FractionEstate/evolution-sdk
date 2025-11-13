@@ -1,20 +1,12 @@
-import { Data, Effect as Eff, FastCheck, ParseResult, Schema } from "effect"
+import { Effect as Eff, Equal, FastCheck, Hash, Inspectable, ParseResult, Schema } from "effect"
 
+import * as Bytes from "./Bytes.js"
 import * as CBOR from "./CBOR.js"
 import * as Coin from "./Coin.js"
 import * as CostModel from "./CostModel.js"
-import * as Function from "./Function.js"
 import * as NonnegativeInterval from "./NonnegativeInterval.js"
 import * as Numeric from "./Numeric.js"
 import * as UnitInterval from "./UnitInterval.js"
-
-/**
- * Error class for ProtocolParamUpdate related operations.
- */
-export class ProtocolParamUpdateError extends Data.TaggedError("ProtocolParamUpdateError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * ex_unit_prices (domain) = [mem_price : NonnegativeInterval, step_price : NonnegativeInterval]
@@ -109,7 +101,125 @@ export class ProtocolParamUpdate extends Schema.TaggedClass<ProtocolParamUpdate>
   drepDeposit: Schema.optional(Coin.Coin), // 31
   drepInactivityPeriod: Schema.optional(Numeric.Uint32Schema), // 32
   minfeeRefScriptCoinsPerByte: Schema.optional(NonnegativeInterval.NonnegativeInterval) // 33
-}) {}
+}) {
+  toJSON() {
+    return {
+      _tag: this._tag,
+      minfeeA: this.minfeeA,
+      minfeeB: this.minfeeB,
+      maxBlockBodySize: this.maxBlockBodySize,
+      maxTxSize: this.maxTxSize,
+      maxBlockHeaderSize: this.maxBlockHeaderSize,
+      keyDeposit: this.keyDeposit,
+      poolDeposit: this.poolDeposit,
+      maxEpoch: this.maxEpoch,
+      nOpt: this.nOpt,
+      poolPledgeInfluence: this.poolPledgeInfluence,
+      expansionRate: this.expansionRate,
+      treasuryGrowthRate: this.treasuryGrowthRate,
+      minPoolCost: this.minPoolCost,
+      adaPerUtxoByte: this.adaPerUtxoByte,
+      costModels: this.costModels,
+      exUnitPrices: this.exUnitPrices,
+      maxTxExUnits: this.maxTxExUnits,
+      maxBlockExUnits: this.maxBlockExUnits,
+      maxValueSize: this.maxValueSize,
+      collateralPercentage: this.collateralPercentage,
+      maxCollateralInputs: this.maxCollateralInputs,
+      poolVotingThresholds: this.poolVotingThresholds,
+      drepVotingThresholds: this.drepVotingThresholds,
+      minCommitteeSize: this.minCommitteeSize,
+      committeeTermLimit: this.committeeTermLimit,
+      governanceActionValidity: this.governanceActionValidity,
+      governanceActionDeposit: this.governanceActionDeposit,
+      drepDeposit: this.drepDeposit,
+      drepInactivityPeriod: this.drepInactivityPeriod,
+      minfeeRefScriptCoinsPerByte: this.minfeeRefScriptCoinsPerByte
+    }
+  }
+
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof ProtocolParamUpdate &&
+      Equal.equals(this.minfeeA, that.minfeeA) &&
+      Equal.equals(this.minfeeB, that.minfeeB) &&
+      Equal.equals(this.maxBlockBodySize, that.maxBlockBodySize) &&
+      Equal.equals(this.maxTxSize, that.maxTxSize) &&
+      Equal.equals(this.maxBlockHeaderSize, that.maxBlockHeaderSize) &&
+      Equal.equals(this.keyDeposit, that.keyDeposit) &&
+      Equal.equals(this.poolDeposit, that.poolDeposit) &&
+      Equal.equals(this.maxEpoch, that.maxEpoch) &&
+      Equal.equals(this.nOpt, that.nOpt) &&
+      Equal.equals(this.poolPledgeInfluence, that.poolPledgeInfluence) &&
+      Equal.equals(this.expansionRate, that.expansionRate) &&
+      Equal.equals(this.treasuryGrowthRate, that.treasuryGrowthRate) &&
+      Equal.equals(this.minPoolCost, that.minPoolCost) &&
+      Equal.equals(this.adaPerUtxoByte, that.adaPerUtxoByte) &&
+      Equal.equals(this.costModels, that.costModels) &&
+      Equal.equals(this.exUnitPrices, that.exUnitPrices) &&
+      Equal.equals(this.maxTxExUnits, that.maxTxExUnits) &&
+      Equal.equals(this.maxBlockExUnits, that.maxBlockExUnits) &&
+      Equal.equals(this.maxValueSize, that.maxValueSize) &&
+      Equal.equals(this.collateralPercentage, that.collateralPercentage) &&
+      Equal.equals(this.maxCollateralInputs, that.maxCollateralInputs) &&
+      Equal.equals(this.poolVotingThresholds, that.poolVotingThresholds) &&
+      Equal.equals(this.drepVotingThresholds, that.drepVotingThresholds) &&
+      Equal.equals(this.minCommitteeSize, that.minCommitteeSize) &&
+      Equal.equals(this.committeeTermLimit, that.committeeTermLimit) &&
+      Equal.equals(this.governanceActionValidity, that.governanceActionValidity) &&
+      Equal.equals(this.governanceActionDeposit, that.governanceActionDeposit) &&
+      Equal.equals(this.drepDeposit, that.drepDeposit) &&
+      Equal.equals(this.drepInactivityPeriod, that.drepInactivityPeriod) &&
+      Equal.equals(this.minfeeRefScriptCoinsPerByte, that.minfeeRefScriptCoinsPerByte)
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(
+      this,
+      Hash.array([
+        this.minfeeA,
+        this.minfeeB,
+        this.maxBlockBodySize,
+        this.maxTxSize,
+        this.maxBlockHeaderSize,
+        this.keyDeposit,
+        this.poolDeposit,
+        this.maxEpoch,
+        this.nOpt,
+        this.poolPledgeInfluence,
+        this.expansionRate,
+        this.treasuryGrowthRate,
+        this.minPoolCost,
+        this.adaPerUtxoByte,
+        this.costModels,
+        this.exUnitPrices,
+        this.maxTxExUnits,
+        this.maxBlockExUnits,
+        this.maxValueSize,
+        this.collateralPercentage,
+        this.maxCollateralInputs,
+        this.poolVotingThresholds,
+        this.drepVotingThresholds,
+        this.minCommitteeSize,
+        this.committeeTermLimit,
+        this.governanceActionValidity,
+        this.governanceActionDeposit,
+        this.drepDeposit,
+        this.drepInactivityPeriod,
+        this.minfeeRefScriptCoinsPerByte
+      ])
+    )
+  }
+}
 
 export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(ProtocolParamUpdate), {
   strict: true,
@@ -345,32 +455,30 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Pro
     })
 })
 
-export const toCBOR = Function.makeCBOREncodeSync(
-  FromCDDL,
-  ProtocolParamUpdateError,
-  "ProtocolParamUpdate.toCBOR",
-  CBOR.CML_DEFAULT_OPTIONS
-)
-export const fromCBOR = Function.makeCBORDecodeSync(
-  FromCDDL,
-  ProtocolParamUpdateError,
-  "ProtocolParamUpdate.fromCBOR",
-  CBOR.CML_DEFAULT_OPTIONS
-)
+export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.compose(CBOR.FromBytes(options), FromCDDL).annotations({
+    identifier: "ProtocolParamUpdate.FromCBORBytes"
+  })
+
+export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.compose(Bytes.FromHex, FromCBORBytes(options)).annotations({
+    identifier: "ProtocolParamUpdate.FromCBORHex"
+  })
+
+export const toCBOR = (data: ProtocolParamUpdate, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.encodeSync(FromCBORBytes(options))(data)
+
+export const fromCBOR = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.decodeSync(FromCBORBytes(options))(bytes)
+
 export const toCBORBytes = toCBOR
 export const fromCBORBytes = fromCBOR
-export const toCBORHex = Function.makeCBOREncodeHexSync(
-  FromCDDL,
-  ProtocolParamUpdateError,
-  "ProtocolParamUpdate.toCBORHex",
-  CBOR.CML_DEFAULT_OPTIONS
-)
-export const fromCBORHex = Function.makeCBORDecodeHexSync(
-  FromCDDL,
-  ProtocolParamUpdateError,
-  "ProtocolParamUpdate.fromCBORHex",
-  CBOR.CML_DEFAULT_OPTIONS
-)
+
+export const toCBORHex = (data: ProtocolParamUpdate, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.encodeSync(FromCBORHex(options))(data)
+
+export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.decodeSync(FromCBORHex(options))(hex)
 
 const coinArb = Coin.arbitrary
 const costModelsArb = FastCheck.record({

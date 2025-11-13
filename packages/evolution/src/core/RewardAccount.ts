@@ -1,18 +1,12 @@
 import { bech32 } from "@scure/base"
-import { Data, Effect as Eff, FastCheck, ParseResult, Schema } from "effect"
+import { Effect as Eff, Equal, FastCheck, Hash, Inspectable, ParseResult, Schema } from "effect"
 
 import * as Bytes from "./Bytes.js"
 import * as Bytes29 from "./Bytes29.js"
 import * as Credential from "./Credential.js"
-import * as Function from "./Function.js"
 import * as KeyHash from "./KeyHash.js"
 import * as NetworkId from "./NetworkId.js"
 import * as ScriptHash from "./ScriptHash.js"
-
-export class RewardAccountError extends Data.TaggedError("RewardAccountError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Reward/stake address with only staking credential
@@ -24,12 +18,48 @@ export class RewardAccount extends Schema.TaggedClass<RewardAccount>("RewardAcco
   networkId: NetworkId.NetworkId,
   stakeCredential: Credential.CredentialSchema
 }) {
-  toString(): string {
-    return `RewardAccount { networkId: ${this.networkId}, stakeCredential: ${this.stakeCredential} }`
+  /**
+   * @since 2.0.0
+   * @category json
+   */
+  toJSON() {
+    return { _tag: "RewardAccount" as const, networkId: this.networkId, stakeCredential: this.stakeCredential }
   }
 
-  [Symbol.for("nodejs.util.inspect.custom")](): string {
-    return this.toString()
+  /**
+   * @since 2.0.0
+   * @category string
+   */
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  /**
+   * @since 2.0.0
+   * @category inspect
+   */
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  /**
+   * @since 2.0.0
+   * @category equality
+   */
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof RewardAccount &&
+      Equal.equals(this.networkId, that.networkId) &&
+      Equal.equals(this.stakeCredential, that.stakeCredential)
+    )
+  }
+
+  /**
+   * @since 2.0.0
+   * @category hash
+   */
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.combine(Hash.hash(this.networkId))(Hash.hash(this.stakeCredential)))
   }
 }
 
@@ -106,27 +136,6 @@ export const FromBech32 = Schema.transformOrFail(Schema.String, Schema.typeSchem
 })
 
 /**
- * Smart constructor for creating RewardAccount instances
- *
- * @since 2.0.0
- * @category constructors
- */
-export const make = (props: {
-  networkId: NetworkId.NetworkId
-  stakeCredential: Credential.CredentialSchema
-}): RewardAccount => new RewardAccount(props)
-
-/**
- * Check if two RewardAccount instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: RewardAccount, b: RewardAccount): boolean => {
-  return a.networkId === b.networkId && Credential.equals(a.stakeCredential, b.stakeCredential)
-}
-
-/**
  * FastCheck arbitrary for RewardAccount instances.
  *
  * @since 2.0.0
@@ -150,7 +159,7 @@ export const arbitrary = FastCheck.tuple(NetworkId.arbitrary, Credential.arbitra
  * @since 2.0.0
  * @category parsing
  */
-export const fromBytes = Function.makeDecodeSync(FromBytes, RewardAccountError, "RewardAccount.fromBytes")
+export const fromBytes = (bytes: Uint8Array) => Schema.decodeSync(FromBytes)(bytes)
 
 /**
  * Parse a RewardAccount from hex string.
@@ -158,7 +167,7 @@ export const fromBytes = Function.makeDecodeSync(FromBytes, RewardAccountError, 
  * @since 2.0.0
  * @category parsing
  */
-export const fromHex = Function.makeDecodeSync(FromHex, RewardAccountError, "RewardAccount.fromHex")
+export const fromHex = (hex: string) => Schema.decodeSync(FromHex)(hex)
 
 /**
  * Parse a RewardAccount from Bech32 string.
@@ -166,7 +175,7 @@ export const fromHex = Function.makeDecodeSync(FromHex, RewardAccountError, "Rew
  * @since 2.0.0
  * @category parsing
  */
-export const fromBech32 = Function.makeDecodeSync(FromBech32, RewardAccountError, "RewardAccount.fromBech32")
+export const fromBech32 = (str: string) => Schema.decodeSync(FromBech32)(str)
 
 // ============================================================================
 // Encoding Functions
@@ -178,7 +187,7 @@ export const fromBech32 = Function.makeDecodeSync(FromBech32, RewardAccountError
  * @since 2.0.0
  * @category encoding
  */
-export const toBytes = Function.makeEncodeSync(FromBytes, RewardAccountError, "RewardAccount.toBytes")
+export const toBytes = (data: RewardAccount) => Schema.encodeSync(FromBytes)(data)
 
 /**
  * Convert a RewardAccount to hex string.
@@ -186,7 +195,7 @@ export const toBytes = Function.makeEncodeSync(FromBytes, RewardAccountError, "R
  * @since 2.0.0
  * @category encoding
  */
-export const toHex = Function.makeEncodeSync(FromHex, RewardAccountError, "RewardAccount.toHex")
+export const toHex = (data: RewardAccount) => Schema.encodeSync(FromHex)(data)
 
 /**
  * Convert a RewardAccount to Bech32 string.
@@ -194,64 +203,5 @@ export const toHex = Function.makeEncodeSync(FromHex, RewardAccountError, "Rewar
  * @since 2.0.0
  * @category encoding
  */
-export const toBech32 = Function.makeEncodeSync(FromBech32, RewardAccountError, "RewardAccount.toBech32")
+export const toBech32 = (data: RewardAccount) => Schema.encodeSync(FromBech32)(data)
 
-// ============================================================================
-// Either Namespace - Either-based Error Handling
-// ============================================================================
-
-/**
- * Either-based error handling variants for functions that can fail.
- *
- * @since 2.0.0
- * @category either
- */
-export namespace Either {
-  /**
-   * Parse a RewardAccount from bytes.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromBytes = Function.makeDecodeEither(FromBytes, RewardAccountError)
-
-  /**
-   * Parse a RewardAccount from hex string.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromHex = Function.makeDecodeEither(FromHex, RewardAccountError)
-
-  /**
-   * Parse a RewardAccount from Bech32 string.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromBech32 = Function.makeDecodeEither(FromBech32, RewardAccountError)
-
-  /**
-   * Convert a RewardAccount to bytes.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toBytes = Function.makeEncodeEither(FromBytes, RewardAccountError)
-
-  /**
-   * Convert a RewardAccount to hex string.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toHex = Function.makeEncodeEither(FromHex, RewardAccountError)
-
-  /**
-   * Convert a RewardAccount to Bech32 string.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toBech32 = Function.makeEncodeEither(FromBech32, RewardAccountError)
-}

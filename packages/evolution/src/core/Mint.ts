@@ -1,23 +1,11 @@
-import { Data, Effect as Eff, FastCheck, ParseResult, Schema } from "effect"
+import { Effect as Eff, Equal, FastCheck, Hash, Inspectable, ParseResult, Schema } from "effect"
 
 import * as AssetName from "./AssetName.js"
 import * as Bytes from "./Bytes.js"
 import * as CBOR from "./CBOR.js"
 import * as _Codec from "./Codec.js"
-import * as Function from "./Function.js"
 import * as NonZeroInt64 from "./NonZeroInt64.js"
 import * as PolicyId from "./PolicyId.js"
-
-/**
- * Error class for Mint related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class MintError extends Data.TaggedError("MintError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Schema for inner asset map
@@ -48,26 +36,67 @@ export type AssetMap = typeof AssetMap.Type
  * ```
  *
  * @since 2.0.0
- * @category schemas
- */
-export const Mint = Schema.Map({
-  key: PolicyId.PolicyId,
-  value: AssetMap
-}).annotations({
-  identifier: "Mint",
-  title: "Token Mint Operations",
-  description: "A collection of token minting/burning operations grouped by policy ID"
-})
-
-/**
- * Type alias for Mint representing a collection of minting/burning operations.
- * Each policy ID maps to a collection of asset names and their amounts.
- * Positive amounts indicate minting, negative amounts indicate burning.
- *
- * @since 2.0.0
  * @category model
  */
-export type Mint = typeof Mint.Type
+export class Mint extends Schema.Class<Mint>("Mint")({
+  map: Schema.Map({
+    key: PolicyId.PolicyId,
+    value: AssetMap
+  })
+}) {
+  /**
+   * Convert to JSON representation.
+   *
+   * @since 2.0.0
+   * @category conversions
+   */
+  toJSON() {
+    return {
+      _tag: "Mint",
+      map: this.map
+    }
+  }
+
+  /**
+   * Convert to string representation.
+   *
+   * @since 2.0.0
+   * @category conversions
+   */
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  /**
+   * Custom inspect for Node.js REPL.
+   *
+   * @since 2.0.0
+   * @category conversions
+   */
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  /**
+   * Structural equality check.
+   *
+   * @since 2.0.0
+   * @category equality
+   */
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof Mint && Equal.equals(this.map, that.map)
+  }
+
+  /**
+   * Hash code generation.
+   *
+   * @since 2.0.0
+   * @category hashing
+   */
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.hash(this.map))
+  }
+}
 
 /**
  * Check if a value is a valid Mint.
@@ -83,7 +112,7 @@ export const is = Schema.is(Mint)
  * @since 2.0.0
  * @category constructors
  */
-export const empty = (): Mint => new Map<PolicyId.PolicyId, AssetMap>() as Mint
+export const empty = (): Mint => new Mint({ map: new Map<PolicyId.PolicyId, AssetMap>() })
 
 /**
  * Create Mint from a single policy and asset entry.
@@ -97,7 +126,7 @@ export const singleton = (
   amount: NonZeroInt64.NonZeroInt64
 ): Mint => {
   const assetMap = new Map([[assetName, amount]])
-  return new Map([[policyId, assetMap]]) as Mint
+  return new Mint({ map: new Map([[policyId, assetMap]]) })
 }
 
 /**
@@ -109,12 +138,8 @@ export const singleton = (
 export const fromEntries = (
   entries: Array<[PolicyId.PolicyId, Array<[AssetName.AssetName, NonZeroInt64.NonZeroInt64]>]>
 ): Mint => {
-  const map = new Map(entries.map(([policyId, assetEntries]) => [policyId, new Map(assetEntries)])) as Mint
-  // Validate the constructed Mint
-  if (!is(map)) {
-    throw new MintError({ message: "Invalid Mint structure" })
-  }
-  return map
+  const innerMap = new Map(entries.map(([policyId, assetEntries]) => [policyId, new Map(assetEntries)]))
+  return new Mint({ map: innerMap })
 }
 
 /**
@@ -130,13 +155,13 @@ export const insert = (
   amount: NonZeroInt64.NonZeroInt64
 ): Mint => {
   // Get existing asset map or create empty one
-  const existingAssetMap = mint.get(policyId)
+  const existingAssetMap = mint.map.get(policyId)
   const assetMap =
     existingAssetMap !== undefined ? new Map(existingAssetMap).set(assetName, amount) : new Map([[assetName, amount]])
 
-  const result = new Map(mint)
+  const result = new Map(mint.map)
   result.set(policyId, assetMap)
-  return result as Mint
+  return new Mint({ map: result })
 }
 
 /**
@@ -146,13 +171,13 @@ export const insert = (
  * @category transformation
  */
 export const removePolicy = (mint: Mint, policyId: PolicyId.PolicyId): Mint => {
-  const result = new Map(mint)
+  const result = new Map(mint.map)
   result.delete(policyId)
-  return result as Mint
+  return new Mint({ map: result })
 }
 
 export const removeAsset = (mint: Mint, policyId: PolicyId.PolicyId, assetName: AssetName.AssetName): Mint => {
-  const assets = mint.get(policyId)
+  const assets = mint.map.get(policyId)
   if (assets === undefined) {
     return mint // No assets for this policy, nothing to remove
   }
@@ -161,14 +186,14 @@ export const removeAsset = (mint: Mint, policyId: PolicyId.PolicyId, assetName: 
 
   if (updatedAssets.size === 0) {
     // If no assets left, remove the policyId entry
-    const result = new Map(mint)
+    const result = new Map(mint.map)
     result.delete(policyId)
-    return result as Mint
+    return new Mint({ map: result })
   }
 
-  const result = new Map(mint)
+  const result = new Map(mint.map)
   result.set(policyId, updatedAssets)
-  return result as Mint
+  return new Mint({ map: result })
 }
 
 /**
@@ -178,7 +203,7 @@ export const removeAsset = (mint: Mint, policyId: PolicyId.PolicyId, assetName: 
  * @category transformation
  */
 export const get = (mint: Mint, policyId: PolicyId.PolicyId, assetName: AssetName.AssetName) => {
-  const assets = mint.get(policyId)
+  const assets = mint.map.get(policyId)
   if (assets === undefined) {
     return undefined
   }
@@ -204,7 +229,7 @@ export const has = (mint: Mint, policyId: PolicyId.PolicyId, assetName: AssetNam
  * @since 2.0.0
  * @category predicates
  */
-export const isEmpty = (mint: Mint): boolean => mint.size === 0
+export const isEmpty = (mint: Mint): boolean => mint.map.size === 0
 
 /**
  * Get the number of policies in the Mint.
@@ -212,46 +237,7 @@ export const isEmpty = (mint: Mint): boolean => mint.size === 0
  * @since 2.0.0
  * @category transformation
  */
-export const policyCount = (mint: Mint): number => mint.size
-
-/**
- * Check if two Mint instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (self: Mint, that: Mint): boolean => {
-  if (self.size !== that.size) return false
-
-  for (const [policyId, assetMap] of self.entries()) {
-    // find matching policyId in `that`
-    let foundPolicy = false
-    for (const [otherPolicyId, otherAssetMap] of that.entries()) {
-      if (PolicyId.equals(policyId, otherPolicyId)) {
-        foundPolicy = true
-
-        // compare inner asset maps
-        if (assetMap.size !== otherAssetMap.size) return false
-
-        for (const [assetName, amount] of assetMap.entries()) {
-          let foundAsset = false
-          for (const [otherAssetName, otherAmount] of otherAssetMap.entries()) {
-            if (AssetName.equals(assetName, otherAssetName) && amount === otherAmount) {
-              foundAsset = true
-              break
-            }
-          }
-          if (!foundAsset) return false
-        }
-
-        break
-      }
-    }
-    if (!foundPolicy) return false
-  }
-
-  return true
-}
+export const policyCount = (mint: Mint): number => mint.map.size
 
 export const CDDLSchema = Schema.MapFromSelf({
   key: CBOR.ByteArray, // Policy ID as 28-byte Uint8Array
@@ -282,7 +268,7 @@ export const FromCDDL = Schema.transformOrFail(Schema.encodedSchema(CDDLSchema),
       // Convert Mint to raw Map data for CBOR encoding
       const outerMap = new Map() as Map<Uint8Array, Map<Uint8Array, bigint>>
 
-      for (const [policyId, assetMap] of toA.entries()) {
+      for (const [policyId, assetMap] of toA.map.entries()) {
         const policyIdBytes = yield* ParseResult.encode(PolicyId.FromBytes)(policyId)
         const innerMap = new Map() as Map<Uint8Array, bigint>
 
@@ -299,7 +285,7 @@ export const FromCDDL = Schema.transformOrFail(Schema.encodedSchema(CDDLSchema),
 
   decode: (fromA) =>
     Eff.gen(function* () {
-      const mint = empty()
+      const innerMap = new Map<PolicyId.PolicyId, AssetMap>()
 
       for (const [policyIdBytes, assetMapCddl] of fromA.entries()) {
         const policyId = yield* ParseResult.decode(PolicyId.FromBytes)(policyIdBytes)
@@ -312,10 +298,10 @@ export const FromCDDL = Schema.transformOrFail(Schema.encodedSchema(CDDLSchema),
           assetMap.set(assetName, nonZeroAmount)
         }
 
-        mint.set(policyId, assetMap)
+        innerMap.set(policyId, assetMap)
       }
 
-      return mint
+      return new Mint({ map: innerMap })
     })
 })
 
@@ -402,7 +388,8 @@ export const arbitrary: FastCheck.Arbitrary<Mint> = FastCheck.oneof(
  * @since 2.0.0
  * @category parsing
  */
-export const fromCBORBytes = Function.makeCBORDecodeSync(FromCDDL, MintError, "Mint.fromCBORBytes")
+export const fromCBORBytes = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): Mint =>
+  Schema.decodeSync(FromCBORBytes(options))(bytes)
 
 /**
  * Parse Mint from CBOR hex string.
@@ -410,7 +397,8 @@ export const fromCBORBytes = Function.makeCBORDecodeSync(FromCDDL, MintError, "M
  * @since 2.0.0
  * @category parsing
  */
-export const fromCBORHex = Function.makeCBORDecodeHexSync(FromCDDL, MintError, "Mint.fromCBORHex")
+export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): Mint =>
+  Schema.decodeSync(FromCBORHex(options))(hex)
 
 /**
  * Encode Mint to CBOR bytes.
@@ -418,7 +406,8 @@ export const fromCBORHex = Function.makeCBORDecodeHexSync(FromCDDL, MintError, "
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORBytes = Function.makeCBOREncodeSync(FromCDDL, MintError, "Mint.toCBORBytes")
+export const toCBORBytes = (mint: Mint, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): Uint8Array =>
+  Schema.encodeSync(FromCBORBytes(options))(mint)
 
 /**
  * Encode Mint to CBOR hex string.
@@ -426,48 +415,5 @@ export const toCBORBytes = Function.makeCBOREncodeSync(FromCDDL, MintError, "Min
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORHex = Function.makeCBOREncodeHexSync(FromCDDL, MintError, "Mint.toCBORHex")
-
-// ============================================================================
-// Effect Namespace
-// ============================================================================
-
-/**
- * Effect-based error handling variants for functions that can fail.
- *
- * @since 2.0.0
- * @category effect
- */
-export namespace Either {
-  /**
-   * Parse Mint from CBOR bytes with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromCBORBytes = Function.makeCBORDecodeEither(FromCDDL, MintError)
-
-  /**
-   * Parse Mint from CBOR hex string with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromCBORHex = Function.makeCBORDecodeHexEither(FromCDDL, MintError)
-
-  /**
-   * Encode Mint to CBOR bytes with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toCBORBytes = Function.makeCBOREncodeEither(FromCDDL, MintError)
-
-  /**
-   * Encode Mint to CBOR hex string with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toCBORHex = Function.makeCBOREncodeHexEither(FromCDDL, MintError)
-}
+export const toCBORHex = (mint: Mint, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): string =>
+  Schema.encodeSync(FromCBORHex(options))(mint)

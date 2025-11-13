@@ -1,24 +1,12 @@
-import { Data, Effect as Eff, FastCheck, Option, ParseResult, Schema } from "effect"
+import { Effect as Eff, Equal, FastCheck, Hash, Inspectable, Option, ParseResult, Schema } from "effect"
 
 import * as AssetName from "./AssetName.js"
 import * as Bytes from "./Bytes.js"
 import * as CBOR from "./CBOR.js"
 import * as Coin from "./Coin.js"
-import * as Function from "./Function.js"
 import * as MultiAsset from "./MultiAsset.js"
 import * as PolicyId from "./PolicyId.js"
 import * as PositiveCoin from "./PositiveCoin.js"
-
-/**
- * Error class for Value related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class ValueError extends Data.TaggedError("ValueError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Schema for Value representing both ADA and native assets.
@@ -37,26 +25,61 @@ export class ValueError extends Data.TaggedError("ValueError")<{
 export class OnlyCoin extends Schema.TaggedClass<OnlyCoin>("OnlyCoin")("OnlyCoin", {
   coin: Coin.Coin
 }) {
-  // toString(): string {
-  //   return `OnlyCoin { coin: ${this.coin} }`
-  // }
+  toJSON() {
+    return {
+      _tag: this._tag,
+      coin: this.coin
+    }
+  }
 
-  // [Symbol.for("nodejs.util.inspect.custom")](): string {
-  //   return this.toString()
-  // }
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof OnlyCoin && Equal.equals(this.coin, that.coin)
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.hash(this.coin))
+  }
 }
 
 export class WithAssets extends Schema.TaggedClass<WithAssets>("WithAssets")("WithAssets", {
   coin: Coin.Coin,
   assets: MultiAsset.MultiAsset
 }) {
-  // toString(): string {
-  //   return `WithAssets { coin: ${this.coin}, assets: ${this.assets} }`
-  // }
+  toJSON() {
+    return {
+      _tag: this._tag,
+      coin: this.coin,
+      assets: this.assets
+    }
+  }
 
-  // [Symbol.for("nodejs.util.inspect.custom")](): string {
-  //   return this.toString()
-  // }
+  toString(): string {
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return (
+      that instanceof WithAssets &&
+      Equal.equals(this.coin, that.coin) &&
+      Equal.equals(this.assets, that.assets)
+    )
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.combine(Hash.hash(this.coin))(Hash.hash(this.assets)))
+  }
 }
 
 export const Value = Schema.Union(OnlyCoin, WithAssets)
@@ -181,9 +204,7 @@ export const subtract = (a: Value, b: Value): Value => {
 
   // a doesn't have assets, b does - this would result in negative assets, throw error
   if (Option.isNone(assetsA) && Option.isSome(assetsB)) {
-    throw new ValueError({
-      message: "Cannot subtract assets from Value with no assets"
-    })
+    throw new Error("Cannot subtract assets from Value with no assets")
   }
 
   // Both have assets - subtract them properly
@@ -198,31 +219,6 @@ export const subtract = (a: Value, b: Value): Value => {
   }
 
   return onlyCoin(resultAda)
-}
-
-/**
- * Check if two Values are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: Value, b: Value): boolean => {
-  const adaEqual = Coin.equals(getAda(a), getAda(b))
-
-  if (!adaEqual) return false
-
-  const assetsA = getAssets(a)
-  const assetsB = getAssets(b)
-
-  if (Option.isNone(assetsA) && Option.isNone(assetsB)) {
-    return true
-  }
-
-  if (Option.isSome(assetsA) && Option.isSome(assetsB)) {
-    return MultiAsset.equals(assetsA.value, assetsB.value)
-  }
-
-  return false
 }
 
 /**
@@ -300,7 +296,7 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Val
         // Convert MultiAsset to raw Map data for CBOR encoding
         const outerMap = new Map<Uint8Array, Map<Uint8Array, bigint>>()
 
-        for (const [policyId, assetMap] of toI.assets.entries()) {
+        for (const [policyId, assetMap] of toI.assets.map.entries()) {
           const policyIdBytes = yield* ParseResult.encode(PolicyId.FromBytes)(policyId)
           const innerMap = new Map<Uint8Array, bigint>()
 
@@ -320,7 +316,7 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Val
       if (typeof fromA === "bigint") {
         // ADA-only value - create OnlyCoin instance
         return new OnlyCoin({
-          coin: Coin.make(fromA)
+          coin: yield* ParseResult.decodeUnknown(Coin.Coin)(fromA)
         })
       } else {
         // Value with assets [coin, multiasset]
@@ -335,7 +331,7 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Val
           const assetMap = new Map<AssetName.AssetName, PositiveCoin.PositiveCoin>()
           for (const [assetNameBytes, amount] of assetMapCddl.entries()) {
             const assetName = yield* ParseResult.decode(AssetName.FromBytes)(assetNameBytes)
-            const positiveCoin = PositiveCoin.make(amount)
+            const positiveCoin = yield* ParseResult.decodeUnknown(PositiveCoin.PositiveCoinSchema)(amount)
             assetMap.set(assetName, positiveCoin)
           }
 
@@ -343,8 +339,8 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Val
         }
 
         return new WithAssets({
-          coin: Coin.make(coinAmount),
-          assets: result as MultiAsset.MultiAsset
+          coin: yield* ParseResult.decodeUnknown(Coin.Coin)(coinAmount),
+          assets: new MultiAsset.MultiAsset({ map: result })
         })
       }
     })
@@ -403,7 +399,8 @@ export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTION
  * @since 2.0.0
  * @category parsing
  */
-export const fromCBORBytes = Function.makeCBORDecodeSync(FromCDDL, ValueError, "Value.fromCBORBytes")
+export const fromCBORBytes = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.decodeSync(FromCBORBytes(options))(bytes)
 
 /**
  * Parse Value from CBOR hex string.
@@ -411,7 +408,8 @@ export const fromCBORBytes = Function.makeCBORDecodeSync(FromCDDL, ValueError, "
  * @since 2.0.0
  * @category parsing
  */
-export const fromCBORHex = Function.makeCBORDecodeHexSync(FromCDDL, ValueError, "Value.fromCBORHex")
+export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.decodeSync(FromCBORHex(options))(hex)
 
 /**
  * Encode Value to CBOR bytes.
@@ -419,7 +417,8 @@ export const fromCBORHex = Function.makeCBORDecodeHexSync(FromCDDL, ValueError, 
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORBytes = Function.makeCBOREncodeSync(FromCDDL, ValueError, "Value.toCBORBytes")
+export const toCBORBytes = (data: Value, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.encodeSync(FromCBORBytes(options))(data)
 
 /**
  * Encode Value to CBOR hex string.
@@ -427,48 +426,5 @@ export const toCBORBytes = Function.makeCBOREncodeSync(FromCDDL, ValueError, "Va
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORHex = Function.makeCBOREncodeHexSync(FromCDDL, ValueError, "Value.toCBORHex")
-
-// ============================================================================
-// Effect Namespace
-// ============================================================================
-
-/**
- * Effect-based error handling variants for functions that can fail.
- *
- * @since 2.0.0
- * @category effect
- */
-export namespace Either {
-  /**
-   * Parse Value from CBOR bytes with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromCBORBytes = Function.makeCBORDecodeEither(FromCDDL, ValueError)
-
-  /**
-   * Parse Value from CBOR hex string with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromCBORHex = Function.makeCBORDecodeHexEither(FromCDDL, ValueError)
-
-  /**
-   * Encode Value to CBOR bytes with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toCBORBytes = Function.makeCBOREncodeEither(FromCDDL, ValueError)
-
-  /**
-   * Encode Value to CBOR hex string with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toCBORHex = Function.makeCBOREncodeHexEither(FromCDDL, ValueError)
-}
+export const toCBORHex = (data: Value, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.encodeSync(FromCBORHex(options))(data)

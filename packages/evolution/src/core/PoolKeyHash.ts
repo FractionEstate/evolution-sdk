@@ -1,18 +1,7 @@
-import { Data, FastCheck, Schema } from "effect"
+import { Equal, FastCheck, Hash, Inspectable, Schema } from "effect"
 
-import * as Function from "./Function.js"
+import * as Bytes from "./Bytes.js"
 import * as Hash28 from "./Hash28.js"
-
-/**
- * Error class for PoolKeyHash related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class PoolKeyHashError extends Data.TaggedError("PoolKeyHashError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * PoolKeyHash as a TaggedClass representing a stake pool's verification key hash.
@@ -24,12 +13,27 @@ export class PoolKeyHashError extends Data.TaggedError("PoolKeyHashError")<{
 export class PoolKeyHash extends Schema.TaggedClass<PoolKeyHash>()("PoolKeyHash", {
   hash: Hash28.BytesFromHex
 }) {
-  toJSON(): string {
-    return toHex(this)
+  toJSON() {
+    return {
+      _tag: "PoolKeyHash" as const,
+      hash: Bytes.toHex(this.hash)
+    }
   }
 
   toString(): string {
-    return toHex(this)
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof PoolKeyHash && Bytes.equals(this.hash, that.hash)
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.array(Array.from(this.hash)))
   }
 }
 
@@ -56,22 +60,6 @@ export const FromHex = Schema.compose(Hash28.BytesFromHex, FromBytes).annotation
 })
 
 /**
- * Smart constructor for PoolKeyHash that validates and applies branding.
- *
- * @since 2.0.0
- * @category constructors
- */
-export const make = (...args: ConstructorParameters<typeof PoolKeyHash>) => new PoolKeyHash(...args)
-
-/**
- * Check if two PoolKeyHash instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: PoolKeyHash, b: PoolKeyHash): boolean => Hash28.equals(a.hash, b.hash)
-
-/**
  * FastCheck arbitrary for generating random PoolKeyHash instances.
  *
  * @since 2.0.0
@@ -80,7 +68,7 @@ export const equals = (a: PoolKeyHash, b: PoolKeyHash): boolean => Hash28.equals
 export const arbitrary: FastCheck.Arbitrary<PoolKeyHash> = FastCheck.uint8Array({
   minLength: Hash28.BYTES_LENGTH,
   maxLength: Hash28.BYTES_LENGTH
-}).map((bytes) => make({ hash: bytes }, { disableValidation: true }))
+}).map((bytes) => new PoolKeyHash({ hash: bytes }, { disableValidation: true }))
 
 // ============================================================================
 // Root Functions
@@ -92,7 +80,7 @@ export const arbitrary: FastCheck.Arbitrary<PoolKeyHash> = FastCheck.uint8Array(
  * @since 2.0.0
  * @category parsing
  */
-export const fromBytes = Function.makeDecodeSync(FromBytes, PoolKeyHashError, "PoolKeyHash.fromBytes")
+export const fromBytes = Schema.decodeSync(FromBytes)
 
 /**
  * Parse PoolKeyHash from hex string.
@@ -100,7 +88,7 @@ export const fromBytes = Function.makeDecodeSync(FromBytes, PoolKeyHashError, "P
  * @since 2.0.0
  * @category parsing
  */
-export const fromHex = Function.makeDecodeSync(FromHex, PoolKeyHashError, "PoolKeyHash.fromHex")
+export const fromHex = Schema.decodeSync(FromHex)
 
 /**
  * Encode PoolKeyHash to bytes.
@@ -108,7 +96,7 @@ export const fromHex = Function.makeDecodeSync(FromHex, PoolKeyHashError, "PoolK
  * @since 2.0.0
  * @category encoding
  */
-export const toBytes = Function.makeEncodeSync(FromBytes, PoolKeyHashError, "PoolKeyHash.toBytes")
+export const toBytes = Schema.encodeSync(FromBytes)
 
 /**
  * Encode PoolKeyHash to hex string.
@@ -116,48 +104,4 @@ export const toBytes = Function.makeEncodeSync(FromBytes, PoolKeyHashError, "Poo
  * @since 2.0.0
  * @category encoding
  */
-export const toHex = Function.makeEncodeSync(FromHex, PoolKeyHashError, "PoolKeyHash.toHex")
-
-// ============================================================================
-// Either Namespace
-// ============================================================================
-
-/**
- * Either-based error handling variants for functions that can fail.
- *
- * @since 2.0.0
- * @category either
- */
-export namespace Either {
-  /**
-   * Parse PoolKeyHash from bytes using Either error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromBytes = Function.makeDecodeEither(FromBytes, PoolKeyHashError)
-
-  /**
-   * Parse PoolKeyHash from hex string using Either error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromHex = Function.makeDecodeEither(FromHex, PoolKeyHashError)
-
-  /**
-   * Encode PoolKeyHash to bytes using Either error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toBytes = Function.makeEncodeEither(FromBytes, PoolKeyHashError)
-
-  /**
-   * Encode PoolKeyHash to hex string using Either error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toHex = Function.makeEncodeEither(FromHex, PoolKeyHashError)
-}
+export const toHex = Schema.encodeSync(FromHex)

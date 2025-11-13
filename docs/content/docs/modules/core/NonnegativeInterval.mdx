@@ -127,8 +127,8 @@ CDDL: nonnegative_interval = #6.30([uint, positive_int])
 export declare const NonnegativeInterval: Schema.refine<
   { readonly numerator: bigint; readonly denominator: bigint },
   Schema.Struct<{
-    numerator: Schema.refine<bigint, typeof Schema.BigInt>
-    denominator: Schema.refine<bigint, typeof Schema.BigInt>
+    numerator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
+    denominator: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
   }>
 >
 ```

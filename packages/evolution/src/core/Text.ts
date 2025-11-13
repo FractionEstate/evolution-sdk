@@ -1,18 +1,6 @@
-import { Data, FastCheck, Schema } from "effect"
+import { FastCheck, Schema } from "effect"
 
 import * as Bytes from "./Bytes.js"
-import * as Function from "./Function.js"
-
-/**
- * Error class for Text related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class TextError extends Data.TaggedError("TextError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 export const Text = Schema.String
 
@@ -183,78 +171,38 @@ export const toHexUnsafe = (text: string): string => {
  */
 export const arbitrary = FastCheck.string()
 
-/**
- * Either namespace for Text operations that can fail
- *
- * @since 2.0.0
- * @category either
- */
-export namespace Either {
-  /**
-   * Convert bytes to text using Either
-   *
-   * @since 2.0.0
-   * @category conversion
-   */
-  export const fromBytes = Function.makeDecodeEither(FromBytes, TextError)
-
-  /**
-   * Convert hex string to text using Either
-   *
-   * @since 2.0.0
-   * @category conversion
-   */
-  export const fromHex = Function.makeDecodeEither(FromHex, TextError)
-
-  /**
-   * Convert text to bytes using Either
-   *
-   * @since 2.0.0
-   * @category conversion
-   */
-  export const toBytes = Function.makeEncodeEither(FromBytes, TextError)
-
-  /**
-   * Convert text to hex string using Either
-   *
-   * @since 2.0.0
-   * @category conversion
-   */
-  export const toHex = Function.makeEncodeEither(FromHex, TextError)
-}
-
 // =============================================================================
 // Public (throwing) API
 // =============================================================================
 
 /**
- * Convert bytes to text (unsafe)
+ * Convert bytes to text
  *
  * @since 2.0.0
  * @category conversion
  */
-export const fromBytes = Function.makeDecodeSync(FromBytes, TextError, "Text.fromBytes")
+export const fromBytes = Schema.decodeSync(FromBytes)
 
 /**
- * Convert hex string to text (unsafe)
+ * Convert hex string to text
  *
  * @since 2.0.0
  * @category conversion
  */
-export const fromHex = Function.makeDecodeSync(FromHex, TextError, "Text.fromHex")
+export const fromHex = Schema.decodeSync(FromHex)
 
 /**
- * Convert text to bytes (unsafe)
+ * Convert text to bytes
  *
  * @since 2.0.0
  * @category conversion
  */
-export const toBytes = Function.makeEncodeSync(FromBytes, TextError, "Text.toBytes")
+export const toBytes = Schema.encodeSync(FromBytes)
 
 /**
- * Convert text to hex string (unsafe)
+ * Convert text to hex string
  *
  * @since 2.0.0
  * @category conversion
  */
-export const toHex = Function.makeEncodeSync(FromHex, TextError, "Text.toHex")
+export const toHex = Schema.encodeSync(FromHex)

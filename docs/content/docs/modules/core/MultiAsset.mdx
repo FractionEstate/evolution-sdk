@@ -263,7 +263,7 @@ Schema for inner asset map (asset_name => positive_coin).
 ```ts
 export declare const AssetMap: Schema.refine<
   Map<AssetName.AssetName, bigint>,
-  Schema.Map$<typeof AssetName.AssetName, Schema.refine<bigint, typeof Schema.BigInt>>
+  Schema.Map$<typeof AssetName.AssetName, Schema.refine<bigint, typeof Schema.BigIntFromSelf>>
 >
 ```
 
@@ -383,7 +383,7 @@ export declare const MultiAsset: Schema.brand<
       typeof PolicyId.PolicyId,
       Schema.refine<
         Map<AssetName.AssetName, bigint>,
-        Schema.Map$<typeof AssetName.AssetName, Schema.refine<bigint, typeof Schema.BigInt>>
+        Schema.Map$<typeof AssetName.AssetName, Schema.refine<bigint, typeof Schema.BigIntFromSelf>>
       >
     >
   >,

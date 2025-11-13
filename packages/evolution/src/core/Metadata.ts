@@ -1,20 +1,8 @@
-import { Data, Either as E, FastCheck, ParseResult, Schema } from "effect"
+import { Either as E, FastCheck, ParseResult, Schema } from "effect"
 
 import * as CBOR from "./CBOR.js"
-import * as Function from "./Function.js"
 import * as Numeric from "./Numeric.js"
 import * as TransactionMetadatum from "./TransactionMetadatum.js"
-
-/**
- * Error class for Metadata related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class MetadataError extends Data.TaggedError("MetadataError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Type representing a transaction metadatum label (uint .size 8).
@@ -46,7 +34,7 @@ export const MetadataLabel = Numeric.Uint8Schema.annotations({
  */
 export const Metadata = Schema.MapFromSelf({
   key: MetadataLabel,
-  value: TransactionMetadatum.TransactionMetadatum
+  value: TransactionMetadatum.TransactionMetadatumVariants
 }).annotations({
   identifier: "Metadata",
   description: "Transaction metadata as a map from labels to transaction metadata values"
@@ -84,7 +72,7 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Met
     }),
   decode: (fromA) =>
     E.gen(function* () {
-      const map = new Map<MetadataLabel, TransactionMetadatum.TransactionMetadatum>()
+      const map = new Map<MetadataLabel, TransactionMetadatum.TransactionMetadatumVariants>()
       for (const [label, metadatum] of fromA.entries()) {
         const transactionMetadatum = yield* ParseResult.decodeEither(TransactionMetadatum.FromCDDL)(metadatum)
         map.set(label, transactionMetadatum)
@@ -117,37 +105,6 @@ export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTION
     description: "Transforms CBOR hex string to Metadata"
   })
 
-// make
-
-/**
- * Smart constructor for Metadata that validates and applies typing.
- *
- * @since 2.0.0
- * @category constructors
- */
-export const make = (...args: ConstructorParameters<typeof Metadata>) => new Metadata(...args)
-
-// ============================================================================
-// Utility Functions
-// ============================================================================
-
-/**
- * Check if two Metadata instances are equal.
- *
- * @since 2.0.0
- * @category utilities
- */
-export const equals = (a: Metadata, b: Metadata): boolean => {
-  if (a.size !== b.size) return false
-
-  for (const [key, value] of a.entries()) {
-    const bValue = b.get(key)
-    if (!bValue || !TransactionMetadatum.equals(value, bValue)) return false
-  }
-
-  return true
-}
-
 /**
  * FastCheck arbitrary for generating random Metadata instances.
  *
@@ -172,7 +129,8 @@ export const arbitrary: FastCheck.Arbitrary<Metadata> = FastCheck.array(
  * @since 2.0.0
  * @category parsing
  */
-export const fromCBORBytes = Function.makeCBORDecodeSync(FromCDDL, MetadataError, "Metadata.fromCBORBytes")
+export const fromCBORBytes = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.decodeSync(Schema.compose(CBOR.FromBytes(options), FromCDDL))
 
 /**
  * Parse Metadata from CBOR hex string.
@@ -180,7 +138,8 @@ export const fromCBORBytes = Function.makeCBORDecodeSync(FromCDDL, MetadataError
  * @since 2.0.0
  * @category parsing
  */
-export const fromCBORHex = Function.makeCBORDecodeHexSync(FromCDDL, MetadataError, "Metadata.fromCBORHex")
+export const fromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.decodeSync(Schema.compose(CBOR.FromHex(options), FromCBORBytes(options)))
 
 // ============================================================================
 // Encoding Functions
@@ -192,7 +151,8 @@ export const fromCBORHex = Function.makeCBORDecodeHexSync(FromCDDL, MetadataErro
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORBytes = Function.makeCBOREncodeSync(FromCDDL, MetadataError, "Metadata.toCBORBytes")
+export const toCBORBytes = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.encodeSync(Schema.compose(CBOR.FromBytes(options), FromCDDL))
 
 /**
  * Convert Metadata to CBOR hex string.
@@ -200,7 +160,8 @@ export const toCBORBytes = Function.makeCBOREncodeSync(FromCDDL, MetadataError, 
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORHex = Function.makeCBOREncodeHexSync(FromCDDL, MetadataError, "Metadata.toCBORHex")
+export const toCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.encodeSync(Schema.compose(CBOR.FromHex(options), FromCBORBytes(options)))
 
 // ============================================================================
 // Factory Functions
@@ -212,7 +173,7 @@ export const toCBORHex = Function.makeCBOREncodeHexSync(FromCDDL, MetadataError,
  * @since 2.0.0
  * @category constructors
  */
-export const fromEntries = (entries: Array<[MetadataLabel, TransactionMetadatum.TransactionMetadatum]>): Metadata =>
+export const fromEntries = (entries: Array<[MetadataLabel, TransactionMetadatum.TransactionMetadatumVariants]>): Metadata =>
   new Map(entries)
 
 /**
@@ -232,7 +193,7 @@ export const empty = (): Metadata => new Map() as Metadata
 export const set = (
   metadata: Metadata,
   label: MetadataLabel,
-  metadatum: TransactionMetadatum.TransactionMetadatum
+  metadatum: TransactionMetadatum.TransactionMetadatumVariants
 ): Metadata => {
   const newMap = new Map(metadata)
   newMap.set(label, metadatum)
@@ -245,7 +206,7 @@ export const set = (
  * @since 2.0.0
  * @category utilities
  */
-export const get = (metadata: Metadata, label: MetadataLabel): TransactionMetadatum.TransactionMetadatum | undefined =>
+export const get = (metadata: Metadata, label: MetadataLabel): TransactionMetadatum.TransactionMetadatumVariants | undefined =>
   metadata.get(label)
 
 /**
@@ -290,7 +251,7 @@ export const labels = (metadata: Metadata): Array<MetadataLabel> => Array.from(m
  * @since 2.0.0
  * @category utilities
  */
-export const values = (metadata: Metadata): Array<TransactionMetadatum.TransactionMetadatum> =>
+export const values = (metadata: Metadata): Array<TransactionMetadatum.TransactionMetadatumVariants> =>
   Array.from(metadata.values())
 
 /**
@@ -299,49 +260,5 @@ export const values = (metadata: Metadata): Array<TransactionMetadatum.Transacti
  * @since 2.0.0
  * @category utilities
  */
-export const entries = (metadata: Metadata): Array<[MetadataLabel, TransactionMetadatum.TransactionMetadatum]> =>
+export const entries = (metadata: Metadata): Array<[MetadataLabel, TransactionMetadatum.TransactionMetadatumVariants]> =>
   Array.from(metadata.entries())
-
-// ============================================================================
-// Effect Namespace - Effect-based Error Handling
-// ============================================================================
-
-/**
- * Effect-based error handling variants for functions that can fail.
- *
- * @since 2.0.0
- * @category effect
- */
-export namespace Either {
-  /**
-   * Parse Metadata from CBOR bytes with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromCBORBytes = Function.makeCBORDecodeEither(FromCDDL, MetadataError)
-
-  /**
-   * Parse Metadata from CBOR hex string with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromCBORHex = Function.makeCBORDecodeHexEither(FromCDDL, MetadataError)
-
-  /**
-   * Convert Metadata to CBOR bytes with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toCBORBytes = Function.makeCBOREncodeEither(FromCDDL, MetadataError)
-
-  /**
-   * Convert Metadata to CBOR hex string with Effect error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toCBORHex = Function.makeCBOREncodeHexEither(FromCDDL, MetadataError)
-}

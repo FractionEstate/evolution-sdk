@@ -1,17 +1,6 @@
-import { Data, FastCheck, Schema } from "effect"
+import { FastCheck, Schema } from "effect"
 
 import * as Coin from "./Coin.js"
-
-/**
- * Error class for PositiveCoin related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class PositiveCoinError extends Data.TaggedError("PositiveCoinError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Minimum value for a positive coin amount.
@@ -36,7 +25,7 @@ export const MAX_POSITIVE_COIN_VALUE = Coin.MAX_COIN_VALUE
  * @since 2.0.0
  * @category schemas
  */
-export const PositiveCoinSchema = Schema.BigInt.pipe(
+export const PositiveCoinSchema = Schema.BigIntFromSelf.pipe(
   Schema.filter((value) => value >= MIN_POSITIVE_COIN_VALUE && value <= MAX_POSITIVE_COIN_VALUE)
 ).annotations({
   message: (issue) =>
@@ -56,15 +45,6 @@ export const PositiveCoinSchema = Schema.BigInt.pipe(
 export type PositiveCoin = typeof PositiveCoinSchema.Type
 
 /**
- * Smart constructor for creating PositiveCoin values.
- * Uses the built-in .make property for branded schemas.
- *
- * @since 2.0.0
- * @category constructors
- */
-export const make = PositiveCoinSchema.make
-
-/**
  * Check if a value is a valid PositiveCoin.
  *
  * @since 2.0.0
@@ -80,7 +60,7 @@ export const is = Schema.is(PositiveCoinSchema)
  */
 export const add = (a: PositiveCoin, b: PositiveCoin): PositiveCoin => {
   const result = a + b
-  return make(result)
+  return PositiveCoinSchema.make(result)
 }
 
 /**
@@ -92,7 +72,7 @@ export const add = (a: PositiveCoin, b: PositiveCoin): PositiveCoin => {
  */
 export const subtract = (a: PositiveCoin, b: PositiveCoin): PositiveCoin => {
   const result = a - b
-  return make(result)
+  return PositiveCoinSchema.make(result)
 }
 
 /**
@@ -108,14 +88,6 @@ export const compare = (a: PositiveCoin, b: PositiveCoin): -1 | 0 | 1 => {
 }
 
 /**
- * Check if two positive coin amounts are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: PositiveCoin, b: PositiveCoin): boolean => a === b
-
-/**
  * FastCheck arbitrary for generating random PositiveCoin values.
  *
  * @since 2.0.0
@@ -124,4 +96,4 @@ export const equals = (a: PositiveCoin, b: PositiveCoin): boolean => a === b
 export const arbitrary = FastCheck.bigInt({
   min: MIN_POSITIVE_COIN_VALUE,
   max: MAX_POSITIVE_COIN_VALUE
-}).map(make)
+}).map(PositiveCoinSchema.make)

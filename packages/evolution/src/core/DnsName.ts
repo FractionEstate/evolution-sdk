@@ -1,18 +1,6 @@
-import { Data, Schema } from "effect"
+import { Schema } from "effect"
 
-import * as Function from "./Function.js"
 import * as Text128 from "./Text128.js"
-
-/**
- * Error class for DnsName related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class DnsNameError extends Data.TaggedError("DnsNameError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Schema for DnsName with DNS-specific validation.
@@ -40,22 +28,6 @@ export const FromHex = Schema.compose(Text128.FromVariableHex, DnsName).annotati
 })
 
 /**
- * Create a DnsName from a string.
- *
- * @since 2.0.0
- * @category constructors
- */
-export const make = DnsName.make
-
-/**
- * Check if two DnsName instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: DnsName, b: DnsName): boolean => a === b
-
-/**
  * Check if the given value is a valid DnsName
  *
  * @since 2.0.0
@@ -69,7 +41,7 @@ export const isDnsName = Schema.is(DnsName)
  * @since 2.0.0
  * @category arbitrary
  */
-export const arbitrary = Text128.arbitrary.map((text) => make(text))
+export const arbitrary = Text128.arbitrary.map((text) => DnsName.make(text))
 
 // ============================================================================
 // Root Functions
@@ -81,7 +53,7 @@ export const arbitrary = Text128.arbitrary.map((text) => make(text))
  * @since 2.0.0
  * @category parsing
  */
-export const fromBytes = Function.makeDecodeSync(FromBytes, DnsNameError, "DnsName.fromBytes")
+export const fromBytes = (bytes: Uint8Array): DnsName => Schema.decodeSync(FromBytes)(bytes)
 
 /**
  * Parse DnsName from hex string.
@@ -89,7 +61,7 @@ export const fromBytes = Function.makeDecodeSync(FromBytes, DnsNameError, "DnsNa
  * @since 2.0.0
  * @category parsing
  */
-export const fromHex = Function.makeDecodeSync(FromHex, DnsNameError, "DnsName.fromHex")
+export const fromHex = (hex: string): DnsName => Schema.decodeSync(FromHex)(hex)
 
 /**
  * Encode DnsName to bytes.
@@ -97,7 +69,7 @@ export const fromHex = Function.makeDecodeSync(FromHex, DnsNameError, "DnsName.f
  * @since 2.0.0
  * @category encoding
  */
-export const toBytes = Function.makeEncodeSync(FromBytes, DnsNameError, "DnsName.toBytes")
+export const toBytes = (dnsName: DnsName): Uint8Array => Schema.encodeSync(FromBytes)(dnsName)
 
 /**
  * Encode DnsName to hex string.
@@ -105,48 +77,4 @@ export const toBytes = Function.makeEncodeSync(FromBytes, DnsNameError, "DnsName
  * @since 2.0.0
  * @category encoding
  */
-export const toHex = Function.makeEncodeSync(FromHex, DnsNameError, "DnsName.toHex")
-
-// ============================================================================
-// Either Namespace
-// ============================================================================
-
-/**
- * Either-based error handling variants for functions that can fail.
- *
- * @since 2.0.0
- * @category either
- */
-export namespace Either {
-  /**
-   * Parse DnsName from bytes with Either error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromBytes = Function.makeDecodeEither(FromBytes, DnsNameError)
-
-  /**
-   * Parse DnsName from hex string with Either error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromHex = Function.makeDecodeEither(FromHex, DnsNameError)
-
-  /**
-   * Encode DnsName to bytes with Either error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toBytes = Function.makeEncodeEither(FromBytes, DnsNameError)
-
-  /**
-   * Encode DnsName to hex string with Either error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toHex = Function.makeEncodeEither(FromHex, DnsNameError)
-}
+export const toHex = (dnsName: DnsName): string => Schema.encodeSync(FromHex)(dnsName)

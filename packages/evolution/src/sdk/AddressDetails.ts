@@ -1,4 +1,4 @@
-import { Effect as Eff, ParseResult, Schema } from "effect"
+import { Effect as Eff, Equal, ParseResult, Schema } from "effect"
 
 import * as AddressEras from "../core/AddressEras.js"
 import * as Bytes from "../core/Bytes.js"
@@ -69,7 +69,7 @@ export const equals = (self: AddressDetails, that: AddressDetails): boolean => {
   return (
     self.networkId === that.networkId &&
     self.type === that.type &&
-    AddressEras.equals(self.address, that.address) &&
+    Equal.equals(self.address, that.address) &&
     self.bech32 === that.bech32 &&
     self.hex === that.hex
   )

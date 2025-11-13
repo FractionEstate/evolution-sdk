@@ -1,15 +1,4 @@
-import { Data, Either as E, FastCheck, Schema } from "effect"
-
-/**
- * Error class for Coin related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class CoinError extends Data.TaggedError("CoinError")<{
-  message?: string
-  cause?: unknown
-}> {}
+import { FastCheck, Schema } from "effect"
 
 /**
  * Maximum value for a coin amount (maxWord64).
@@ -26,7 +15,7 @@ export const MAX_COIN_VALUE = 18446744073709551615n
  * @since 2.0.0
  * @category schemas
  */
-export const Coin = Schema.BigInt.pipe(Schema.filter((value) => value >= 0n && value <= MAX_COIN_VALUE)).annotations({
+export const Coin = Schema.BigIntFromSelf.pipe(Schema.filter((value) => value >= 0n && value <= MAX_COIN_VALUE)).annotations({
   message: (issue) => `Coin must be between 0 and ${MAX_COIN_VALUE}, but got ${issue.actual}`,
   identifier: "Coin"
 })
@@ -39,14 +28,6 @@ export const Coin = Schema.BigInt.pipe(Schema.filter((value) => value >= 0n && v
  * @category model
  */
 export type Coin = typeof Coin.Type
-
-/**
- * Smart constructor for creating Coin values.
- *
- * @since 2.0.0
- * @category constructors
- */
-export const make = Coin.make
 
 /**
  * Check if a value is a valid Coin.
@@ -62,7 +43,13 @@ export const is = Schema.is(Coin)
  * @since 2.0.0
  * @category transformation
  */
-export const add = (a: Coin, b: Coin): Coin => E.getOrThrow(Either.add(a, b))
+export const add = (a: Coin, b: Coin): Coin => {
+  const result = a + b
+  if (result > MAX_COIN_VALUE) {
+    throw new Error(`Addition overflow: ${a} + ${b} exceeds maximum coin value`)
+  }
+  return Coin.make(result)
+}
 
 /**
  * Subtract two coin amounts safely.
@@ -70,7 +57,13 @@ export const add = (a: Coin, b: Coin): Coin => E.getOrThrow(Either.add(a, b))
  * @since 2.0.0
  * @category transformation
  */
-export const subtract = (a: Coin, b: Coin): Coin => E.getOrThrow(Either.subtract(a, b))
+export const subtract = (a: Coin, b: Coin): Coin => {
+  const result = a - b
+  if (result < 0n) {
+    throw new Error(`Subtraction underflow: ${a} - ${b} results in negative value`)
+  }
+  return Coin.make(result)
+}
 
 /**
  * Compare two coin amounts.
@@ -85,14 +78,6 @@ export const compare = (a: Coin, b: Coin): -1 | 0 | 1 => {
 }
 
 /**
- * Check if two coin amounts are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: Coin, b: Coin): boolean => a === b
-
-/**
  * Generate a random Coin value.
  *
  * @since 2.0.0
@@ -101,52 +86,4 @@ export const equals = (a: Coin, b: Coin): boolean => a === b
 export const arbitrary = FastCheck.bigInt({
   min: 0n,
   max: MAX_COIN_VALUE
-}).map(make)
-
-// ============================================================================
-// Effect Namespace
-// ============================================================================
-
-/**
- * Either-based error handling variants for functions that can fail.
- *
- * @since 2.0.0
- * @category either
- */
-export namespace Either {
-  /**
-   * Add two coin amounts safely with Either error handling.
-   *
-   * @since 2.0.0
-   * @category transformation
-   */
-  export const add = (a: Coin, b: Coin): E.Either<Coin, CoinError> => {
-    const result = a + b
-    if (result > MAX_COIN_VALUE) {
-      return E.left(
-        new CoinError({
-          message: `Addition overflow: ${a} + ${b} exceeds maximum coin value`
-        })
-      )
-    }
-    return E.right(make(result))
-  }
-
-  /**
-   * Subtract two coin amounts safely with Either error handling.
-   *
-   * @since 2.0.0
-   * @category transformation
-   */
-  export const subtract = (a: Coin, b: Coin): E.Either<Coin, CoinError> => {
-    const result = a - b
-    if (result < 0n) {
-      return E.left(
-        new CoinError({
-          message: `Subtraction underflow: ${a} - ${b} results in negative value`
-        })
-      )
-    }
-    return E.right(make(result))
-  }
-}
+}).map(Coin.make)

@@ -1,4 +1,4 @@
-import { Data, FastCheck, Schema } from "effect"
+import { FastCheck, Schema } from "effect"
 
 /**
  * Constants for NonZeroInt64 validation.
@@ -15,23 +15,12 @@ export const POS_INT64_MIN = 1n
 export const POS_INT64_MAX = 9223372036854775807n
 
 /**
- * Error class for NonZeroInt64 related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class NonZeroInt64Error extends Data.TaggedError("NonZeroInt64Error")<{
-  message?: string
-  cause?: unknown
-}> {}
-
-/**
  * Schema for validating negative 64-bit integers (-9223372036854775808 to -1).
  *
  * @since 2.0.0
  * @category schemas
  */
-export const NegInt64Schema = Schema.BigInt.pipe(
+export const NegInt64Schema = Schema.BigIntFromSelf.pipe(
   Schema.filter((value: bigint) => value >= NEG_INT64_MIN && value <= NEG_INT64_MAX)
 ).annotations({
   message: (issue: any) => `NegInt64 must be between ${NEG_INT64_MIN} and ${NEG_INT64_MAX}, but got ${issue.actual}`,
@@ -44,7 +33,7 @@ export const NegInt64Schema = Schema.BigInt.pipe(
  * @since 2.0.0
  * @category schemas
  */
-export const PosInt64Schema = Schema.BigInt.pipe(
+export const PosInt64Schema = Schema.BigIntFromSelf.pipe(
   Schema.filter((value: bigint) => value >= POS_INT64_MIN && value <= POS_INT64_MAX)
 ).annotations({
   message: (issue: any) => `PosInt64 must be between ${POS_INT64_MIN} and ${POS_INT64_MAX}, but got ${issue.actual}`,
@@ -125,14 +114,6 @@ export const compare = (a: NonZeroInt64, b: NonZeroInt64): -1 | 0 | 1 => {
   if (a > b) return 1
   return 0
 }
-
-/**
- * Check if two NonZeroInt64 values are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: NonZeroInt64, b: NonZeroInt64): boolean => a === b
 
 /**
  * FastCheck arbitrary for generating random NonZeroInt64 instances.

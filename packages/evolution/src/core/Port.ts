@@ -1,29 +1,6 @@
-import { Data, Schema } from "effect"
+import { Schema } from "effect"
 
 import * as Numeric from "./Numeric.js"
-
-/**
- * CDDL specification:
- * ```
- * port = uint .le 65535
- * ```
- *
- * @since 2.0.0
- * @category constants
- */
-export const PORT_MIN_VALUE = Numeric.UINT16_MIN
-export const PORT_MAX_VALUE = Numeric.UINT16_MAX
-
-/**
- * Error class for Port related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class PortError extends Data.TaggedError("PortError")<{
-  message?: string
-  reason?: "InvalidRange" | "NegativeValue" | "ExceedsMaxValue"
-}> {}
 
 /**
  * Schema for validating port numbers (0-65535).
@@ -46,28 +23,12 @@ export const PortSchema = Numeric.Uint16Schema.annotations({
 export type Port = typeof PortSchema.Type
 
 /**
- * Smart constructor for creating Port values.
- *
- * @since 2.0.0
- * @category constructors
- */
-export const make = (value: bigint): Port => PortSchema.make(value)
-
-/**
  * Check if a value is a valid Port.
  *
  * @since 2.0.0
  * @category predicates
  */
 export const is = (value: unknown): value is Port => Schema.is(PortSchema)(value)
-
-/**
- * Check if two Port instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: Port, b: Port): boolean => a === b
 
 /**
  * Check if a port is a well-known port (0-1023).
@@ -100,31 +61,3 @@ export const isDynamic = (port: Port): boolean => port >= 49152 && port <= 65535
  * @category arbitrary
  */
 export const arbitrary = Numeric.Uint16Arbitrary
-
-/**
- * Synchronous encoding/decoding utilities.
- *
- * @since 2.0.0
- * @category encoding/decoding
- */
-export const Encode = {
-  sync: Schema.encodeSync(PortSchema)
-}
-
-export const Decode = {
-  sync: Schema.decodeUnknownSync(PortSchema)
-}
-
-/**
- * Either encoding/decoding utilities.
- *
- * @since 2.0.0
- * @category encoding/decoding
- */
-export const EncodeEither = {
-  either: Schema.encodeEither(PortSchema)
-}
-
-export const DecodeEither = {
-  either: Schema.decodeUnknownEither(PortSchema)
-}

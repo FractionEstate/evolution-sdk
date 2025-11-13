@@ -1,20 +1,8 @@
-import { Data, Effect, FastCheck, Schema } from "effect"
+import { Effect, Equal, FastCheck, Hash, Inspectable, Schema } from "effect"
 
 import * as Bytes from "./Bytes.js"
 import * as CBOR from "./CBOR.js"
-import * as Function from "./Function.js"
 import * as Script from "./Script.js"
-
-/**
- * Error class for ScriptRef related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class ScriptRefError extends Data.TaggedError("ScriptRefError")<{
-  message?: string
-  cause?: unknown
-}> {}
 
 /**
  * Schema for ScriptRef representing a reference to a script in a transaction output.
@@ -32,12 +20,27 @@ export class ScriptRefError extends Data.TaggedError("ScriptRefError")<{
 export class ScriptRef extends Schema.TaggedClass<ScriptRef>()("ScriptRef", {
   bytes: Schema.Uint8ArrayFromHex.pipe(Schema.filter((b) => b.length > 0))
 }) {
-  toJSON(): string {
-    return toHex(this)
+  toJSON() {
+    return {
+      _tag: "ScriptRef" as const,
+      bytes: this.bytes
+    }
   }
 
   toString(): string {
-    return toHex(this)
+    return Inspectable.format(this.toJSON())
+  }
+
+  [Inspectable.NodeInspectSymbol](): unknown {
+    return this.toJSON()
+  }
+
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof ScriptRef && Equal.equals(this.bytes, that.bytes)
+  }
+
+  [Hash.symbol](): number {
+    return Hash.cached(this, Hash.hash(this.bytes))
   }
 }
 
@@ -94,21 +97,6 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Scr
 })
 
 /**
- * Smart constructor for ScriptRef.
- *
- * @since 2.0.0
- * @category constructors
- */
-export const make = (...args: ConstructorParameters<typeof ScriptRef>) => new ScriptRef(...args)
-
-/**
- * Check if two ScriptRef instances are equal.
- *
- * @since 2.0.0
- * @category equality
- */
-export const equals = (a: ScriptRef, b: ScriptRef): boolean => Bytes.equals(a.bytes, b.bytes)
-
 /**
  * CBOR bytes transformation schema for ScriptRef.
  *
@@ -165,7 +153,7 @@ export const arbitrary = FastCheck.uint8Array({
  * @since 2.0.0
  * @category parsing
  */
-export const fromBytes = Function.makeDecodeSync(FromBytes, ScriptRefError, "ScriptRef.fromBytes")
+export const fromBytes = (bytes: Uint8Array) => Schema.decodeSync(FromBytes)(bytes)
 
 /**
  * Parse ScriptRef from hex string.
@@ -173,7 +161,7 @@ export const fromBytes = Function.makeDecodeSync(FromBytes, ScriptRefError, "Scr
  * @since 2.0.0
  * @category parsing
  */
-export const fromHex = Function.makeDecodeSync(FromHex, ScriptRefError, "ScriptRef.fromHex")
+export const fromHex = (hex: string) => Schema.decodeSync(FromHex)(hex)
 
 /**
  * Parse ScriptRef from CBOR bytes.
@@ -181,7 +169,8 @@ export const fromHex = Function.makeDecodeSync(FromHex, ScriptRefError, "ScriptR
  * @since 2.0.0
  * @category parsing
  */
-export const fromCBORBytes = Function.makeCBORDecodeSync(FromCDDL, ScriptRefError, "ScriptRef.fromCBORBytes")
+export const fromCBORBytes = (bytes: Uint8Array, options = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.decodeSync(FromCBORBytes(options))(bytes)
 
 /**
  * Parse ScriptRef from CBOR hex string.
@@ -189,7 +178,8 @@ export const fromCBORBytes = Function.makeCBORDecodeSync(FromCDDL, ScriptRefErro
  * @since 2.0.0
  * @category parsing
  */
-export const fromCBORHex = Function.makeCBORDecodeHexSync(FromCDDL, ScriptRefError, "ScriptRef.fromCBORHex")
+export const fromCBORHex = (hex: string, options = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.decodeSync(FromCBORHex(options))(hex)
 
 /**
  * Encode ScriptRef to bytes.
@@ -197,7 +187,7 @@ export const fromCBORHex = Function.makeCBORDecodeHexSync(FromCDDL, ScriptRefErr
  * @since 2.0.0
  * @category encoding
  */
-export const toBytes = Function.makeEncodeSync(FromBytes, ScriptRefError, "ScriptRef.toBytes")
+export const toBytes = (data: ScriptRef) => Schema.encodeSync(FromBytes)(data)
 
 /**
  * Encode ScriptRef to hex string.
@@ -205,7 +195,7 @@ export const toBytes = Function.makeEncodeSync(FromBytes, ScriptRefError, "Scrip
  * @since 2.0.0
  * @category encoding
  */
-export const toHex = Function.makeEncodeSync(FromHex, ScriptRefError, "ScriptRef.toHex")
+export const toHex = (data: ScriptRef) => Schema.encodeSync(FromHex)(data)
 
 /**
  * Encode ScriptRef to CBOR bytes.
@@ -213,7 +203,8 @@ export const toHex = Function.makeEncodeSync(FromHex, ScriptRefError, "ScriptRef
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORBytes = Function.makeCBOREncodeSync(FromCDDL, ScriptRefError, "ScriptRef.toCBORBytes")
+export const toCBORBytes = (data: ScriptRef, options = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.encodeSync(FromCBORBytes(options))(data)
 
 /**
  * Encode ScriptRef to CBOR hex string.
@@ -221,80 +212,5 @@ export const toCBORBytes = Function.makeCBOREncodeSync(FromCDDL, ScriptRefError,
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORHex = Function.makeCBOREncodeHexSync(FromCDDL, ScriptRefError, "ScriptRef.toCBORHex")
-
-// ============================================================================
-// Either Namespace
-// ============================================================================
-
-/**
- * Either-based error handling variants for functions that can fail.
- *
- * @since 2.0.0
- * @category either
- */
-export namespace Either {
-  /**
-   * Parse ScriptRef from bytes with Either error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromBytes = Function.makeDecodeEither(FromBytes, ScriptRefError)
-
-  /**
-   * Parse ScriptRef from hex string with Either error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromHex = Function.makeDecodeEither(FromHex, ScriptRefError)
-
-  /**
-   * Parse ScriptRef from CBOR bytes with Either error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromCBORBytes = Function.makeCBORDecodeEither(FromCDDL, ScriptRefError)
-
-  /**
-   * Parse ScriptRef from CBOR hex string with Either error handling.
-   *
-   * @since 2.0.0
-   * @category parsing
-   */
-  export const fromCBORHex = Function.makeCBORDecodeHexEither(FromCDDL, ScriptRefError)
-
-  /**
-   * Encode ScriptRef to bytes with Either error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toBytes = Function.makeEncodeEither(FromBytes, ScriptRefError)
-
-  /**
-   * Encode ScriptRef to hex string with Either error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toHex = Function.makeEncodeEither(FromHex, ScriptRefError)
-
-  /**
-   * Encode ScriptRef to CBOR bytes with Either error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toCBORBytes = Function.makeCBOREncodeEither(FromCDDL, ScriptRefError)
-
-  /**
-   * Encode ScriptRef to CBOR hex string with Either error handling.
-   *
-   * @since 2.0.0
-   * @category encoding
-   */
-  export const toCBORHex = Function.makeCBOREncodeHexEither(FromCDDL, ScriptRefError)
-}
+export const toCBORHex = (data: ScriptRef, options = CBOR.CML_DEFAULT_OPTIONS) =>
+  Schema.encodeSync(FromCBORHex(options))(data)

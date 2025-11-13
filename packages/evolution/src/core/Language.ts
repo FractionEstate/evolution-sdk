@@ -1,15 +1,4 @@
-import { Data, FastCheck, Schema } from "effect"
-
-/**
- * Error class for Language related operations.
- *
- * @since 2.0.0
- * @category errors
- */
-export class LanguageError extends Data.TaggedError("LanguageError")<{
-  message?: string
-  cause?: unknown
-}> {}
+import { FastCheck, Schema } from "effect"
 
 /**
  * Plutus languages supported in cost models.
@@ -46,8 +35,6 @@ export const FromCDDL = Schema.transform(CDDLSchema, Schema.typeSchema(Language)
     }
   }
 })
-
-export const equals = (a: Language, b: Language): boolean => a === b
 
 export const arbitrary: FastCheck.Arbitrary<Language> = FastCheck.oneof(
   FastCheck.constant("PlutusV1" as const),
