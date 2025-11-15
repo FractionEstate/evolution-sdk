@@ -17,6 +17,12 @@ const config = {
     unoptimized: true,
   },
   serverExternalPackages: ['typescript', 'twoslash'],
+  turbopack: {
+    // Redirect imports to use built dist/ instead of src/ TypeScript files
+    resolveAlias: {
+      '@evolution-sdk/evolution': '../packages/evolution/dist/index.js',
+    },
+  },
 }
 
 export default withMDX(config)

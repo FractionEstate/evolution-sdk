@@ -98,6 +98,9 @@ importers:
 
   docs:
     dependencies:
+      '@evolution-sdk/evolution':
+        specifier: workspace:*
+        version: link:../packages/evolution
       '@orama/orama':
         specifier: ^3.1.11
         version: 3.1.11
@@ -132,9 +135,6 @@ importers:
         specifier: ^0.3.4
         version: 0.3.4(typescript@5.9.2)
     devDependencies:
-      '@evolution-sdk/evolution':
-        specifier: workspace:*
-        version: link:../packages/evolution
       '@shikijs/twoslash':
         specifier: ^3.14.0
         version: 3.14.0(typescript@5.9.2)
@@ -214,6 +214,31 @@ importers:
       typescript:
         specifier: ^5.9.2
         version: 5.9.2
+
+  packages/evolution-devnet:
+    dependencies:
+      '@evolution-sdk/evolution':
+        specifier: workspace:*
+        version: link:../evolution
+      dockerode:
+        specifier: ^4.0.7
+        version: 4.0.7
+      effect:
+        specifier: ^3.11.7
+        version: 3.19.3
+    devDependencies:
+      '@babel/cli':
+        specifier: ^7.26.4
+        version: 7.28.3(@babel/core@7.28.3)
+      '@types/dockerode':
+        specifier: ^3.3.31
+        version: 3.3.43
+      babel-plugin-annotate-pure-calls:
+        specifier: ^0.4.0
+        version: 0.4.0(@babel/core@7.28.3)
+      typescript:
+        specifier: ~5.7.2
+        version: 5.7.3
 
 packages:
 
@@ -2460,6 +2485,11 @@ packages:
   available-typed-arrays@1.0.7:
     resolution: {integrity: sha512-wvUjBtSGN7+7SjNpq/9M2Tg350UZD3q62IFZLbRAR1bSMlCo1ZaeW+BJ+D090e4hIIZLBcTDWe4Mh4jvUDajzQ==}
     engines: {node: '>= 0.4'}
+
+  babel-plugin-annotate-pure-calls@0.4.0:
+    resolution: {integrity: sha512-oi4M/PWUJOU9ZyRGoPTfPMqdyMp06jbJAomd3RcyYuzUtBOddv98BqLm96Lucpi2QFoQHkdGQt0ACvw7VzVEQA==}
+    peerDependencies:
+      '@babel/core': ^6.0.0-0 || 7.x
 
   babel-plugin-annotate-pure-calls@0.5.0:
     resolution: {integrity: sha512-bWlaZl2qsJKHv9BJgF1g6bQ04wK/7Topq9g59I795W9jpx9lNs9N5LK5NjlEBCDhHncrO0vcoAMuHJR3oWnTeQ==}
@@ -5747,6 +5777,11 @@ packages:
   typedarray@0.0.6:
     resolution: {integrity: sha512-/aCDEGatGvZ2BIk+HmLf4ifCJFwvKFNb9/JeZPMulfgFracn9QFcAf5GO8B/mweUjSoblS5In0cWhqpfs/5PQA==}
 
+  typescript@5.7.3:
+    resolution: {integrity: sha512-84MVSjMEHP+FQRPy3pX9sTVV/INIex71s9TL2Gm5FG/WG1SqXeKyZ0k7/blY/4FdOzI12CBy1vGc4og/eus0fw==}
+    engines: {node: '>=14.17'}
+    hasBin: true
+
   typescript@5.9.2:
     resolution: {integrity: sha512-CWBzXQrc/qOkhidw1OzBTQuYRbfyxDXJMVJ1XNwUHGROVmuaeiEm3OslpZ1RV96d7SKKjZKrSJu3+t/xlw3R9A==}
     engines: {node: '>=14.17'}
@@ -8470,6 +8505,10 @@ snapshots:
     dependencies:
       possible-typed-array-names: 1.1.0
 
+  babel-plugin-annotate-pure-calls@0.4.0(@babel/core@7.28.3):
+    dependencies:
+      '@babel/core': 7.28.3
+
   babel-plugin-annotate-pure-calls@0.5.0(@babel/core@7.28.3):
     dependencies:
       '@babel/core': 7.28.3
@@ -9129,7 +9168,7 @@ snapshots:
 
   docker-modem@5.0.6:
     dependencies:
-      debug: 4.4.1
+      debug: 4.4.3
       readable-stream: 3.6.2
       split-ca: 1.0.1
       ssh2: 1.17.0
@@ -12502,6 +12541,8 @@ snapshots:
       reflect.getprototypeof: 1.0.10
 
   typedarray@0.0.6: {}
+
+  typescript@5.7.3: {}
 
   typescript@5.9.2: {}
 
