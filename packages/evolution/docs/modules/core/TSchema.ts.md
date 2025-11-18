@@ -17,18 +17,28 @@ parent: Modules
   - [Integer](#integer)
 - [utils](#utils)
   - [Array](#array)
+  - [Array (interface)](#array-interface)
   - [Boolean](#boolean)
+  - [Boolean (interface)](#boolean-interface)
   - [ByteArray (interface)](#bytearray-interface)
   - [Integer (interface)](#integer-interface)
   - [Literal](#literal)
+  - [Literal (interface)](#literal-interface)
   - [Map](#map)
+  - [Map (interface)](#map-interface)
   - [NullOr](#nullor)
+  - [NullOr (interface)](#nullor-interface)
   - [OneLiteral](#oneliteral)
+  - [OneLiteral (interface)](#oneliteral-interface)
   - [Struct](#struct)
+  - [Struct (interface)](#struct-interface)
   - [StructOptions (interface)](#structoptions-interface)
   - [Tuple](#tuple)
+  - [Tuple (interface)](#tuple-interface)
+  - [UndefineOr (interface)](#undefineor-interface)
   - [UndefinedOr](#undefinedor)
   - [Union](#union)
+  - [Union (interface)](#union-interface)
   - [compose](#compose)
   - [filter](#filter)
   - [is](#is)
@@ -93,6 +103,14 @@ export declare const Array: <S extends Schema.Schema.Any>(items: S) => Array<S>
 
 Added in v1.0.0
 
+## Array (interface)
+
+**Signature**
+
+```ts
+export interface Array<S extends Schema.Schema.Any> extends Schema.Array$<S> {}
+```
+
 ## Boolean
 
 Schema for boolean values using Plutus Data Constructor
@@ -107,6 +125,15 @@ export declare const Boolean: Boolean
 ```
 
 Added in v2.0.0
+
+## Boolean (interface)
+
+**Signature**
+
+```ts
+export interface Boolean
+  extends Schema.transform<Schema.SchemaClass<Data.Constr, Data.Constr, never>, typeof Schema.Boolean> {}
+```
 
 ## ByteArray (interface)
 
@@ -138,6 +165,15 @@ export declare const Literal: <Literals extends NonEmptyReadonlyArray<Exclude<Sc
 
 Added in v2.0.0
 
+## Literal (interface)
+
+**Signature**
+
+```ts
+export interface Literal<Literals extends NonEmptyReadonlyArray<SchemaAST.LiteralValue>>
+  extends Schema.transform<Schema.SchemaClass<Data.Constr, Data.Constr, never>, Schema.Literal<[...Literals]>> {}
+```
+
 ## Map
 
 Creates a schema for maps with Plutus Map type annotation
@@ -151,6 +187,18 @@ export declare const Map: <K extends Schema.Schema.Any, V extends Schema.Schema.
 ```
 
 Added in v1.0.0
+
+## Map (interface)
+
+**Signature**
+
+```ts
+export interface Map<K extends Schema.Schema.Any, V extends Schema.Schema.Any>
+  extends Schema.transform<
+    Schema.SchemaClass<globalThis.Map<Data.Data, Data.Data>, globalThis.Map<Data.Data, Data.Data>, never>,
+    Schema.MapFromSelf<K, V>
+  > {}
+```
 
 ## NullOr
 
@@ -168,6 +216,15 @@ export declare const NullOr: <S extends Schema.Schema.All>(self: S) => NullOr<S>
 
 Added in v2.0.0
 
+## NullOr (interface)
+
+**Signature**
+
+```ts
+export interface NullOr<S extends Schema.Schema.All>
+  extends Schema.transform<Schema.SchemaClass<Data.Constr, Data.Constr, never>, Schema.NullOr<S>> {}
+```
+
 ## OneLiteral
 
 **Signature**
@@ -176,6 +233,15 @@ Added in v2.0.0
 export declare const OneLiteral: <Single extends Exclude<SchemaAST.LiteralValue, null | bigint>>(
   self: Single
 ) => OneLiteral<Single>
+```
+
+## OneLiteral (interface)
+
+**Signature**
+
+```ts
+export interface OneLiteral<Single extends Exclude<SchemaAST.LiteralValue, null | bigint>>
+  extends Schema.transform<Schema.SchemaClass<Data.Constr, Data.Constr, never>, Schema.Literal<[Single]>> {}
 ```
 
 ## Struct
@@ -193,6 +259,15 @@ export declare const Struct: <Fields extends Schema.Struct.Fields>(
 ```
 
 Added in v2.0.0
+
+## Struct (interface)
+
+**Signature**
+
+```ts
+export interface Struct<Fields extends Schema.Struct.Fields>
+  extends Schema.transform<Schema.SchemaClass<Data.Constr, Data.Constr, never>, Schema.Struct<Fields>> {}
+```
 
 ## StructOptions (interface)
 
@@ -230,6 +305,23 @@ export declare const Tuple: <Elements extends Schema.TupleType.Elements>(element
 
 Added in v2.0.0
 
+## Tuple (interface)
+
+**Signature**
+
+```ts
+export interface Tuple<Elements extends Schema.TupleType.Elements> extends Schema.Tuple<Elements> {}
+```
+
+## UndefineOr (interface)
+
+**Signature**
+
+```ts
+export interface UndefineOr<S extends Schema.Schema.Any>
+  extends Schema.transform<Schema.SchemaClass<Data.Constr, Data.Constr, never>, Schema.UndefinedOr<S>> {}
+```
+
 ## UndefinedOr
 
 Creates a schema for undefined types that transforms to/from Plutus Data Constructor
@@ -261,6 +353,19 @@ export declare const Union: <Members extends ReadonlyArray<Schema.Schema.Any>>(.
 ```
 
 Added in v2.0.0
+
+## Union (interface)
+
+**Signature**
+
+```ts
+export interface Union<Members extends ReadonlyArray<Schema.Schema.Any>>
+  extends Schema.transformOrFail<
+    Schema.SchemaClass<Data.Constr, Data.Constr, never>,
+    Schema.SchemaClass<Schema.Schema.Type<[...Members][number]>, Schema.Schema.Type<[...Members][number]>, never>,
+    never
+  > {}
+```
 
 ## compose
 

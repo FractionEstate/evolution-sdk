@@ -536,7 +536,7 @@ export declare const isRecord: (
 export declare const isTag: (
   u: unknown,
   overrideOptions?: ParseOptions | number
-) => u is { readonly _tag: "Tag"; readonly value: CBOR; readonly tag: number }
+) => u is { readonly _tag: "Tag"; readonly tag: number; readonly value: CBOR }
 ```
 
 ## map

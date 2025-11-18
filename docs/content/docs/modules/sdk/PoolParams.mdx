@@ -36,19 +36,19 @@ export declare const fromCore: (
   overrideOptions?: ParseOptions
 ) => {
   readonly _tag: "PoolParams"
-  readonly operator: { readonly hash: string; readonly _tag: "PoolKeyHash" }
-  readonly vrfKeyhash: { readonly hash: string; readonly _tag: "VrfKeyHash" }
+  readonly operator: { readonly _tag: "PoolKeyHash"; readonly hash: string }
+  readonly vrfKeyhash: { readonly _tag: "VrfKeyHash"; readonly hash: string }
   readonly pledge: string
   readonly cost: string
   readonly margin: { readonly numerator: string; readonly denominator: string }
   readonly rewardAccount: {
+    readonly _tag: "RewardAccount"
     readonly networkId: number
     readonly stakeCredential:
-      | { readonly hash: string; readonly _tag: "KeyHash" }
-      | { readonly hash: string; readonly _tag: "ScriptHash" }
-    readonly _tag: "RewardAccount"
+      | { readonly _tag: "KeyHash"; readonly hash: string }
+      | { readonly _tag: "ScriptHash"; readonly hash: string }
   }
-  readonly poolOwners: readonly { readonly hash: string; readonly _tag: "KeyHash" }[]
+  readonly poolOwners: readonly { readonly _tag: "KeyHash"; readonly hash: string }[]
   readonly relays: readonly (
     | {
         readonly _tag: "SingleHostAddr"
@@ -61,8 +61,8 @@ export declare const fromCore: (
   )[]
   readonly poolMetadata?:
     | {
-        readonly hash: any
         readonly _tag: "PoolMetadata"
+        readonly hash: any
         readonly url: { readonly _tag: "Url"; readonly href: string }
       }
     | null
@@ -82,19 +82,19 @@ Convert from SDK PoolParams to Core PoolParams (decode to strict form).
 export declare const toCore: (
   i: {
     readonly _tag: "PoolParams"
-    readonly operator: { readonly hash: string; readonly _tag: "PoolKeyHash" }
-    readonly vrfKeyhash: { readonly hash: string; readonly _tag: "VrfKeyHash" }
+    readonly operator: { readonly _tag: "PoolKeyHash"; readonly hash: string }
+    readonly vrfKeyhash: { readonly _tag: "VrfKeyHash"; readonly hash: string }
     readonly pledge: string
     readonly cost: string
     readonly margin: { readonly numerator: string; readonly denominator: string }
     readonly rewardAccount: {
+      readonly _tag: "RewardAccount"
       readonly networkId: number
       readonly stakeCredential:
-        | { readonly hash: string; readonly _tag: "KeyHash" }
-        | { readonly hash: string; readonly _tag: "ScriptHash" }
-      readonly _tag: "RewardAccount"
+        | { readonly _tag: "KeyHash"; readonly hash: string }
+        | { readonly _tag: "ScriptHash"; readonly hash: string }
     }
-    readonly poolOwners: readonly { readonly hash: string; readonly _tag: "KeyHash" }[]
+    readonly poolOwners: readonly { readonly _tag: "KeyHash"; readonly hash: string }[]
     readonly relays: readonly (
       | {
           readonly _tag: "SingleHostAddr"
@@ -107,8 +107,8 @@ export declare const toCore: (
     )[]
     readonly poolMetadata?:
       | {
-          readonly hash: any
           readonly _tag: "PoolMetadata"
+          readonly hash: any
           readonly url: { readonly _tag: "Url"; readonly href: string }
         }
       | null

@@ -42,11 +42,11 @@ export type RewardAddress = string
 ```ts
 export declare const fromJsonToRewardAccount: (
   i: {
+    readonly _tag: "RewardAccount"
     readonly networkId: number
     readonly stakeCredential:
-      | { readonly hash: string; readonly _tag: "KeyHash" }
-      | { readonly hash: string; readonly _tag: "ScriptHash" }
-    readonly _tag: "RewardAccount"
+      | { readonly _tag: "KeyHash"; readonly hash: string }
+      | { readonly _tag: "ScriptHash"; readonly hash: string }
   },
   overrideOptions?: ParseOptions
 ) => CoreRewardAccount.RewardAccount
@@ -69,11 +69,11 @@ export declare const fromRewardAccountToJson: (
   a: CoreRewardAccount.RewardAccount,
   overrideOptions?: ParseOptions
 ) => {
+  readonly _tag: "RewardAccount"
   readonly networkId: number
   readonly stakeCredential:
-    | { readonly hash: string; readonly _tag: "KeyHash" }
-    | { readonly hash: string; readonly _tag: "ScriptHash" }
-  readonly _tag: "RewardAccount"
+    | { readonly _tag: "KeyHash"; readonly hash: string }
+    | { readonly _tag: "ScriptHash"; readonly hash: string }
 }
 ```
 
@@ -84,11 +84,11 @@ export declare const fromRewardAccountToJson: (
 ```ts
 export declare const jsonToRewardAddress: (
   i: {
+    readonly _tag: "RewardAccount"
     readonly networkId: number
     readonly stakeCredential:
-      | { readonly hash: string; readonly _tag: "KeyHash" }
-      | { readonly hash: string; readonly _tag: "ScriptHash" }
-    readonly _tag: "RewardAccount"
+      | { readonly _tag: "KeyHash"; readonly hash: string }
+      | { readonly _tag: "ScriptHash"; readonly hash: string }
   },
   overrideOptions?: ParseOptions | undefined
 ) => string
@@ -103,11 +103,11 @@ export declare const rewardAddressToJson: (
   i: string,
   overrideOptions?: ParseOptions | undefined
 ) => {
+  readonly _tag: "RewardAccount"
   readonly networkId: number
   readonly stakeCredential:
-    | { readonly hash: string; readonly _tag: "KeyHash" }
-    | { readonly hash: string; readonly _tag: "ScriptHash" }
-  readonly _tag: "RewardAccount"
+    | { readonly _tag: "KeyHash"; readonly hash: string }
+    | { readonly _tag: "ScriptHash"; readonly hash: string }
 }
 ```
 
