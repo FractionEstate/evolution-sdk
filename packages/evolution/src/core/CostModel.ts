@@ -31,7 +31,7 @@ const arrayHash = <A>(arr: ReadonlyArray<A>): number => {
  * ```
  */
 export class CostModel extends Schema.Class<CostModel>("CostModel")({
-  costs: Schema.Array(Schema.BigIntFromSelf)
+  costs: Schema.Array(Schema.BigInt)
 }) {
   /**
    * Convert to JSON representation.

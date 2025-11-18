@@ -20,7 +20,7 @@ export const POS_INT64_MAX = 9223372036854775807n
  * @since 2.0.0
  * @category schemas
  */
-export const NegInt64Schema = Schema.BigIntFromSelf.pipe(
+export const NegInt64Schema = Schema.BigInt.pipe(
   Schema.filter((value: bigint) => value >= NEG_INT64_MIN && value <= NEG_INT64_MAX)
 ).annotations({
   message: (issue: any) => `NegInt64 must be between ${NEG_INT64_MIN} and ${NEG_INT64_MAX}, but got ${issue.actual}`,
@@ -33,7 +33,7 @@ export const NegInt64Schema = Schema.BigIntFromSelf.pipe(
  * @since 2.0.0
  * @category schemas
  */
-export const PosInt64Schema = Schema.BigIntFromSelf.pipe(
+export const PosInt64Schema = Schema.BigInt.pipe(
   Schema.filter((value: bigint) => value >= POS_INT64_MIN && value <= POS_INT64_MAX)
 ).annotations({
   message: (issue: any) => `PosInt64 must be between ${POS_INT64_MIN} and ${POS_INT64_MAX}, but got ${issue.actual}`,

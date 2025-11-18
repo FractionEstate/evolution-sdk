@@ -130,7 +130,7 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Pro
   decode: (procedureTuple) =>
     Eff.gen(function* () {
       const [depositBigInt, rewardAccountBytes, governanceActionCDDL, anchorCDDL] = procedureTuple as any
-      const deposit = yield* ParseResult.decode(Coin.Coin)(depositBigInt)
+      const deposit = yield* ParseResult.decode(Schema.typeSchema(Coin.Coin))(depositBigInt)
       const rewardAccount = yield* ParseResult.decode(RewardAccount.FromBytes)(rewardAccountBytes)
       const governanceAction = yield* ParseResult.decode(GovernanceAction.FromCDDL)(governanceActionCDDL)
       const anchor = anchorCDDL ? yield* ParseResult.decode(Anchor.FromCDDL)(anchorCDDL) : null

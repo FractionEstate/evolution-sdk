@@ -191,10 +191,10 @@ export declare const CDDLSchema: Schema.Tuple<
           readonly [any, bigint] | null,
           (
             | readonly (readonly [0n | 1n, any])[]
-            | { readonly value: readonly (readonly [0n | 1n, any])[]; readonly _tag: "Tag"; readonly tag: 258 }
+            | { readonly _tag: "Tag"; readonly tag: 258; readonly value: readonly (readonly [0n | 1n, any])[] }
           ),
           ReadonlyMap<readonly [0n | 1n, any], bigint>,
-          { readonly value: readonly [bigint, bigint]; readonly _tag: "Tag"; readonly tag: 30 }
+          { readonly _tag: "Tag"; readonly tag: 30; readonly value: readonly [bigint, bigint] }
         ]
       | readonly [5n, readonly [any, bigint] | null, readonly [readonly [string, any], any]]
       | readonly [6n],
@@ -207,10 +207,10 @@ export declare const CDDLSchema: Schema.Tuple<
           readonly [any, bigint] | null,
           (
             | readonly (readonly [0n | 1n, any])[]
-            | { readonly value: readonly (readonly [0n | 1n, any])[]; readonly _tag: "Tag"; readonly tag: 258 }
+            | { readonly _tag: "Tag"; readonly tag: 258; readonly value: readonly (readonly [0n | 1n, any])[] }
           ),
           ReadonlyMap<readonly [0n | 1n, any], bigint>,
-          { readonly value: readonly [bigint, bigint]; readonly _tag: "Tag"; readonly tag: 30 }
+          { readonly _tag: "Tag"; readonly tag: 30; readonly value: readonly [bigint, bigint] }
         ]
       | readonly [5n, readonly [any, bigint] | null, readonly [readonly [string, any], any]]
       | readonly [6n],
@@ -253,10 +253,10 @@ export declare const FromCBORBytes: (
               readonly [any, bigint] | null,
               (
                 | readonly (readonly [0n | 1n, any])[]
-                | { readonly value: readonly (readonly [0n | 1n, any])[]; readonly _tag: "Tag"; readonly tag: 258 }
+                | { readonly _tag: "Tag"; readonly tag: 258; readonly value: readonly (readonly [0n | 1n, any])[] }
               ),
               ReadonlyMap<readonly [0n | 1n, any], bigint>,
-              { readonly value: readonly [bigint, bigint]; readonly _tag: "Tag"; readonly tag: 30 }
+              { readonly _tag: "Tag"; readonly tag: 30; readonly value: readonly [bigint, bigint] }
             ]
           | readonly [5n, readonly [any, bigint] | null, readonly [readonly [string, any], any]]
           | readonly [6n],
@@ -269,10 +269,10 @@ export declare const FromCBORBytes: (
               readonly [any, bigint] | null,
               (
                 | readonly (readonly [0n | 1n, any])[]
-                | { readonly value: readonly (readonly [0n | 1n, any])[]; readonly _tag: "Tag"; readonly tag: 258 }
+                | { readonly _tag: "Tag"; readonly tag: 258; readonly value: readonly (readonly [0n | 1n, any])[] }
               ),
               ReadonlyMap<readonly [0n | 1n, any], bigint>,
-              { readonly value: readonly [bigint, bigint]; readonly _tag: "Tag"; readonly tag: 30 }
+              { readonly _tag: "Tag"; readonly tag: 30; readonly value: readonly [bigint, bigint] }
             ]
           | readonly [5n, readonly [any, bigint] | null, readonly [readonly [string, any], any]]
           | readonly [6n],
@@ -321,10 +321,10 @@ export declare const FromCBORHex: (
                 readonly [any, bigint] | null,
                 (
                   | readonly (readonly [0n | 1n, any])[]
-                  | { readonly value: readonly (readonly [0n | 1n, any])[]; readonly _tag: "Tag"; readonly tag: 258 }
+                  | { readonly _tag: "Tag"; readonly tag: 258; readonly value: readonly (readonly [0n | 1n, any])[] }
                 ),
                 ReadonlyMap<readonly [0n | 1n, any], bigint>,
-                { readonly value: readonly [bigint, bigint]; readonly _tag: "Tag"; readonly tag: 30 }
+                { readonly _tag: "Tag"; readonly tag: 30; readonly value: readonly [bigint, bigint] }
               ]
             | readonly [5n, readonly [any, bigint] | null, readonly [readonly [string, any], any]]
             | readonly [6n],
@@ -337,10 +337,10 @@ export declare const FromCBORHex: (
                 readonly [any, bigint] | null,
                 (
                   | readonly (readonly [0n | 1n, any])[]
-                  | { readonly value: readonly (readonly [0n | 1n, any])[]; readonly _tag: "Tag"; readonly tag: 258 }
+                  | { readonly _tag: "Tag"; readonly tag: 258; readonly value: readonly (readonly [0n | 1n, any])[] }
                 ),
                 ReadonlyMap<readonly [0n | 1n, any], bigint>,
-                { readonly value: readonly [bigint, bigint]; readonly _tag: "Tag"; readonly tag: 30 }
+                { readonly _tag: "Tag"; readonly tag: 30; readonly value: readonly [bigint, bigint] }
               ]
             | readonly [5n, readonly [any, bigint] | null, readonly [readonly [string, any], any]]
             | readonly [6n],
@@ -380,10 +380,10 @@ export declare const FromCDDL: Schema.transformOrFail<
             readonly [any, bigint] | null,
             (
               | readonly (readonly [0n | 1n, any])[]
-              | { readonly value: readonly (readonly [0n | 1n, any])[]; readonly _tag: "Tag"; readonly tag: 258 }
+              | { readonly _tag: "Tag"; readonly tag: 258; readonly value: readonly (readonly [0n | 1n, any])[] }
             ),
             ReadonlyMap<readonly [0n | 1n, any], bigint>,
-            { readonly value: readonly [bigint, bigint]; readonly _tag: "Tag"; readonly tag: 30 }
+            { readonly _tag: "Tag"; readonly tag: 30; readonly value: readonly [bigint, bigint] }
           ]
         | readonly [5n, readonly [any, bigint] | null, readonly [readonly [string, any], any]]
         | readonly [6n],
@@ -396,10 +396,10 @@ export declare const FromCDDL: Schema.transformOrFail<
             readonly [any, bigint] | null,
             (
               | readonly (readonly [0n | 1n, any])[]
-              | { readonly value: readonly (readonly [0n | 1n, any])[]; readonly _tag: "Tag"; readonly tag: 258 }
+              | { readonly _tag: "Tag"; readonly tag: 258; readonly value: readonly (readonly [0n | 1n, any])[] }
             ),
             ReadonlyMap<readonly [0n | 1n, any], bigint>,
-            { readonly value: readonly [bigint, bigint]; readonly _tag: "Tag"; readonly tag: 30 }
+            { readonly _tag: "Tag"; readonly tag: 30; readonly value: readonly [bigint, bigint] }
           ]
         | readonly [5n, readonly [any, bigint] | null, readonly [readonly [string, any], any]]
         | readonly [6n],

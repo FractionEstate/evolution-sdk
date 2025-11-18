@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest"
 
+import * as Bytes from "../src/core/Bytes.js"
+import { fromHex } from "../src/core/Bytes.js"
 import * as Data from "../src/core/Data.js"
 import * as TSchema from "../src/core/TSchema.js"
 
@@ -11,27 +13,29 @@ describe("TypeTaggedSchema Tests", () => {
   describe("Basic Types", () => {
     describe("ByteArray Schema", () => {
       it("should encode/decode ByteArray", () => {
-        const input = "deadbeef"
+        const eq = TSchema.equivalence(TSchema.ByteArray)
+        const input = fromHex("deadbeef")
         const encoded = Data.withSchema(TSchema.ByteArray).toCBORHex(input)
         const decoded = Data.withSchema(TSchema.ByteArray).fromCBORHex(encoded)
 
         expect(encoded).toEqual("44deadbeef")
-        expect(decoded).toEqual("deadbeef")
+        expect(eq(decoded, input)).toBe(true)
       })
 
       it("should fail on invalid hex string", () => {
-        expect(() => Data.withSchema(TSchema.ByteArray).toCBORHex("not-hex")).toThrow()
+        expect(() => Data.withSchema(TSchema.ByteArray).toCBORHex(fromHex("not-hex"))).toThrow()
       })
     })
 
     describe("Integer Schema", () => {
       it("should encode/decode Integer", () => {
+        const eq = TSchema.equivalence(TSchema.Integer)
         const input = 42n
         const encoded = Data.withSchema(TSchema.Integer).toCBORHex(input)
         const decoded = Data.withSchema(TSchema.Integer).fromCBORHex(encoded)
 
         expect(encoded).toEqual("182a")
-        expect(decoded).toEqual(42n)
+        expect(eq(decoded, input)).toBe(true)
       })
 
       it("should fail on non-bigint", () => {
@@ -44,21 +48,23 @@ describe("TypeTaggedSchema Tests", () => {
 
     describe("Boolean Schema", () => {
       it("should encode/decode true", () => {
+        const eq = TSchema.equivalence(TSchema.Boolean)
         const input = true
         const encoded = Data.withSchema(TSchema.Boolean).toCBORHex(input)
         const decoded = Data.withSchema(TSchema.Boolean).fromCBORHex(encoded)
 
         expect(encoded).toEqual("d87a80")
-        expect(decoded).toEqual(true)
+        expect(eq(decoded, input)).toBe(true)
       })
 
       it("should encode/decode false", () => {
+        const eq = TSchema.equivalence(TSchema.Boolean)
         const input = false
         const encoded = Data.withSchema(TSchema.Boolean).toCBORHex(input)
         const decoded = Data.withSchema(TSchema.Boolean).fromCBORHex(encoded)
 
         expect(encoded).toEqual("d87980")
-        expect(decoded).toEqual(false)
+        expect(eq(decoded, input)).toBe(true)
       })
 
       it("should fail on invalid format", () => {
@@ -72,66 +78,73 @@ describe("TypeTaggedSchema Tests", () => {
     describe("Array Schema", () => {
       it("should encode/decode arrays", () => {
         const IntArray = TSchema.Array(TSchema.Integer)
+        const eq = TSchema.equivalence(IntArray)
 
         const input = [1n, 2n, 3n]
         const encoded = Data.withSchema(IntArray).toCBORHex(input)
         const decoded = Data.withSchema(IntArray).fromCBORHex(encoded)
 
         expect(encoded).toEqual("9f010203ff")
-        expect(decoded).toEqual([1n, 2n, 3n])
+        expect(eq(decoded, input)).toBe(true)
       })
 
       it("should handle empty arrays", () => {
         const IntArray = TSchema.Array(TSchema.Integer)
+        const eq = TSchema.equivalence(IntArray)
 
         const input: Array<bigint> = []
         const encoded = Data.withSchema(IntArray).toCBORHex(input)
         const decoded = Data.withSchema(IntArray).fromCBORHex(encoded)
 
         expect(encoded).toEqual("80")
-        expect(decoded).toEqual([])
+        expect(eq(decoded, input)).toBe(true)
       })
     })
 
     describe("Map Schema", () => {
       it("should encode/decode maps", () => {
         const TokenMap = TSchema.Map(TSchema.ByteArray, TSchema.Integer)
+        type TokenMap = typeof TokenMap.Type
+        const eq = TSchema.equivalence(TokenMap)
 
-        const input = new Map<string, bigint>([
-          ["deadbeef", 1n],
-          ["cafe", 2n]
+        const input: TokenMap = new Map([
+          [fromHex("deadbeef"), 1n],
+          [fromHex("cafe"), 2n]
         ])
 
         const encoded = Data.withSchema(TokenMap).toCBORHex(input)
         const decoded = Data.withSchema(TokenMap).fromCBORHex(encoded)
 
-        expect(decoded).toEqual(input)
+        expect(eq(decoded, input)).toBe(true)
       })
 
       it("should handle empty maps", () => {
         const TokenMap = TSchema.Map(TSchema.ByteArray, TSchema.Integer)
+        type TokenMap = typeof TokenMap.Type
+        const eq = TSchema.equivalence(TokenMap)
 
-        const input = new Map<string, bigint>()
+        const input: TokenMap = new Map()
         const encoded = Data.withSchema(TokenMap).toCBORHex(input)
         const decoded = Data.withSchema(TokenMap).fromCBORHex(encoded)
 
-        expect(decoded).toEqual(input)
+        expect(eq(decoded, input)).toBe(true)
       })
 
       it("should deterministically encode Maps regardless of insertion order", () => {
         const TokenMap = TSchema.Map(TSchema.ByteArray, TSchema.Integer)
+        type TokenMap = typeof TokenMap.Type
 
         // Create two maps with same entries but different insertion order
-        const map1 = new Map<string, bigint>([
-          ["deadbeef", 1n],
-          ["cafe", 2n],
-          ["babe", 3n]
+        const map1: TokenMap = new Map([
+          [fromHex("deadbeef"), 1n],
+          [fromHex("cafe"), 2n],
+          [fromHex("babe"), 3n]
         ])
 
-        const map2 = new Map<string, bigint>([
-          ["cafe", 2n],
-          ["babe", 3n],
-          ["deadbeef", 1n]
+        const map2: TokenMap = new Map([
+          [fromHex("cafe"), 2n],
+          [fromHex("babe"), 3n],
+          [fromHex("deadbeef"), 1n]
         ])
 
         const encoded1 = Data.withSchema(TokenMap, { mode: "canonical" }).toCBORHex(map1)
@@ -139,19 +152,25 @@ describe("TypeTaggedSchema Tests", () => {
 
         // The CBOR outputs should be identical if sorting is working correctly
         expect(encoded1).toEqual(encoded2)
+
+        // Note: Default Map equivalence considers insertion order, so these are NOT equivalent
+        // even though they have the same content. This is expected behavior.
+        // If you need content-based comparison, decode from the canonical CBOR.
       })
 
       it("should handle key integer and value bytearray", () => {
         const IntegerByteArrayMap = TSchema.Map(TSchema.Integer, TSchema.ByteArray)
-        const input = new Map<bigint, string>([
-          [3209n, "3131"],
-          [249218490182n, "32323232"]
+        type IntegerByteArrayMap = typeof IntegerByteArrayMap.Type
+        const eq = TSchema.equivalence(IntegerByteArrayMap)
+        const input: IntegerByteArrayMap = new Map([
+          [3209n, fromHex("3131")],
+          [249218490182n, fromHex("32323232")]
         ])
         const encoded = Data.withSchema(IntegerByteArrayMap).toCBORHex(input)
         const decoded = Data.withSchema(IntegerByteArrayMap).fromCBORHex(encoded)
 
         expect(encoded).toEqual("bf190c894231311b0000003a06945f464432323232ff")
-        expect(decoded).toEqual(input)
+        expect(eq(decoded, input)).toBe(true)
       })
 
       it("should handle complex map with mixed types", () => {
@@ -160,22 +179,31 @@ describe("TypeTaggedSchema Tests", () => {
           TSchema.Union(TSchema.Integer, TSchema.ByteArray, TSchema.Boolean)
         )
         type ComplexMap = typeof ComplexMap.Type
+        const eq = TSchema.equivalence(ComplexMap)
 
-        const input = new Map<string, bigint | string | boolean>([
-          ["deadbeef01", 42n],
-          ["deadbeef02", "cafe"],
-          ["deadbeef03", true]
-        ])
+        const input: ComplexMap = new Map()
+        input.set(fromHex("deadbeef01"), 42n)
+        input.set(fromHex("deadbeef02"), fromHex("cafe"))
+        input.set(fromHex("deadbeef03"), true)
 
         const encoded = Data.withSchema(ComplexMap).toCBORHex(input)
         const decoded = Data.withSchema(ComplexMap).fromCBORHex(encoded)
 
-        expect(decoded).toEqual(input)
+        expect(eq(decoded, input)).toBe(true)
         expect(decoded instanceof Map).toBe(true)
         expect(decoded.size).toBe(3)
-        expect(decoded.get("deadbeef01")).toBe(42n)
-        expect(decoded.get("deadbeef02")).toBe("cafe")
-        expect(decoded.get("deadbeef03")).toBe(true)
+
+        // Since Map keys are Uint8Array, we need to find by comparing bytes
+        const entries = Array.from(decoded.entries())
+        const getValue = (hexKey: string) => {
+          const keyBytes = fromHex(hexKey)
+          const entry = entries.find(([k]) => Bytes.equals(k, keyBytes))
+          return entry?.[1]
+        }
+
+        expect(getValue("deadbeef01")).toBe(42n)
+        expect(getValue("deadbeef02")).toEqual(fromHex("cafe"))
+        expect(getValue("deadbeef03")).toBe(true)
       })
     })
 
@@ -187,62 +215,70 @@ describe("TypeTaggedSchema Tests", () => {
           amount: TSchema.Integer
         })
 
-        const input = { policyId: "deadbeef", assetName: "cafe", amount: 1000n }
+        type Token = typeof Token.Type
+        const eq = TSchema.equivalence(Token)
+
+        const input: Token = { policyId: fromHex("deadbeef"), assetName: fromHex("cafe"), amount: 1000n }
 
         const encoded = Data.withSchema(Token).toCBORHex(input)
         const decoded = Data.withSchema(Token).fromCBORHex(encoded)
 
         expect(encoded).toEqual("d8799f44deadbeef42cafe1903e8ff")
-        expect(decoded).toEqual(input)
+        expect(eq(decoded, input)).toBe(true)
       })
 
       it("should handle nested structs", () => {
         const Asset = TSchema.Struct({ policyId: TSchema.ByteArray, assetName: TSchema.ByteArray })
         const Token = TSchema.Struct({ asset: Asset, amount: TSchema.Integer })
         type Token = typeof Token.Type
+        const eq = TSchema.equivalence(Token)
 
-        const input: Token = { asset: { policyId: "deadbeef", assetName: "cafe" }, amount: 1000n }
-
+        const input: Token = { asset: { policyId: fromHex("deadbeef"), assetName: fromHex("cafe") }, amount: 1000n }
         const encoded = Data.withSchema(Token).toCBORHex(input)
         const decoded = Data.withSchema(Token).fromCBORHex(encoded)
 
-        expect(decoded).toEqual(input)
+        expect(eq(decoded, input)).toBe(true)
       })
     })
 
     describe("Tuple Schema", () => {
       it("should encode/decode tuples", () => {
         const AssetPair = TSchema.Tuple([TSchema.ByteArray, TSchema.Integer])
+        type AssetPair = typeof AssetPair.Type
+        const eq = TSchema.equivalence(AssetPair)
 
-        const input = ["deadbeef", 1000n] as const
+        const input: AssetPair = [fromHex("deadbeef"), 1000n]
         const encoded = Data.withSchema(AssetPair).toCBORHex(input)
         const decoded = Data.withSchema(AssetPair).fromCBORHex(encoded)
 
         expect(encoded).toEqual("9f44deadbeef1903e8ff")
-        expect(decoded).toEqual(input)
+        expect(eq(decoded, input)).toBe(true)
       })
 
       it("should handle heterogeneous tuples", () => {
         const Mixed = TSchema.Tuple([TSchema.ByteArray, TSchema.Integer, TSchema.Boolean])
+        type Mixed = typeof Mixed.Type
+        const eq = TSchema.equivalence(Mixed)
 
-        const input = ["deadbeef", 1000n, true] as const
+        const input: Mixed = [fromHex("deadbeef"), 1000n, true]
         const encoded = Data.withSchema(Mixed).toCBORHex(input)
         const decoded = Data.withSchema(Mixed).fromCBORHex(encoded)
 
-        expect(decoded).toEqual(input)
+        expect(eq(decoded, input)).toBe(true)
       })
     })
 
     describe("Nullable Schema", () => {
       it("should encode/decode non-null values", () => {
         const MaybeInt = TSchema.NullOr(TSchema.Integer)
+        const eq = TSchema.equivalence(MaybeInt)
 
         const input = 42n
         const encoded = Data.withSchema(MaybeInt).toCBORHex(input)
         const decoded = Data.withSchema(MaybeInt).fromCBORHex(encoded)
 
         expect(encoded).toEqual("d8799f182aff")
-        expect(decoded).toEqual(42n)
+        expect(eq(decoded, input)).toBe(true)
       })
 
       it("should encode/decode null values", () => {
@@ -260,20 +296,21 @@ describe("TypeTaggedSchema Tests", () => {
     describe("Literal Schema", () => {
       it("should encode/decode literals", () => {
         const Action = TSchema.Literal("mint", "burn", "transfer")
+        const eq = TSchema.equivalence(Action)
 
         const input = "mint"
         const encoded = Data.withSchema(Action).toCBORHex(input)
         const decoded = Data.withSchema(Action).fromCBORHex(encoded)
 
         expect(encoded).toEqual("d87980")
-        expect(decoded).toEqual("mint")
+        expect(eq(decoded, input)).toBe(true)
 
         const input2 = "burn"
         const encoded2 = Data.withSchema(Action).toCBORHex(input2)
         const decoded2 = Data.withSchema(Action).fromCBORHex(encoded2)
 
         expect(encoded2).toEqual("d87a80")
-        expect(decoded2).toEqual("burn")
+        expect(eq(decoded2, input2)).toBe(true)
       })
 
       it("should fail on invalid literal", () => {
@@ -292,26 +329,29 @@ describe("TypeTaggedSchema Tests", () => {
           assetName: TSchema.ByteArray,
           amount: TSchema.Integer
         })
+        type MintRedeem = typeof MintRedeem.Type
 
         const SpendRedeem = TSchema.Struct({ address: TSchema.ByteArray, amount: TSchema.Integer })
+        type SpendRedeem = typeof SpendRedeem.Type
 
         const RedeemAction = TSchema.Union(MintRedeem, SpendRedeem, TSchema.Integer)
+        const eq = TSchema.equivalence(RedeemAction)
 
         // Test MintRedeem
-        const mintInput = { policyId: "deadbeef", assetName: "cafe", amount: 1000n }
+        const mintInput: MintRedeem = { policyId: fromHex("deadbeef"), assetName: fromHex("cafe"), amount: 1000n }
         const mintEncoded = Data.withSchema(RedeemAction).toCBORHex(mintInput)
         const mintDecoded = Data.withSchema(RedeemAction).fromCBORHex(mintEncoded)
 
         expect(mintEncoded).toEqual("d8799fd8799f44deadbeef42cafe1903e8ffff")
-        expect(mintDecoded).toEqual(mintInput)
+        expect(eq(mintDecoded, mintInput)).toBe(true)
 
         // Test SpendRedeem
-        const spendInput = { address: "deadbeef", amount: 500n }
+        const spendInput: SpendRedeem = { address: fromHex("deadbeef"), amount: 500n }
         const spendEncoded = Data.withSchema(RedeemAction).toCBORHex(spendInput)
         const spendDecoded = Data.withSchema(RedeemAction).fromCBORHex(spendEncoded)
 
         expect(spendEncoded).toEqual("d87a9fd8799f44deadbeef1901f4ffff")
-        expect(spendDecoded).toEqual(spendInput)
+        expect(eq(spendDecoded, spendInput)).toBe(true)
 
         // Test Integer
         const intInput = 42n
@@ -319,7 +359,7 @@ describe("TypeTaggedSchema Tests", () => {
         const intDecoded = Data.withSchema(RedeemAction).fromCBORHex(intEncoded)
 
         expect(intEncoded).toEqual("d87b9f182aff")
-        expect(intDecoded).toEqual(intInput)
+        expect(eq(intDecoded, intInput)).toBe(true)
       })
     })
   })
@@ -334,24 +374,26 @@ describe("TypeTaggedSchema Tests", () => {
         active: TSchema.Boolean,
         metadata: TSchema.NullOr(TSchema.Map(TSchema.ByteArray, TSchema.ByteArray))
       })
+      type Wallet = typeof Wallet.Type
+      const eq = TSchema.equivalence(Wallet)
 
-      const input = {
-        owner: "deadbeef",
+      const input: Wallet = {
+        owner: fromHex("deadbeef"),
         tokens: [
-          { policyId: "cafe01", assetName: "deadbeef01" },
-          { policyId: "cafe02", assetName: "deadbeef02" }
+          { policyId: fromHex("cafe01"), assetName: fromHex("deadbeef01") },
+          { policyId: fromHex("cafe02"), assetName: fromHex("deadbeef02") }
         ],
         active: true,
         metadata: new Map([
-          ["cafe01", "deadbeef01"],
-          ["cafe02", "deadbeef02"]
+          [fromHex("cafe01"), fromHex("deadbeef01")],
+          [fromHex("cafe02"), fromHex("deadbeef02")]
         ])
       }
 
       const encoded = Data.withSchema(Wallet).toCBORHex(input)
       const decoded = Data.withSchema(Wallet).fromCBORHex(encoded)
 
-      expect(decoded).toEqual(input)
+      expect(eq(decoded, input)).toBe(true)
     })
   })
 

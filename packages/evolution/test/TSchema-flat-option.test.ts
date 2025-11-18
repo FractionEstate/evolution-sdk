@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest"
 
+import * as Bytes from "../src/core/Bytes.js"
+import { fromHex } from "../src/core/Bytes.js"
 import * as Data from "../src/core/Data.js"
 import * as TSchema from "../src/core/TSchema.js"
 
@@ -263,34 +265,35 @@ describe("TSchema.Struct with flat option", () => {
       )
 
       // Test minting
-      const minting = { minting: "deadbeef" }
+      const minting = { minting: fromHex("deadbeef") }
       const mintEncoded = Data.withSchema(ScriptPurpose).toCBORHex(minting)
       const mintDecoded = Data.withSchema(ScriptPurpose).fromCBORHex(mintEncoded)
       expect(mintDecoded).toEqual(minting)
       
       const mintRaw = Data.fromCBORHex(mintEncoded) as Data.Constr
       expect(mintRaw.index).toBe(0n)
-      expect(mintRaw.fields[0]).toBe("deadbeef")
+      // fields[0] is now a Uint8Array, convert to hex for comparison
+      expect(Bytes.toHex(mintRaw.fields[0] as Uint8Array)).toBe("deadbeef")
 
       // Test spending
-      const spending = { spending: "cafebabe" }
+      const spending = { spending: fromHex("cafebabe") }
       const spendEncoded = Data.withSchema(ScriptPurpose).toCBORHex(spending)
       const spendDecoded = Data.withSchema(ScriptPurpose).fromCBORHex(spendEncoded)
       expect(spendDecoded).toEqual(spending)
       
       const spendRaw = Data.fromCBORHex(spendEncoded) as Data.Constr
       expect(spendRaw.index).toBe(1n)
-      expect(spendRaw.fields[0]).toBe("cafebabe")
+      expect(Bytes.toHex(spendRaw.fields[0] as Uint8Array)).toBe("cafebabe")
 
       // Test rewarding
-      const rewarding = { rewarding: "feedface" }
+      const rewarding = { rewarding: fromHex("feedface") }
       const rewardEncoded = Data.withSchema(ScriptPurpose).toCBORHex(rewarding)
       const rewardDecoded = Data.withSchema(ScriptPurpose).fromCBORHex(rewardEncoded)
       expect(rewardDecoded).toEqual(rewarding)
       
       const rewardRaw = Data.fromCBORHex(rewardEncoded) as Data.Constr
       expect(rewardRaw.index).toBe(2n)
-      expect(rewardRaw.fields[0]).toBe("feedface")
+      expect(Bytes.toHex(rewardRaw.fields[0] as Uint8Array)).toBe("feedface")
     })
   })
 
@@ -322,7 +325,7 @@ describe("TSchema.Struct with flat option", () => {
         )
       )
 
-      const value = { field1: 42n, field2: "deadbeef", field3: true }
+      const value = { field1: 42n, field2: fromHex("deadbeef"), field3: true }
       const encoded = Data.withSchema(MyUnion).toCBORHex(value)
       const decoded = Data.withSchema(MyUnion).fromCBORHex(encoded)
 
@@ -332,7 +335,7 @@ describe("TSchema.Struct with flat option", () => {
       expect(rawData.index).toBe(100n)
       expect(rawData.fields.length).toBe(3)
       expect(rawData.fields[0]).toBe(42n)
-      expect(rawData.fields[1]).toBe("deadbeef")
+      expect(Bytes.toHex(rawData.fields[1] as Uint8Array)).toBe("deadbeef")
       // Boolean is encoded as Constr: true -> Constr(1, []), false -> Constr(0, [])
       expect(rawData.fields[2]).toBeInstanceOf(Data.Constr)
       expect((rawData.fields[2] as Data.Constr).index).toBe(1n)

@@ -109,7 +109,7 @@ coin = uint
 **Signature**
 
 ```ts
-export declare const Coin: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
+export declare const Coin: Schema.refine<bigint, typeof Schema.BigInt>
 ```
 
 Added in v2.0.0

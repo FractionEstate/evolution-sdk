@@ -337,7 +337,7 @@ export const FromCDDL = Schema.transformOrFail(AnyEraCDDL, Schema.typeSchema(Aux
       switch (auxData._tag) {
         case "ConwayAuxiliaryData": {
           // const struct: Record<number, any> = {}
-          const map = new Map<bigint, CBOR.CBOR>()
+          const map = new globalThis.Map<bigint, CBOR.CBOR>()
           if (auxData.metadata !== undefined)
             map.set(0n, yield* ParseResult.encodeEither(Metadata.FromCDDL)(auxData.metadata))
           if (auxData.nativeScripts !== undefined) {
@@ -373,7 +373,7 @@ export const FromCDDL = Schema.transformOrFail(AnyEraCDDL, Schema.typeSchema(Aux
         case "ShelleyMAAuxiliaryData": {
           // Encode ShelleyMA strictly as a 2-element array [metadataMap, nativeScriptList]
           // Use empty map/array when values are absent to avoid CBOR specials and match CML decoding.
-          const encodedMetadata =
+          const encodedMetadata: Map<bigint, CBOR.CBOR> =
             auxData.metadata !== undefined
               ? new Map(yield* ParseResult.encodeEither(Metadata.FromCDDL)(auxData.metadata))
               : new Map()
@@ -402,7 +402,7 @@ export const FromCDDL = Schema.transformOrFail(AnyEraCDDL, Schema.typeSchema(Aux
       if (CBOR.isTag(input) && input.tag === 259) {
         const struct = input.value
         const meta = struct.get(0n)
-        const metadata = meta ? yield* ParseResult.decodeUnknownEither(Metadata.FromCDDL)(meta) : undefined
+        const metadata = meta ? yield* ParseResult.decodeEither(Metadata.FromCDDL)(meta as any) : undefined
 
         const nScripts = struct.get(1n)
         const nativeScripts = nScripts

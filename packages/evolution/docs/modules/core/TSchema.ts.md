@@ -10,9 +10,10 @@ parent: Modules
 
 <h2 class="text-delta">Table of contents</h2>
 
+- [combinators](#combinators)
+  - [equivalence](#equivalence)
 - [schemas](#schemas)
   - [ByteArray](#bytearray)
-  - [HexString](#hexstring)
   - [Integer](#integer)
 - [utils](#utils)
   - [Array](#array)
@@ -34,30 +35,33 @@ parent: Modules
 
 ---
 
+# combinators
+
+## equivalence
+
+Creates an equivalence function for a schema that can compare two values for equality.
+
+This leverages Effect Schema's built-in equivalence generation, which creates
+optimized equality checks based on the schema structure.
+
+**Signature**
+
+```ts
+export declare const equivalence: <A, I, R>(schema: Schema.Schema<A, I, R>) => Equivalence<A>
+```
+
+Added in v2.0.0
+
 # schemas
 
 ## ByteArray
 
-ByteArray schema for PlutusData hex strings.
-Since Data.ByteArray is now hex string based, this is just an alias to it.
+ByteArray schema for PlutusData - runtime Uint8Array, encoded as hex string.
 
 **Signature**
 
 ```ts
 export declare const ByteArray: ByteArray
-```
-
-Added in v2.0.0
-
-## HexString
-
-HexString schema that transforms hex string to ByteArray for PlutusData.
-This transforms from hex string to Uint8Array (runtime Data type) and back.
-
-**Signature**
-
-```ts
-export declare const HexString: Schema.transform<typeof Schema.Uint8ArrayFromSelf, typeof Schema.String>
 ```
 
 Added in v2.0.0
@@ -109,7 +113,7 @@ Added in v2.0.0
 **Signature**
 
 ```ts
-export interface ByteArray extends Schema.Schema<string, string, never> {}
+export interface ByteArray extends Schema.Schema<Uint8Array, Uint8Array, never> {}
 ```
 
 ## Integer (interface)

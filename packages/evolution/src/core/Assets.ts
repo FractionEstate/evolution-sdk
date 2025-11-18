@@ -352,7 +352,7 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Ass
     Eff.gen(function* () {
       if (typeof fromA === "bigint") {
         return new Assets({
-          lovelace: yield* ParseResult.decodeUnknown(Coin.Coin)(fromA)
+          lovelace: yield* ParseResult.decodeUnknown(Schema.typeSchema(Coin.Coin))(fromA)
         })
       } else {
         const [coinAmount, multiAssetCddl] = fromA
@@ -365,7 +365,7 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Ass
           const assetMap = new Map<AssetName.AssetName, PositiveCoin.PositiveCoin>()
           for (const [assetNameBytes, amount] of assetMapCddl.entries()) {
             const assetName = yield* ParseResult.decode(AssetName.FromBytes)(assetNameBytes)
-            const positiveCoin = yield* ParseResult.decodeUnknown(PositiveCoin.PositiveCoinSchema)(amount)
+            const positiveCoin = yield* ParseResult.decodeUnknown(Schema.typeSchema(PositiveCoin.PositiveCoinSchema))(amount)
             assetMap.set(assetName, positiveCoin)
           }
 
@@ -373,7 +373,7 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Ass
         }
 
         return new Assets({
-          lovelace: yield* ParseResult.decodeUnknown(Coin.Coin)(coinAmount),
+          lovelace: yield* ParseResult.decodeUnknown(Schema.typeSchema(Coin.Coin))(coinAmount),
           multiAsset: new MultiAsset.MultiAsset({ map: result })
         })
       }

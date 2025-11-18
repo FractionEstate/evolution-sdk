@@ -178,7 +178,7 @@ export const FromCDDL = Schema.transformOrFail(
         const port =
           portValue === null || portValue === undefined
             ? undefined
-            : yield* ParseResult.decode(Port.PortSchema)(portValue)
+            : yield* ParseResult.decode(Schema.typeSchema(Port.PortSchema))(portValue)
 
         const ipv4 =
           ipv4Value === null || ipv4Value === undefined

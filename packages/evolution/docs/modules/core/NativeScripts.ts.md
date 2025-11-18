@@ -22,6 +22,8 @@ parent: Modules
 - [encoding](#encoding)
   - [toCBORBytes](#tocborbytes)
   - [toCBORHex](#tocborhex)
+- [errors](#errors)
+  - [NativeScriptError (class)](#nativescripterror-class)
 - [model](#model)
   - [NativeScriptCDDL (type alias)](#nativescriptcddl-type-alias)
   - [NativeScriptEncoded (type alias)](#nativescriptencoded-type-alias)
@@ -34,9 +36,6 @@ parent: Modules
 - [schemas](#schemas)
   - [FromCDDL](#fromcddl)
   - [NativeScript (class)](#nativescript-class)
-    - [toJSON (method)](#tojson-method)
-    - [toString (method)](#tostring-method)
-    - [[Inspectable.NodeInspectSymbol] (method)](#inspectablenodeinspectsymbol-method)
     - [[Equal.symbol] (method)](#equalsymbol-method)
     - [[Hash.symbol] (method)](#hashsymbol-method)
   - [NativeScriptVariants](#nativescriptvariants)
@@ -141,24 +140,38 @@ Added in v2.0.0
 
 ## toCBORBytes
 
-Convert a NativeScript to CBOR bytes
+Convert a NativeScript to CBOR bytes.
 
 **Signature**
 
 ```ts
-export declare const toCBORBytes: (data: NativeScript, options?: CBOR.CodecOptions) => any
+export declare const toCBORBytes: (nativeScript: NativeScript, options?: CBOR.CodecOptions) => Uint8Array
 ```
 
 Added in v2.0.0
 
 ## toCBORHex
 
-Convert a NativeScript to CBOR hex string
+Convert a NativeScript to CBOR hex string.
 
 **Signature**
 
 ```ts
-export declare const toCBORHex: (data: NativeScript, options?: CBOR.CodecOptions) => string
+export declare const toCBORHex: (nativeScript: NativeScript, options?: CBOR.CodecOptions) => string
+```
+
+Added in v2.0.0
+
+# errors
+
+## NativeScriptError (class)
+
+Error class for Native script related operations.
+
+**Signature**
+
+```ts
+export declare class NativeScriptError
 ```
 
 Added in v2.0.0
@@ -201,11 +214,11 @@ Native script encoded type definition (wire format)
 ```ts
 export type NativeScriptEncoded =
   | { readonly _tag: "ScriptPubKey"; readonly keyHash: string }
-  | { readonly _tag: "InvalidBefore"; readonly slot: bigint }
-  | { readonly _tag: "InvalidHereafter"; readonly slot: bigint }
+  | { readonly _tag: "InvalidBefore"; readonly slot: string }
+  | { readonly _tag: "InvalidHereafter"; readonly slot: string }
   | { readonly _tag: "ScriptAll"; readonly scripts: ReadonlyArray<NativeScriptEncoded> }
   | { readonly _tag: "ScriptAny"; readonly scripts: ReadonlyArray<NativeScriptEncoded> }
-  | { readonly _tag: "ScriptNOfK"; readonly required: bigint; readonly scripts: ReadonlyArray<NativeScriptEncoded> }
+  | { readonly _tag: "ScriptNOfK"; readonly required: string; readonly scripts: ReadonlyArray<NativeScriptEncoded> }
 ```
 
 Added in v2.0.0
@@ -232,7 +245,7 @@ Added in v2.0.0
 
 ## fromCBORBytes
 
-Parse a NativeScript from CBOR bytes
+Parse a NativeScript from CBOR bytes.
 
 **Signature**
 
@@ -244,7 +257,7 @@ Added in v2.0.0
 
 ## fromCBORHex
 
-Parse a NativeScript from CBOR hex string
+Parse a NativeScript from CBOR hex string.
 
 **Signature**
 
@@ -294,30 +307,6 @@ export declare class NativeScript
 
 Added in v2.0.0
 
-### toJSON (method)
-
-**Signature**
-
-```ts
-toJSON()
-```
-
-### toString (method)
-
-**Signature**
-
-```ts
-toString(): string
-```
-
-### [Inspectable.NodeInspectSymbol] (method)
-
-**Signature**
-
-```ts
-[Inspectable.NodeInspectSymbol](): unknown
-```
-
 ### [Equal.symbol] (method)
 
 **Signature**
@@ -350,7 +339,7 @@ Added in v2.0.0
 
 ## arbitrary
 
-Check if two NativeScript instances are equal
+FastCheck arbitrary for generating random NativeScript instances
 
 **Signature**
 
@@ -359,12 +348,6 @@ export declare const arbitrary: FastCheck.Arbitrary<NativeScript>
 ```
 
 Added in v2.0.0
-// ============================================================================
-// FastCheck Arbitraries
-// ============================================================================
-
-/\*\*
-FastCheck arbitrary for generating random NativeScript instances
 
 # utils
 

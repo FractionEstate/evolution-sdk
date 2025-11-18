@@ -49,7 +49,7 @@ export type Metadata = typeof Metadata.Type
  * @category schemas
  */
 export const CDDLSchema = Schema.MapFromSelf({
-  key: Schema.BigIntFromSelf,
+  key: CBOR.Integer,
   value: TransactionMetadatum.CDDLSchema
 })
 

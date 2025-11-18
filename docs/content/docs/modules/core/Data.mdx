@@ -37,6 +37,7 @@ parent: Modules
   - [arbitraryPlutusMap](#arbitraryplutusmap)
 - [model](#model)
   - [Data (type alias)](#data-type-alias)
+  - [DataEncoded (type alias)](#dataencoded-type-alias)
   - [List (type alias)](#list-type-alias)
   - [Map (type alias)](#map-type-alias)
 - [predicates](#predicates)
@@ -48,6 +49,8 @@ parent: Modules
 - [schemas](#schemas)
   - [ByteArray](#bytearray-1)
   - [Constr (class)](#constr-class)
+    - [[Equal.symbol] (method)](#equalsymbol-method)
+    - [[Hash.symbol] (method)](#hashsymbol-method)
   - [DataSchema](#dataschema)
   - [FromCBORBytes](#fromcborbytes)
   - [FromCBORHex](#fromcborhex)
@@ -255,7 +258,7 @@ Creates an arbitrary that generates PlutusBigInt values
 **Signature**
 
 ```ts
-export declare const arbitraryPlutusBigInt: () => FastCheck.Arbitrary<Int>
+export declare const arbitraryPlutusBigInt: () => FastCheck.Arbitrary<bigint>
 ```
 
 Added in v2.0.0
@@ -267,7 +270,7 @@ Creates an arbitrary that generates PlutusBytes values
 **Signature**
 
 ```ts
-export declare const arbitraryPlutusBytes: () => FastCheck.Arbitrary<ByteArray>
+export declare const arbitraryPlutusBytes: () => FastCheck.Arbitrary<Uint8Array>
 ```
 
 Added in v2.0.0
@@ -349,7 +352,40 @@ Constructor Index Limits:
 **Signature**
 
 ```ts
-export type Data = Constr | ReadonlyMap<Data, Data> | ReadonlyArray<Data> | bigint | string
+export type Data =
+  // Constr (runtime with bigint index)
+  | Constr
+  // Map (using standard Map since Schema.Map produces Map<K,V>)
+  | globalThis.Map<Data, Data>
+  // List
+  | ReadonlyArray<Data>
+  // Int (runtime as bigint)
+  | bigint
+  // ByteArray (runtime as Uint8Array)
+  | Uint8Array
+```
+
+Added in v2.0.0
+
+## DataEncoded (type alias)
+
+PlutusData encoded type (for JSON/CBOR encoding)
+Based on Conway CDDL specification
+
+**Signature**
+
+```ts
+export type DataEncoded =
+  // Constr (encoded with string index)
+  | { readonly index: string; readonly fields: ReadonlyArray<DataEncoded> }
+  // Map (encoded as array of [key, value] pairs)
+  | ReadonlyArray<readonly [DataEncoded, DataEncoded]>
+  // List
+  | ReadonlyArray<DataEncoded>
+  // Int (encoded as string)
+  | string
+  // ByteArray (encoded as hex string)
+  | string
 ```
 
 Added in v2.0.0
@@ -373,7 +409,7 @@ PlutusMap type alias
 **Signature**
 
 ```ts
-export type Map = ReadonlyMap<Data, Data>
+export type Map = globalThis.Map<Data, Data>
 ```
 
 Added in v2.0.0
@@ -387,7 +423,7 @@ Type guard to check if a value is a PlutusBytes
 **Signature**
 
 ```ts
-export declare const isBytes: (u: unknown, overrideOptions?: ParseOptions | number) => u is string
+export declare const isBytes: (u: unknown, overrideOptions?: ParseOptions | number) => u is Uint8Array
 ```
 
 Added in v2.0.0
@@ -435,7 +471,7 @@ Type guard to check if a value is a PlutusMap
 **Signature**
 
 ```ts
-export declare const isMap: (u: unknown, overrideOptions?: ParseOptions | number) => u is ReadonlyMap<Data, Data>
+export declare const isMap: (u: unknown, overrideOptions?: ParseOptions | number) => u is globalThis.Map<Data, Data>
 ```
 
 Added in v2.0.0
@@ -449,7 +485,7 @@ Schema for PlutusBytes data type
 **Signature**
 
 ```ts
-export declare const ByteArray: Schema.refine<string, typeof Schema.String>
+export declare const ByteArray: Schema.Schema<Uint8Array, string, never>
 ```
 
 Added in v2.0.0
@@ -466,6 +502,22 @@ export declare class Constr
 
 Added in v2.0.0
 
+### [Equal.symbol] (method)
+
+**Signature**
+
+```ts
+[Equal.symbol](that: unknown): boolean
+```
+
+### [Hash.symbol] (method)
+
+**Signature**
+
+```ts
+[Hash.symbol](): number
+```
+
 ## DataSchema
 
 Combined schema for PlutusData type with proper recursion
@@ -473,15 +525,7 @@ Combined schema for PlutusData type with proper recursion
 **Signature**
 
 ```ts
-export declare const DataSchema: Schema.Union<
-  [
-    Schema.ReadonlyMapFromSelf<Schema.suspend<Data, Data, never>, Schema.suspend<Data, Data, never>>,
-    Schema.Array$<Schema.suspend<Data, Data, never>>,
-    Schema.SchemaClass<bigint, bigint, never>,
-    Schema.refine<string, typeof Schema.String>,
-    typeof Constr
-  ]
->
+export declare const DataSchema: Schema.Schema<Data, DataEncoded, never>
 ```
 
 Added in v2.0.0
@@ -502,15 +546,7 @@ export declare const FromCBORBytes: (
     Schema.declare<CBOR.CBOR, CBOR.CBOR, readonly [], never>,
     never
   >,
-  Schema.transformOrFail<
-    Schema.Schema<CBOR.CBOR, CBOR.CBOR, never>,
-    Schema.SchemaClass<
-      string | bigint | Constr | readonly Data[] | ReadonlyMap<Data, Data>,
-      string | bigint | Constr | readonly Data[] | ReadonlyMap<Data, Data>,
-      never
-    >,
-    never
-  >
+  Schema.transformOrFail<Schema.Schema<CBOR.CBOR, CBOR.CBOR, never>, Schema.SchemaClass<Data, Data, never>, never>
 >
 ```
 
@@ -534,15 +570,7 @@ export declare const FromCBORHex: (
       Schema.declare<CBOR.CBOR, CBOR.CBOR, readonly [], never>,
       never
     >,
-    Schema.transformOrFail<
-      Schema.Schema<CBOR.CBOR, CBOR.CBOR, never>,
-      Schema.SchemaClass<
-        string | bigint | Constr | readonly Data[] | ReadonlyMap<Data, Data>,
-        string | bigint | Constr | readonly Data[] | ReadonlyMap<Data, Data>,
-        never
-      >,
-      never
-    >
+    Schema.transformOrFail<Schema.Schema<CBOR.CBOR, CBOR.CBOR, never>, Schema.SchemaClass<Data, Data, never>, never>
   >
 >
 ```
@@ -584,11 +612,7 @@ plutusDataToCBORValue and cborValueToPlutusData functions.
 ```ts
 export declare const FromCDDL: Schema.transformOrFail<
   Schema.Schema<CBOR.CBOR, CBOR.CBOR, never>,
-  Schema.SchemaClass<
-    string | bigint | Constr | readonly Data[] | ReadonlyMap<Data, Data>,
-    string | bigint | Constr | readonly Data[] | ReadonlyMap<Data, Data>,
-    never
-  >,
+  Schema.SchemaClass<Data, Data, never>,
   never
 >
 ```
@@ -618,7 +642,11 @@ Note: JavaScript's Number.MAX_SAFE_INTEGER (2^53-1) is much smaller than CBOR's 
 **Signature**
 
 ```ts
-export declare const IntSchema: Schema.SchemaClass<bigint, bigint, never>
+export declare const IntSchema: Schema.transformOrFail<
+  Schema.SchemaClass<string, string, never>,
+  typeof Schema.BigIntFromSelf,
+  never
+>
 ```
 
 Added in v2.0.0
@@ -630,7 +658,7 @@ Schema for PlutusList data type
 **Signature**
 
 ```ts
-export declare const ListSchema: Schema.Array$<Schema.suspend<Data, Data, never>>
+export declare const ListSchema: Schema.Array$<Schema.suspend<Data, DataEncoded, never>>
 ```
 
 Added in v2.0.0
@@ -642,9 +670,9 @@ Schema for PlutusMap data type
 **Signature**
 
 ```ts
-export declare const MapSchema: Schema.ReadonlyMapFromSelf<
-  Schema.suspend<Data, Data, never>,
-  Schema.suspend<Data, Data, never>
+export declare const MapSchema: Schema.transform<
+  Schema.Array$<Schema.Tuple2<Schema.suspend<Data, DataEncoded, never>, Schema.suspend<Data, DataEncoded, never>>>,
+  Schema.MapFromSelf<Schema.SchemaClass<Data, Data, never>, Schema.SchemaClass<Data, Data, never>>
 >
 ```
 
@@ -671,10 +699,7 @@ Decode PlutusData from CBOR bytes
 **Signature**
 
 ```ts
-export declare const fromCBORBytes: (
-  bytes: Uint8Array,
-  options?: CBOR.CodecOptions
-) => string | bigint | Constr | readonly Data[] | ReadonlyMap<Data, Data>
+export declare const fromCBORBytes: (bytes: Uint8Array, options?: CBOR.CodecOptions) => Data
 ```
 
 Added in v2.0.0
@@ -686,10 +711,7 @@ Decode PlutusData from CBOR hex string
 **Signature**
 
 ```ts
-export declare const fromCBORHex: (
-  hex: string,
-  options?: CBOR.CodecOptions
-) => string | bigint | Constr | readonly Data[] | ReadonlyMap<Data, Data>
+export declare const fromCBORHex: (hex: string, options?: CBOR.CodecOptions) => Data
 ```
 
 Added in v2.0.0
@@ -713,10 +735,7 @@ Encode PlutusData to CBOR bytes
 **Signature**
 
 ```ts
-export declare const toCBORBytes: (
-  input: string | bigint | Constr | readonly Data[] | ReadonlyMap<Data, Data>,
-  options?: CBOR.CodecOptions
-) => Uint8Array
+export declare const toCBORBytes: (input: Data, options?: CBOR.CodecOptions) => Uint8Array
 ```
 
 Added in v2.0.0
@@ -728,10 +747,7 @@ Encode PlutusData to CBOR hex string
 **Signature**
 
 ```ts
-export declare const toCBORHex: (
-  input: string | bigint | Constr | readonly Data[] | ReadonlyMap<Data, Data>,
-  options?: CBOR.CodecOptions
-) => string
+export declare const toCBORHex: (input: Data, options?: CBOR.CodecOptions) => string
 ```
 
 Added in v2.0.0
@@ -766,7 +782,7 @@ export declare const matchData: <T>(
     Map: (entries: ReadonlyArray<[Data, Data]>) => T
     List: (items: ReadonlyArray<Data>) => T
     Int: (value: bigint) => T
-    Bytes: (bytes: string) => T
+    Bytes: (bytes: Uint8Array) => T
     Constr: (constr: Constr) => T
   }
 ) => T

@@ -312,7 +312,7 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Val
       if (typeof fromA === "bigint") {
         // ADA-only value - create OnlyCoin instance
         return new OnlyCoin({
-          coin: yield* ParseResult.decodeUnknown(Coin.Coin)(fromA)
+          coin: yield* ParseResult.decodeUnknown(Schema.typeSchema(Coin.Coin))(fromA)
         })
       } else {
         // Value with assets [coin, multiasset]
@@ -327,7 +327,7 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Val
           const assetMap = new Map<AssetName.AssetName, PositiveCoin.PositiveCoin>()
           for (const [assetNameBytes, amount] of assetMapCddl.entries()) {
             const assetName = yield* ParseResult.decode(AssetName.FromBytes)(assetNameBytes)
-            const positiveCoin = yield* ParseResult.decodeUnknown(PositiveCoin.PositiveCoinSchema)(amount)
+            const positiveCoin = yield* ParseResult.decodeUnknown(Schema.typeSchema(PositiveCoin.PositiveCoinSchema))(amount)
             assetMap.set(assetName, positiveCoin)
           }
 
@@ -335,7 +335,7 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Val
         }
 
         return new WithAssets({
-          coin: yield* ParseResult.decodeUnknown(Coin.Coin)(coinAmount),
+          coin: yield* ParseResult.decodeUnknown(Schema.typeSchema(Coin.Coin))(coinAmount),
           assets: new MultiAsset.MultiAsset({ map: result })
         })
       }

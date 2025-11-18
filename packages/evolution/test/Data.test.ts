@@ -1,5 +1,6 @@
 import { describe, expect, it } from "@effect/vitest"
 
+import * as Bytes from "../src/core/Bytes.js"
 import * as Data from "../src/core/Data.js"
 
 describe("Data Module Tests", () => {
@@ -275,7 +276,7 @@ describe("Utility Functions", () => {
         Map: (entries) => `Map with ${entries.length} entries`,
         List: (items) => `List with ${items.length} items`,
         Int: (value) => `BigInt: ${value}`,
-        Bytes: (bytes) => `Bytes: ${bytes}`,
+        Bytes: (bytes) => `Bytes: ${Bytes.toHex(bytes)}`,
         Constr: (constr) => `Constructor ${constr.index} with ${constr.fields.length} fields`
       })
       expect(result).toBe("Bytes: cafe")
@@ -535,8 +536,8 @@ describe("Error Handling and Edge Cases", () => {
           const decoded = Data.fromCBORBytes(encoded)
           // Note: hex strings are normalized to lowercase during processing
           if (Data.isBytes(decoded)) {
-            // Data.ByteArray now stores as hex string, so compare directly
-            expect(decoded).toBe(value.toLowerCase())
+            // Data.ByteArray now stores as Uint8Array, so convert back to hex for comparison
+            expect(Bytes.toHex(decoded)).toBe(value.toLowerCase())
           }
         }).not.toThrow()
       })

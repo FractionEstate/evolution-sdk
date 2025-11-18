@@ -25,6 +25,8 @@ parent: Modules
   - [TransactionMetadatumError (class)](#transactionmetadatumerror-class)
 - [model](#model)
   - [CDDLSchema (type alias)](#cddlschema-type-alias)
+  - [TransactionMetadatumVariants (type alias)](#transactionmetadatumvariants-type-alias)
+  - [TransactionMetadatumVariantsEncoded (type alias)](#transactionmetadatumvariantsencoded-type-alias)
 - [parsing](#parsing)
   - [fromCBORBytes](#fromcborbytes)
   - [fromCBORHex](#fromcborhex)
@@ -43,7 +45,6 @@ parent: Modules
 - [utils](#utils)
   - [FromCDDL](#fromcddl)
   - [TransactionMetadatum (class)](#transactionmetadatum-class)
-  - [TransactionMetadatumVariants (type alias)](#transactionmetadatumvariants-type-alias)
   - [arbitrary](#arbitrary)
 
 ---
@@ -128,7 +129,7 @@ Convert a TransactionMetadatum to CBOR bytes.
 
 ```ts
 export declare const toCBORBytes: (
-  input: TextMetadatum | IntMetadatum | BytesMetadatum | ArrayMetadatum | MetadatumMap,
+  input: TextMetadatum | IntMetadatum | BytesMetadatum | MetadatumMap | ArrayMetadatum,
   options?: CBOR.CodecOptions
 ) => Uint8Array
 ```
@@ -143,7 +144,7 @@ Convert a TransactionMetadatum to CBOR hex string.
 
 ```ts
 export declare const toCBORHex: (
-  input: TextMetadatum | IntMetadatum | BytesMetadatum | ArrayMetadatum | MetadatumMap,
+  input: TextMetadatum | IntMetadatum | BytesMetadatum | MetadatumMap | ArrayMetadatum,
   options?: CBOR.CodecOptions
 ) => string
 ```
@@ -173,7 +174,39 @@ Type representing the CDDL-compatible format for transaction metadata.
 **Signature**
 
 ```ts
-export type CDDLSchema = bigint | string | Uint8Array | ReadonlyArray<CDDLSchema> | Map<CDDLSchema, CDDLSchema>
+export type CDDLSchema = bigint | string | Uint8Array | ReadonlyArray<CDDLSchema> | ReadonlyMap<CDDLSchema, CDDLSchema>
+```
+
+Added in v2.0.0
+
+## TransactionMetadatumVariants (type alias)
+
+Runtime type for transaction metadata (bigint at runtime)
+
+**Signature**
+
+```ts
+export type TransactionMetadatumVariants = TextMetadatum | IntMetadatum | BytesMetadatum | MetadatumMap | ArrayMetadatum
+```
+
+Added in v2.0.0
+
+## TransactionMetadatumVariantsEncoded (type alias)
+
+Encoded type for transaction metadata (wire format with string for bigint)
+
+**Signature**
+
+```ts
+export type TransactionMetadatumVariantsEncoded =
+  | { readonly _tag: "TextMetadatum"; readonly value: string }
+  | { readonly _tag: "IntMetadatum"; readonly value: string }
+  | { readonly _tag: "BytesMetadatum"; readonly value: Uint8Array }
+  | {
+      readonly _tag: "MetadatumMap"
+      readonly value: ReadonlyArray<readonly [TransactionMetadatumVariantsEncoded, TransactionMetadatumVariantsEncoded]>
+    }
+  | { readonly _tag: "ArrayMetadatum"; readonly value: ReadonlyArray<TransactionMetadatumVariantsEncoded> }
 ```
 
 Added in v2.0.0
@@ -190,7 +223,7 @@ Parse a TransactionMetadatum from CBOR bytes.
 export declare const fromCBORBytes: (
   bytes: Uint8Array,
   options?: CBOR.CodecOptions
-) => TextMetadatum | IntMetadatum | BytesMetadatum | ArrayMetadatum | MetadatumMap
+) => TextMetadatum | IntMetadatum | BytesMetadatum | MetadatumMap | ArrayMetadatum
 ```
 
 Added in v2.0.0
@@ -205,7 +238,7 @@ Parse a TransactionMetadatum from CBOR hex string.
 export declare const fromCBORHex: (
   hex: string,
   options?: CBOR.CodecOptions
-) => TextMetadatum | IntMetadatum | BytesMetadatum | ArrayMetadatum | MetadatumMap
+) => TextMetadatum | IntMetadatum | BytesMetadatum | MetadatumMap | ArrayMetadatum
 ```
 
 Added in v2.0.0
@@ -265,11 +298,7 @@ export declare const FromCBORBytes: (
   >,
   Schema.transform<
     Schema.Schema<CDDLSchema, CDDLSchema, never>,
-    Schema.SchemaClass<
-      TextMetadatum | IntMetadatum | BytesMetadatum | ArrayMetadatum | MetadatumMap,
-      TextMetadatum | IntMetadatum | BytesMetadatum | ArrayMetadatum | MetadatumMap,
-      never
-    >
+    Schema.SchemaClass<TransactionMetadatumVariants, TransactionMetadatumVariants, never>
   >
 >
 ```
@@ -302,11 +331,7 @@ export declare const FromCBORHex: (
     >,
     Schema.transform<
       Schema.Schema<CDDLSchema, CDDLSchema, never>,
-      Schema.SchemaClass<
-        TextMetadatum | IntMetadatum | BytesMetadatum | ArrayMetadatum | MetadatumMap,
-        TextMetadatum | IntMetadatum | BytesMetadatum | ArrayMetadatum | MetadatumMap,
-        never
-      >
+      Schema.SchemaClass<TransactionMetadatumVariants, TransactionMetadatumVariants, never>
     >
   >
 >
@@ -317,6 +342,7 @@ Added in v2.0.0
 ## IntMetadatum (class)
 
 Schema for integer-based transaction metadata.
+Encoded as string, runtime as bigint
 
 **Signature**
 
@@ -357,8 +383,10 @@ Union schema for all types of transaction metadata.
 **Signature**
 
 ```ts
-export declare const TransactionMetadatumVariants: Schema.Union<
-  [typeof TextMetadatum, typeof IntMetadatum, typeof BytesMetadatum, typeof ArrayMetadatum, typeof MetadatumMap]
+export declare const TransactionMetadatumVariants: Schema.Schema<
+  TransactionMetadatumVariants,
+  TransactionMetadatumVariantsEncoded,
+  never
 >
 ```
 
@@ -387,11 +415,7 @@ Added in v2.0.0
 ```ts
 export declare const FromCDDL: Schema.transform<
   Schema.Schema<CDDLSchema, CDDLSchema, never>,
-  Schema.SchemaClass<
-    TextMetadatum | IntMetadatum | BytesMetadatum | ArrayMetadatum | MetadatumMap,
-    TextMetadatum | IntMetadatum | BytesMetadatum | ArrayMetadatum | MetadatumMap,
-    never
-  >
+  Schema.SchemaClass<TransactionMetadatumVariants, TransactionMetadatumVariants, never>
 >
 ```
 
@@ -401,14 +425,6 @@ export declare const FromCDDL: Schema.transform<
 
 ```ts
 export declare class TransactionMetadatum
-```
-
-## TransactionMetadatumVariants (type alias)
-
-**Signature**
-
-```ts
-export type TransactionMetadatumVariants = TextMetadatum | IntMetadatum | BytesMetadatum | MetadatumMap | ArrayMetadatum
 ```
 
 ## arbitrary

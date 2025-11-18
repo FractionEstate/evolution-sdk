@@ -92,7 +92,7 @@ Schema for validating epoch numbers (0-255).
 **Signature**
 
 ```ts
-export declare const EpochNoSchema: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
+export declare const EpochNoSchema: Schema.refine<bigint, typeof Schema.BigInt>
 ```
 
 Added in v2.0.0

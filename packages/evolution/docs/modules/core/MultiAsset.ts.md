@@ -275,7 +275,7 @@ Schema for inner asset map (asset_name => positive_coin).
 ```ts
 export declare const AssetMap: Schema.refine<
   Map<AssetName.AssetName, bigint>,
-  Schema.Map$<typeof AssetName.AssetName, Schema.refine<bigint, typeof Schema.BigIntFromSelf>>
+  Schema.Map$<typeof AssetName.AssetName, Schema.refine<bigint, typeof Schema.BigInt>>
 >
 ```
 

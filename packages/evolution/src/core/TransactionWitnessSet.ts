@@ -106,7 +106,9 @@ export class VKeyWitness extends Schema.Class<VKeyWitness>("VKeyWitness")({
    * @category equality
    */
   [Equal.symbol](that: unknown): boolean {
-    return that instanceof VKeyWitness && Equal.equals(this.vkey, that.vkey) && Equal.equals(this.signature, that.signature)
+    return (
+      that instanceof VKeyWitness && Equal.equals(this.vkey, that.vkey) && Equal.equals(this.signature, that.signature)
+    )
   }
 
   /**
@@ -191,12 +193,12 @@ export class TransactionWitnessSet extends Schema.Class<TransactionWitnessSet>("
   toJSON() {
     return {
       _tag: "TransactionWitnessSet" as const,
-      vkeyWitnesses: this.vkeyWitnesses?.map(v => v.toJSON()),
-      nativeScripts: this.nativeScripts?.map(s => s.toJSON()),
-      bootstrapWitnesses: this.bootstrapWitnesses?.map(b => b.toJSON()),
+      vkeyWitnesses: this.vkeyWitnesses?.map((v) => v.toJSON()),
+      nativeScripts: this.nativeScripts?.map((s) => Schema.encodeSync(NativeScripts.NativeScript)(s)),
+      bootstrapWitnesses: this.bootstrapWitnesses?.map((b) => b.toJSON()),
       plutusV1Scripts: this.plutusV1Scripts,
       plutusData: this.plutusData,
-      redeemers: this.redeemers?.map(r => r.toJSON()),
+      redeemers: this.redeemers?.map((r) => r.toJSON()),
       plutusV2Scripts: this.plutusV2Scripts,
       plutusV3Scripts: this.plutusV3Scripts
     }

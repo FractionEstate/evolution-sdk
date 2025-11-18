@@ -21,7 +21,7 @@ import * as TransactionIndex from "./TransactionIndex.js"
  */
 const mapEquals = <K, V>(a: Map<K, V>, b: Map<K, V>): boolean => {
   if (a.size !== b.size) return false
-  
+
   for (const [aKey, aValue] of a.entries()) {
     let found = false
     for (const [bKey, bValue] of b.entries()) {
@@ -37,7 +37,7 @@ const mapEquals = <K, V>(a: Map<K, V>, b: Map<K, V>): boolean => {
     }
     if (!found) return false
   }
-  
+
   return true
 }
 
@@ -91,10 +91,7 @@ export class ConstitutionalCommitteeVoter extends Schema.TaggedClass<Constitutio
   }
 
   [Equal.symbol](that: unknown): boolean {
-    return (
-      that instanceof ConstitutionalCommitteeVoter &&
-      Equal.equals(this.credential, that.credential)
-    )
+    return that instanceof ConstitutionalCommitteeVoter && Equal.equals(this.credential, that.credential)
   }
 
   [Hash.symbol](): number {
@@ -416,9 +413,7 @@ export class VotingProcedure extends Schema.Class<VotingProcedure>("VotingProced
 
   [Equal.symbol](that: unknown): boolean {
     return (
-      that instanceof VotingProcedure &&
-      Equal.equals(this.vote, that.vote) &&
-      Equal.equals(this.anchor, that.anchor)
+      that instanceof VotingProcedure && Equal.equals(this.vote, that.vote) && Equal.equals(this.anchor, that.anchor)
     )
   }
 
@@ -781,7 +776,7 @@ export const arbitrary = FastCheck.array(
           ([transactionId, govActionIndex]) =>
             new GovernanceAction.GovActionId({
               transactionId: new TransactionHash.TransactionHash({ hash: transactionId }),
-              govActionIndex: Schema.decodeSync(TransactionIndex.TransactionIndex)(govActionIndex)
+              govActionIndex: Schema.decodeSync(Schema.typeSchema(TransactionIndex.TransactionIndex))(govActionIndex)
             })
         ),
         FastCheck.tuple(
@@ -836,4 +831,3 @@ export const toCBORBytes = (data: VotingProcedures, options: CBOR.CodecOptions =
  */
 export const toCBORHex = (data: VotingProcedures, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.encodeSync(FromCBORHex(options))(data)
-

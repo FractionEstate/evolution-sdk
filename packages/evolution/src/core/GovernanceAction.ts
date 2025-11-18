@@ -75,9 +75,7 @@ const mapEquals = <K, V>(a: Map<K, V>, b: Map<K, V>): boolean => {
 const mapHash = <K, V>(map: Map<K, V>): number => {
   let hash = 0
   for (const [key, value] of map) {
-    const entryHash = Hash.combine(Hash.hash(key))(
-      value instanceof Map ? mapHash(value as any) : Hash.hash(value)
-    )
+    const entryHash = Hash.combine(Hash.hash(key))(value instanceof Map ? mapHash(value as any) : Hash.hash(value))
     hash ^= entryHash
   }
   return hash
@@ -1160,7 +1158,10 @@ export const toCBORHex = (data: GovernanceAction, options: CBOR.CodecOptions = C
  * @since 2.0.0
  * @category parsing
  */
-export const fromCBOR = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): GovernanceAction => {
+export const fromCBOR = (
+  bytes: Uint8Array,
+  options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS
+): GovernanceAction => {
   const cddl = CBOR.fromCBORBytes(bytes, options)
   return Schema.decodeSync(FromCDDL)(cddl as any)
 }

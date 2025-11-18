@@ -69,7 +69,7 @@ Convert Core Assets to SDK Assets format.
 export declare const fromCoreAssetsSchema: (
   a: CoreAssets.Assets,
   overrideOptions?: ParseOptions
-) => { readonly lovelace?: bigint | undefined } & { readonly [x: string]: bigint }
+) => { readonly lovelace?: string | undefined } & { readonly [x: string]: string }
 ```
 
 Added in v2.0.0
@@ -84,7 +84,7 @@ Convert Core Mint to SDK Assets format (without lovelace).
 export declare const fromMint: (
   a: CoreMint.Mint,
   overrideOptions?: ParseOptions
-) => { readonly lovelace?: bigint | undefined } & { readonly [x: string]: bigint }
+) => { readonly lovelace?: string | undefined } & { readonly [x: string]: string }
 ```
 
 Added in v2.0.0
@@ -109,7 +109,7 @@ Convert SDK Assets to Core Assets.
 
 ```ts
 export declare const toCoreAssetsSchema: (
-  i: { readonly lovelace?: bigint | undefined } & { readonly [x: string]: bigint },
+  i: { readonly lovelace?: string | undefined } & { readonly [x: string]: string },
   overrideOptions?: ParseOptions
 ) => CoreAssets.Assets
 ```
@@ -124,7 +124,7 @@ Convert SDK Assets to Core Mint (lovelace key will be rejected).
 
 ```ts
 export declare const toMint: (
-  i: { readonly lovelace?: bigint | undefined } & { readonly [x: string]: bigint },
+  i: { readonly lovelace?: string | undefined } & { readonly [x: string]: string },
   overrideOptions?: ParseOptions
 ) => CoreMint.Mint
 ```
@@ -192,8 +192,8 @@ Transform between Assets (SDK-friendly) and core Assets.
 ```ts
 export declare const CoreAssetsFromAssets: Schema.transformOrFail<
   Schema.extend<
-    Schema.Struct<{ lovelace: Schema.optional<typeof Schema.BigIntFromSelf> }>,
-    Schema.Record$<typeof Schema.String, typeof Schema.BigIntFromSelf>
+    Schema.Struct<{ lovelace: Schema.optional<typeof Schema.BigInt> }>,
+    Schema.Record$<typeof Schema.String, typeof Schema.BigInt>
   >,
   Schema.SchemaClass<CoreAssets.Assets, CoreAssets.Assets, never>,
   never
@@ -211,8 +211,8 @@ Transform between Assets (SDK-friendly) and Mint (Core).
 ```ts
 export declare const MintFromAssets: Schema.transformOrFail<
   Schema.extend<
-    Schema.Struct<{ lovelace: Schema.optional<typeof Schema.BigIntFromSelf> }>,
-    Schema.Record$<typeof Schema.String, typeof Schema.BigIntFromSelf>
+    Schema.Struct<{ lovelace: Schema.optional<typeof Schema.BigInt> }>,
+    Schema.Record$<typeof Schema.String, typeof Schema.BigInt>
   >,
   Schema.SchemaClass<CoreMint.Mint, CoreMint.Mint, never>,
   never
@@ -237,8 +237,8 @@ export type Assets = typeof AssetsSchema.Type
 
 ```ts
 export declare const AssetsSchema: Schema.extend<
-  Schema.Struct<{ lovelace: Schema.optional<typeof Schema.BigIntFromSelf> }>,
-  Schema.Record$<typeof Schema.String, typeof Schema.BigIntFromSelf>
+  Schema.Struct<{ lovelace: Schema.optional<typeof Schema.BigInt> }>,
+  Schema.Record$<typeof Schema.String, typeof Schema.BigInt>
 >
 ```
 

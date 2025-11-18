@@ -111,17 +111,7 @@ Convert Metadata to CBOR bytes.
 ```ts
 export declare const toCBORBytes: (
   options?: CBOR.CodecOptions
-) => (
-  a: Map<
-    bigint,
-    | TransactionMetadatum.TextMetadatum
-    | TransactionMetadatum.IntMetadatum
-    | TransactionMetadatum.BytesMetadatum
-    | TransactionMetadatum.ArrayMetadatum
-    | TransactionMetadatum.MetadatumMap
-  >,
-  overrideOptions?: ParseOptions
-) => any
+) => (a: Map<bigint, TransactionMetadatum.TransactionMetadatumVariants>, overrideOptions?: ParseOptions) => any
 ```
 
 Added in v2.0.0
@@ -135,17 +125,7 @@ Convert Metadata to CBOR hex string.
 ```ts
 export declare const toCBORHex: (
   options?: CBOR.CodecOptions
-) => (
-  a: Map<
-    bigint,
-    | TransactionMetadatum.TextMetadatum
-    | TransactionMetadatum.IntMetadatum
-    | TransactionMetadatum.BytesMetadatum
-    | TransactionMetadatum.ArrayMetadatum
-    | TransactionMetadatum.MetadatumMap
-  >,
-  overrideOptions?: ParseOptions
-) => string
+) => (a: Map<bigint, TransactionMetadatum.TransactionMetadatumVariants>, overrideOptions?: ParseOptions) => string
 ```
 
 Added in v2.0.0
@@ -175,17 +155,7 @@ Parse Metadata from CBOR bytes.
 ```ts
 export declare const fromCBORBytes: (
   options?: CBOR.CodecOptions
-) => (
-  i: any,
-  overrideOptions?: ParseOptions
-) => Map<
-  bigint,
-  | TransactionMetadatum.TextMetadatum
-  | TransactionMetadatum.IntMetadatum
-  | TransactionMetadatum.BytesMetadatum
-  | TransactionMetadatum.ArrayMetadatum
-  | TransactionMetadatum.MetadatumMap
->
+) => (i: any, overrideOptions?: ParseOptions) => Map<bigint, TransactionMetadatum.TransactionMetadatumVariants>
 ```
 
 Added in v2.0.0
@@ -199,17 +169,7 @@ Parse Metadata from CBOR hex string.
 ```ts
 export declare const fromCBORHex: (
   options?: CBOR.CodecOptions
-) => (
-  i: string,
-  overrideOptions?: ParseOptions
-) => Map<
-  bigint,
-  | TransactionMetadatum.TextMetadatum
-  | TransactionMetadatum.IntMetadatum
-  | TransactionMetadatum.BytesMetadatum
-  | TransactionMetadatum.ArrayMetadatum
-  | TransactionMetadatum.MetadatumMap
->
+) => (i: string, overrideOptions?: ParseOptions) => Map<bigint, TransactionMetadatum.TransactionMetadatumVariants>
 ```
 
 Added in v2.0.0
@@ -252,22 +212,8 @@ export declare const FromCBORBytes: (
       Schema.Schema<TransactionMetadatum.CDDLSchema, TransactionMetadatum.CDDLSchema, never>
     >,
     Schema.SchemaClass<
-      Map<
-        bigint,
-        | TransactionMetadatum.TextMetadatum
-        | TransactionMetadatum.IntMetadatum
-        | TransactionMetadatum.BytesMetadatum
-        | TransactionMetadatum.ArrayMetadatum
-        | TransactionMetadatum.MetadatumMap
-      >,
-      Map<
-        bigint,
-        | TransactionMetadatum.TextMetadatum
-        | TransactionMetadatum.IntMetadatum
-        | TransactionMetadatum.BytesMetadatum
-        | TransactionMetadatum.ArrayMetadatum
-        | TransactionMetadatum.MetadatumMap
-      >,
+      Map<bigint, TransactionMetadatum.TransactionMetadatumVariants>,
+      Map<bigint, TransactionMetadatum.TransactionMetadatumVariants>,
       never
     >,
     never
@@ -307,22 +253,8 @@ export declare const FromCBORHex: (
         Schema.Schema<TransactionMetadatum.CDDLSchema, TransactionMetadatum.CDDLSchema, never>
       >,
       Schema.SchemaClass<
-        Map<
-          bigint,
-          | TransactionMetadatum.TextMetadatum
-          | TransactionMetadatum.IntMetadatum
-          | TransactionMetadatum.BytesMetadatum
-          | TransactionMetadatum.ArrayMetadatum
-          | TransactionMetadatum.MetadatumMap
-        >,
-        Map<
-          bigint,
-          | TransactionMetadatum.TextMetadatum
-          | TransactionMetadatum.IntMetadatum
-          | TransactionMetadatum.BytesMetadatum
-          | TransactionMetadatum.ArrayMetadatum
-          | TransactionMetadatum.MetadatumMap
-        >,
+        Map<bigint, TransactionMetadatum.TransactionMetadatumVariants>,
+        Map<bigint, TransactionMetadatum.TransactionMetadatumVariants>,
         never
       >,
       never
@@ -346,22 +278,8 @@ export declare const FromCDDL: Schema.transformOrFail<
     Schema.Schema<TransactionMetadatum.CDDLSchema, TransactionMetadatum.CDDLSchema, never>
   >,
   Schema.SchemaClass<
-    Map<
-      bigint,
-      | TransactionMetadatum.TextMetadatum
-      | TransactionMetadatum.IntMetadatum
-      | TransactionMetadatum.BytesMetadatum
-      | TransactionMetadatum.ArrayMetadatum
-      | TransactionMetadatum.MetadatumMap
-    >,
-    Map<
-      bigint,
-      | TransactionMetadatum.TextMetadatum
-      | TransactionMetadatum.IntMetadatum
-      | TransactionMetadatum.BytesMetadatum
-      | TransactionMetadatum.ArrayMetadatum
-      | TransactionMetadatum.MetadatumMap
-    >,
+    Map<bigint, TransactionMetadatum.TransactionMetadatumVariants>,
+    Map<bigint, TransactionMetadatum.TransactionMetadatumVariants>,
     never
   >,
   never
@@ -382,15 +300,11 @@ Represents: metadata = {* transaction_metadatum_label => transaction_metadatum}
 
 ```ts
 export declare const Metadata: Schema.MapFromSelf<
-  Schema.refine<bigint, typeof Schema.BigIntFromSelf>,
-  Schema.Union<
-    [
-      typeof TransactionMetadatum.TextMetadatum,
-      typeof TransactionMetadatum.IntMetadatum,
-      typeof TransactionMetadatum.BytesMetadatum,
-      typeof TransactionMetadatum.ArrayMetadatum,
-      typeof TransactionMetadatum.MetadatumMap
-    ]
+  Schema.refine<bigint, typeof Schema.BigInt>,
+  Schema.Schema<
+    TransactionMetadatum.TransactionMetadatumVariants,
+    TransactionMetadatum.TransactionMetadatumVariantsEncoded,
+    never
   >
 >
 ```
@@ -404,7 +318,7 @@ Schema for transaction metadatum label (uint .size 8).
 **Signature**
 
 ```ts
-export declare const MetadataLabel: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
+export declare const MetadataLabel: Schema.refine<bigint, typeof Schema.BigInt>
 ```
 
 Added in v2.0.0
@@ -418,16 +332,7 @@ FastCheck arbitrary for generating random Metadata instances.
 **Signature**
 
 ```ts
-export declare const arbitrary: FastCheck.Arbitrary<
-  Map<
-    bigint,
-    | TransactionMetadatum.TextMetadatum
-    | TransactionMetadatum.IntMetadatum
-    | TransactionMetadatum.BytesMetadatum
-    | TransactionMetadatum.ArrayMetadatum
-    | TransactionMetadatum.MetadatumMap
-  >
->
+export declare const arbitrary: FastCheck.Arbitrary<Map<bigint, TransactionMetadatum.TransactionMetadatumVariants>>
 ```
 
 Added in v2.0.0

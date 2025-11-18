@@ -955,14 +955,14 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Cer
           // reg_cert = (7, stake_credential, coin)
           const [, credentialCDDL, coinBigInt] = fromA
           const stakeCredential = yield* ParseResult.decodeEither(Credential.FromCDDL)(credentialCDDL)
-          const coin = yield* ParseResult.decodeEither(Coin.Coin)(coinBigInt)
+          const coin = yield* ParseResult.decodeEither(Schema.typeSchema(Coin.Coin))(coinBigInt)
           return new RegCert({ stakeCredential, coin }, { disableValidation: true })
         }
         case 8n: {
           // unreg_cert = (8, stake_credential, coin)
           const [, credentialCDDL, coinBigInt] = fromA
           const stakeCredential = yield* ParseResult.decodeEither(Credential.FromCDDL)(credentialCDDL)
-          const coin = yield* ParseResult.decodeEither(Coin.Coin)(coinBigInt)
+          const coin = yield* ParseResult.decodeEither(Schema.typeSchema(Coin.Coin))(coinBigInt)
           return new UnregCert({ stakeCredential, coin }, { disableValidation: true })
         }
         case 9n: {
@@ -992,7 +992,7 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Cer
           const [, credentialCDDL, poolKeyHashBytes, coinBigInt] = fromA
           const stakeCredential = yield* ParseResult.decodeEither(Credential.FromCDDL)(credentialCDDL)
           const poolKeyHash = yield* ParseResult.decodeEither(PoolKeyHash.FromBytes)(poolKeyHashBytes)
-          const coin = yield* ParseResult.decodeEither(Coin.Coin)(coinBigInt)
+          const coin = yield* ParseResult.decodeEither(Schema.typeSchema(Coin.Coin))(coinBigInt)
           return new StakeRegDelegCert(
             {
               stakeCredential,
@@ -1007,7 +1007,7 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Cer
           const [, credentialCDDL, drepCDDL, coinBigInt] = fromA
           const stakeCredential = yield* ParseResult.decodeEither(Credential.FromCDDL)(credentialCDDL)
           const drep = yield* ParseResult.decodeEither(DRep.FromCDDL)(drepCDDL)
-          const coin = yield* ParseResult.decodeEither(Coin.Coin)(coinBigInt)
+          const coin = yield* ParseResult.decodeEither(Schema.typeSchema(Coin.Coin))(coinBigInt)
           return new VoteRegDelegCert({ stakeCredential, drep, coin }, { disableValidation: true })
         }
         case 13n: {
@@ -1016,7 +1016,7 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Cer
           const stakeCredential = yield* ParseResult.decodeEither(Credential.FromCDDL)(credentialCDDL)
           const poolKeyHash = yield* ParseResult.decodeEither(PoolKeyHash.FromBytes)(poolKeyHashBytes)
           const drep = yield* ParseResult.decodeEither(DRep.FromCDDL)(drepCDDL)
-          const coin = yield* ParseResult.decodeEither(Coin.Coin)(coinBigInt)
+          const coin = yield* ParseResult.decodeEither(Schema.typeSchema(Coin.Coin))(coinBigInt)
           return new StakeVoteRegDelegCert(
             {
               stakeCredential,
@@ -1057,7 +1057,7 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Cer
           // reg_drep_cert = (16, drep_credential, coin, anchor/ nil)
           const [, credentialCDDL, coinBigInt, anchorCDDL] = fromA
           const drepCredential = yield* ParseResult.decodeEither(Credential.FromCDDL)(credentialCDDL)
-          const coin = yield* ParseResult.decodeEither(Coin.Coin)(coinBigInt)
+          const coin = yield* ParseResult.decodeEither(Schema.typeSchema(Coin.Coin))(coinBigInt)
           const anchor = anchorCDDL ? yield* ParseResult.decodeEither(Anchor.FromCDDL)(anchorCDDL) : undefined
           return new RegDrepCert({ drepCredential, coin, anchor }, { disableValidation: true })
         }
@@ -1065,7 +1065,7 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Cer
           // unreg_drep_cert = (17, drep_credential, coin)
           const [, credentialCDDL, coinBigInt] = fromA
           const drepCredential = yield* ParseResult.decodeEither(Credential.FromCDDL)(credentialCDDL)
-          const coin = yield* ParseResult.decodeEither(Coin.Coin)(coinBigInt)
+          const coin = yield* ParseResult.decodeEither(Schema.typeSchema(Coin.Coin))(coinBigInt)
           return new UnregDrepCert({ drepCredential, coin }, { disableValidation: true })
         }
         case 18n: {
@@ -1213,10 +1213,6 @@ export const fromCBORBytes = (bytes: Uint8Array, options?: CBOR.CodecOptions): C
  */
 export const fromCBORHex = (hex: string, options?: CBOR.CodecOptions): Certificate =>
   Schema.decodeSync(FromCBORHex(options))(hex)
-
-// ============================================================================
-// Encoding Functions
-// ============================================================================
 
 /**
  * Convert a Certificate to CBOR bytes.

@@ -130,7 +130,7 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Wit
       const decodedWithdrawals = new Map<RewardAccount.RewardAccount, Coin.Coin>()
       for (const [accountBytes, coinAmount] of fromA.entries()) {
         const rewardAccount = yield* ParseResult.decode(RewardAccount.FromBytes)(accountBytes)
-        const coin = yield* ParseResult.decode(Coin.Coin)(coinAmount)
+        const coin = yield* ParseResult.decode(Schema.typeSchema(Coin.Coin))(coinAmount)
         decodedWithdrawals.set(rewardAccount, coin)
       }
       return new Withdrawals({ withdrawals: decodedWithdrawals })

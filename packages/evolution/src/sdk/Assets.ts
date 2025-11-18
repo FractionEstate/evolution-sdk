@@ -11,8 +11,8 @@ import * as PositiveCoin from "../core/PositiveCoin.js"
 import * as Unit from "./Unit.js"
 
 export const AssetsSchema = Schema.Struct({
-  lovelace: Schema.optional(Schema.BigIntFromSelf)
-}).pipe(Schema.extend(Schema.Record({ key: Schema.String, value: Schema.BigIntFromSelf })))
+  lovelace: Schema.optional(Schema.BigInt)
+}).pipe(Schema.extend(Schema.Record({ key: Schema.String, value: Schema.BigInt })))
 
 export type Assets = typeof AssetsSchema.Type
 /**

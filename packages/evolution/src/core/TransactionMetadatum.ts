@@ -14,6 +14,28 @@ export class TransactionMetadatumError extends Data.TaggedError("TransactionMeta
   cause?: unknown
 }> {}
 
+/**
+ * Encoded type for transaction metadata (wire format with string for bigint)
+ *
+ * @since 2.0.0
+ * @category model
+ */
+export type TransactionMetadatumVariantsEncoded =
+  | { readonly _tag: "TextMetadatum"; readonly value: string }
+  | { readonly _tag: "IntMetadatum"; readonly value: string }
+  | { readonly _tag: "BytesMetadatum"; readonly value: Uint8Array }
+  | {
+      readonly _tag: "MetadatumMap"
+      readonly value: ReadonlyArray<readonly [TransactionMetadatumVariantsEncoded, TransactionMetadatumVariantsEncoded]>
+    }
+  | { readonly _tag: "ArrayMetadatum"; readonly value: ReadonlyArray<TransactionMetadatumVariantsEncoded> }
+
+/**
+ * Runtime type for transaction metadata (bigint at runtime)
+ *
+ * @since 2.0.0
+ * @category model
+ */
 export type TransactionMetadatumVariants = TextMetadatum | IntMetadatum | BytesMetadatum | MetadatumMap | ArrayMetadatum
 
 /**
@@ -28,12 +50,13 @@ export class TextMetadatum extends Schema.TaggedClass<TextMetadatum>("TextMetada
 
 /**
  * Schema for integer-based transaction metadata.
+ * Encoded as string, runtime as bigint
  *
  * @since 2.0.0
  * @category schemas
  */
 export class IntMetadatum extends Schema.TaggedClass<IntMetadatum>("IntMetadatum")("IntMetadatum", {
-  value: Schema.BigIntFromSelf
+  value: Schema.BigInt
 }) {}
 
 /**
@@ -53,12 +76,16 @@ export class BytesMetadatum extends Schema.TaggedClass<BytesMetadatum>("BytesMet
  * @category schemas
  */
 export class MetadatumMap extends Schema.TaggedClass<MetadatumMap>("MetadatumMap")("MetadatumMap", {
-  value: Schema.typeSchema(
-    Schema.MapFromSelf({
-      key: Schema.suspend((): Schema.Schema<TransactionMetadatumVariants> => TransactionMetadatumVariants),
-      value: Schema.suspend((): Schema.Schema<TransactionMetadatumVariants> => TransactionMetadatumVariants)
-    })
-  )
+  value: Schema.Map({
+    key: Schema.suspend(
+      (): Schema.Schema<TransactionMetadatumVariants, TransactionMetadatumVariantsEncoded> =>
+        TransactionMetadatumVariants
+    ),
+    value: Schema.suspend(
+      (): Schema.Schema<TransactionMetadatumVariants, TransactionMetadatumVariantsEncoded> =>
+        TransactionMetadatumVariants
+    )
+  })
 }) {}
 
 /**
@@ -68,7 +95,12 @@ export class MetadatumMap extends Schema.TaggedClass<MetadatumMap>("MetadatumMap
  * @category schemas
  */
 export class ArrayMetadatum extends Schema.TaggedClass<ArrayMetadatum>("ArrayMetadatum")("ArrayMetadatum", {
-  value: Schema.Array(Schema.suspend((): Schema.Schema<TransactionMetadatumVariants> => TransactionMetadatumVariants))
+  value: Schema.Array(
+    Schema.suspend(
+      (): Schema.Schema<TransactionMetadatumVariants, TransactionMetadatumVariantsEncoded> =>
+        TransactionMetadatumVariants
+    )
+  )
 }) {}
 
 /**
@@ -77,38 +109,35 @@ export class ArrayMetadatum extends Schema.TaggedClass<ArrayMetadatum>("ArrayMet
  * @since 2.0.0
  * @category schemas
  */
-export const TransactionMetadatumVariants = Schema.Union(
-  TextMetadatum,
-  IntMetadatum,
-  BytesMetadatum,
-  ArrayMetadatum,
-  MetadatumMap
-).annotations({
+export const TransactionMetadatumVariants: Schema.Schema<
+  TransactionMetadatumVariants,
+  TransactionMetadatumVariantsEncoded
+> = Schema.Union(TextMetadatum, IntMetadatum, BytesMetadatum, ArrayMetadatum, MetadatumMap).annotations({
   identifier: "TransactionMetadatum",
   description: "A transaction metadata value supporting text, integers, bytes, arrays, and maps"
 })
 
 // Add Equal/Hash implementations to variant classes
 // @ts-expect-error - Adding Equal symbol to prototype
-TextMetadatum.prototype[Equal.symbol] = function(that: unknown): boolean {
+TextMetadatum.prototype[Equal.symbol] = function (that: unknown): boolean {
   return that instanceof TextMetadatum && this.value === that.value
 }
 // @ts-expect-error - Adding Hash symbol to prototype
-TextMetadatum.prototype[Hash.symbol] = function(): number {
+TextMetadatum.prototype[Hash.symbol] = function (): number {
   return Hash.string(this.value)
 }
 
 // @ts-expect-error - Adding Equal symbol to prototype
-IntMetadatum.prototype[Equal.symbol] = function(that: unknown): boolean {
+IntMetadatum.prototype[Equal.symbol] = function (that: unknown): boolean {
   return that instanceof IntMetadatum && this.value === that.value
 }
 // @ts-expect-error - Adding Hash symbol to prototype
-IntMetadatum.prototype[Hash.symbol] = function(): number {
+IntMetadatum.prototype[Hash.symbol] = function (): number {
   return Hash.number(Number(this.value))
 }
 
 // @ts-expect-error - Adding Equal symbol to prototype
-BytesMetadatum.prototype[Equal.symbol] = function(that: unknown): boolean {
+BytesMetadatum.prototype[Equal.symbol] = function (that: unknown): boolean {
   if (!(that instanceof BytesMetadatum)) return false
   if (this.value.length !== that.value.length) return false
   for (let i = 0; i < this.value.length; i++) {
@@ -117,7 +146,7 @@ BytesMetadatum.prototype[Equal.symbol] = function(that: unknown): boolean {
   return true
 }
 // @ts-expect-error - Adding Hash symbol to prototype
-BytesMetadatum.prototype[Hash.symbol] = function(): number {
+BytesMetadatum.prototype[Hash.symbol] = function (): number {
   let h = Hash.string("BytesMetadatum")
   for (let i = 0; i < this.value.length; i++) {
     h = Hash.combine(h)(Hash.number(this.value[i]))
@@ -126,7 +155,7 @@ BytesMetadatum.prototype[Hash.symbol] = function(): number {
 }
 
 // @ts-expect-error - Adding Equal symbol to prototype
-ArrayMetadatum.prototype[Equal.symbol] = function(that: unknown): boolean {
+ArrayMetadatum.prototype[Equal.symbol] = function (that: unknown): boolean {
   if (!(that instanceof ArrayMetadatum)) return false
   if (this.value.length !== that.value.length) return false
   for (let i = 0; i < this.value.length; i++) {
@@ -135,7 +164,7 @@ ArrayMetadatum.prototype[Equal.symbol] = function(that: unknown): boolean {
   return true
 }
 // @ts-expect-error - Adding Hash symbol to prototype
-ArrayMetadatum.prototype[Hash.symbol] = function(): number {
+ArrayMetadatum.prototype[Hash.symbol] = function (): number {
   let h = Hash.string("ArrayMetadatum")
   for (const item of this.value) {
     h = Hash.combine(h)(Hash.hash(item))
@@ -144,7 +173,7 @@ ArrayMetadatum.prototype[Hash.symbol] = function(): number {
 }
 
 // @ts-expect-error - Adding Equal symbol to prototype
-MetadatumMap.prototype[Equal.symbol] = function(that: unknown): boolean {
+MetadatumMap.prototype[Equal.symbol] = function (that: unknown): boolean {
   if (!(that instanceof MetadatumMap)) return false
   if (this.value.size !== that.value.size) return false
   for (const [key, val] of this.value.entries()) {
@@ -161,7 +190,7 @@ MetadatumMap.prototype[Equal.symbol] = function(that: unknown): boolean {
   return true
 }
 // @ts-expect-error - Adding Hash symbol to prototype
-MetadatumMap.prototype[Hash.symbol] = function(): number {
+MetadatumMap.prototype[Hash.symbol] = function (): number {
   let h = Hash.string("MetadatumMap")
   const entries = Array.from(this.value.entries())
   entries.sort((a, b) => Hash.hash(a[0]) - Hash.hash(b[0]))
@@ -182,7 +211,7 @@ export class TransactionMetadatum extends Schema.Class<TransactionMetadatum>("Tr
  * @since 2.0.0
  * @category model
  */
-export type CDDLSchema = bigint | string | Uint8Array | ReadonlyArray<CDDLSchema> | Map<CDDLSchema, CDDLSchema>
+export type CDDLSchema = bigint | string | Uint8Array | ReadonlyArray<CDDLSchema> | ReadonlyMap<CDDLSchema, CDDLSchema>
 
 /**
  * Schema for CDDL-compatible transaction metadata format.
@@ -195,12 +224,10 @@ export const CDDLSchema: Schema.Schema<CDDLSchema> = Schema.Union(
   Schema.BigIntFromSelf,
   Schema.Uint8ArrayFromSelf,
   Schema.Array(Schema.suspend((): Schema.Schema<CDDLSchema> => CDDLSchema)),
-  Schema.typeSchema(
-    Schema.MapFromSelf({
-      key: Schema.suspend((): Schema.Schema<CDDLSchema> => CDDLSchema),
-      value: Schema.suspend((): Schema.Schema<CDDLSchema> => CDDLSchema)
-    })
-  )
+  Schema.ReadonlyMapFromSelf({
+    key: Schema.suspend((): Schema.Schema<CDDLSchema> => CDDLSchema),
+    value: Schema.suspend((): Schema.Schema<CDDLSchema> => CDDLSchema)
+  })
 ).annotations({
   identifier: "TransactionMetadatum.CDDLSchema",
   description: "CDDL-compatible format for transaction metadata"

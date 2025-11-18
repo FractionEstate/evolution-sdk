@@ -38,9 +38,9 @@ export declare const fromCore: (
   readonly _tag: "PoolParams"
   readonly operator: { readonly _tag: "PoolKeyHash"; readonly hash: string }
   readonly vrfKeyhash: { readonly _tag: "VrfKeyHash"; readonly hash: string }
-  readonly pledge: bigint
-  readonly cost: bigint
-  readonly margin: { readonly numerator: bigint; readonly denominator: bigint }
+  readonly pledge: string
+  readonly cost: string
+  readonly margin: { readonly numerator: string; readonly denominator: string }
   readonly rewardAccount: {
     readonly _tag: "RewardAccount"
     readonly networkId: number
@@ -52,11 +52,11 @@ export declare const fromCore: (
   readonly relays: readonly (
     | {
         readonly _tag: "SingleHostAddr"
-        readonly port?: bigint | undefined
+        readonly port?: string | undefined
         readonly ipv4?: { readonly _tag: "IPv4"; readonly bytes: string } | undefined
         readonly ipv6?: { readonly _tag: "IPv6"; readonly bytes: string } | undefined
       }
-    | { readonly _tag: "SingleHostName"; readonly dnsName: string; readonly port?: bigint | undefined }
+    | { readonly _tag: "SingleHostName"; readonly dnsName: string; readonly port?: string | undefined }
     | { readonly _tag: "MultiHostName"; readonly dnsName: string }
   )[]
   readonly poolMetadata?:
@@ -84,9 +84,9 @@ export declare const toCore: (
     readonly _tag: "PoolParams"
     readonly operator: { readonly _tag: "PoolKeyHash"; readonly hash: string }
     readonly vrfKeyhash: { readonly _tag: "VrfKeyHash"; readonly hash: string }
-    readonly pledge: bigint
-    readonly cost: bigint
-    readonly margin: { readonly numerator: bigint; readonly denominator: bigint }
+    readonly pledge: string
+    readonly cost: string
+    readonly margin: { readonly numerator: string; readonly denominator: string }
     readonly rewardAccount: {
       readonly _tag: "RewardAccount"
       readonly networkId: number
@@ -98,11 +98,11 @@ export declare const toCore: (
     readonly relays: readonly (
       | {
           readonly _tag: "SingleHostAddr"
-          readonly port?: bigint | undefined
+          readonly port?: string | undefined
           readonly ipv4?: { readonly _tag: "IPv4"; readonly bytes: string } | undefined
           readonly ipv6?: { readonly _tag: "IPv6"; readonly bytes: string } | undefined
         }
-      | { readonly _tag: "SingleHostName"; readonly dnsName: string; readonly port?: bigint | undefined }
+      | { readonly _tag: "SingleHostName"; readonly dnsName: string; readonly port?: string | undefined }
       | { readonly _tag: "MultiHostName"; readonly dnsName: string }
     )[]
     readonly poolMetadata?:

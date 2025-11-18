@@ -77,11 +77,11 @@ export class TransactionBody extends Schema.TaggedClass<TransactionBody>()("Tran
   inputs: Schema.Array(TransactionInput.TransactionInput), // 0
   outputs: Schema.Array(TxOut.TransactionOutput), // 1
   fee: Coin.Coin, // 2
-  ttl: Schema.optional(Schema.BigIntFromSelf), // 3 - slot_no
+  ttl: Schema.optional(Schema.BigInt), // 3 - slot_no
   certificates: Schema.optional(Schema.NonEmptyArray(Certificate.Certificate)), // 4
   withdrawals: Schema.optional(Withdrawals.Withdrawals), // 5
   auxiliaryDataHash: Schema.optional(AuxiliaryDataHash.AuxiliaryDataHash), // 7
-  validityIntervalStart: Schema.optional(Schema.BigIntFromSelf), // 8 - slot_no
+  validityIntervalStart: Schema.optional(Schema.BigInt), // 8 - slot_no
   mint: Schema.optional(Mint.Mint), // 9
   scriptDataHash: Schema.optional(ScriptDataHash.ScriptDataHash), // 11
   collateralInputs: Schema.optional(Schema.NonEmptyArray(TransactionInput.TransactionInput)), // 13

@@ -295,9 +295,7 @@ export declare const AssetMap: Schema.transform<
   Schema.Array$<
     Schema.Tuple2<
       typeof AssetName.AssetName,
-      Schema.Union<
-        [Schema.refine<bigint, typeof Schema.BigIntFromSelf>, Schema.refine<bigint, typeof Schema.BigIntFromSelf>]
-      >
+      Schema.Union<[Schema.refine<bigint, typeof Schema.BigInt>, Schema.refine<bigint, typeof Schema.BigInt>]>
     >
   >,
   Schema.MapFromSelf<

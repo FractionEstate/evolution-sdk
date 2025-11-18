@@ -143,7 +143,7 @@ Schema for validating negative 64-bit integers (-9223372036854775808 to -1).
 **Signature**
 
 ```ts
-export declare const NegInt64Schema: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
+export declare const NegInt64Schema: Schema.refine<bigint, typeof Schema.BigInt>
 ```
 
 Added in v2.0.0
@@ -157,7 +157,7 @@ nonZeroInt64 = negInt64/ posInt64
 
 ```ts
 export declare const NonZeroInt64: Schema.Union<
-  [Schema.refine<bigint, typeof Schema.BigIntFromSelf>, Schema.refine<bigint, typeof Schema.BigIntFromSelf>]
+  [Schema.refine<bigint, typeof Schema.BigInt>, Schema.refine<bigint, typeof Schema.BigInt>]
 >
 ```
 
@@ -170,7 +170,7 @@ Schema for validating positive 64-bit integers (1 to 9223372036854775807).
 **Signature**
 
 ```ts
-export declare const PosInt64Schema: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
+export declare const PosInt64Schema: Schema.refine<bigint, typeof Schema.BigInt>
 ```
 
 Added in v2.0.0

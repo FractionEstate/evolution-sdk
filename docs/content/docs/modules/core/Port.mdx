@@ -112,7 +112,7 @@ Schema for validating port numbers (0-65535).
 **Signature**
 
 ```ts
-export declare const PortSchema: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
+export declare const PortSchema: Schema.refine<bigint, typeof Schema.BigInt>
 ```
 
 Added in v2.0.0

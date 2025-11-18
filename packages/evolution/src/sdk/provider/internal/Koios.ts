@@ -39,8 +39,8 @@ export const ProtocolParametersSchema = Schema.Struct({
   max_block_size: Schema.Number,
   max_tx_size: Schema.Number,
   max_bh_size: Schema.Number,
-  key_deposit: Schema.BigIntFromSelf,
-  pool_deposit: Schema.BigIntFromSelf,
+  key_deposit: Schema.BigInt,
+  pool_deposit: Schema.BigInt,
   max_epoch: Schema.Number,
   optimal_pool_count: Schema.Number,
   influence: Schema.Number,
@@ -68,7 +68,7 @@ export const ProtocolParametersSchema = Schema.Struct({
   max_val_size: Schema.Number,
   collateral_percent: Schema.Number,
   max_collateral_inputs: Schema.Number,
-  coins_per_utxo_size: Schema.BigIntFromSelf
+  coins_per_utxo_size: Schema.BigInt
 })
 export interface ProtocolParameters extends Schema.Schema.Type<typeof ProtocolParametersSchema> {}
 

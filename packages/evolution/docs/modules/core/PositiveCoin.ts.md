@@ -122,7 +122,7 @@ positive_coin = 1 .. maxWord64
 **Signature**
 
 ```ts
-export declare const PositiveCoinSchema: Schema.refine<bigint, typeof Schema.BigIntFromSelf>
+export declare const PositiveCoinSchema: Schema.refine<bigint, typeof Schema.BigInt>
 ```
 
 Added in v2.0.0

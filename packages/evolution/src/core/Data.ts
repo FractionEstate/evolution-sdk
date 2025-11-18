@@ -1,4 +1,4 @@
-import { Data as EffectData, Effect, FastCheck, Hash, ParseResult, Schema } from "effect"
+import { Data as EffectData, Effect, Equal, FastCheck, Hash, ParseResult, Schema } from "effect"
 
 import * as Bytes from "./Bytes.js"
 import * as CBOR from "./CBOR.js"
@@ -15,6 +15,25 @@ export class DataError extends EffectData.TaggedError("DataError")<{
   message?: string
   cause?: unknown
 }> {}
+
+/**
+ * PlutusData encoded type (for JSON/CBOR encoding)
+ * Based on Conway CDDL specification
+ *
+ * @since 2.0.0
+ * @category model
+ */
+export type DataEncoded =
+  // Constr (encoded with string index)
+  | { readonly index: string; readonly fields: ReadonlyArray<DataEncoded> }
+  // Map (encoded as array of [key, value] pairs)
+  | ReadonlyArray<readonly [DataEncoded, DataEncoded]>
+  // List
+  | ReadonlyArray<DataEncoded>
+  // Int (encoded as string)
+  | string
+  // ByteArray (encoded as hex string)
+  | string
 
 /**
  * PlutusData type definition (runtime type)
@@ -49,11 +68,16 @@ export class DataError extends EffectData.TaggedError("DataError")<{
  * @category model
  */
 export type Data =
+  // Constr (runtime with bigint index)
   | Constr
-  | ReadonlyMap<Data, Data>
+  // Map (using standard Map since Schema.Map produces Map<K,V>)
+  | globalThis.Map<Data, Data>
+  // List
   | ReadonlyArray<Data>
+  // Int (runtime as bigint)
   | bigint
-  | string
+  // ByteArray (runtime as Uint8Array)
+  | Uint8Array
 
 /**
  * PlutusMap type alias
@@ -61,7 +85,7 @@ export type Data =
  * @since 2.0.0
  * @category model
  */
-export type Map = ReadonlyMap<Data, Data>
+export type Map = globalThis.Map<Data, Data>
 
 /**
  * PlutusList type alias
@@ -83,12 +107,20 @@ export class Constr extends Schema.Class<Constr>("Constr")({
     title: "Constructor Index",
     description: "The index of the constructor, must be a non-negative integer"
   }),
-  fields: Schema.Array(Schema.suspend((): Schema.Schema<Data> => DataSchema)).annotations({
+  fields: Schema.Array(Schema.suspend((): Schema.Schema<Data, DataEncoded> => DataSchema)).annotations({
     identifier: "Data.Constr.Fields",
     title: "Fields of Constr",
     description: "A list of PlutusData fields for the constructor"
   })
-}) {}
+}) {
+  [Equal.symbol](that: unknown): boolean {
+    return that instanceof Constr && equals(this, that)
+  }
+
+  [Hash.symbol](): number {
+    return Hash.hash(this.index.toString() + this.fields.length)
+  }
+}
 
 /**
  * Schema for PlutusMap data type
@@ -97,13 +129,13 @@ export class Constr extends Schema.Class<Constr>("Constr")({
  *
  * @since 2.0.0
  */
-export const MapSchema = Schema.ReadonlyMapFromSelf({
-  key: Schema.suspend((): Schema.Schema<Data> => DataSchema).annotations({
+export const MapSchema = Schema.Map({
+  key: Schema.suspend((): Schema.Schema<Data, DataEncoded> => DataSchema).annotations({
     identifier: "Data.Map.Key",
     title: "Map Key",
     description: "The key of the PlutusMap, must be a PlutusData type"
   }),
-  value: Schema.suspend((): Schema.Schema<Data> => DataSchema).annotations({
+  value: Schema.suspend((): Schema.Schema<Data, DataEncoded> => DataSchema).annotations({
     identifier: "Data.Map.Value",
     title: "Map Value",
     description: "The value of the PlutusMap, must be a PlutusData type"
@@ -121,7 +153,7 @@ export const MapSchema = Schema.ReadonlyMapFromSelf({
  *
  * @since 2.0.0
  */
-export const ListSchema = Schema.Array(Schema.suspend((): Schema.Schema<Data> => DataSchema)).annotations({
+export const ListSchema = Schema.Array(Schema.suspend((): Schema.Schema<Data, DataEncoded> => DataSchema)).annotations({
   identifier: "Data.List"
 })
 
@@ -146,7 +178,7 @@ export const ListSchema = Schema.Array(Schema.suspend((): Schema.Schema<Data> =>
  *
  * @since 2.0.0
  */
-export const IntSchema = Schema.BigIntFromSelf.annotations({
+export const IntSchema = Schema.BigInt.annotations({
   identifier: "Data.Int"
 })
 export type Int = typeof IntSchema.Type
@@ -158,7 +190,7 @@ export type Int = typeof IntSchema.Type
  *
  * @since 2.0.0
  */
-export const ByteArray = Bytes.HexLenientSchema.annotations({
+export const ByteArray = Schema.Uint8ArrayFromHex.annotations({
   identifier: "Data.ByteArray"
 })
 export type ByteArray = typeof ByteArray.Type
@@ -170,11 +202,20 @@ export type ByteArray = typeof ByteArray.Type
  *
  * @since 2.0.0
  */
-export const DataSchema = Schema.Union(
+export const DataSchema: Schema.Schema<Data, DataEncoded> = Schema.Union(
+  // Map: ReadonlyArray<[DataEncoded, DataEncoded]> <-> Map<Data, Data>
   MapSchema,
+
+  // List: ReadonlyArray<DataEncoded> <-> ReadonlyArray<Data>
   ListSchema,
+
+  // Int: string <-> bigint
   IntSchema,
+
+  // ByteArray: hex string <-> Uint8Array
   ByteArray,
+
+  // Constr: { index: string, fields: DataEncoded[] } <-> Constr { index: bigint, fields: Data[] }
   Constr
 ).annotations({
   identifier: "DataSchema"
@@ -239,7 +280,7 @@ export const constr = (index: bigint, fields: Array<Data>): Constr => Constr.mak
  * @since 2.0.0
  * @category constructors
  */
-export const map = (entries: Array<[key: Data, value: Data]>): Map => new globalThis.Map(entries) as ReadonlyMap<Data, Data>
+export const map = (entries: Array<[key: Data, value: Data]>): Map => new globalThis.Map(entries)
 
 /**
  * Creates a Plutus list from items
@@ -297,7 +338,7 @@ export const matchData = <T>(
     Map: (entries: ReadonlyArray<[Data, Data]>) => T
     List: (items: ReadonlyArray<Data>) => T
     Int: (value: bigint) => T
-    Bytes: (bytes: string) => T
+    Bytes: (bytes: Uint8Array) => T
     Constr: (constr: Constr) => T
   }
 ): T => {
@@ -352,11 +393,11 @@ export const arbitraryPlutusData = (depth: number = 3): FastCheck.Arbitrary<Data
  *
  * @since 2.0.0
  */
-export const arbitraryPlutusBytes = (): FastCheck.Arbitrary<ByteArray> =>
+export const arbitraryPlutusBytes = (): FastCheck.Arbitrary<Uint8Array> =>
   FastCheck.uint8Array({
     minLength: 0, // Allow empty arrays (valid for PlutusBytes)
     maxLength: 32 // Max 32 bytes
-  }).map((bytes) => Bytes.toHexLenient(bytes))
+  })
 
 /**
  * Creates an arbitrary that generates PlutusBigInt values
@@ -365,7 +406,7 @@ export const arbitraryPlutusBytes = (): FastCheck.Arbitrary<ByteArray> =>
  *
  * @since 2.0.0
  */
-export const arbitraryPlutusBigInt = (): FastCheck.Arbitrary<Int> => FastCheck.bigInt().map((value) => int(value))
+export const arbitraryPlutusBigInt = (): FastCheck.Arbitrary<bigint> => FastCheck.bigInt()
 
 /**
  * Creates an arbitrary that generates PlutusList values
@@ -499,8 +540,8 @@ export const plutusDataToCBORValue = (data: Data): CBOR.CBOR => {
       return value
     },
     Bytes: (bytes): CBOR.CBOR => {
-      // Convert hex string to Uint8Array for CBOR encoding (lenient to allow empty)
-      return Bytes.fromHexLenient(bytes)
+      // Bytes are already Uint8Array, return as is
+      return bytes
     },
     Constr: (constr): CBOR.CBOR => {
       // PlutusData Constr -> CBOR tags based on index
@@ -542,9 +583,9 @@ export const cborValueToPlutusData = (cborValue: CBOR.CBOR): Data => {
     return cborValue
   }
 
-  // Handle Uint8Array (bytes) - convert to hex string
+  // Handle Uint8Array (bytes)
   if (CBOR.isByteArray(cborValue)) {
-    return Bytes.toHex(cborValue)
+    return cborValue
   }
 
   // Handle tagged values
@@ -701,10 +742,15 @@ export const hash = (data: Data): number => {
  * @category equality
  */
 export const equals = (a: Data, b: Data): boolean => {
-  if (typeof a === "bigint" || typeof b === "bigint") return a === b
+  // bigint
+  if (typeof a === "bigint" && typeof b === "bigint") return a === b
 
-  // String comparison (for ByteArray hex strings or other string types)
-  if (typeof a === "string" && typeof b === "string") return a === b
+  // Uint8Array (ByteArray) - bytewise comparison
+  if (a instanceof Uint8Array && b instanceof Uint8Array) {
+    if (a.length !== b.length) return false
+    for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false
+    return true
+  }
 
   // Arrays (Lists)
   if (Array.isArray(a) && Array.isArray(b)) {
