@@ -39,7 +39,7 @@ export interface Integer extends Schema.SchemaClass<bigint, bigint, never> {}
  */
 export const Integer: Integer = Schema.typeSchema(Data.IntSchema)
 
-interface Literal<Literals extends NonEmptyReadonlyArray<SchemaAST.LiteralValue>>
+export interface Literal<Literals extends NonEmptyReadonlyArray<SchemaAST.LiteralValue>>
   extends Schema.transform<Schema.SchemaClass<Data.Constr, Data.Constr, never>, Schema.Literal<[...Literals]>> {}
 
 /**
@@ -56,7 +56,7 @@ export const Literal = <Literals extends NonEmptyReadonlyArray<Exclude<SchemaAST
     decode: (value) => self[Number(value.index)]
   })
 
-interface OneLiteral<Single extends Exclude<SchemaAST.LiteralValue, null | bigint>>
+export interface OneLiteral<Single extends Exclude<SchemaAST.LiteralValue, null | bigint>>
   extends Schema.transform<Schema.SchemaClass<Data.Constr, Data.Constr, never>, Schema.Literal<[Single]>> {}
 
 export const OneLiteral = <Single extends Exclude<SchemaAST.LiteralValue, null | bigint>>(
@@ -70,7 +70,7 @@ export const OneLiteral = <Single extends Exclude<SchemaAST.LiteralValue, null |
     decode: (_value) => self
   })
 
-interface Array<S extends Schema.Schema.Any> extends Schema.Array$<S> {}
+export interface Array<S extends Schema.Schema.Any> extends Schema.Array$<S> {}
 
 /**
  * Creates a schema for arrays - just passes through to Schema.Array directly
@@ -79,7 +79,7 @@ interface Array<S extends Schema.Schema.Any> extends Schema.Array$<S> {}
  */
 export const Array = <S extends Schema.Schema.Any>(items: S): Array<S> => Schema.Array(items)
 
-interface Map<K extends Schema.Schema.Any, V extends Schema.Schema.Any>
+export interface Map<K extends Schema.Schema.Any, V extends Schema.Schema.Any>
   extends Schema.transform<
     Schema.SchemaClass<globalThis.Map<Data.Data, Data.Data>, globalThis.Map<Data.Data, Data.Data>, never>,
     Schema.MapFromSelf<K, V>
@@ -107,7 +107,7 @@ export const Map = <K extends Schema.Schema.Any, V extends Schema.Schema.Any>(ke
     }
   })
 
-interface NullOr<S extends Schema.Schema.All>
+export interface NullOr<S extends Schema.Schema.All>
   extends Schema.transform<Schema.SchemaClass<Data.Constr, Data.Constr, never>, Schema.NullOr<S>> {}
 
 /**
@@ -126,7 +126,7 @@ export const NullOr = <S extends Schema.Schema.All>(self: S): NullOr<S> =>
     decode: (value) => (value.index === 1n ? null : (value.fields[0] as Schema.Schema.Type<S>))
   })
 
-interface UndefineOr<S extends Schema.Schema.Any>
+export interface UndefineOr<S extends Schema.Schema.Any>
   extends Schema.transform<Schema.SchemaClass<Data.Constr, Data.Constr, never>, Schema.UndefinedOr<S>> {}
 
 /**
@@ -147,7 +147,7 @@ export const UndefinedOr = <S extends Schema.Schema.Any>(self: S): UndefineOr<S>
     decode: (value) => (value.index === 1n ? undefined : (value.fields[0] as Schema.Schema.Type<S>))
   })
 
-interface Boolean
+export interface Boolean
   extends Schema.transform<Schema.SchemaClass<Data.Constr, Data.Constr, never>, typeof Schema.Boolean> {}
 
 /**
@@ -180,7 +180,7 @@ export const Boolean: Boolean = Schema.transform(
   identifier: "TSchema.BooleanFromConstr"
 })
 
-interface Struct<Fields extends Schema.Struct.Fields>
+export interface Struct<Fields extends Schema.Struct.Fields>
   extends Schema.transform<Schema.SchemaClass<Data.Constr, Data.Constr, never>, Schema.Struct<Fields>> {}
 
 /**
@@ -244,7 +244,7 @@ export const Struct = <Fields extends Schema.Struct.Fields>(
   })
 }
 
-interface Union<Members extends ReadonlyArray<Schema.Schema.Any>>
+export interface Union<Members extends ReadonlyArray<Schema.Schema.Any>>
   extends Schema.transformOrFail<
     Schema.SchemaClass<Data.Constr, Data.Constr, never>,
     Schema.SchemaClass<Schema.Schema.Type<[...Members][number]>, Schema.Schema.Type<[...Members][number]>, never>,
@@ -463,7 +463,7 @@ export const Union = <Members extends ReadonlyArray<Schema.Schema.Any>>(...membe
   }) as Union<Members>
 }
 
-interface Tuple<Elements extends Schema.TupleType.Elements> extends Schema.Tuple<Elements> {}
+export interface Tuple<Elements extends Schema.TupleType.Elements> extends Schema.Tuple<Elements> {}
 /**
  * Creates a schema for tuple types - just passes through to Schema.Tuple directly
  *
