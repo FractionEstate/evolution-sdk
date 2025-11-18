@@ -1,5 +1,11 @@
 # @evolution-sdk/evolution
 
+## 0.2.1
+
+### Patch Changes
+
+- [#61](https://github.com/IntersectMBO/evolution-sdk/pull/61) [`0dcf415`](https://github.com/IntersectMBO/evolution-sdk/commit/0dcf4155e7950ff46061100300355fb0a69e902d) Thanks [@solidsnakedev](https://github.com/solidsnakedev)! - upgrade modules
+
 ## 0.2.0
 
 ### Minor Changes
