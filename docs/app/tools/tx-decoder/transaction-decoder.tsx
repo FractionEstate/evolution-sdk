@@ -1,12 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { Core } from "@evolution-sdk/evolution"
+import { Core, Schema } from "@evolution-sdk/evolution"
+
+type DecodeType = 'transaction' | 'witnessSet' | 'data'
 
 export function TransactionDecoder() {
   const [txHex, setTxHex] = useState("")
   const [decodedJson, setDecodedJson] = useState<string>("")
   const [error, setError] = useState<string | null>(null)
+  const [decodeType, setDecodeType] = useState<DecodeType>('transaction')
 
   const decodeTx = async () => {
     setError(null)
@@ -16,60 +19,114 @@ export function TransactionDecoder() {
       const cleanHex = txHex.trim().replace(/\s+/g, '')
       
       if (!cleanHex) {
-        setError("Please enter a transaction CBOR hex string")
+        setError(`Please enter a ${decodeType === 'transaction' ? 'transaction' : decodeType === 'witnessSet' ? 'transaction witness set' : 'plutus data'} CBOR hex string`)
         return
       }
       
-      const tx = Core.Transaction.fromCBORHex(cleanHex)
-      const json = JSON.stringify(tx.toJSON(), (key, value) =>
-        typeof value === 'bigint' ? value.toString() : value
-      , 2)
-      setDecodedJson(json)
+      if (decodeType === 'transaction') {
+        const tx = Core.Transaction.fromCBORHex(cleanHex)
+        const json = Schema.encodeSync(Schema.parseJson(Core.Transaction.Transaction, {space: 2}))(tx)
+        setDecodedJson(json)
+      } else if (decodeType === 'witnessSet') {
+        const witnessSet = Core.TransactionWitnessSet.fromCBORHex(cleanHex)
+        const json = Schema.encodeSync(Schema.parseJson(Core.TransactionWitnessSet.TransactionWitnessSet, {space: 2}))(witnessSet)
+        setDecodedJson(json)
+      } else {
+        const data = Core.Data.fromCBORHex(cleanHex)
+        const json = Schema.encodeSync(Schema.parseJson(Core.Data.DataSchema, {space: 2}))(data)
+        setDecodedJson(json)
+      }
     } catch (err) {
       console.error('Decode error:', err)
-      setError(err instanceof Error ? err.message : "Failed to decode transaction")
+      setError(err instanceof Error ? err.message : `Failed to decode ${decodeType === 'transaction' ? 'transaction' : decodeType === 'witnessSet' ? 'witness set' : 'data'}`)
     }
   }
 
   return (
-    <div className="space-y-6">
-      <div className="space-y-4">
-        <button
-          onClick={decodeTx}
-          className="px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-        >
-          Decode Transaction
-        </button>
-
-        <div className="space-y-2">
-          <label htmlFor="tx-hex" className="block text-sm font-medium">
-            Transaction CBOR Hex
-          </label>
-          <textarea
-            id="tx-hex"
-            value={txHex}
-            onChange={(e) => setTxHex(e.target.value)}
-            placeholder="Paste transaction CBOR hex here..."
-            className="w-full h-32 px-3 py-2 bg-background border border-border rounded-md font-mono text-sm resize-y focus:outline-none focus:ring-2 focus:ring-ring"
-          />
+    <div className="max-w-6xl mx-auto space-y-6">
+      <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
+        <div className="p-6 space-y-6">
+          <div className="flex items-center justify-between">
+            <div className="space-y-1">
+              <h3 className="text-2xl font-semibold tracking-tight">CBOR Decoder</h3>
+              <p className="text-sm text-muted-foreground">Decode Cardano CBOR hex strings</p>
+            </div>
+          </div>
+          
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <label htmlFor="decode-type" className="text-sm font-medium leading-none">
+                  Type
+                </label>
+                <select
+                  id="decode-type"
+                  value={decodeType}
+                  onChange={(e) => setDecodeType(e.target.value as DecodeType)}
+                  className="flex h-10 w-full items-center justify-between rounded-md border border-input bg-background px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="transaction">Transaction</option>
+                  <option value="witnessSet">Transaction Witness Set</option>
+                  <option value="data">Plutus Data</option>
+                </select>
+              </div>
+            </div>
+            
+            <div className="space-y-2">
+              <label htmlFor="tx-hex" className="text-sm font-medium leading-none">
+                CBOR Hex Input
+              </label>
+              <textarea
+                id="tx-hex"
+                value={txHex}
+                onChange={(e) => setTxHex(e.target.value)}
+                placeholder={`Paste ${decodeType === 'transaction' ? 'transaction' : decodeType === 'witnessSet' ? 'transaction witness set' : 'plutus data'} CBOR hex here...`}
+                className="flex min-h-[120px] w-full rounded-md border border-input bg-background px-3 py-2 text-sm font-mono resize-y focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+            
+            <button
+              onClick={decodeTx}
+              className="sm:w-auto w-full inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-6 py-2 bg-zinc-700 text-white hover:bg-zinc-600 active:bg-zinc-500 transition-all cursor-pointer shadow-sm hover:shadow"
+            >
+              Decode {decodeType === 'transaction' ? 'Transaction' : decodeType === 'witnessSet' ? 'Witness Set' : 'Data'}
+            </button>
+          </div>
         </div>
       </div>
 
       {error && (
-        <div className="p-4 bg-destructive/10 border border-destructive/20 rounded-md">
-          <p className="text-destructive font-medium">Error decoding transaction:</p>
-          <p className="text-destructive/80 text-sm mt-1">{error}</p>
+        <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
+          <div className="p-6">
+            <div className="flex gap-3">
+              <svg className="h-5 w-5 text-destructive shrink-0 mt-0.5" viewBox="0 0 20 20" fill="currentColor">
+                <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+              </svg>
+              <div className="flex-1 min-w-0 space-y-2">
+                <p className="text-sm font-medium text-destructive">Error decoding {decodeType === 'transaction' ? 'transaction' : decodeType === 'witnessSet' ? 'witness set' : 'data'}</p>
+                <pre className="text-xs text-muted-foreground whitespace-pre-wrap break-words overflow-wrap-anywhere font-mono">{error}</pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+      
+      {decodedJson && (
+        <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
+          <div className="p-6 space-y-3">
+            <h4 className="text-sm font-semibold">Decoded Result</h4>
+            <pre className="rounded-md bg-muted p-4 overflow-x-auto max-h-[500px]">
+              <code className="text-xs">{decodedJson}</code>
+            </pre>
+          </div>
         </div>
       )}
 
-      {decodedJson && (
-        <div className="space-y-2">
-          <label className="block text-sm font-medium">Decoded Transaction (JSON)</label>
-          <pre className="w-full p-4 bg-muted border border-border rounded-md overflow-auto max-h-[600px] text-sm">
-            <code>{decodedJson}</code>
-          </pre>
-        </div>
-      )}
+      <div className="pt-4 border-t border-border/50">
+        <p className="text-xs text-center text-muted-foreground">
+          Questions or feedback? <a href="https://github.com/IntersectMBO/evolution-sdk/issues" target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">Start a discussion on GitHub</a>
+        </p>
+      </div>
     </div>
   )
 }

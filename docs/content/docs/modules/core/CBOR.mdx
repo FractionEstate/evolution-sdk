@@ -11,6 +11,7 @@ parent: Modules
 <h2 className="text-delta">Table of contents</h2>
 
 - [constants](#constants)
+  - [AIKEN_DEFAULT_OPTIONS](#aiken_default_options)
   - [CANONICAL_OPTIONS](#canonical_options)
   - [CBOR_ADDITIONAL_INFO](#cbor_additional_info)
   - [CBOR_MAJOR_TYPE](#cbor_major_type)
@@ -63,6 +64,25 @@ parent: Modules
 ---
 
 # constants
+
+## AIKEN_DEFAULT_OPTIONS
+
+Aiken-compatible CBOR encoding options
+
+Matches the encoding used by Aiken's cbor.serialise():
+
+- Indefinite-length arrays (9f...ff)
+- Maps encoded as arrays of pairs (not CBOR maps)
+- Strings as bytearrays (major type 2, not 3)
+- Constructor tags: 121-127 for indices 0-6, then 1280+ for 7+
+
+**Signature**
+
+```ts
+export declare const AIKEN_DEFAULT_OPTIONS: CodecOptions
+```
+
+Added in v2.0.0
 
 ## CANONICAL_OPTIONS
 
@@ -239,6 +259,7 @@ export type CodecOptions =
   | {
       readonly mode: "canonical"
       readonly mapsAsObjects?: boolean
+      readonly encodeMapAsPairs?: boolean
     }
   | {
       readonly mode: "custom"
@@ -248,6 +269,7 @@ export type CodecOptions =
       readonly sortMapKeys: boolean
       readonly useMinimalEncoding: boolean
       readonly mapsAsObjects?: boolean
+      readonly encodeMapAsPairs?: boolean
     }
 ```
 

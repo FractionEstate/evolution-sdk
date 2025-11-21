@@ -100,9 +100,15 @@ while maintaining single-level CBOR encoding compatible with Aiken.
 **Signature**
 
 ```ts
-export declare const Variant: <Variants extends Record<string, Schema.Struct.Fields>>(
+export declare function Variant<const Variants extends Record<PropertyKey, Schema.Struct.Fields>>(
   variants: Variants
-) => Schema.Schema<VariantType<Variants>, Data.Data, never>
+): Union<
+  ReadonlyArray<
+    {
+      [K in keyof Variants]: Struct<{ readonly [P in K]: Struct<Variants[K]> }>
+    }[keyof Variants]
+  >
+>
 ```
 
 Added in v2.0.0
@@ -297,10 +303,10 @@ Objects are represented as a constructor with index (default 0) and fields as an
 **Signature**
 
 ```ts
-export declare const Struct: <Fields extends Schema.Struct.Fields>(
+export declare function Struct<Fields extends Schema.Struct.Fields>(
   fields: Fields,
-  options?: StructOptions
-) => Struct<Fields>
+  options: StructOptions = {}
+): Struct<Fields>
 ```
 
 Added in v2.0.0
