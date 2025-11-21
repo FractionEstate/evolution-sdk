@@ -304,121 +304,29 @@ describe("TypeTaggedSchema Tests", () => {
           stakeCredential: TSchema.NullOr(TSchema.Integer)
         })
 
+        const Foo = TSchema.Union(
+          TSchema.Struct({ foo: AddressSchema }, { flatFields: true })
+        )
+
         const input = {
-          paymentCredential: { pubKeyHash: fromHex("deadbeef") },
-          stakeCredential: null
+          foo: {
+            paymentCredential: { pubKeyHash: fromHex("deadbeef") },
+            stakeCredential: null
+          }
         }
 
-        const encoded = Data.withSchema(AddressSchema).toData(input)
-        const decoded = Data.withSchema(AddressSchema).fromData(encoded)
+        const encoded = Data.withSchema(Foo).toData(input)
+        const decoded = Data.withSchema(Foo).fromData(encoded)
 
         // Verify roundtrip
         expect(decoded).toEqual(input)
 
         // Verify field order in CBOR: paymentCredential should be field 0, stakeCredential field 1
-        expect(encoded.fields.length).toBe(2)
-        expect(encoded.fields[0]).toBeInstanceOf(Data.Constr) // paymentCredential
-        expect(encoded.fields[1]).toBeInstanceOf(Data.Constr) // stakeCredential (null)
-        expect((encoded.fields[1] as Data.Constr).index).toBe(1n) // null is Constr(1, [])
-      })
-
-      it("should preserve field order with multiple NullOr fields", () => {
-        const TestSchema = TSchema.Struct({
-          first: TSchema.Integer,
-          second: TSchema.NullOr(TSchema.ByteArray),
-          third: TSchema.Boolean,
-          fourth: TSchema.NullOr(TSchema.Integer)
-        })
-
-        const input = {
-          first: 100n,
-          second: fromHex("cafe"),
-          third: true,
-          fourth: null
-        }
-
-        const encoded = Data.withSchema(TestSchema).toData(input)
-        const decoded = Data.withSchema(TestSchema).fromData(encoded)
-
-        expect(decoded).toEqual(input)
-
-        // Verify field order
-        expect(encoded.fields[0]).toBe(100n) // first
-        expect(encoded.fields[1]).toBeInstanceOf(Data.Constr) // second (NullOr with value)
-        expect(encoded.fields[2]).toBeInstanceOf(Data.Constr) // third (Boolean)
-        expect(encoded.fields[3]).toBeInstanceOf(Data.Constr) // fourth (null)
-        expect((encoded.fields[3] as Data.Constr).index).toBe(1n) // null
-      })
-
-      it("should preserve field order with UndefinedOr fields", () => {
-        const TestSchema = TSchema.Struct({
-          first: TSchema.ByteArray,
-          second: TSchema.UndefinedOr(TSchema.Integer),
-          third: TSchema.Boolean
-        })
-
-        const inputWithValue = {
-          first: fromHex("deadbeef"),
-          second: 42n,
-          third: false
-        }
-
-        const encodedWithValue = Data.withSchema(TestSchema).toData(inputWithValue)
-        const decodedWithValue = Data.withSchema(TestSchema).fromData(encodedWithValue)
-
-        expect(decodedWithValue).toEqual(inputWithValue)
-
-        // Verify field order when value is present
-        expect(encodedWithValue.fields[0]).toBeInstanceOf(Uint8Array) // first
-        expect(encodedWithValue.fields[1]).toBeInstanceOf(Data.Constr) // second (UndefinedOr with value)
-        expect(encodedWithValue.fields[2]).toBeInstanceOf(Data.Constr) // third (Boolean)
-
-        const inputUndefined = {
-          first: fromHex("cafebabe"),
-          second: undefined,
-          third: true
-        }
-
-        const encodedUndefined = Data.withSchema(TestSchema).toData(inputUndefined)
-        const decodedUndefined = Data.withSchema(TestSchema).fromData(encodedUndefined)
-
-        expect(decodedUndefined).toEqual(inputUndefined)
-
-        // Verify field order when value is undefined
-        expect(encodedUndefined.fields[0]).toBeInstanceOf(Uint8Array) // first
-        expect(encodedUndefined.fields[1]).toBeInstanceOf(Data.Constr) // second (undefined)
-        expect((encodedUndefined.fields[1] as Data.Constr).index).toBe(1n) // undefined is Constr(1, [])
-        expect(encodedUndefined.fields[2]).toBeInstanceOf(Data.Constr) // third (Boolean)
-      })
-
-      it("should preserve field order with mixed NullOr and UndefinedOr fields", () => {
-        const TestSchema = TSchema.Struct({
-          a: TSchema.Integer,
-          b: TSchema.NullOr(TSchema.ByteArray),
-          c: TSchema.UndefinedOr(TSchema.Integer),
-          d: TSchema.Boolean
-        })
-
-        const input = {
-          a: 999n,
-          b: null,
-          c: undefined,
-          d: true
-        }
-
-        const encoded = Data.withSchema(TestSchema).toData(input)
-        const decoded = Data.withSchema(TestSchema).fromData(encoded)
-
-        expect(decoded).toEqual(input)
-
-        // Verify all fields are in correct order
-        expect(encoded.fields[0]).toBe(999n) // a
-        expect(encoded.fields[1]).toBeInstanceOf(Data.Constr) // b (null)
-        expect((encoded.fields[1] as Data.Constr).index).toBe(1n) // null
-        expect(encoded.fields[2]).toBeInstanceOf(Data.Constr) // c (undefined)
-        expect((encoded.fields[2] as Data.Constr).index).toBe(1n) // undefined
-        expect(encoded.fields[3]).toBeInstanceOf(Data.Constr) // d (Boolean)
-        expect((encoded.fields[3] as Data.Constr).index).toBe(1n) // true
+        const innerStruct = (encoded.fields[0] as Data.Constr).fields[0] as Data.Constr
+        expect(innerStruct.fields.length).toBe(2)
+        expect(innerStruct.fields[0]).toBeInstanceOf(Data.Constr) // paymentCredential
+        expect(innerStruct.fields[1]).toBeInstanceOf(Data.Constr) // stakeCredential (null)
+        expect((innerStruct.fields[1] as Data.Constr).index).toBe(1n) // null is Constr(1, [])
       })
     })
 

@@ -100,9 +100,9 @@ while maintaining single-level CBOR encoding compatible with Aiken.
 **Signature**
 
 ```ts
-export declare const Variant: <Variants extends Record<string, Schema.Struct.Fields>>(
+export declare const Variant: <const Variants extends Record<PropertyKey, Schema.Struct.Fields>>(
   variants: Variants
-) => Schema.Schema<VariantType<Variants>, Data.Data, never>
+) => Union<ReadonlyArray<{ [K in keyof Variants]: Struct<{ readonly [P in K]: Struct<Variants[K]> }> }[keyof Variants]>>
 ```
 
 Added in v2.0.0
