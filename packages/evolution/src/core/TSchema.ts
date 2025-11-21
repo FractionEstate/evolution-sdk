@@ -326,7 +326,7 @@ export const Struct = <Fields extends Schema.Struct.Fields>(
       // encodedStruct is the result of Schema.Struct(fields), which has already transformed all fields
 
       // Use Object.keys(fields) to preserve schema definition order
-      // (Object.entries doesn't guarantee property order)
+      // rather than Object.entries(encodedStruct) which would use runtime object order
       const orderedKeys = Object.keys(fields).filter((key) => key !== detectedTagField)
       const fieldValues = orderedKeys.map((key) => encodedStruct[key as keyof typeof encodedStruct]) as ReadonlyArray<Data.Data>
 
