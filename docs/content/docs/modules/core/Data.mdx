@@ -20,8 +20,6 @@ parent: Modules
   - [int](#int)
   - [list](#list)
   - [map](#map)
-- [either](#either)
-  - [Either (namespace)](#either-namespace)
 - [equality](#equality)
   - [equals](#equals)
   - [hash](#hash)
@@ -71,6 +69,7 @@ parent: Modules
 - [utils](#utils)
   - [ByteArray (type alias)](#bytearray-type-alias)
   - [CDDLSchema](#cddlschema)
+  - [DataSchema (interface)](#dataschema-interface)
   - [Int (type alias)](#int-type-alias)
 
 ---
@@ -88,12 +87,12 @@ export declare const withSchema: <A, I extends Data>(
   schema: Schema.Schema<A, I>,
   options?: CBOR.CodecOptions
 ) => {
-  toData: (input: A) => I
-  fromData: (input: I) => A
-  toCBORHex: (input: A, options?: CBOR.CodecOptions) => string
-  toCBORBytes: (input: A, options?: CBOR.CodecOptions) => Uint8Array
-  fromCBORHex: (hex: string, options?: CBOR.CodecOptions) => A
-  fromCBORBytes: (bytes: Uint8Array, options?: CBOR.CodecOptions) => A
+  toData: (a: A, overrideOptions?: ParseOptions) => I
+  fromData: (i: I, overrideOptions?: ParseOptions) => A
+  toCBORHex: (a: A, overrideOptions?: ParseOptions) => string
+  toCBORBytes: (a: A, overrideOptions?: ParseOptions) => any
+  fromCBORHex: (i: string, overrideOptions?: ParseOptions) => A
+  fromCBORBytes: (i: any, overrideOptions?: ParseOptions) => A
 }
 ```
 
@@ -172,14 +171,6 @@ Creates a Plutus map from key-value pairs
 ```ts
 export declare const map: (entries: Array<[key: Data, value: Data]>) => Map
 ```
-
-Added in v2.0.0
-
-# either
-
-## Either (namespace)
-
-Either-based variants for functions that can fail.
 
 Added in v2.0.0
 
@@ -525,7 +516,7 @@ Combined schema for PlutusData type with proper recursion
 **Signature**
 
 ```ts
-export declare const DataSchema: Schema.Schema<Data, DataEncoded, never>
+export declare const DataSchema: DataSchema
 ```
 
 Added in v2.0.0
@@ -735,7 +726,7 @@ Encode PlutusData to CBOR bytes
 **Signature**
 
 ```ts
-export declare const toCBORBytes: (input: Data, options?: CBOR.CodecOptions) => Uint8Array
+export declare const toCBORBytes: (data: Data, options?: CBOR.CodecOptions) => any
 ```
 
 Added in v2.0.0
@@ -747,7 +738,7 @@ Encode PlutusData to CBOR hex string
 **Signature**
 
 ```ts
-export declare const toCBORHex: (input: Data, options?: CBOR.CodecOptions) => string
+export declare const toCBORHex: (data: Data, options?: CBOR.CodecOptions) => string
 ```
 
 Added in v2.0.0
@@ -806,6 +797,14 @@ export type ByteArray = typeof ByteArray.Type
 
 ```ts
 export declare const CDDLSchema: Schema.Schema<CBOR.CBOR, CBOR.CBOR, never>
+```
+
+## DataSchema (interface)
+
+**Signature**
+
+```ts
+export interface DataSchema extends Schema.SchemaClass<Data, DataEncoded> {}
 ```
 
 ## Int (type alias)

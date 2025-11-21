@@ -12,6 +12,9 @@ parent: Modules
 
 - [combinators](#combinators)
   - [equivalence](#equivalence)
+- [constructors](#constructors)
+  - [TaggedStruct](#taggedstruct)
+  - [Variant](#variant)
 - [schemas](#schemas)
   - [ByteArray](#bytearray)
   - [Integer](#integer)
@@ -58,6 +61,48 @@ optimized equality checks based on the schema structure.
 
 ```ts
 export declare const equivalence: <A, I, R>(schema: Schema.Schema<A, I, R>) => Equivalence<A>
+```
+
+Added in v2.0.0
+
+# constructors
+
+## TaggedStruct
+
+Creates a tagged struct - a shortcut for creating a Struct with a Literal tag field.
+
+This is a convenience helper that makes it easy to create structs with discriminator fields,
+commonly used in discriminated unions.
+
+**Signature**
+
+```ts
+export declare const TaggedStruct: <
+  TagValue extends string,
+  Fields extends Schema.Struct.Fields,
+  TagField extends string = "_tag"
+>(
+  tagValue: TagValue,
+  fields: Fields,
+  options?: StructOptions & { tagField?: TagField }
+) => Struct<{ [K in TagField]: OneLiteral<TagValue> } & Fields>
+```
+
+Added in v2.0.0
+
+## Variant
+
+Creates a variant (tagged union) schema for Aiken-style enum types.
+
+This is a convenience helper that creates properly discriminated TypeScript types
+while maintaining single-level CBOR encoding compatible with Aiken.
+
+**Signature**
+
+```ts
+export declare const Variant: <Variants extends Record<string, Schema.Struct.Fields>>(
+  variants: Variants
+) => Schema.Schema<VariantType<Variants>, Data.Data, never>
 ```
 
 Added in v2.0.0
@@ -289,7 +334,31 @@ export interface StructOptions {
    *
    * Default: true when index is specified, false otherwise
    */
-  flat?: boolean
+  flatInUnion?: boolean
+  /**
+   * When used as a field in a parent Struct, controls whether this Struct's fields
+   * should be spread (merged) into the parent's field array.
+   * - true: Inner Struct fields are merged directly into parent
+   * - false: Inner Struct is kept as a nested Constr
+   *
+   * Default: false
+   *
+   * Note: This only applies when the Struct is a field value, not when used in Union.
+   */
+  flatFields?: boolean
+  /**
+   * Name of a field to treat as a discriminant tag (e.g., "_tag", "type").
+   *
+   * Auto-detection: Fields named "_tag", "type", "kind", or "variant" containing
+   * Literal values are automatically stripped from CBOR encoding and injected during decoding.
+   *
+   * This option allows you to:
+   * - Explicitly specify a custom tag field name
+   * - Disable auto-detection with `tagField: false`
+   *
+   * Default: auto-detect from KNOWN_TAG_FIELDS
+   */
+  tagField?: string | false
 }
 ```
 
@@ -362,7 +431,7 @@ Added in v2.0.0
 export interface Union<Members extends ReadonlyArray<Schema.Schema.Any>>
   extends Schema.transformOrFail<
     Schema.SchemaClass<Data.Constr, Data.Constr, never>,
-    Schema.SchemaClass<Schema.Schema.Type<[...Members][number]>, Schema.Schema.Type<[...Members][number]>, never>,
+    Schema.SchemaClass<Schema.Schema.Type<Members[number]>, Schema.Schema.Type<Members[number]>, never>,
     never
   > {}
 ```
