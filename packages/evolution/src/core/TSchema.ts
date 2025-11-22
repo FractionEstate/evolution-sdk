@@ -18,35 +18,24 @@ const KNOWN_TAG_FIELDS = ["_tag", "type", "kind", "variant"] as const
 const getLiteralFieldValue = (schema: Schema.Schema.Any, fieldName: string): any | undefined => {
   const ast = schema.ast
 
-  // Check if this is a Struct (TypeLiteral or Transformation to TypeLiteral)
-  let typeLiteral: any
-  if (ast._tag === "TypeLiteral") {
-    typeLiteral = ast
-  } else if (ast._tag === "Transformation" && (ast as any).to._tag === "TypeLiteral") {
-    typeLiteral = (ast as any).to
-  } else {
-    return undefined
-  }
+  // Extract TypeLiteral from either direct TypeLiteral or Transformation to TypeLiteral
+  const typeLiteral = ast._tag === "TypeLiteral" 
+    ? ast 
+    : ast._tag === "Transformation" && (ast as any).to._tag === "TypeLiteral"
+      ? (ast as any).to
+      : undefined
+
+  if (!typeLiteral) return undefined
 
   // Find the property signature for this field name
-  const propertySignatures = typeLiteral.propertySignatures || []
-  const propSig = propertySignatures.find((sig: any) => sig.name === fieldName)
+  const propSig = (typeLiteral.propertySignatures || []).find((sig: any) => sig.name === fieldName)
   if (!propSig) return undefined
 
-  // Check if the property type is a Literal or a Transformation to Literal
+  // Extract Literal value from either direct Literal or Transformation to Literal
   const propType = propSig.type
-
-  // Direct Literal (Schema.Literal)
-  if (propType._tag === "Literal") {
-    return (propType as any).literal
-  }
-
-  // TSchema.Literal (Transformation from Constr to Literal)
-  if (propType._tag === "Transformation") {
-    const transformTo = (propType as any).to
-    if (transformTo._tag === "Literal") {
-      return (transformTo as any).literal
-    }
+  if (propType._tag === "Literal") return (propType as any).literal
+  if (propType._tag === "Transformation" && (propType as any).to._tag === "Literal") {
+    return ((propType as any).to as any).literal
   }
 
   return undefined
@@ -91,32 +80,69 @@ export interface Literal<Literals extends NonEmptyReadonlyArray<SchemaAST.Litera
   extends Schema.transform<Schema.SchemaClass<Data.Constr, Data.Constr, never>, Schema.Literal<[...Literals]>> {}
 
 /**
+ * Options for Literal schema
+ */
+export interface LiteralOptions {
+  /**
+   * Custom Constr index for this literal (default: auto-incremented from 0)
+   * Useful when matching Plutus contract constructor indices
+   */
+  index?: number
+  /**
+   * When used in a Union, controls whether this Literal should be "flattened" (unwrapped).
+   * - true: Encodes as Constr(index, []) directly
+   * - false: Encodes as Constr(unionPos, [Constr(index, [])]) (nested)
+   *
+   * Default: true when index is specified, false otherwise
+   */
+  flatInUnion?: boolean
+}
+
+/**
  * Creates a schema for literal types with Plutus Data Constructor transformation
  *
  * @since 2.0.0
  */
-export const Literal = <Literals extends NonEmptyReadonlyArray<Exclude<SchemaAST.LiteralValue, null | bigint>>>(
-  ...self: Literals
-): Literal<Literals> =>
-  Schema.transform(Schema.typeSchema(Data.Constr), Schema.Literal(...self), {
+export const Literal: {
+  <Literals extends NonEmptyReadonlyArray<Exclude<SchemaAST.LiteralValue, null | bigint>>>(
+    ...self: Literals
+  ): Literal<Literals>
+  <Literals extends NonEmptyReadonlyArray<Exclude<SchemaAST.LiteralValue, null | bigint>>>(
+    ...args: [...Literals, LiteralOptions]
+  ): Literal<Literals>
+} = <Literals extends NonEmptyReadonlyArray<Exclude<SchemaAST.LiteralValue, null | bigint>>>(
+  ...args: globalThis.Array<any>
+): Literal<Literals> => {
+  // Check if last argument is options object
+  const lastArg = args[args.length - 1]
+  const hasOptions = 
+    lastArg !== null &&
+    typeof lastArg === "object" &&
+    ("index" in lastArg || "flatInUnion" in lastArg)
+  
+  const self = (hasOptions ? args.slice(0, -1) : args) as unknown as Literals
+  const options: LiteralOptions = hasOptions ? (lastArg as LiteralOptions) : {}
+  
+  return Schema.transform(Schema.typeSchema(Data.Constr), Schema.Literal(...self), {
     strict: true,
-    encode: (value) => new Data.Constr({ index: BigInt(self.indexOf(value)), fields: [] }),
-    decode: (value) => self[Number(value.index)]
-  })
-
-export interface OneLiteral<Single extends Exclude<SchemaAST.LiteralValue, null | bigint>>
-  extends Schema.transform<Schema.SchemaClass<Data.Constr, Data.Constr, never>, Schema.Literal<[Single]>> {}
-
-export const OneLiteral = <Single extends Exclude<SchemaAST.LiteralValue, null | bigint>>(
-  self: Single
-): OneLiteral<Single> =>
-  Schema.transform(Schema.typeSchema(Data.Constr), Schema.Literal(self), {
-    strict: true,
-
-    encode: (_value) => new Data.Constr({ index: 0n, fields: [] }),
-
-    decode: (_value) => self
-  })
+    encode: (value) => {
+      const baseIndex = options.index ?? self.indexOf(value)
+      return new Data.Constr({ index: BigInt(baseIndex), fields: [] })
+    },
+    decode: (value) => {
+      // When flatInUnion is true and there's only one literal, ignore the index
+      // (the Union will have assigned a position-based or custom index)
+      if (options.flatInUnion && self.length === 1) {
+        return self[0]
+      }
+      // Otherwise, use the index to look up the value
+      return self[Number(value.index)]
+    }
+  }).annotations({
+    "TSchema.customIndex": options.index,
+    "TSchema.flatInUnion": options.flatInUnion ?? (options.index !== undefined)
+  }) as Literal<Literals>
+}
 
 export interface Array<S extends Schema.Schema.Any> extends Schema.Array$<S> {}
 
@@ -215,11 +241,8 @@ export const Boolean: Boolean = Schema.transform(
     encode: (boolean) =>
       boolean ? new Data.Constr({ index: 1n, fields: [] }) : new Data.Constr({ index: 0n, fields: [] }),
     decode: ({ fields, index }) => {
-      if (index !== 0n && index !== 1n) {
-        throw new Error(`Expected constructor index to be 0 or 1, got ${index}`)
-      }
-      if (fields.length !== 0) {
-        throw new Error("Expected a constructor with no fields")
+      if ((index !== 0n && index !== 1n) || fields.length !== 0) {
+        throw new Error(`Expected constructor with index 0 or 1 and no fields, got index ${index} with ${fields.length} fields`)
       }
       return index === 1n
     }
@@ -300,21 +323,15 @@ export const Struct = <Fields extends Schema.Struct.Fields>(
       // Auto-detect from known tag field names
       for (const knownTag of KNOWN_TAG_FIELDS) {
         const fieldSchema = (fields as any)[knownTag]
-        if (fieldSchema) {
-          // Check if this field is a Literal (either TSchema.Literal or Schema.Literal)
-          const ast = fieldSchema.ast
-          if (ast._tag === "Literal") {
-            detectedTagField = knownTag
-            break
-          }
-          // Also check for transformed literals (TSchema.Literal)
-          if (ast._tag === "Transformation") {
-            const toAST = (ast as any).to
-            if (toAST._tag === "Literal") {
-              detectedTagField = knownTag
-              break
-            }
-          }
+        if (!fieldSchema) continue
+        
+        const ast = fieldSchema.ast
+        const isLiteral = ast._tag === "Literal" || 
+          (ast._tag === "Transformation" && (ast as any).to._tag === "Literal")
+        
+        if (isLiteral) {
+          detectedTagField = knownTag
+          break
         }
       }
     }
@@ -330,13 +347,19 @@ export const Struct = <Fields extends Schema.Struct.Fields>(
       const orderedKeys = Object.keys(fields).filter((key) => key !== detectedTagField)
       const fieldValues = orderedKeys.map((key) => encodedStruct[key as keyof typeof encodedStruct]) as ReadonlyArray<Data.Data>
 
-      // Check if any field values are Constrs with flatFields:true
+      // Check if any field values are Constrs with flatFields:true in their schema annotations
       // If so, spread their fields into this Struct's field array
       const finalFields = new globalThis.Array<Data.Data>()
 
-      for (const fieldValue of fieldValues) {
-        // Check if this field is a Constr from a flatFields Struct
-        if (fieldValue instanceof Data.Constr && (fieldValue as any)["__flatFields__"] === true) {
+      for (let i = 0; i < orderedKeys.length; i++) {
+        const key = orderedKeys[i]
+        const fieldValue = fieldValues[i]
+        const fieldSchema = (fields as any)[key]
+        
+        // Check if this field schema has flatFields annotation
+        const hasFlatFields = fieldSchema?.ast?.annotations?.["TSchema.flatFields"] === true
+        
+        if (fieldValue instanceof Data.Constr && hasFlatFields) {
           // Spread its fields into the parent
           finalFields.push(...fieldValue.fields)
         } else {
@@ -344,17 +367,10 @@ export const Struct = <Fields extends Schema.Struct.Fields>(
         }
       }
 
-      const constr = new Data.Constr({
+      return new Data.Constr({
         index: BigInt(index),
         fields: finalFields
       })
-
-      // Mark this Constr if it was created with flatFields so parent can detect it
-      if (isFlatFields) {
-        ;(constr as any)["__flatFields__"] = true
-      }
-
-      return constr
     },
     decode: (fromA) => {
       const keys = Object.keys(fields)
@@ -526,10 +542,7 @@ export const Union = <Members extends ReadonlyArray<Schema.Schema.Any>>(...membe
     }
   })
 
-  // Detect index collisions
-  // Collisions can occur in two scenarios:
-  // 1. A flat member's index equals the position of a non-flat member
-  // 2. Two flat members have the same index (both would encode to same Constr index)
+  // Detect index collisions between flat and nested members, or between flat members
   const collisions = new globalThis.Array<{
     type: "flat-to-nested" | "flat-to-flat"
     position1: number
@@ -537,36 +550,35 @@ export const Union = <Members extends ReadonlyArray<Schema.Schema.Any>>(...membe
     conflictingIndex: number
   }>()
 
-  memberInfos.forEach((member1, pos1) => {
-    if (member1.isFlat) {
-      const index1 = member1.customIndex ?? member1.position
-
-      // Check for flat-to-nested collisions
-      memberInfos.forEach((member2, pos2) => {
-        if (!member2.isFlat && index1 === member2.position) {
-          collisions.push({
-            type: "flat-to-nested",
-            position1: pos1,
-            position2: pos2,
-            conflictingIndex: index1
-          })
-        }
+  // Build index usage map for efficient collision detection
+  const indexUsage = new globalThis.Map<number, { position: number; isFlat: boolean }>()
+  
+  memberInfos.forEach((member, position) => {
+    const memberIndex = member.isFlat ? (member.customIndex ?? member.position) : member.position
+    const existing = indexUsage.get(memberIndex)
+    
+    if (existing) {
+      // Collision detected
+      const type = existing.isFlat && member.isFlat ? "flat-to-flat" : "flat-to-nested"
+      collisions.push({
+        type,
+        position1: existing.position,
+        position2: position,
+        conflictingIndex: memberIndex
       })
-
-      // Check for flat-to-flat collisions (only check positions after current to avoid duplicates)
-      memberInfos.forEach((member2, pos2) => {
-        if (pos2 > pos1 && member2.isFlat) {
-          const index2 = member2.customIndex ?? member2.position
-          if (index1 === index2) {
-            collisions.push({
-              type: "flat-to-flat",
-              position1: pos1,
-              position2: pos2,
-              conflictingIndex: index1
-            })
-          }
-        }
-      })
+    } else if (member.isFlat) {
+      // Only track flat members and their indices for collision detection
+      indexUsage.set(memberIndex, { position, isFlat: member.isFlat })
+      
+      // Also check if this flat member's index collides with any nested member's position
+      if (memberIndex < memberInfos.length && !memberInfos[memberIndex].isFlat) {
+        collisions.push({
+          type: "flat-to-nested",
+          position1: position,
+          position2: memberIndex,
+          conflictingIndex: memberIndex
+        })
+      }
     }
   })
 
@@ -601,6 +613,16 @@ export const Union = <Members extends ReadonlyArray<Schema.Schema.Any>>(...membe
     })
   }
 
+  // Helper to get a readable type name for error messages
+  const getTypeName = (value: unknown): string => {
+    if (typeof value === "bigint") return "bigint"
+    if (typeof value === "object" && value !== null) {
+      if (value instanceof globalThis.Map) return "Map"
+      if (globalThis.Array.isArray(value)) return "array"
+    }
+    return typeof value
+  }
+
   return Schema.transformOrFail(Schema.typeSchema(Data.Constr), Schema.typeSchema(Schema.Union(...members)), {
     strict: false,
     encode: (value) =>
@@ -610,14 +632,7 @@ export const Union = <Members extends ReadonlyArray<Schema.Schema.Any>>(...membe
 
         if (matchedIndex === -1) {
           const memberNames = getMemberNames()
-          const actualType =
-            typeof value === "bigint"
-              ? "bigint"
-              : typeof value === "object" && value !== null && (value as unknown) instanceof globalThis.Map
-                ? "Map"
-                : typeof value === "object" && value !== null && globalThis.Array.isArray(value)
-                  ? "array"
-                  : typeof value
+          const actualType = getTypeName(value)
 
           return yield* Effect.fail(
             new ParseResult.Type(
@@ -636,29 +651,13 @@ export const Union = <Members extends ReadonlyArray<Schema.Schema.Any>>(...membe
 
         // If the member is flat, use its encoded value directly (unwrap the Constr)
         if (memberInfo.isFlat && encodedValue instanceof Data.Constr) {
-          // Recursively unwrap nested flat Constrs (for nested flatFields support)
-          const unwrapNestedFlat = (constr: Data.Constr): Data.Constr => {
-            // If this Constr has exactly one field and that field is also a flat Constr, unwrap it
-            if (
-              constr.fields.length === 1 &&
-              constr.fields[0] instanceof Data.Constr &&
-              (constr.fields[0] as any)["__flatFields__"] === true
-            ) {
-              // Recursively unwrap
-              return unwrapNestedFlat(constr.fields[0] as Data.Constr)
-            }
-            return constr
-          }
-
-          const unwrapped = unwrapNestedFlat(encodedValue)
-
           // If the member has a custom index, use it; otherwise use position
           const customIdx = memberInfo.customIndex
           const finalIndex = customIdx !== undefined ? BigInt(customIdx) : BigInt(memberInfo.position)
 
           return new Data.Constr({
             index: finalIndex,
-            fields: unwrapped.fields
+            fields: encodedValue.fields
           })
         }
 
@@ -677,7 +676,8 @@ export const Union = <Members extends ReadonlyArray<Schema.Schema.Any>>(...membe
       })
 
       if (flatMember) {
-        // This is a flat Struct, decode it directly (no unwrapping needed)
+        // This is a flat member, decode it directly (no unwrapping needed)
+        // Use Schema.decode to decode from the encoded form (Constr) to the decoded type
         return Effect.gen(function* () {
           const decoded = yield* ParseResult.decode(flatMember.schema)(value)
 
@@ -713,23 +713,11 @@ export const Union = <Members extends ReadonlyArray<Schema.Schema.Any>>(...membe
       // Get the member schema for this index
       const member = members[memberIndex] as Schema.Schema<any, any, never>
 
-      // If the member schema expects a Data.Constr (like Boolean),
-      // we need to reconstruct the original Constr structure
-      // For primitive types, we use the first field
+      // Non-flat members are wrapped: Constr(index, [encodedValue])
+      // We need to decode the wrapped value
       return Effect.gen(function* () {
-        let decoded
-        if (value.fields.length === 0) {
-          // This is likely a Boolean-like case where the original Constr had no fields
-          // Reconstruct the original Constr structure
-          decoded = yield* ParseResult.decode(member)(new Data.Constr({ index: 0n, fields: [] }))
-        } else if (value.fields.length === 1) {
-          // This could be either a primitive value or a Constr that was flattened
-          decoded = yield* ParseResult.decode(member)(value.fields[0])
-        } else {
-          // Multiple fields - reconstruct as a Constr with index 0
-          // This handles cases where the original Constr had multiple fields
-          decoded = yield* ParseResult.decode(member)(new Data.Constr({ index: 0n, fields: [...value.fields] }))
-        }
+        const wrappedValue = value.fields[0]
+        const decoded = yield* ParseResult.decode(member)(wrappedValue)
 
         // Inject tag field if detected
         if (detectedTagField && typeof decoded === "object" && decoded !== null) {
@@ -750,21 +738,8 @@ export const Union = <Members extends ReadonlyArray<Schema.Schema.Any>>(...membe
     message: (issue) => {
       const memberNames = getMemberNames()
       const actual = issue.actual
-      const actualType =
-        typeof actual === "bigint"
-          ? "bigint"
-          : typeof actual === "object" && actual !== null && actual instanceof globalThis.Map
-            ? "Map"
-            : typeof actual === "object" && actual !== null && globalThis.Array.isArray(actual)
-              ? "array"
-              : typeof actual
-
-      const actualStr =
-        typeof actual === "bigint"
-          ? String(actual)
-          : typeof actual === "object"
-            ? String(actual)
-            : JSON.stringify(actual)
+      const actualType = getTypeName(actual)
+      const actualStr = String(actual)
 
       return `Invalid value for Union: received ${actualType} (${actualStr}), expected ${memberNames.join(" or ")}`
     }
@@ -837,14 +812,14 @@ export const TaggedStruct = <
   tagValue: TagValue,
   fields: Fields,
   options?: StructOptions & { tagField?: TagField }
-): Struct<{ [K in TagField]: OneLiteral<TagValue> } & Fields> => {
+): Struct<{ [K in TagField]: Literal<[TagValue]> } & Fields> => {
   const tagField = (options?.tagField ?? "_tag") as TagField
 
   return Struct(
     {
       [tagField]: Literal(tagValue),
       ...fields
-    } as { [K in TagField]: OneLiteral<TagValue> } & Fields,
+    } as { [K in TagField]: Literal<[TagValue]> } & Fields,
     { ...options, tagField }
   )
 }

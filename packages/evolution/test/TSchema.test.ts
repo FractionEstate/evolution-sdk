@@ -239,6 +239,36 @@ describe("TypeTaggedSchema Tests", () => {
 
         expect(eq(decoded, input)).toBe(true)
       })
+
+      it("should encode/decode struct with custom index", () => {
+        const Action = TSchema.Struct({ amount: TSchema.Integer }, { index: 5 })
+        type Action = typeof Action.Type
+        const eq = TSchema.equivalence(Action)
+
+        const input: Action = { amount: 100n }
+        const encoded = Data.withSchema(Action).toCBORHex(input)
+        const decoded = Data.withSchema(Action).fromCBORHex(encoded)
+
+        // Custom index should be reflected in the Constr
+        const data = Data.withSchema(Action).toData(input)
+        expect(data.index).toBe(5n)
+        expect(eq(decoded, input)).toBe(true)
+      })
+
+      it("should encode/decode struct with flatFields", () => {
+        const Inner = TSchema.Struct({ x: TSchema.Integer, y: TSchema.Integer }, { flatFields: true })
+        const Outer = TSchema.Struct({ inner: Inner, z: TSchema.Integer })
+        type Outer = typeof Outer.Type
+        const eq = TSchema.equivalence(Outer)
+
+        const input: Outer = { inner: { x: 1n, y: 2n }, z: 3n }
+        const encoded = Data.withSchema(Outer).toCBORHex(input)
+        const decoded = Data.withSchema(Outer).fromCBORHex(encoded)
+
+        // With flatFields, inner's fields should be merged into outer's field array
+        expect(encoded).toEqual("d8799f010203ff")
+        expect(eq(decoded, input)).toBe(true)
+      })
     })
 
     describe("Tuple Schema", () => {
@@ -290,6 +320,31 @@ describe("TypeTaggedSchema Tests", () => {
 
         expect(encoded).toEqual("d87a80")
         expect(decoded).toBeNull()
+      })
+    })
+
+    describe("UndefinedOr Schema", () => {
+      it("should encode/decode non-undefined values", () => {
+        const MaybeInt = TSchema.UndefinedOr(TSchema.Integer)
+        const eq = TSchema.equivalence(MaybeInt)
+
+        const input = 42n
+        const encoded = Data.withSchema(MaybeInt).toCBORHex(input)
+        const decoded = Data.withSchema(MaybeInt).fromCBORHex(encoded)
+
+        expect(encoded).toEqual("d8799f182aff")
+        expect(eq(decoded, input)).toBe(true)
+      })
+
+      it("should encode/decode undefined values", () => {
+        const MaybeInt = TSchema.UndefinedOr(TSchema.Integer)
+
+        const input = undefined
+        const encoded = Data.withSchema(MaybeInt).toCBORHex(input)
+        const decoded = Data.withSchema(MaybeInt).fromCBORHex(encoded)
+
+        expect(encoded).toEqual("d87a80")
+        expect(decoded).toBeUndefined()
       })
 
       it("should preserve field order in structs with NullOr fields (regression test)", () => {
@@ -429,6 +484,87 @@ describe("TypeTaggedSchema Tests", () => {
 
       const encoded = Data.withSchema(Wallet).toCBORHex(input)
       const decoded = Data.withSchema(Wallet).fromCBORHex(encoded)
+
+      expect(eq(decoded, input)).toBe(true)
+    })
+
+    it("should handle flatInUnion options in Union members", () => {
+      const FlatUnion = TSchema.Union(
+        TSchema.Literal("OptionA", { flatInUnion: true }),
+        TSchema.Literal("OptionB", { flatInUnion: true }),
+        TSchema.Struct({ data: TSchema.Integer }, { flatFields: true, flatInUnion: true })
+      )
+      type FlatUnion = typeof FlatUnion.Type
+
+      const eq = TSchema.equivalence(FlatUnion)
+
+      // Test first Literal with flatInUnion
+      const optionA: FlatUnion = "OptionA"
+      const encodedOptionA = Data.withSchema(FlatUnion).toData(optionA)
+      const decodedOptionA = Data.withSchema(FlatUnion).fromData(encodedOptionA)
+      expect(eq(decodedOptionA, optionA)).toBe(true)
+
+      // Test second Literal with flatInUnion
+      const optionB: FlatUnion = "OptionB"
+      const encodedOptionB = Data.withSchema(FlatUnion).toData(optionB)
+      const decodedOptionB = Data.withSchema(FlatUnion).fromData(encodedOptionB)
+      expect(eq(decodedOptionB, optionB)).toBe(true)
+
+      // Test Struct with flatFields and flatInUnion
+      const structData: FlatUnion = { data: 123n }
+      const encodedStructData = Data.withSchema(FlatUnion).toData(structData)
+      const decodedStructData = Data.withSchema(FlatUnion).fromData(encodedStructData)
+      expect(eq(decodedStructData, structData)).toBe(true)
+    })
+
+    it("should handle Variant with multiple tagged options", () => {
+      const Action = TSchema.Variant({
+        Mint: { amount: TSchema.Integer },
+        Burn: { amount: TSchema.Integer },
+        Transfer: { from: TSchema.ByteArray, to: TSchema.ByteArray, amount: TSchema.Integer }
+      })
+      type Action = typeof Action.Type
+      const eq = TSchema.equivalence(Action)
+
+      // Test Mint variant
+      const mintInput: Action = { Mint: { amount: 100n } }
+      const mintEncoded = Data.withSchema(Action).toCBORHex(mintInput)
+      const mintDecoded = Data.withSchema(Action).fromCBORHex(mintEncoded)
+      expect(eq(mintDecoded, mintInput)).toBe(true)
+
+      // Test Burn variant
+      const burnInput: Action = { Burn: { amount: 50n } }
+      const burnEncoded = Data.withSchema(Action).toCBORHex(burnInput)
+      const burnDecoded = Data.withSchema(Action).fromCBORHex(burnEncoded)
+      expect(eq(burnDecoded, burnInput)).toBe(true)
+
+      // Test Transfer variant
+      const transferInput: Action = { Transfer: { from: fromHex("cafe"), to: fromHex("beef"), amount: 25n } }
+      const transferEncoded = Data.withSchema(Action).toCBORHex(transferInput)
+      const transferDecoded = Data.withSchema(Action).fromCBORHex(transferEncoded)
+      expect(eq(transferDecoded, transferInput)).toBe(true)
+    })
+
+    it("should handle TaggedStruct with custom tag field", () => {
+      const MintAction = TSchema.TaggedStruct("Mint", { amount: TSchema.Integer })
+      type MintAction = typeof MintAction.Type
+      const eq = TSchema.equivalence(MintAction)
+
+      const input: MintAction = { _tag: "Mint", amount: 100n }
+      const encoded = Data.withSchema(MintAction).toCBORHex(input)
+      const decoded = Data.withSchema(MintAction).fromCBORHex(encoded)
+
+      expect(eq(decoded, input)).toBe(true)
+    })
+
+    it("should handle TaggedStruct with custom tagField name", () => {
+      const MintAction = TSchema.TaggedStruct("Mint", { amount: TSchema.Integer }, { tagField: "type" })
+      type MintAction = typeof MintAction.Type
+      const eq = TSchema.equivalence(MintAction)
+
+      const input: MintAction = { type: "Mint", amount: 100n }
+      const encoded = Data.withSchema(MintAction).toCBORHex(input)
+      const decoded = Data.withSchema(MintAction).fromCBORHex(encoded)
 
       expect(eq(decoded, input)).toBe(true)
     })

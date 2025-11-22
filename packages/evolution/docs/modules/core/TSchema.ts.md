@@ -27,12 +27,11 @@ parent: Modules
   - [Integer (interface)](#integer-interface)
   - [Literal](#literal)
   - [Literal (interface)](#literal-interface)
+  - [LiteralOptions (interface)](#literaloptions-interface)
   - [Map](#map)
   - [Map (interface)](#map-interface)
   - [NullOr](#nullor)
   - [NullOr (interface)](#nullor-interface)
-  - [OneLiteral](#oneliteral)
-  - [OneLiteral (interface)](#oneliteral-interface)
   - [Struct](#struct)
   - [Struct (interface)](#struct-interface)
   - [StructOptions (interface)](#structoptions-interface)
@@ -85,7 +84,7 @@ export declare const TaggedStruct: <
   tagValue: TagValue,
   fields: Fields,
   options?: StructOptions & { tagField?: TagField }
-) => Struct<{ [K in TagField]: OneLiteral<TagValue> } & Fields>
+) => Struct<{ [K in TagField]: Literal<[TagValue]> } & Fields>
 ```
 
 Added in v2.0.0
@@ -203,9 +202,14 @@ Creates a schema for literal types with Plutus Data Constructor transformation
 **Signature**
 
 ```ts
-export declare const Literal: <Literals extends NonEmptyReadonlyArray<Exclude<SchemaAST.LiteralValue, null | bigint>>>(
-  ...self: Literals
-) => Literal<Literals>
+export declare const Literal: {
+  <Literals extends NonEmptyReadonlyArray<Exclude<SchemaAST.LiteralValue, null | bigint>>>(
+    ...self: Literals
+  ): Literal<Literals>
+  <Literals extends NonEmptyReadonlyArray<Exclude<SchemaAST.LiteralValue, null | bigint>>>(
+    ...args: [...Literals, LiteralOptions]
+  ): Literal<Literals>
+}
 ```
 
 Added in v2.0.0
@@ -217,6 +221,30 @@ Added in v2.0.0
 ```ts
 export interface Literal<Literals extends NonEmptyReadonlyArray<SchemaAST.LiteralValue>>
   extends Schema.transform<Schema.SchemaClass<Data.Constr, Data.Constr, never>, Schema.Literal<[...Literals]>> {}
+```
+
+## LiteralOptions (interface)
+
+Options for Literal schema
+
+**Signature**
+
+```ts
+export interface LiteralOptions {
+  /**
+   * Custom Constr index for this literal (default: auto-incremented from 0)
+   * Useful when matching Plutus contract constructor indices
+   */
+  index?: number
+  /**
+   * When used in a Union, controls whether this Literal should be "flattened" (unwrapped).
+   * - true: Encodes as Constr(index, []) directly
+   * - false: Encodes as Constr(unionPos, [Constr(index, [])]) (nested)
+   *
+   * Default: true when index is specified, false otherwise
+   */
+  flatInUnion?: boolean
+}
 ```
 
 ## Map
@@ -268,25 +296,6 @@ Added in v2.0.0
 ```ts
 export interface NullOr<S extends Schema.Schema.All>
   extends Schema.transform<Schema.SchemaClass<Data.Constr, Data.Constr, never>, Schema.NullOr<S>> {}
-```
-
-## OneLiteral
-
-**Signature**
-
-```ts
-export declare const OneLiteral: <Single extends Exclude<SchemaAST.LiteralValue, null | bigint>>(
-  self: Single
-) => OneLiteral<Single>
-```
-
-## OneLiteral (interface)
-
-**Signature**
-
-```ts
-export interface OneLiteral<Single extends Exclude<SchemaAST.LiteralValue, null | bigint>>
-  extends Schema.transform<Schema.SchemaClass<Data.Constr, Data.Constr, never>, Schema.Literal<[Single]>> {}
 ```
 
 ## Struct
