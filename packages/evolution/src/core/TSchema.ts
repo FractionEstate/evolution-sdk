@@ -103,15 +103,16 @@ export interface LiteralOptions {
  *
  * @since 2.0.0
  */
-export function Literal<Literals extends NonEmptyReadonlyArray<Exclude<SchemaAST.LiteralValue, null | bigint>>>(
-  ...self: Literals
-): Literal<Literals>
-export function Literal<Literals extends NonEmptyReadonlyArray<Exclude<SchemaAST.LiteralValue, null | bigint>>>(
-  ...args: [...Literals, LiteralOptions]
-): Literal<Literals>
-export function Literal<Literals extends NonEmptyReadonlyArray<Exclude<SchemaAST.LiteralValue, null | bigint>>>(
+export const Literal: {
+  <Literals extends NonEmptyReadonlyArray<Exclude<SchemaAST.LiteralValue, null | bigint>>>(
+    ...self: Literals
+  ): Literal<Literals>
+  <Literals extends NonEmptyReadonlyArray<Exclude<SchemaAST.LiteralValue, null | bigint>>>(
+    ...args: [...Literals, LiteralOptions]
+  ): Literal<Literals>
+} = <Literals extends NonEmptyReadonlyArray<Exclude<SchemaAST.LiteralValue, null | bigint>>>(
   ...args: globalThis.Array<any>
-): Literal<Literals> {
+): Literal<Literals> => {
   // Check if last argument is options object
   const lastArg = args[args.length - 1]
   const hasOptions = 

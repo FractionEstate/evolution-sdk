@@ -202,12 +202,14 @@ Creates a schema for literal types with Plutus Data Constructor transformation
 **Signature**
 
 ```ts
-export declare function Literal<Literals extends NonEmptyReadonlyArray<Exclude<SchemaAST.LiteralValue, null | bigint>>>(
-  ...self: Literals
-): Literal<Literals>
-export declare function Literal<Literals extends NonEmptyReadonlyArray<Exclude<SchemaAST.LiteralValue, null | bigint>>>(
-  ...args: [...Literals, LiteralOptions]
-): Literal<Literals>
+export declare const Literal: {
+  <Literals extends NonEmptyReadonlyArray<Exclude<SchemaAST.LiteralValue, null | bigint>>>(
+    ...self: Literals
+  ): Literal<Literals>
+  <Literals extends NonEmptyReadonlyArray<Exclude<SchemaAST.LiteralValue, null | bigint>>>(
+    ...args: [...Literals, LiteralOptions]
+  ): Literal<Literals>
+}
 ```
 
 Added in v2.0.0
