@@ -1,6 +1,6 @@
 ---
 title: core/VrfKeyHash.ts
-nav_order: 123
+nav_order: 126
 parent: Modules
 ---
 

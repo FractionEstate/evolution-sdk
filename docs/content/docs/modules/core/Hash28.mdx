@@ -1,6 +1,6 @@
 ---
 title: core/Hash28.ts
-nav_order: 53
+nav_order: 56
 parent: Modules
 ---
 

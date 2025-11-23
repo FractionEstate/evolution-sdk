@@ -1,6 +1,6 @@
 ---
 title: core/Mint.ts
-nav_order: 63
+nav_order: 66
 parent: Modules
 ---
 

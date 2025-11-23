@@ -1,6 +1,6 @@
 ---
 title: core/Bip32PrivateKey.ts
-nav_order: 12
+nav_order: 15
 parent: Modules
 ---
 

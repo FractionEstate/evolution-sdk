@@ -1,6 +1,6 @@
 ---
 title: core/KesSignature.ts
-nav_order: 58
+nav_order: 61
 parent: Modules
 ---
 

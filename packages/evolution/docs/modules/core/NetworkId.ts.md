@@ -1,6 +1,6 @@
 ---
 title: core/NetworkId.ts
-nav_order: 71
+nav_order: 74
 parent: Modules
 ---
 

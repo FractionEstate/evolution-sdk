@@ -1,6 +1,6 @@
 ---
 title: core/Bytes96.ts
-nav_order: 30
+nav_order: 33
 parent: Modules
 ---
 

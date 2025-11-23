@@ -1,6 +1,6 @@
 ---
 title: core/Bytes16.ts
-nav_order: 22
+nav_order: 25
 parent: Modules
 ---
 

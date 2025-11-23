@@ -1,6 +1,6 @@
 ---
 title: sdk/AddressDetails.ts
-nav_order: 127
+nav_order: 130
 parent: Modules
 ---
 

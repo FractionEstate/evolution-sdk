@@ -1,6 +1,6 @@
 ---
 title: core/IPv6.ts
-nav_order: 57
+nav_order: 60
 parent: Modules
 ---
 

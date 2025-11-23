@@ -1,6 +1,6 @@
 ---
 title: core/PoolMetadata.ts
-nav_order: 84
+nav_order: 87
 parent: Modules
 ---
 

@@ -1,6 +1,6 @@
 ---
 title: core/Constitution.ts
-nav_order: 38
+nav_order: 41
 parent: Modules
 ---
 

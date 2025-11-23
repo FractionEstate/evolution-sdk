@@ -1,6 +1,6 @@
 ---
 title: core/PlutusV3.ts
-nav_order: 79
+nav_order: 82
 parent: Modules
 ---
 

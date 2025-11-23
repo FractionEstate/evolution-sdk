@@ -1,6 +1,6 @@
 ---
 title: core/StakeReference.ts
-nav_order: 103
+nav_order: 106
 parent: Modules
 ---
 

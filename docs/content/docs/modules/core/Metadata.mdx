@@ -1,6 +1,6 @@
 ---
 title: core/Metadata.ts
-nav_order: 62
+nav_order: 65
 parent: Modules
 ---
 

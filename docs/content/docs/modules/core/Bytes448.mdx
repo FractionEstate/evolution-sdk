@@ -1,6 +1,6 @@
 ---
 title: core/Bytes448.ts
-nav_order: 26
+nav_order: 29
 parent: Modules
 ---
 

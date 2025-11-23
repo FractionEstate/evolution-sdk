@@ -1,6 +1,6 @@
 ---
 title: core/Pointer.ts
-nav_order: 80
+nav_order: 83
 parent: Modules
 ---
 
