@@ -32,19 +32,19 @@ Each address type encodes different credential combinations:
 
 | Address Type | Payment | Staking | On-Chain Size | Bech32 Prefix | Header Bits |
 |--------------|---------|---------|---------------|---------------|-------------|
-| **[Base](./base)** | ✓ | ✓ | 57 bytes | `addr`/`addr_test` | `0000xxxx` |
-| **[Enterprise](./enterprise)** | ✓ | ✗ | 29 bytes | `addr`/`addr_test` | `0110xxxx` |
-| **[Reward](./reward)** | ✗ | ✓ | 29 bytes | `stake`/`stake_test` | `1110xxxx` |
-| **[Pointer](./pointer)** | ✓ | Pointer | Variable | `addr`/`addr_test` | `0100xxxx` |
+| **[Base](/docs/addresses/address-types/base)** | ✓ | ✓ | 57 bytes | `addr`/`addr_test` | `0000xxxx` |
+| **[Enterprise](/docs/addresses/address-types/enterprise)** | ✓ | ✗ | 29 bytes | `addr`/`addr_test` | `0110xxxx` |
+| **[Reward](/docs/addresses/address-types/reward)** | ✗ | ✓ | 29 bytes | `stake`/`stake_test` | `1110xxxx` |
+| **[Pointer](/docs/addresses/address-types/pointer)** | ✓ | Pointer | Variable | `addr`/`addr_test` | `0100xxxx` |
 
 ## Address Type Documentation
 
 Detailed serialization specifications for each format:
 
-- **[Base Addresses](./base)** - Payment and staking credential encoding
-- **[Enterprise Addresses](./enterprise)** - Payment credential only encoding
-- **[Reward Addresses](./reward)** - Staking credential only encoding
-- **[Pointer Addresses](./pointer)** - On-chain stake registration reference encoding
+- **[Base Addresses](/docs/addresses/address-types/base)** - Payment and staking credential encoding
+- **[Enterprise Addresses](/docs/addresses/address-types/enterprise)** - Payment credential only encoding
+- **[Reward Addresses](/docs/addresses/address-types/reward)** - Staking credential only encoding
+- **[Pointer Addresses](/docs/addresses/address-types/pointer)** - On-chain stake registration reference encoding
 
 ## Related
 

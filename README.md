@@ -6,12 +6,12 @@
   
   Build robust Cardano applications with modern TypeScript, functional programming, and comprehensive type safety.
   
-  [![Build Status](https://img.shields.io/github/actions/workflow/status/no-witness-labs/evolution-sdk/ci.yml?branch=main)](https://github.com/no-witness-labs/evolution-sdk/actions)
+  [![Build Status](https://img.shields.io/github/actions/workflow/status/IntersectMBO/evolution-sdk/ci.yml?branch=main)](https://github.com/IntersectMBO/evolution-sdk/actions)
   [![TypeScript](https://img.shields.io/badge/TypeScript-5.4+-blue.svg)](https://www.typescriptlang.org/)
   [![Effect](https://img.shields.io/badge/Effect-3.0+-blueviolet.svg)](https://effect.website/)
   [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
   
-  [Documentation](https://no-witness-labs.github.io/evolution-sdk) • [Quick Start](#quick-start) • [Contributing](#contributing)
+  [Documentation](https://intersectmbo.github.io/evolution-sdk) • [Quick Start](#quick-start) • [Contributing](#contributing)
 </div>
 
 ---
@@ -152,18 +152,18 @@ evolution-sdk/
 
 ## Core Modules
 
-Evolution SDK provides 78 comprehensive modules organized into the following categories:
+Evolution SDK provides **125+ core modules** plus SDK utilities, organized into comprehensive categories:
 
 ### Address Management (10 modules)
 - `Address` - Core address utilities with bech32/hex encoding
-- `BaseAddress`, `ByronAddress`, `EnterpriseAddress` - All address types
+- `BaseAddress`, `ByronAddress`, `EnterpriseAddress` - Address type implementations
 - `PaymentAddress`, `PointerAddress`, `RewardAddress` - Specialized addresses
-- `AddressDetails`, `AddressTag`, `StakeReference` - Address metadata
+- `AddressEras`, `AddressTag`, `StakeReference` - Address metadata
 
-### Transaction Handling (7 modules)
-- `Transaction`, `TransactionBody`, `TransactionHash` - Core transaction
+### Transaction Handling (9 modules)
+- `Transaction`, `TransactionBody`, `TransactionHash` - Core transaction types
 - `TransactionInput`, `TransactionOutput`, `TransactionIndex` - I/O handling
-- `TransactionMetadatumLabels` - Metadata support
+- `TransactionWitnessSet`, `TransactionMetadatum`, `TransactionMetadatumLabels` - Metadata & witnesses
 
 ### Cryptography & Security (9 modules)
 - `Ed25519Signature`, `KesSignature`, `VrfCert` - Digital signatures
@@ -248,23 +248,23 @@ pnpm turbo type-check
 ## Documentation
 
 ### Website
-For comprehensive guides, tutorials, and interactive examples, visit our [official documentation](https://no-witness-labs.github.io/evolution-sdk).
+For comprehensive guides, tutorials, and interactive examples, visit our [official documentation](https://intersectmbo.github.io/evolution-sdk).
 
 ### API Reference
-Complete API documentation with type definitions and examples is available in our [API reference](https://no-witness-labs.github.io/evolution-sdk/api).
+Complete API documentation with type definitions and examples is available in our [API reference](https://intersectmbo.github.io/evolution-sdk/api).
 
 ### Learning Resources
 
-- [Getting Started Guide](https://no-witness-labs.github.io/evolution-sdk/getting-started) - Your first steps with Evolution SDK
+- [Getting Started Guide](https://intersectmbo.github.io/evolution-sdk/getting-started) - Your first steps with Evolution SDK
 
 ## Community & Support
 
 Join our thriving community of Cardano developers:
 
-- [Discord](https://discord.gg/RcW9xqFC) - Get help, share projects, and discuss development
+- [Discord](https://discord.gg/jnGW5YG3) - Get help, share projects, and discuss development
 - [X](https://x.com/nowitnesslabs) - Latest announcements and ecosystem updates  
-- [GitHub Issues](https://github.com/no-witness-labs/evolution-sdk/issues) - Bug reports and feature requests
-- [GitHub Discussions](https://github.com/no-witness-labs/evolution-sdk/discussions) - Questions, ideas, and community showcases
+- [GitHub Issues](https://github.com/IntersectMBO/evolution-sdk/issues) - Bug reports and feature requests
+- [GitHub Discussions](https://github.com/IntersectMBO/evolution-sdk/discussions) - Questions, ideas, and community showcases
 
 ### Getting Help
 
@@ -340,7 +340,7 @@ We love your input! We want to make contributing to Evolution SDK as easy and tr
 
 1. Fork and clone the repository
    ```bash
-   git clone https://github.com/your-username/evolution-sdk.git
+   git clone https://github.com/IntersectMBO/evolution-sdk.git
    cd evolution-sdk
    ```
 
@@ -384,7 +384,7 @@ Evolution SDK builds on the incredible work of:
 
 - [Turborepo](https://turborepo.org/) - For the incredible build system
 - [Effect](https://effect.website/) - For functional programming excellence  
-- Our [contributors](https://github.com/no-witness-labs/evolution-sdk/graphs/contributors) - Building the future together
+- Our [contributors](https://github.com/IntersectMBO/evolution-sdk/graphs/contributors) - Building the future together
 
 ---
 
@@ -393,10 +393,10 @@ Evolution SDK builds on the incredible work of:
     <sub>Built with ❤️ by <a href="https://github.com/no-witness-labs">No Witness Labs</a></sub>
   </p>
   <p>
-    <a href="https://github.com/no-witness-labs/evolution-sdk">⭐ Star us on GitHub</a> •
+    <a href="https://github.com/IntersectMBO/evolution-sdk">⭐ Star us on GitHub</a> •
     <a href="https://x.com/nowitnesslabs">Follow on X</a> •
-    <a href="https://discord.gg/RcW9xqFC">Join Discord</a>
+    <a href="https://discord.gg/jnGW5YG3">Join Discord</a>
   </p>
   
-  [Read the docs](https://no-witness-labs.github.io/evolution-sdk) to get started building with Evolution SDK
+  [Read the docs](https://intersectmbo.github.io/evolution-sdk) to get started building with Evolution SDK
 </div>
