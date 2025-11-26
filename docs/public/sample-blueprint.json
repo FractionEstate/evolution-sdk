@@ -1,0 +1,1047 @@
+{
+  "preamble": {
+    "title": "evolution-sdk/spec",
+    "description": "Aiken contracts for project 'evolution-sdk/spec'",
+    "version": "0.0.0",
+    "plutusVersion": "v3",
+    "compiler": {
+      "name": "Aiken",
+      "version": "v1.1.19+e525483"
+    },
+    "license": "Apache-2.0"
+  },
+  "validators": [
+    {
+      "title": "always_succeed.always_succeed.spend",
+      "datum": {
+        "title": "_datum",
+        "schema": {
+          "$ref": "#/definitions/Data"
+        }
+      },
+      "redeemer": {
+        "title": "_redeemer",
+        "schema": {
+          "$ref": "#/definitions/Data"
+        }
+      },
+      "compiledCode": "585c01010029800aba2aba1aab9eaab9dab9a4888896600264653001300600198031803800cc0180092225980099b8748008c01cdd500144c8cc892898050009805180580098041baa0028a50401830060013003375400d149a26cac8009",
+      "hash": "a2492486ed656e3fb854a2c240cf16055216c38ec94d166a533c5820"
+    },
+    {
+      "title": "always_succeed.always_succeed.else",
+      "redeemer": {
+        "schema": {}
+      },
+      "compiledCode": "585c01010029800aba2aba1aab9eaab9dab9a4888896600264653001300600198031803800cc0180092225980099b8748008c01cdd500144c8cc892898050009805180580098041baa0028a50401830060013003375400d149a26cac8009",
+      "hash": "a2492486ed656e3fb854a2c240cf16055216c38ec94d166a533c5820"
+    },
+    {
+      "title": "mint.mint_policy.spend",
+      "datum": {
+        "title": "datum",
+        "schema": {
+          "$ref": "#/definitions/mint~1SpendDatum"
+        }
+      },
+      "redeemer": {
+        "title": "redeemer",
+        "schema": {
+          "$ref": "#/definitions/ByteArray"
+        }
+      },
+      "compiledCode": "5903b101010029800aba2aba1aba0aab9faab9eaab9dab9a4888888966002646465300130053754003370e90004dc7a4410131009804801cc024009222225980099b87480080162646644b30013007300d3754003133225980099baf374cb30014a114bd6f7b63044c8c8cc0040052f5bded8c044b300100189980a99bb04c01014000374c00697adef6c608994c004dd71809800cdd5980a000cc0600092225980099b904890000389980c99bb04c01014000374c00e00b15980099b8f4890000389980c99bb04c01014000374c00e003133019337606ea400cdd300119803003000a02a405430160014050646600200297adef6c602259800800c4cc050cdd82610140004c01010a004bd6f7b63044ca60026eb8c0480066eb4c04c006602e0049112cc004cdc824410000389980c19bb04c010140004c01010a000058acc004cdc7a4410000389980c19bb04c010140004c01010a0000189980c19bb037520066ea0008cc0180180050142028180a800a02640386e98c8cc004004dd5980118089baa30143011375400644b30010018a5eb7bdb18226464664466446600400400244b300100189980d19bb037520066e980112f5bded8c1132325980099b9000500189980e19bb0375200a6e9801800e2b30013371e00a0031689980e19bb03752002603400466008008603c00680c10181bae3018001301b00140646600c00c603400a6464006646600200200644b30010018a4d13259800800c56600260086eb4c060c06c00a29345901644cc896600266e40dd7180c8011bae30190018acc004c018dd6980d00144cc014014cc070004c07800e2c80c22c80c0c06c008c06c005019180d800a030298009807000d28528a026375c60260046eacc04c004c054005013456600266e252000375a600260206ea800a260106eb801a294100e4528201c3011300e375400246024602600314a08060c03c004c03cc040004c02cdd5003456600266e1d20040058992cc004c014c02cdd500144c8c966002602400513006375c6022601c6ea80122c8078dd7180800098061baa0028b2014300e300b375400d15980099b87480180162646644b30013007300d37540091323259800980a00144c020dd7180998081baa0068b2022375c6024002601c6ea80122c8060dd698078009807980800098059baa0068acc004c010016264b30013005300b37540051323259800980900144cdc39bad3011300e3754008900145900f1bad3010001300c37540051640286eb8c038c02cdd500345900920124024804860106012002601000260066ea802229344d9590011",
+      "hash": "0b7a8ebdc1c15fdfbe7acccb50e68c145bb5ae20e1cf1d4291517d98"
+    },
+    {
+      "title": "mint.mint_policy.withdraw",
+      "redeemer": {
+        "title": "redeemer",
+        "schema": {
+          "$ref": "#/definitions/mint~1WithdrawRedeemer"
+        }
+      },
+      "compiledCode": "5903b101010029800aba2aba1aba0aab9faab9eaab9dab9a4888888966002646465300130053754003370e90004dc7a4410131009804801cc024009222225980099b87480080162646644b30013007300d3754003133225980099baf374cb30014a114bd6f7b63044c8c8cc0040052f5bded8c044b300100189980a99bb04c01014000374c00697adef6c608994c004dd71809800cdd5980a000cc0600092225980099b904890000389980c99bb04c01014000374c00e00b15980099b8f4890000389980c99bb04c01014000374c00e003133019337606ea400cdd300119803003000a02a405430160014050646600200297adef6c602259800800c4cc050cdd82610140004c01010a004bd6f7b63044ca60026eb8c0480066eb4c04c006602e0049112cc004cdc824410000389980c19bb04c010140004c01010a000058acc004cdc7a4410000389980c19bb04c010140004c01010a0000189980c19bb037520066ea0008cc0180180050142028180a800a02640386e98c8cc004004dd5980118089baa30143011375400644b30010018a5eb7bdb18226464664466446600400400244b300100189980d19bb037520066e980112f5bded8c1132325980099b9000500189980e19bb0375200a6e9801800e2b30013371e00a0031689980e19bb03752002603400466008008603c00680c10181bae3018001301b00140646600c00c603400a6464006646600200200644b30010018a4d13259800800c56600260086eb4c060c06c00a29345901644cc896600266e40dd7180c8011bae30190018acc004c018dd6980d00144cc014014cc070004c07800e2c80c22c80c0c06c008c06c005019180d800a030298009807000d28528a026375c60260046eacc04c004c054005013456600266e252000375a600260206ea800a260106eb801a294100e4528201c3011300e375400246024602600314a08060c03c004c03cc040004c02cdd5003456600266e1d20040058992cc004c014c02cdd500144c8c966002602400513006375c6022601c6ea80122c8078dd7180800098061baa0028b2014300e300b375400d15980099b87480180162646644b30013007300d37540091323259800980a00144c020dd7180998081baa0068b2022375c6024002601c6ea80122c8060dd698078009807980800098059baa0068acc004c010016264b30013005300b37540051323259800980900144cdc39bad3011300e3754008900145900f1bad3010001300c37540051640286eb8c038c02cdd500345900920124024804860106012002601000260066ea802229344d9590011",
+      "hash": "0b7a8ebdc1c15fdfbe7acccb50e68c145bb5ae20e1cf1d4291517d98"
+    },
+    {
+      "title": "mint.mint_policy.publish",
+      "redeemer": {
+        "title": "redeemer",
+        "schema": {
+          "$ref": "#/definitions/mint~1PublishRedeemer"
+        }
+      },
+      "compiledCode": "5903b101010029800aba2aba1aba0aab9faab9eaab9dab9a4888888966002646465300130053754003370e90004dc7a4410131009804801cc024009222225980099b87480080162646644b30013007300d3754003133225980099baf374cb30014a114bd6f7b63044c8c8cc0040052f5bded8c044b300100189980a99bb04c01014000374c00697adef6c608994c004dd71809800cdd5980a000cc0600092225980099b904890000389980c99bb04c01014000374c00e00b15980099b8f4890000389980c99bb04c01014000374c00e003133019337606ea400cdd300119803003000a02a405430160014050646600200297adef6c602259800800c4cc050cdd82610140004c01010a004bd6f7b63044ca60026eb8c0480066eb4c04c006602e0049112cc004cdc824410000389980c19bb04c010140004c01010a000058acc004cdc7a4410000389980c19bb04c010140004c01010a0000189980c19bb037520066ea0008cc0180180050142028180a800a02640386e98c8cc004004dd5980118089baa30143011375400644b30010018a5eb7bdb18226464664466446600400400244b300100189980d19bb037520066e980112f5bded8c1132325980099b9000500189980e19bb0375200a6e9801800e2b30013371e00a0031689980e19bb03752002603400466008008603c00680c10181bae3018001301b00140646600c00c603400a6464006646600200200644b30010018a4d13259800800c56600260086eb4c060c06c00a29345901644cc896600266e40dd7180c8011bae30190018acc004c018dd6980d00144cc014014cc070004c07800e2c80c22c80c0c06c008c06c005019180d800a030298009807000d28528a026375c60260046eacc04c004c054005013456600266e252000375a600260206ea800a260106eb801a294100e4528201c3011300e375400246024602600314a08060c03c004c03cc040004c02cdd5003456600266e1d20040058992cc004c014c02cdd500144c8c966002602400513006375c6022601c6ea80122c8078dd7180800098061baa0028b2014300e300b375400d15980099b87480180162646644b30013007300d37540091323259800980a00144c020dd7180998081baa0068b2022375c6024002601c6ea80122c8060dd698078009807980800098059baa0068acc004c010016264b30013005300b37540051323259800980900144cdc39bad3011300e3754008900145900f1bad3010001300c37540051640286eb8c038c02cdd500345900920124024804860106012002601000260066ea802229344d9590011",
+      "hash": "0b7a8ebdc1c15fdfbe7acccb50e68c145bb5ae20e1cf1d4291517d98"
+    },
+    {
+      "title": "mint.mint_policy.mint",
+      "redeemer": {
+        "title": "redeemer",
+        "schema": {
+          "$ref": "#/definitions/mint~1MintRedeemer"
+        }
+      },
+      "compiledCode": "5903b101010029800aba2aba1aba0aab9faab9eaab9dab9a4888888966002646465300130053754003370e90004dc7a4410131009804801cc024009222225980099b87480080162646644b30013007300d3754003133225980099baf374cb30014a114bd6f7b63044c8c8cc0040052f5bded8c044b300100189980a99bb04c01014000374c00697adef6c608994c004dd71809800cdd5980a000cc0600092225980099b904890000389980c99bb04c01014000374c00e00b15980099b8f4890000389980c99bb04c01014000374c00e003133019337606ea400cdd300119803003000a02a405430160014050646600200297adef6c602259800800c4cc050cdd82610140004c01010a004bd6f7b63044ca60026eb8c0480066eb4c04c006602e0049112cc004cdc824410000389980c19bb04c010140004c01010a000058acc004cdc7a4410000389980c19bb04c010140004c01010a0000189980c19bb037520066ea0008cc0180180050142028180a800a02640386e98c8cc004004dd5980118089baa30143011375400644b30010018a5eb7bdb18226464664466446600400400244b300100189980d19bb037520066e980112f5bded8c1132325980099b9000500189980e19bb0375200a6e9801800e2b30013371e00a0031689980e19bb03752002603400466008008603c00680c10181bae3018001301b00140646600c00c603400a6464006646600200200644b30010018a4d13259800800c56600260086eb4c060c06c00a29345901644cc896600266e40dd7180c8011bae30190018acc004c018dd6980d00144cc014014cc070004c07800e2c80c22c80c0c06c008c06c005019180d800a030298009807000d28528a026375c60260046eacc04c004c054005013456600266e252000375a600260206ea800a260106eb801a294100e4528201c3011300e375400246024602600314a08060c03c004c03cc040004c02cdd5003456600266e1d20040058992cc004c014c02cdd500144c8c966002602400513006375c6022601c6ea80122c8078dd7180800098061baa0028b2014300e300b375400d15980099b87480180162646644b30013007300d37540091323259800980a00144c020dd7180998081baa0068b2022375c6024002601c6ea80122c8060dd698078009807980800098059baa0068acc004c010016264b30013005300b37540051323259800980900144cdc39bad3011300e3754008900145900f1bad3010001300c37540051640286eb8c038c02cdd500345900920124024804860106012002601000260066ea802229344d9590011",
+      "hash": "0b7a8ebdc1c15fdfbe7acccb50e68c145bb5ae20e1cf1d4291517d98"
+    },
+    {
+      "title": "mint.mint_policy.else",
+      "redeemer": {
+        "schema": {}
+      },
+      "compiledCode": "5903b101010029800aba2aba1aba0aab9faab9eaab9dab9a4888888966002646465300130053754003370e90004dc7a4410131009804801cc024009222225980099b87480080162646644b30013007300d3754003133225980099baf374cb30014a114bd6f7b63044c8c8cc0040052f5bded8c044b300100189980a99bb04c01014000374c00697adef6c608994c004dd71809800cdd5980a000cc0600092225980099b904890000389980c99bb04c01014000374c00e00b15980099b8f4890000389980c99bb04c01014000374c00e003133019337606ea400cdd300119803003000a02a405430160014050646600200297adef6c602259800800c4cc050cdd82610140004c01010a004bd6f7b63044ca60026eb8c0480066eb4c04c006602e0049112cc004cdc824410000389980c19bb04c010140004c01010a000058acc004cdc7a4410000389980c19bb04c010140004c01010a0000189980c19bb037520066ea0008cc0180180050142028180a800a02640386e98c8cc004004dd5980118089baa30143011375400644b30010018a5eb7bdb18226464664466446600400400244b300100189980d19bb037520066e980112f5bded8c1132325980099b9000500189980e19bb0375200a6e9801800e2b30013371e00a0031689980e19bb03752002603400466008008603c00680c10181bae3018001301b00140646600c00c603400a6464006646600200200644b30010018a4d13259800800c56600260086eb4c060c06c00a29345901644cc896600266e40dd7180c8011bae30190018acc004c018dd6980d00144cc014014cc070004c07800e2c80c22c80c0c06c008c06c005019180d800a030298009807000d28528a026375c60260046eacc04c004c054005013456600266e252000375a600260206ea800a260106eb801a294100e4528201c3011300e375400246024602600314a08060c03c004c03cc040004c02cdd5003456600266e1d20040058992cc004c014c02cdd500144c8c966002602400513006375c6022601c6ea80122c8078dd7180800098061baa0028b2014300e300b375400d15980099b87480180162646644b30013007300d37540091323259800980a00144c020dd7180998081baa0068b2022375c6024002601c6ea80122c8060dd698078009807980800098059baa0068acc004c010016264b30013005300b37540051323259800980900144cdc39bad3011300e3754008900145900f1bad3010001300c37540051640286eb8c038c02cdd500345900920124024804860106012002601000260066ea802229344d9590011",
+      "hash": "0b7a8ebdc1c15fdfbe7acccb50e68c145bb5ae20e1cf1d4291517d98"
+    }
+  ],
+  "definitions": {
+    "Bool": {
+      "title": "Bool",
+      "anyOf": [
+        {
+          "title": "False",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": []
+        },
+        {
+          "title": "True",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": []
+        }
+      ]
+    },
+    "ByteArray": {
+      "dataType": "bytes"
+    },
+    "Data": {
+      "title": "Data",
+      "description": "Any Plutus data."
+    },
+    "Int": {
+      "dataType": "integer"
+    },
+    "List$cardano/address/Address": {
+      "dataType": "list",
+      "items": {
+        "$ref": "#/definitions/cardano~1address~1Address"
+      }
+    },
+    "Never": {
+      "title": "Never",
+      "anyOf": [
+        {
+          "title": "Never",
+          "description": "Nothing.",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": []
+        }
+      ]
+    },
+    "Option$ByteArray": {
+      "title": "Option",
+      "anyOf": [
+        {
+          "title": "Some",
+          "description": "An optional value.",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "$ref": "#/definitions/ByteArray"
+            }
+          ]
+        },
+        {
+          "title": "None",
+          "description": "Nothing.",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": []
+        }
+      ]
+    },
+    "Option$aiken/crypto/ScriptHash": {
+      "title": "Option",
+      "anyOf": [
+        {
+          "title": "Some",
+          "description": "An optional value.",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "$ref": "#/definitions/aiken~1crypto~1ScriptHash"
+            }
+          ]
+        },
+        {
+          "title": "None",
+          "description": "Nothing.",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": []
+        }
+      ]
+    },
+    "Option$cardano/address/StakeCredential": {
+      "title": "Option",
+      "anyOf": [
+        {
+          "title": "Some",
+          "description": "An optional value.",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "$ref": "#/definitions/cardano~1address~1StakeCredential"
+            }
+          ]
+        },
+        {
+          "title": "None",
+          "description": "Nothing.",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": []
+        }
+      ]
+    },
+    "Ordering": {
+      "title": "Ordering",
+      "anyOf": [
+        {
+          "title": "Less",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": []
+        },
+        {
+          "title": "Equal",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": []
+        },
+        {
+          "title": "Greater",
+          "dataType": "constructor",
+          "index": 2,
+          "fields": []
+        }
+      ]
+    },
+    "Pairs$cardano/assets/AssetName_Int": {
+      "title": "Pairs<AssetName, Int>",
+      "dataType": "map",
+      "keys": {
+        "$ref": "#/definitions/cardano~1assets~1AssetName"
+      },
+      "values": {
+        "$ref": "#/definitions/Int"
+      }
+    },
+    "String": {
+      "dataType": "bytes"
+    },
+    "Void": {
+      "title": "Unit",
+      "anyOf": [
+        {
+          "dataType": "constructor",
+          "index": 0,
+          "fields": []
+        }
+      ]
+    },
+    "aiken/collection/Index": {
+      "title": "Index",
+      "dataType": "integer"
+    },
+    "aiken/crypto/ScriptHash": {
+      "title": "ScriptHash",
+      "dataType": "bytes"
+    },
+    "aiken/crypto/VerificationKeyHash": {
+      "title": "VerificationKeyHash",
+      "dataType": "bytes"
+    },
+    "aiken/interval/IntervalBound": {
+      "title": "IntervalBound",
+      "description": "An interval bound, either inclusive or exclusive.",
+      "anyOf": [
+        {
+          "title": "IntervalBound",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "bound_type",
+              "$ref": "#/definitions/aiken~1interval~1IntervalBoundType"
+            },
+            {
+              "title": "is_inclusive",
+              "$ref": "#/definitions/Bool"
+            }
+          ]
+        }
+      ]
+    },
+    "aiken/interval/IntervalBoundType": {
+      "title": "IntervalBoundType",
+      "description": "A type of interval bound. The value for the `Finite` case typically\n represents a number of seconds or milliseconds.",
+      "anyOf": [
+        {
+          "title": "NegativeInfinity",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": []
+        },
+        {
+          "title": "Finite",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": [
+            {
+              "$ref": "#/definitions/Int"
+            }
+          ]
+        },
+        {
+          "title": "PositiveInfinity",
+          "dataType": "constructor",
+          "index": 2,
+          "fields": []
+        }
+      ]
+    },
+    "cardano/address/Address": {
+      "title": "Address",
+      "description": "A Cardano `Address` typically holding one or two credential references.\n\n Note that legacy bootstrap addresses (a.k.a. 'Byron addresses') are\n completely excluded from Plutus contexts. Thus, from an on-chain\n perspective only exists addresses of type 00, 01, ..., 07 as detailed\n in [CIP-0019 :: Shelley Addresses](https://github.com/cardano-foundation/CIPs/tree/master/CIP-0019/#shelley-addresses).",
+      "anyOf": [
+        {
+          "title": "Address",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "payment_credential",
+              "$ref": "#/definitions/cardano~1address~1PaymentCredential"
+            },
+            {
+              "title": "stake_credential",
+              "$ref": "#/definitions/Option$cardano~1address~1StakeCredential"
+            }
+          ]
+        }
+      ]
+    },
+    "cardano/address/Credential": {
+      "title": "Credential",
+      "description": "A general structure for representing an on-chain `Credential`.\n\n Credentials are always one of two kinds: a direct public/private key\n pair, or a script (native or Plutus).",
+      "anyOf": [
+        {
+          "title": "VerificationKey",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "$ref": "#/definitions/aiken~1crypto~1VerificationKeyHash"
+            }
+          ]
+        },
+        {
+          "title": "Script",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": [
+            {
+              "$ref": "#/definitions/aiken~1crypto~1ScriptHash"
+            }
+          ]
+        }
+      ]
+    },
+    "cardano/address/PaymentCredential": {
+      "title": "PaymentCredential",
+      "description": "A general structure for representing an on-chain `Credential`.\n\n Credentials are always one of two kinds: a direct public/private key\n pair, or a script (native or Plutus).",
+      "anyOf": [
+        {
+          "title": "VerificationKey",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "$ref": "#/definitions/aiken~1crypto~1VerificationKeyHash"
+            }
+          ]
+        },
+        {
+          "title": "Script",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": [
+            {
+              "$ref": "#/definitions/aiken~1crypto~1ScriptHash"
+            }
+          ]
+        }
+      ]
+    },
+    "cardano/address/StakeCredential": {
+      "title": "StakeCredential",
+      "description": "Represent a type of object that can be represented either inline (by hash)\n or via a reference (i.e. a pointer to an on-chain location).\n\n This is mainly use for capturing pointers to a stake credential\n registration certificate in the case of so-called pointer addresses.",
+      "anyOf": [
+        {
+          "title": "Inline",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "$ref": "#/definitions/cardano~1address~1Credential"
+            }
+          ]
+        },
+        {
+          "title": "Pointer",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": [
+            {
+              "title": "slot_number",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "transaction_index",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "certificate_index",
+              "$ref": "#/definitions/Int"
+            }
+          ]
+        }
+      ]
+    },
+    "cardano/assets/AssetName": {
+      "title": "AssetName",
+      "dataType": "bytes"
+    },
+    "cardano/assets/Lovelace": {
+      "title": "Lovelace",
+      "dataType": "integer"
+    },
+    "cardano/assets/PolicyId": {
+      "title": "PolicyId",
+      "dataType": "bytes"
+    },
+    "cardano/certificate/Certificate": {
+      "title": "Certificate",
+      "description": "An on-chain certificate attesting of some operation. Publishing\n certificates triggers different kind of rules; most of the time,\n they require signatures from specific keys.",
+      "anyOf": [
+        {
+          "title": "RegisterCredential",
+          "description": "Register a stake credential with an optional deposit amount.\n The deposit is always present when using the new registration certificate\n format available since the Conway era.",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "credential",
+              "$ref": "#/definitions/cardano~1address~1Credential"
+            },
+            {
+              "title": "deposit",
+              "description": "> [!NOTE]\n > The `deposit` ought to be an `Option<Lovelace>`, but due to unfortunate\n > circumstances it will always be instantiated to `None` even when set in\n > the host transaction. This is what the `Never` type captures here.",
+              "$ref": "#/definitions/Never"
+            }
+          ]
+        },
+        {
+          "title": "UnregisterCredential",
+          "description": "Un-Register a stake credential with an optional refund amount\n The deposit is always present when using the new de-registration certificate\n format available since the Conway era.",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": [
+            {
+              "title": "credential",
+              "$ref": "#/definitions/cardano~1address~1Credential"
+            },
+            {
+              "title": "refund",
+              "description": "> [!NOTE]\n > The `refund` ought to be an `Option<Lovelace>`, but due to unfortunate\n > circumstances it will always be instantiated to `None` even when set in\n > the host transaction. This is what the `Never` type captures here.",
+              "$ref": "#/definitions/Never"
+            }
+          ]
+        },
+        {
+          "title": "DelegateCredential",
+          "description": "Delegate stake to a [Delegate](#Delegate).",
+          "dataType": "constructor",
+          "index": 2,
+          "fields": [
+            {
+              "title": "credential",
+              "$ref": "#/definitions/cardano~1address~1Credential"
+            },
+            {
+              "title": "delegate",
+              "$ref": "#/definitions/cardano~1certificate~1Delegate"
+            }
+          ]
+        },
+        {
+          "title": "RegisterAndDelegateCredential",
+          "description": "Register and delegate staking credential to a Delegatee in one certificate.",
+          "dataType": "constructor",
+          "index": 3,
+          "fields": [
+            {
+              "title": "credential",
+              "$ref": "#/definitions/cardano~1address~1Credential"
+            },
+            {
+              "title": "delegate",
+              "$ref": "#/definitions/cardano~1certificate~1Delegate"
+            },
+            {
+              "title": "deposit",
+              "$ref": "#/definitions/cardano~1assets~1Lovelace"
+            }
+          ]
+        },
+        {
+          "title": "RegisterDelegateRepresentative",
+          "description": "Register a delegate representative (a.k.a DRep). The deposit is explicit and\n is refunded when the delegate steps down (unregister).",
+          "dataType": "constructor",
+          "index": 4,
+          "fields": [
+            {
+              "title": "delegate_representative",
+              "$ref": "#/definitions/cardano~1address~1Credential"
+            },
+            {
+              "title": "deposit",
+              "$ref": "#/definitions/cardano~1assets~1Lovelace"
+            }
+          ]
+        },
+        {
+          "title": "UpdateDelegateRepresentative",
+          "description": "Update a delegate representative (a.k.a DRep). The certificate also contains\n metadata which aren't visible on-chain.",
+          "dataType": "constructor",
+          "index": 5,
+          "fields": [
+            {
+              "title": "delegate_representative",
+              "$ref": "#/definitions/cardano~1address~1Credential"
+            }
+          ]
+        },
+        {
+          "title": "UnregisterDelegateRepresentative",
+          "description": "UnRegister a delegate representative, and refund back its past deposit.",
+          "dataType": "constructor",
+          "index": 6,
+          "fields": [
+            {
+              "title": "delegate_representative",
+              "$ref": "#/definitions/cardano~1address~1Credential"
+            },
+            {
+              "title": "refund",
+              "$ref": "#/definitions/cardano~1assets~1Lovelace"
+            }
+          ]
+        },
+        {
+          "title": "RegisterStakePool",
+          "description": "Register a new stake pool",
+          "dataType": "constructor",
+          "index": 7,
+          "fields": [
+            {
+              "title": "stake_pool",
+              "description": "The hash digest of the stake pool's cold (public) key",
+              "$ref": "#/definitions/cardano~1certificate~1StakePoolId"
+            },
+            {
+              "title": "vrf",
+              "description": "The hash digest of the stake pool's VRF (public) key",
+              "$ref": "#/definitions/aiken~1crypto~1VerificationKeyHash"
+            }
+          ]
+        },
+        {
+          "title": "RetireStakePool",
+          "description": "Retire a stake pool. 'at_epoch' indicates in which the retirement will take place",
+          "dataType": "constructor",
+          "index": 8,
+          "fields": [
+            {
+              "title": "stake_pool",
+              "$ref": "#/definitions/cardano~1certificate~1StakePoolId"
+            },
+            {
+              "title": "at_epoch",
+              "$ref": "#/definitions/Int"
+            }
+          ]
+        },
+        {
+          "title": "AuthorizeConstitutionalCommitteeProxy",
+          "description": "Authorize a Hot credential for a specific Committee member's cold credential",
+          "dataType": "constructor",
+          "index": 9,
+          "fields": [
+            {
+              "title": "constitutional_committee_member",
+              "$ref": "#/definitions/cardano~1address~1Credential"
+            },
+            {
+              "title": "proxy",
+              "$ref": "#/definitions/cardano~1address~1Credential"
+            }
+          ]
+        },
+        {
+          "title": "RetireFromConstitutionalCommittee",
+          "description": "Step down from the constitutional committee as a member.",
+          "dataType": "constructor",
+          "index": 10,
+          "fields": [
+            {
+              "title": "constitutional_committee_member",
+              "$ref": "#/definitions/cardano~1address~1Credential"
+            }
+          ]
+        }
+      ]
+    },
+    "cardano/certificate/Delegate": {
+      "title": "Delegate",
+      "description": "A type of stake delegation that can be either block-production, vote or\n both. Note that delegation types aren't cancelling one another, so it is\n possible to delegate block production in one transaction, and delegate vote\n in another. This second delegation **does NOT** invalidate the first one.",
+      "anyOf": [
+        {
+          "title": "DelegateBlockProduction",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "stake_pool",
+              "$ref": "#/definitions/cardano~1certificate~1StakePoolId"
+            }
+          ]
+        },
+        {
+          "title": "DelegateVote",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": [
+            {
+              "title": "delegate_representative",
+              "$ref": "#/definitions/cardano~1certificate~1DelegateRepresentative"
+            }
+          ]
+        },
+        {
+          "title": "DelegateBoth",
+          "dataType": "constructor",
+          "index": 2,
+          "fields": [
+            {
+              "title": "stake_pool",
+              "$ref": "#/definitions/cardano~1certificate~1StakePoolId"
+            },
+            {
+              "title": "delegate_representative",
+              "$ref": "#/definitions/cardano~1certificate~1DelegateRepresentative"
+            }
+          ]
+        }
+      ]
+    },
+    "cardano/certificate/DelegateRepresentative": {
+      "title": "DelegateRepresentative",
+      "anyOf": [
+        {
+          "title": "Registered",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "$ref": "#/definitions/cardano~1address~1Credential"
+            }
+          ]
+        },
+        {
+          "title": "AlwaysAbstain",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": []
+        },
+        {
+          "title": "AlwaysNoConfidence",
+          "dataType": "constructor",
+          "index": 2,
+          "fields": []
+        }
+      ]
+    },
+    "cardano/certificate/StakePoolId": {
+      "title": "StakePoolId",
+      "dataType": "bytes"
+    },
+    "cardano/governance/Constitution": {
+      "title": "Constitution",
+      "anyOf": [
+        {
+          "title": "Constitution",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "guardrails",
+              "$ref": "#/definitions/Option$aiken~1crypto~1ScriptHash"
+            }
+          ]
+        }
+      ]
+    },
+    "cardano/governance/GovernanceActionId": {
+      "title": "GovernanceActionId",
+      "anyOf": [
+        {
+          "title": "GovernanceActionId",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "transaction",
+              "$ref": "#/definitions/cardano~1governance~1TransactionId"
+            },
+            {
+              "title": "proposal_procedure",
+              "$ref": "#/definitions/aiken~1collection~1Index"
+            }
+          ]
+        }
+      ]
+    },
+    "cardano/governance/Mandate": {
+      "title": "Mandate",
+      "dataType": "integer"
+    },
+    "cardano/governance/ProtocolVersion": {
+      "title": "ProtocolVersion",
+      "anyOf": [
+        {
+          "title": "ProtocolVersion",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "major",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "minor",
+              "$ref": "#/definitions/Int"
+            }
+          ]
+        }
+      ]
+    },
+    "cardano/governance/TransactionId": {
+      "title": "TransactionId",
+      "dataType": "bytes"
+    },
+    "cardano/governance/Vote": {
+      "title": "Vote",
+      "anyOf": [
+        {
+          "title": "No",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": []
+        },
+        {
+          "title": "Yes",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": []
+        },
+        {
+          "title": "Abstain",
+          "dataType": "constructor",
+          "index": 2,
+          "fields": []
+        }
+      ]
+    },
+    "cardano/governance/Voter": {
+      "title": "Voter",
+      "anyOf": [
+        {
+          "title": "ConstitutionalCommitteeMember",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "$ref": "#/definitions/cardano~1address~1Credential"
+            }
+          ]
+        },
+        {
+          "title": "DelegateRepresentative",
+          "dataType": "constructor",
+          "index": 1,
+          "fields": [
+            {
+              "$ref": "#/definitions/cardano~1address~1Credential"
+            }
+          ]
+        },
+        {
+          "title": "StakePool",
+          "dataType": "constructor",
+          "index": 2,
+          "fields": [
+            {
+              "$ref": "#/definitions/aiken~1crypto~1VerificationKeyHash"
+            }
+          ]
+        }
+      ]
+    },
+    "cardano/transaction/OutputReference": {
+      "title": "OutputReference",
+      "description": "An `OutputReference` is a unique reference to an output on-chain. The `output_index`\n corresponds to the position in the output list of the transaction (identified by its id)\n that produced that output",
+      "anyOf": [
+        {
+          "title": "OutputReference",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "transaction_id",
+              "$ref": "#/definitions/ByteArray"
+            },
+            {
+              "title": "output_index",
+              "$ref": "#/definitions/Int"
+            }
+          ]
+        }
+      ]
+    },
+    "cardano/transaction/Redeemer": {
+      "title": "Redeemer",
+      "description": "Any Plutus data."
+    },
+    "cardano/transaction/ValidityRange": {
+      "title": "ValidityRange",
+      "description": "A type to represent intervals of values. Interval are inhabited by an\n integer value representing  have a finite lower-bound and/or upper-bound.\n\n This allows to represent all kind of mathematical intervals:\n\n ```aiken\n // [1; 10]\n let i0: Interval = Interval\n   { lower_bound:\n       IntervalBound { bound_type: Finite(1), is_inclusive: True }\n   , upper_bound:\n       IntervalBound { bound_type: Finite(10), is_inclusive: True }\n   }\n ```\n\n ```aiken\n // (20; infinity)\n let i1: Interval = Interval\n   { lower_bound:\n       IntervalBound { bound_type: Finite(20), is_inclusive: False }\n   , upper_bound:\n       IntervalBound { bound_type: PositiveInfinity, is_inclusive: False }\n   }\n ```",
+      "anyOf": [
+        {
+          "title": "Interval",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "lower_bound",
+              "$ref": "#/definitions/aiken~1interval~1IntervalBound"
+            },
+            {
+              "title": "upper_bound",
+              "$ref": "#/definitions/aiken~1interval~1IntervalBound"
+            }
+          ]
+        }
+      ]
+    },
+    "mint/AssetsMap": {
+      "title": "AssetsMap",
+      "dataType": "map",
+      "keys": {
+        "$ref": "#/definitions/cardano~1assets~1PolicyId"
+      },
+      "values": {
+        "$ref": "#/definitions/Pairs$cardano~1assets~1AssetName_Int"
+      }
+    },
+    "mint/MintRedeemer": {
+      "title": "MintRedeemer",
+      "anyOf": [
+        {
+          "title": "MintRedeemer",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "idx",
+              "$ref": "#/definitions/Int"
+            }
+          ]
+        }
+      ]
+    },
+    "mint/NestedData": {
+      "title": "NestedData",
+      "anyOf": [
+        {
+          "title": "NestedData",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "owner",
+              "$ref": "#/definitions/cardano~1address~1Address"
+            },
+            {
+              "title": "amount",
+              "$ref": "#/definitions/mint~1AssetsMap"
+            },
+            {
+              "title": "signers",
+              "$ref": "#/definitions/List$cardano~1address~1Address"
+            },
+            {
+              "title": "metadata",
+              "$ref": "#/definitions/Option$ByteArray"
+            },
+            {
+              "title": "cert",
+              "$ref": "#/definitions/cardano~1certificate~1Certificate"
+            },
+            {
+              "title": "out_ref",
+              "$ref": "#/definitions/cardano~1transaction~1OutputReference"
+            },
+            {
+              "title": "validity_range",
+              "$ref": "#/definitions/cardano~1transaction~1ValidityRange"
+            },
+            {
+              "title": "redeemer",
+              "$ref": "#/definitions/cardano~1transaction~1Redeemer"
+            },
+            {
+              "title": "constitution",
+              "$ref": "#/definitions/cardano~1governance~1Constitution"
+            },
+            {
+              "title": "governance_action_id",
+              "$ref": "#/definitions/cardano~1governance~1GovernanceActionId"
+            },
+            {
+              "title": "mandate",
+              "$ref": "#/definitions/cardano~1governance~1Mandate"
+            },
+            {
+              "title": "protocol_version",
+              "$ref": "#/definitions/cardano~1governance~1ProtocolVersion"
+            },
+            {
+              "title": "transaction_id",
+              "$ref": "#/definitions/cardano~1governance~1TransactionId"
+            },
+            {
+              "title": "vote",
+              "$ref": "#/definitions/cardano~1governance~1Vote"
+            },
+            {
+              "title": "voter",
+              "$ref": "#/definitions/cardano~1governance~1Voter"
+            },
+            {
+              "title": "true_false",
+              "$ref": "#/definitions/Bool"
+            },
+            {
+              "title": "bytes",
+              "$ref": "#/definitions/ByteArray"
+            },
+            {
+              "title": "data",
+              "$ref": "#/definitions/Data"
+            },
+            {
+              "title": "int",
+              "$ref": "#/definitions/Int"
+            },
+            {
+              "title": "never",
+              "$ref": "#/definitions/Never"
+            },
+            {
+              "title": "ordering",
+              "$ref": "#/definitions/Ordering"
+            },
+            {
+              "title": "string",
+              "$ref": "#/definitions/String"
+            },
+            {
+              "title": "void",
+              "$ref": "#/definitions/Void"
+            }
+          ]
+        }
+      ]
+    },
+    "mint/PublishRedeemer": {
+      "title": "PublishRedeemer",
+      "anyOf": [
+        {
+          "title": "PublishRedeemer",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "msg",
+              "$ref": "#/definitions/ByteArray"
+            }
+          ]
+        }
+      ]
+    },
+    "mint/SpendDatum": {
+      "title": "SpendDatum",
+      "anyOf": [
+        {
+          "title": "SpendDatum",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "data",
+              "$ref": "#/definitions/mint~1NestedData"
+            },
+            {
+              "title": "counter",
+              "$ref": "#/definitions/Int"
+            }
+          ]
+        }
+      ]
+    },
+    "mint/WithdrawRedeemer": {
+      "title": "WithdrawRedeemer",
+      "anyOf": [
+        {
+          "title": "WithdrawRedeemer",
+          "dataType": "constructor",
+          "index": 0,
+          "fields": [
+            {
+              "title": "msg",
+              "$ref": "#/definitions/ByteArray"
+            }
+          ]
+        }
+      ]
+    }
+  }
+}

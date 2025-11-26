@@ -73,6 +73,21 @@ export function BlueprintCodegen() {
     }
   }
 
+  const loadSample = async () => {
+    try {
+      const response = await fetch('/sample-blueprint.json')
+      if (!response.ok) {
+        throw new Error('Failed to load sample blueprint')
+      }
+      const sampleJson = await response.json()
+      setBlueprintJson(JSON.stringify(sampleJson, null, 2))
+      setError(null)
+    } catch (err) {
+      console.error('Failed to load sample:', err)
+      setError(err instanceof Error ? err.message : 'Failed to load sample blueprint')
+    }
+  }
+
   return (
     <div className="max-w-6xl mx-auto space-y-6">
       <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
@@ -82,6 +97,12 @@ export function BlueprintCodegen() {
               <h3 className="text-2xl font-semibold tracking-tight">Blueprint Input</h3>
               <p className="text-sm text-muted-foreground">Paste your plutus.json blueprint</p>
             </div>
+            <button
+              onClick={loadSample}
+              className="inline-flex items-center justify-center rounded-md text-sm font-medium h-9 px-6 py-2 bg-zinc-700 text-white hover:bg-zinc-600 active:bg-zinc-500 transition-all cursor-pointer shadow-sm hover:shadow"
+            >
+              Load Sample
+            </button>
           </div>
           
           <div className="space-y-4">
