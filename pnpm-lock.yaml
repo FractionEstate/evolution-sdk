@@ -98,6 +98,9 @@ importers:
 
   docs:
     dependencies:
+      '@evolution-sdk/devnet':
+        specifier: workspace:*
+        version: link:../packages/evolution-devnet
       '@evolution-sdk/evolution':
         specifier: workspace:*
         version: link:../packages/evolution

@@ -1,0 +1,9 @@
+{
+  "title": "Devnet",
+  "pages": [
+    "index",
+    "getting-started",
+    "configuration",
+    "integration"
+  ]
+}
