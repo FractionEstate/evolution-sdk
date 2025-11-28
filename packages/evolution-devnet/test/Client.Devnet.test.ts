@@ -1,6 +1,7 @@
 import { describe, expect, it } from "@effect/vitest"
-import * as Devnet from "@evolution-sdk/devnet/Devnet"
-import * as DevnetDefault from "@evolution-sdk/devnet/DevnetDefault"
+import * as Cluster from "@evolution-sdk/devnet/Cluster"
+import * as Config from "@evolution-sdk/devnet/Config"
+import * as Genesis from "@evolution-sdk/devnet/Genesis"
 import * as Address from "@evolution-sdk/evolution/core/AddressEras"
 import * as Assets from "@evolution-sdk/evolution/sdk/Assets"
 import { createClient } from "@evolution-sdk/evolution/sdk/client/ClientImpl"
@@ -12,9 +13,9 @@ import { afterAll, beforeAll } from "vitest"
  * Client integration tests with local Devnet
  */
 describe("Client with Devnet", () => {
-  let devnetCluster: Devnet.DevNetCluster | undefined
+  let devnetCluster: Cluster.Cluster | undefined
   let genesisUtxos: Array<UTxO> = []
-  let genesisConfig: DevnetDefault.ShelleyGenesis
+  let genesisConfig: Config.ShelleyGenesis
 
   const TEST_MNEMONIC =
     "test test test test test test test test test test test test test test test test test test test test test test test sauce"
@@ -44,34 +45,34 @@ describe("Client with Devnet", () => {
     const testAddressHex = Address.toHex(Address.fromBech32(testAddressBech32))
 
     genesisConfig = {
-      ...DevnetDefault.DEFAULT_SHELLEY_GENESIS,
+      ...Config.DEFAULT_SHELLEY_GENESIS,
       slotLength: 0.02,
       epochLength: 50,
       activeSlotsCoeff: 1.0,
       initialFunds: { [testAddressHex]: 900_000_000_000 }
     }
 
-    devnetCluster = await Devnet.Cluster.make({
-      clusterName: "client-devnet-test",
+    devnetCluster = await Cluster.make({
+      clusterName: "client-kupmios-wallet-test",
       ports: { node: 6001, submit: 9002 },
       shelleyGenesis: genesisConfig,
       kupo: { enabled: true, port: 1443, logLevel: "Info" },
       ogmios: { enabled: true, port: 1338, logLevel: "info" }
     })
 
-    await Devnet.Cluster.start(devnetCluster)
+    await Cluster.start(devnetCluster)
     await new Promise((resolve) => setTimeout(resolve, 3_000))
   }, 180_000)
 
   afterAll(async () => {
     if (devnetCluster) {
-      await Devnet.Cluster.stop(devnetCluster)
-      await Devnet.Cluster.remove(devnetCluster)
+      await Cluster.stop(devnetCluster)
+      await Cluster.remove(devnetCluster)
     }
   }, 60_000)
 
   it("should calculate genesis UTxOs from config", { timeout: 10_000 }, async () => {
-    const calculatedUtxos = await Devnet.Genesis.calculateUtxosFromConfigOrThrow(genesisConfig)
+    const calculatedUtxos = await Genesis.calculateUtxosFromConfigOrThrow(genesisConfig)
 
     expect(calculatedUtxos).toBeDefined()
     expect(calculatedUtxos.length).toBe(1)

@@ -10,7 +10,7 @@ import { KupmiosProvider } from "@evolution-sdk/evolution/sdk/provider/Kupmios"
 import * as Script from "@evolution-sdk/evolution/sdk/Script"
 import { Schema } from "effect"
 
-import { Devnet } from "../src/index.js"
+import * as Cluster from "../src/Cluster.js"
 import { createTestUtxo } from "./utils/utxo-helpers.js"
 
 describe("TxBuilder Script Handling", () => {
@@ -18,13 +18,13 @@ describe("TxBuilder Script Handling", () => {
   // Devnet Setup (Ogmios for script evaluation)
   // ============================================================================
 
-  let devnetCluster: Devnet.DevNetCluster | undefined
+  let devnetCluster: Cluster.Cluster | undefined
   let kupmiosProvider: KupmiosProvider
 
   beforeAll(async () => {
     try {
-      devnetCluster = await Devnet.Cluster.make({
-        clusterName: "txbuilder-scripts-devnet",
+      devnetCluster = await Cluster.make({
+        clusterName: "txbuilder-plutus-script-eval",
         ports: {
           node: 5001,
           submit: 9001
@@ -41,7 +41,7 @@ describe("TxBuilder Script Handling", () => {
         }
       })
 
-      await Devnet.Cluster.start(devnetCluster)
+      await Cluster.start(devnetCluster)
       
       // Wait for Ogmios to be ready
       await new Promise((resolve) => setTimeout(resolve, 2_000))
@@ -68,8 +68,8 @@ describe("TxBuilder Script Handling", () => {
   afterAll(async () => {
     if (devnetCluster) {
       try {
-        await Devnet.Cluster.stop(devnetCluster)
-        await Devnet.Cluster.remove(devnetCluster)
+        await Cluster.stop(devnetCluster)
+        await Cluster.remove(devnetCluster)
         // eslint-disable-next-line no-console
         console.log("✓ Devnet stopped")
       } catch (error) {
