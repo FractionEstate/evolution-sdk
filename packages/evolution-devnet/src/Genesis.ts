@@ -50,7 +50,7 @@ export interface Cluster {
  *   // ... other genesis config
  * }
  *
- * const utxos = await Devnet.Genesis.calculateUtxosFromConfigOrThrow(
+ * const utxos = await Devnet.Genesis.calculateUtxosFromConfig(
  *   genesisConfig
  * )
  * ```
@@ -58,7 +58,7 @@ export interface Cluster {
  * @since 2.0.0
  * @category genesis
  */
-export const calculateUtxosFromConfig = (
+export const calculateUtxosFromConfigEffect = (
   genesisConfig: Config.ShelleyGenesis
 ): Effect.Effect<ReadonlyArray<UTxO.UTxO>, GenesisError> =>
   Effect.gen(function* () {
@@ -104,8 +104,8 @@ export const calculateUtxosFromConfig = (
  * @since 2.0.0
  * @category genesis
  */
-export const calculateUtxosFromConfigOrThrow = (genesisConfig: Config.ShelleyGenesis) =>
-  Effect.runPromise(calculateUtxosFromConfig(genesisConfig))
+export const calculateUtxosFromConfig = (genesisConfig: Config.ShelleyGenesis) =>
+  Effect.runPromise(calculateUtxosFromConfigEffect(genesisConfig))
 
 /**
  * Query genesis UTxOs from the running node using cardano-cli.
@@ -114,7 +114,7 @@ export const calculateUtxosFromConfigOrThrow = (genesisConfig: Config.ShelleyGen
  * @since 2.0.0
  * @category genesis
  */
-export const queryUtxos = (cluster: Cluster): Effect.Effect<ReadonlyArray<UTxO.UTxO>, GenesisError> =>
+export const queryUtxosEffect = (cluster: Cluster): Effect.Effect<ReadonlyArray<UTxO.UTxO>, GenesisError> =>
   Effect.gen(function* () {
     // Need to import Container functions dynamically to avoid circular dependency
     const ContainerModule = yield* Effect.promise(() => import("./Container.js"))
@@ -169,4 +169,4 @@ export const queryUtxos = (cluster: Cluster): Effect.Effect<ReadonlyArray<UTxO.U
  * @since 2.0.0
  * @category genesis
  */
-export const queryUtxosOrThrow = (cluster: Cluster) => Effect.runPromise(queryUtxos(cluster))
+export const queryUtxos = (cluster: Cluster) => Effect.runPromise(queryUtxosEffect(cluster))

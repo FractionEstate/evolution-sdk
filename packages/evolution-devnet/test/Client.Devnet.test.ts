@@ -72,7 +72,7 @@ describe("Client with Devnet", () => {
   }, 60_000)
 
   it("should calculate genesis UTxOs from config", { timeout: 10_000 }, async () => {
-    const calculatedUtxos = await Genesis.calculateUtxosFromConfigOrThrow(genesisConfig)
+    const calculatedUtxos = await Genesis.calculateUtxosFromConfig(genesisConfig)
 
     expect(calculatedUtxos).toBeDefined()
     expect(calculatedUtxos.length).toBe(1)

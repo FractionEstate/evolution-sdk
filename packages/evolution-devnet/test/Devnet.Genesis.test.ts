@@ -44,7 +44,7 @@ describe("Devnet.Genesis", () => {
   }, 60_000)
 
   it("should calculate genesis UTxOs from config", { timeout: 10_000 }, async () => {
-    const utxos = await Genesis.calculateUtxosFromConfigOrThrow(genesisConfig)
+    const utxos = await Genesis.calculateUtxosFromConfig(genesisConfig)
 
     expect(utxos).toBeDefined()
     expect(utxos.length).toBe(1)
@@ -60,7 +60,7 @@ describe("Devnet.Genesis", () => {
   it("should query genesis UTxOs from node", { timeout: 30_000 }, async () => {
     if (!devnetCluster) throw new Error("Devnet not initialized")
 
-    const utxos = await Genesis.queryUtxosOrThrow(devnetCluster)
+    const utxos = await Genesis.queryUtxos(devnetCluster)
 
     expect(utxos).toBeDefined()
     expect(utxos.length).toBe(1)
@@ -76,8 +76,8 @@ describe("Devnet.Genesis", () => {
   it("should match: calculated === queried", { timeout: 30_000 }, async () => {
     if (!devnetCluster) throw new Error("Devnet not initialized")
 
-    const calculated = await Genesis.calculateUtxosFromConfigOrThrow(genesisConfig)
-    const queried = await Genesis.queryUtxosOrThrow(devnetCluster)
+    const calculated = await Genesis.calculateUtxosFromConfig(genesisConfig)
+    const queried = await Genesis.queryUtxos(devnetCluster)
 
     expect(calculated.length).toBe(queried.length)
 
@@ -90,9 +90,9 @@ describe("Devnet.Genesis", () => {
   })
 
   it("should be deterministic", { timeout: 10_000 }, async () => {
-    const result1 = await Genesis.calculateUtxosFromConfigOrThrow(genesisConfig)
-    const result2 = await Genesis.calculateUtxosFromConfigOrThrow(genesisConfig)
-    const result3 = await Genesis.calculateUtxosFromConfigOrThrow(genesisConfig)
+    const result1 = await Genesis.calculateUtxosFromConfig(genesisConfig)
+    const result2 = await Genesis.calculateUtxosFromConfig(genesisConfig)
+    const result3 = await Genesis.calculateUtxosFromConfig(genesisConfig)
 
     expect(result1).toEqual(result2)
     expect(result2).toEqual(result3)
@@ -108,7 +108,7 @@ describe("Devnet.Genesis", () => {
       }
     }
 
-    const utxos = await Genesis.calculateUtxosFromConfigOrThrow(multiConfig)
+    const utxos = await Genesis.calculateUtxosFromConfig(multiConfig)
 
     expect(utxos.length).toBe(3)
     

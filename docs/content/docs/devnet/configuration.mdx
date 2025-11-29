@@ -117,7 +117,7 @@ This pattern enables testing multi-party protocols, delegation scenarios, and wa
 
 After creating a genesis configuration, calculate the resulting UTxOs to verify addresses and amounts.
 
-**Important**: Genesis UTxOs do NOT appear in Kupo's index because Kupo reads chain events starting from block 1, while genesis UTxOs exist in block 0 (the genesis block itself). You must use `calculateUtxosFromConfigOrThrow` to derive these UTxOs and provide them to your transaction builder via the `availableUtxos` parameter. After spending a genesis UTxO, the resulting outputs will be indexed normally by Kupo.
+**Important**: Genesis UTxOs do NOT appear in Kupo's index because Kupo reads chain events starting from block 1, while genesis UTxOs exist in block 0 (the genesis block itself). You must use `calculateUtxosFromConfig` to derive these UTxOs and provide them to your transaction builder via the `availableUtxos` parameter. After spending a genesis UTxO, the resulting outputs will be indexed normally by Kupo.
 
 ```typescript twoslash
 import { Config, Genesis } from "@evolution-sdk/devnet";
@@ -131,7 +131,7 @@ const genesisConfig = {
 } satisfies Config.ShelleyGenesis;
 
 // Calculate UTxOs before starting the cluster
-const genesisUtxos = await Genesis.calculateUtxosFromConfigOrThrow(genesisConfig);
+const genesisUtxos = await Genesis.calculateUtxosFromConfig(genesisConfig);
 
 console.log("Genesis UTxOs:", genesisUtxos.length);
 genesisUtxos.forEach(utxo => {
@@ -383,7 +383,7 @@ console.log("- Custom protocol parameters");
 console.log("- Kupo and Ogmios enabled");
 
 // Calculate and verify genesis UTxOs
-const utxos = await Genesis.calculateUtxosFromConfigOrThrow(genesisConfig);
+const utxos = await Genesis.calculateUtxosFromConfig(genesisConfig);
 console.log(`\nGenesis UTxOs: ${utxos.length}`);
 utxos.forEach((utxo, i) => {
   console.log(`  Address ${i + 1}: ${utxo.assets.lovelace} lovelace`);

@@ -93,7 +93,7 @@ async function completeWorkflow() {
   });
 
   // Step 6: Calculate genesis UTxOs
-  const genesisUtxos = await Genesis.calculateUtxosFromConfigOrThrow(genesisConfig);
+  const genesisUtxos = await Genesis.calculateUtxosFromConfig(genesisConfig);
   
   console.log("Genesis UTxOs:", genesisUtxos.length);
   console.log("Initial balance:", genesisUtxos[0]?.assets.lovelace, "lovelace");
@@ -155,9 +155,9 @@ The genesis UTxO calculation provides the initial funds for transaction building
 
 Three key integration points connect devnet to the Evolution SDK:
 
-**Genesis to UTxO**: The `calculateUtxosFromConfigOrThrow` function converts genesis configuration into queryable UTxO objects. These UTxOs can be used as transaction inputs immediately after cluster start.
+**Genesis to UTxO**: The `calculateUtxosFromConfig` function converts genesis configuration into queryable UTxO objects. These UTxOs can be used as transaction inputs immediately after cluster start.
 
-**Critical: Genesis UTxOs and Kupo**: Genesis UTxOs do NOT appear in Kupo's index. Kupo reads chain events starting from the first block, but genesis UTxOs are created in the genesis block itself (block 0), which has no transaction events. You MUST use `calculateUtxosFromConfigOrThrow` to derive genesis UTxOs and explicitly inject them into your transaction builder using the `availableUtxos` parameter. Once you spend a genesis UTxO in a transaction, the resulting outputs WILL be indexed by Kupo and can be queried normally.
+**Critical: Genesis UTxOs and Kupo**: Genesis UTxOs do NOT appear in Kupo's index. Kupo reads chain events starting from the first block, but genesis UTxOs are created in the genesis block itself (block 0), which has no transaction events. You MUST use `calculateUtxosFromConfig` to derive genesis UTxOs and explicitly inject them into your transaction builder using the `availableUtxos` parameter. Once you spend a genesis UTxO in a transaction, the resulting outputs WILL be indexed by Kupo and can be queried normally.
 
 **Provider Configuration**: The client's provider configuration points to the devnet's Kupo and Ogmios services. This enables all blockchain queries (UTxOs, protocol parameters, tip) to target the local network.
 
@@ -269,7 +269,7 @@ describe("Transaction Tests", () => {
       wallet: { type: "seed", mnemonic, accountIndex: 0 }
     });
 
-    genesisUtxos = await Genesis.calculateUtxosFromConfigOrThrow(
+    genesisUtxos = await Genesis.calculateUtxosFromConfig(
       genesisConfig
     );
   }, 180_000); // Extended timeout for cluster startup
@@ -405,7 +405,7 @@ const client2 = createClient({
 });
 
   // Wallet 1 sends to Wallet 2
-  const utxos1 = await Genesis.calculateUtxosFromConfigOrThrow(genesisConfig);
+  const utxos1 = await Genesis.calculateUtxosFromConfig(genesisConfig);
   const wallet1Address = await wallet1.address();
   const wallet1Utxo = utxos1.find(u => u.address === wallet1Address)!;
 
@@ -488,7 +488,7 @@ Run this script to start a persistent devnet for manual testing, dApp developmen
 
 **"Cannot connect to provider"**: Ensure sufficient wait time after `Cluster.start()`. Kupo and Ogmios need 6-8 seconds to initialize completely. Increase wait time for slower systems.
 
-**"UTxO not found"**: Remember that genesis UTxOs are NOT indexed by Kupo. Always use `calculateUtxosFromConfigOrThrow` and provide them via `availableUtxos` parameter when building your first transaction. After spending genesis UTxOs, subsequent outputs will be indexed normally.
+**"UTxO not found"**: Remember that genesis UTxOs are NOT indexed by Kupo. Always use `calculateUtxosFromConfig` and provide them via `availableUtxos` parameter when building your first transaction. After spending genesis UTxOs, subsequent outputs will be indexed normally.
 
 **"Transaction submission failed"**: Verify network magic matches between genesis configuration and client. Mismatched magic causes address validation failures.
 
