@@ -160,10 +160,14 @@ export const hashAuxiliaryData = (aux: AuxiliaryData.AuxiliaryData): AuxiliaryDa
 }
 
 /**
- * Compute hash of plutus data using default Data encoding.
+ * Compute hash of plutus data using specified CBOR encoding options.
+ * Defaults to CML_DATA_DEFAULT_OPTIONS (indefinite-length arrays/maps).
  */
-export const hashPlutusData = (pd: Data.Data): DatumOption.DatumHash => {
-  const bytes = Data.toCBORBytes(pd)
+export const hashPlutusData = (
+  pd: Data.Data,
+  options: CBOR.CodecOptions = CBOR.CML_DATA_DEFAULT_OPTIONS
+): DatumOption.DatumHash => {
+  const bytes = Data.toCBORBytes(pd, options)
   const digest = blake2b(bytes, { dkLen: 32 })
   return new DatumOption.DatumHash({ hash: digest })
 }
