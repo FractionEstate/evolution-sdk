@@ -183,7 +183,11 @@ Added in v2.0.0
 ## toBech32
 
 Convert a PrivateKey to a Bech32 string.
-Format: ed25519e_sk1...
+Automatically selects the appropriate prefix based on key length:
+
+- 32 bytes → ed25519_sk1... (normal key)
+- 64 bytes → ed25519e_sk1... (extended key)
+  Compatible with CML.PrivateKey.to_bech32().
 
 **Signature**
 
@@ -274,7 +278,8 @@ Added in v2.0.0
 ## fromBech32
 
 Parse a PrivateKey from a Bech32 string.
-Expected format: ed25519e_sk1...
+Supports both extended (ed25519e_sk1...) and normal (ed25519_sk1...) formats.
+Compatible with CML.PrivateKey.from_bech32().
 
 **Signature**
 

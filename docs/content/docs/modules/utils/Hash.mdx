@@ -1,6 +1,6 @@
 ---
 title: utils/Hash.ts
-nav_order: 187
+nav_order: 188
 parent: Modules
 ---
 
@@ -43,12 +43,13 @@ export declare const hashAuxiliaryData: (aux: AuxiliaryData.AuxiliaryData) => Au
 
 ## hashPlutusData
 
-Compute hash of plutus data using default Data encoding.
+Compute hash of plutus data using specified CBOR encoding options.
+Defaults to CML_DATA_DEFAULT_OPTIONS (indefinite-length arrays/maps).
 
 **Signature**
 
 ```ts
-export declare const hashPlutusData: (pd: Data.Data) => DatumOption.DatumHash
+export declare const hashPlutusData: (pd: Data.Data, options?: CBOR.CodecOptions) => DatumOption.DatumHash
 ```
 
 ## hashScriptData
