@@ -6,18 +6,10 @@ parent: Modules
 
 ## SignData overview
 
-COSE (RFC 8152) message signing for Cardano (CIP-0030).
+COSE (RFC 8152) message signing for Cardano.
 
-This module provides a TypeScript implementation of @emurgo/cardano-message-signing-nodejs,
-offering the complete CSL message signing API surface including:
-
-- COSESign1Builder: Builder for creating COSE_Sign1 structures
-- COSESign1: Signed message representation
-- COSEKey: COSE key representation
-- Headers: Protected and unprotected headers
-- HeaderMap: Map of header labels to values
-- Label: Header label representation
-- EdDSA25519Key: Ed25519 key operations
+Implements CIP-30 wallet API and CIP-8 message signing using COSE_Sign1 structures.
+Compatible with all major Cardano wallets.
 
 Added in v2.0.0
 
@@ -130,7 +122,13 @@ Added in v2.0.0
 ## signData
 
 Sign data with a private key using COSE_Sign1.
-Compatible with lucid-evolution's sign_data implementation.
+
+Implements CIP-30 `api.signData()` specification. Creates a COSE_Sign1 structure with:
+
+- Protected headers: algorithm (EdDSA), address
+- Unprotected headers: hashed (false)
+- Payload: NOT pre-hashed
+- Returns CBOR-encoded COSE_Sign1 and COSE_Key
 
 **Signature**
 
@@ -147,7 +145,14 @@ Added in v2.0.0
 ## verifyData
 
 Verify a COSE_Sign1 signed message.
-Compatible with lucid-evolution's verifyData implementation.
+
+Validates CIP-30 signatures by verifying:
+
+- Payload matches signed data
+- Address matches protected headers
+- Algorithm is EdDSA
+- Public key hash matches provided key hash
+- Ed25519 signature is cryptographically valid
 
 **Signature**
 
@@ -937,7 +942,7 @@ Added in v2.0.0
 ## COSEKeyFromCBORBytes
 
 CBOR bytes transformation schema for COSEKey.
-Encodes COSEKey as a CBOR Map compatible with CSL/lucid-evolution.
+Encodes COSEKey as a CBOR Map compatible with CSL.
 
 **Signature**
 
@@ -1071,6 +1076,8 @@ Added in v2.0.0
 
 Payload type - raw binary data to be signed.
 
+The payload is NOT pre-hashed before signing (per CIP-8).
+
 **Signature**
 
 ```ts
@@ -1081,7 +1088,9 @@ Added in v2.0.0
 
 ## SignedMessage (type alias)
 
-Signed message result.
+Signed message result (CIP-30 DataSignature format).
+
+Contains CBOR-encoded COSE_Sign1 (signature) and COSE_Key (public key).
 
 **Signature**
 
