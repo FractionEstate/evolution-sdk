@@ -6,8 +6,8 @@ import { describe, expect, it } from "vitest"
 
 import { fromHex, toHex } from "../src/core/Bytes.js"
 import * as KeyHash from "../src/core/KeyHash.js"
+import { SignData } from "../src/core/message-signing/index.js"
 import * as PrivateKey from "../src/core/PrivateKey.js"
-import * as SignData from "../src/core/SignData.js"
 
 function signData(addressHex: string, payload: string, privateKey: string): { signature: string; key: string } {
   const protectedHeaders = M.HeaderMap.new()

@@ -3,22 +3,22 @@ import { describe, expect, it } from "vitest"
 
 import * as Bytes from "../src/core/Bytes.js"
 import * as KeyHash from "../src/core/KeyHash.js"
+import { COSESign1, Header, SignData, Utils } from "../src/core/message-signing/index.js"
 import * as PrivateKey from "../src/core/PrivateKey.js"
-import * as SignData from "../src/core/SignData.js"
 import * as VKey from "../src/core/VKey.js"
 
 describe("SignData", () => {
   describe("Payload", () => {
     it("should create a Payload from hex string", () => {
-      const payload = SignData.fromHex("48656c6c6f")
+      const payload = Utils.fromHex("48656c6c6f")
       expect(payload).toBeInstanceOf(Uint8Array)
-      expect(SignData.toHex(payload)).toBe("48656c6c6f")
+      expect(Utils.toHex(payload)).toBe("48656c6c6f")
     })
 
     it("should convert text to payload and back", () => {
       const originalText = "Hello, Cardano!"
-      const payload = SignData.fromText(originalText)
-      const decodedText = SignData.toText(payload)
+      const payload = Utils.fromText(originalText)
+      const decodedText = Utils.toText(payload)
       expect(decodedText).toBe(originalText)
     })
   })
@@ -34,7 +34,7 @@ describe("SignData", () => {
       const addressHex = Bytes.toHex(keyHash.hash)
 
       // Create payload
-      const payload = SignData.fromText("Hello, Cardano!")
+      const payload = Utils.fromText("Hello, Cardano!")
 
       // Sign the data
       const signedMessage = SignData.signData(addressHex, payload, privateKey)
@@ -50,8 +50,8 @@ describe("SignData", () => {
       const keyHash = KeyHash.fromPrivateKey(privateKey)
       const addressHex = KeyHash.toHex(keyHash)
 
-      const payload1 = SignData.fromText("Hello")
-      const payload2 = SignData.fromText("World")
+      const payload1 = Utils.fromText("Hello")
+      const payload2 = Utils.fromText("World")
 
       const signedMessage = SignData.signData(addressHex, payload1, privateKey)
       const isValid = SignData.verifyData(addressHex, KeyHash.toHex(keyHash), payload2, signedMessage)
@@ -66,7 +66,7 @@ describe("SignData", () => {
       const addressHex1 = KeyHash.toHex(keyHash)
       const addressHex2 = "ff" + KeyHash.toHex(keyHash).slice(2)
 
-      const payload = SignData.fromText("Hello")
+      const payload = Utils.fromText("Hello")
 
       const signedMessage = SignData.signData(addressHex1, payload, privateKey)
       const isValid = SignData.verifyData(addressHex2, KeyHash.toHex(keyHash), payload, signedMessage)
@@ -85,7 +85,7 @@ describe("SignData", () => {
       const keyHash2 = KeyHash.fromPrivateKey(privateKey2)
 
       const addressHex = KeyHash.toHex(keyHash1)
-      const payload = SignData.fromText("Hello")
+      const payload = Utils.fromText("Hello")
 
       const signedMessage = SignData.signData(addressHex, payload, privateKey1)
       const isValid = SignData.verifyData(addressHex, KeyHash.toHex(keyHash2), payload, signedMessage)
@@ -99,7 +99,7 @@ describe("SignData", () => {
       const keyHash = KeyHash.fromPrivateKey(privateKey)
       const addressHex = KeyHash.toHex(keyHash)
 
-      const payload = new Uint8Array(0) as SignData.Payload
+      const payload = new Uint8Array(0) as Utils.Payload
 
       const signedMessage = SignData.signData(addressHex, payload, privateKey)
       const isValid = SignData.verifyData(addressHex, KeyHash.toHex(keyHash), payload, signedMessage)
@@ -115,7 +115,7 @@ describe("SignData", () => {
 
       // Create a large payload (1KB of data)
       const largeText = "x".repeat(1024)
-      const payload = SignData.fromText(largeText)
+      const payload = Utils.fromText(largeText)
 
       const signedMessage = SignData.signData(addressHex, payload, privateKey)
       const isValid = SignData.verifyData(addressHex, KeyHash.toHex(keyHash), payload, signedMessage)
@@ -129,7 +129,7 @@ describe("SignData", () => {
       const keyHash = KeyHash.fromPrivateKey(privateKey)
       const addressHex = KeyHash.toHex(keyHash)
 
-      const payload = SignData.fromText("Testing extended keys")
+      const payload = Utils.fromText("Testing extended keys")
 
       const signedMessage = SignData.signData(addressHex, payload, privateKey)
       const isValid = SignData.verifyData(addressHex, KeyHash.toHex(keyHash), payload, signedMessage)
@@ -148,7 +148,7 @@ describe("SignData", () => {
             const keyHash = KeyHash.fromPrivateKey(privateKey)
             const addressHex = KeyHash.toHex(keyHash)
 
-            const payload = payloadBytes as SignData.Payload
+            const payload = payloadBytes as Utils.Payload
 
             const signedMessage = SignData.signData(addressHex, payload, privateKey)
             const isValid = SignData.verifyData(addressHex, KeyHash.toHex(keyHash), payload, signedMessage)
@@ -175,8 +175,8 @@ describe("SignData", () => {
             const keyHash = KeyHash.fromPrivateKey(privateKey)
             const addressHex = KeyHash.toHex(keyHash)
 
-            const payload1 = payloadBytes1 as SignData.Payload
-            const payload2 = payloadBytes2 as SignData.Payload
+            const payload1 = payloadBytes1 as Utils.Payload
+            const payload2 = payloadBytes2 as Utils.Payload
 
             const signedMessage = SignData.signData(addressHex, payload1, privateKey)
             const isValid = SignData.verifyData(addressHex, KeyHash.toHex(keyHash), payload2, signedMessage)
@@ -204,7 +204,7 @@ describe("SignData", () => {
             }
 
             const addressHex = KeyHash.toHex(keyHash1)
-            const payload = payloadBytes as SignData.Payload
+            const payload = payloadBytes as Utils.Payload
 
             const signedMessage = SignData.signData(addressHex, payload, privateKey1)
             const isValid = SignData.verifyData(addressHex, KeyHash.toHex(keyHash2), payload, signedMessage)
@@ -219,8 +219,8 @@ describe("SignData", () => {
     it("property: text roundtrip preserves content", () => {
       FastCheck.assert(
         FastCheck.property(FastCheck.string({ minLength: 0, maxLength: 200 }), (text) => {
-          const payload = SignData.fromText(text)
-          const decoded = SignData.toText(payload)
+          const payload = Utils.fromText(text)
+          const decoded = Utils.toText(payload)
           expect(decoded).toBe(text)
         }),
         { numRuns: 100 }
@@ -238,16 +238,16 @@ describe("SignData", () => {
       const privateKey = PrivateKey.fromBytes(skBytes)
       const publicKey = PrivateKey.toPublicKey(privateKey)
       
-      const payload = SignData.fromText("message to sign")
-      const externalAAD = SignData.fromText("externally supplied data not in sign object")
+      const payload = Utils.fromText("message to sign")
+      const externalAAD = Utils.fromText("externally supplied data not in sign object")
 
       // 2) Creating a simple signed message
-      const protectedHeaders = SignData.headerMapNew()
-      const unprotectedHeaders = SignData.headerMapNew()
-      const headers = SignData.headersNew(protectedHeaders, unprotectedHeaders)
+      const protectedHeaders = Header.headerMapNew()
+      const unprotectedHeaders = Header.headerMapNew()
+      const headers = Header.headersNew(protectedHeaders, unprotectedHeaders)
 
       // Use COSESign1Builder
-      let builder = SignData.coseSign1BuilderNew(headers, payload, false)
+      let builder = COSESign1.coseSign1BuilderNew(headers, payload, false)
       
       // Set external AAD
       builder = builder.setExternalAad(externalAAD)
@@ -284,16 +284,16 @@ describe("SignData", () => {
       const privateKey = PrivateKey.fromBytes(skBytes)
       const publicKey = PrivateKey.toPublicKey(privateKey)
       
-      const payload = SignData.fromText("message to sign")
-      const externalAAD1 = SignData.fromText("external data 1")
-      const externalAAD2 = SignData.fromText("external data 2")
+      const payload = Utils.fromText("message to sign")
+      const externalAAD1 = Utils.fromText("external data 1")
+      const externalAAD2 = Utils.fromText("external data 2")
 
       // Create and sign with externalAAD1
-      const protectedHeaders = SignData.headerMapNew()
-      const unprotectedHeaders = SignData.headerMapNew()
-      const headers = SignData.headersNew(protectedHeaders, unprotectedHeaders)
+      const protectedHeaders = Header.headerMapNew()
+      const unprotectedHeaders = Header.headerMapNew()
+      const headers = Header.headersNew(protectedHeaders, unprotectedHeaders)
 
-      let builder = SignData.coseSign1BuilderNew(headers, payload, false)
+      let builder = COSESign1.coseSign1BuilderNew(headers, payload, false)
       builder = builder.setExternalAad(externalAAD1)
       const toSignBytes = builder.makeDataToSign()
       const signature = PrivateKey.sign(privateKey, toSignBytes)
@@ -311,14 +311,14 @@ describe("SignData", () => {
       const privateKey = PrivateKey.fromBytes(skBytes)
       const publicKey = PrivateKey.toPublicKey(privateKey)
       
-      const payload = SignData.fromText("message to sign")
+      const payload = Utils.fromText("message to sign")
 
       // Create and sign without external AAD
-      const protectedHeaders = SignData.headerMapNew()
-      const unprotectedHeaders = SignData.headerMapNew()
-      const headers = SignData.headersNew(protectedHeaders, unprotectedHeaders)
+      const protectedHeaders = Header.headerMapNew()
+      const unprotectedHeaders = Header.headerMapNew()
+      const headers = Header.headersNew(protectedHeaders, unprotectedHeaders)
 
-      const builder = SignData.coseSign1BuilderNew(headers, payload, false)
+      const builder = COSESign1.coseSign1BuilderNew(headers, payload, false)
       const toSignBytes = builder.makeDataToSign()
       const signature = PrivateKey.sign(privateKey, toSignBytes)
       const coseSign1 = builder.build(signature)
@@ -335,14 +335,14 @@ describe("SignData", () => {
       const privateKey = PrivateKey.fromBytes(skBytes)
       const publicKey = PrivateKey.toPublicKey(privateKey)
       
-      const payload = SignData.fromText("external payload")
+      const payload = Utils.fromText("external payload")
 
       // Create with external payload (isPayloadExternal = true)
-      const protectedHeaders = SignData.headerMapNew()
-      const unprotectedHeaders = SignData.headerMapNew()
-      const headers = SignData.headersNew(protectedHeaders, unprotectedHeaders)
+      const protectedHeaders = Header.headerMapNew()
+      const unprotectedHeaders = Header.headerMapNew()
+      const headers = Header.headersNew(protectedHeaders, unprotectedHeaders)
 
-      const builder = SignData.coseSign1BuilderNew(headers, payload, true)
+      const builder = COSESign1.coseSign1BuilderNew(headers, payload, true)
       const toSignBytes = builder.makeDataToSign()
       const signature = PrivateKey.sign(privateKey, toSignBytes)
       const coseSign1 = builder.build(signature)
@@ -365,7 +365,7 @@ describe("SignData", () => {
       const privateKey = PrivateKey.fromBytes(privateKeyBytes)
       const keyHash = KeyHash.fromPrivateKey(privateKey)
       const addressHex = "0" + Bytes.toHex(keyHash.hash) + "0".repeat(56)
-      const payload = SignData.fromText("test")
+      const payload = Utils.fromText("test")
 
       // Create a malformed signed message
       const badSignedMessage: SignData.SignedMessage = {
@@ -382,7 +382,7 @@ describe("SignData", () => {
       const privateKey = PrivateKey.fromBytes(privateKeyBytes)
       const keyHash = KeyHash.fromPrivateKey(privateKey)
       const addressHex = KeyHash.toHex(keyHash)
-      const payload = SignData.fromText("test")
+      const payload = Utils.fromText("test")
 
       const signedMessage = SignData.signData(addressHex, payload, privateKey)
 
