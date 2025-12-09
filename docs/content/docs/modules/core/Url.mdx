@@ -56,7 +56,7 @@ Encode Url to bytes.
 **Signature**
 
 ```ts
-export declare const toBytes: (url: Url) => Uint8Array
+export declare const toBytes: (url: Url) => any
 ```
 
 Added in v2.0.0
@@ -196,7 +196,10 @@ Added in v2.0.0
 
 ```ts
 export declare const FromBytes: Schema.transform<
-  Schema.transform<Schema.Schema<Uint8Array, Uint8Array, never>, Schema.Schema<string, string, never>>,
+  Schema.transform<
+    Schema.transform<typeof Schema.Uint8ArrayFromSelf, typeof Schema.String>,
+    Schema.refine<string, typeof Schema.String>
+  >,
   typeof Url
 >
 ```
@@ -207,9 +210,12 @@ export declare const FromBytes: Schema.transform<
 
 ```ts
 export declare const FromHex: Schema.transform<
-  Schema.transform<Schema.Schema<string, string, never>, Schema.Schema<Uint8Array, Uint8Array, never>>,
+  Schema.Schema<Uint8Array, string, never>,
   Schema.transform<
-    Schema.transform<Schema.Schema<Uint8Array, Uint8Array, never>, Schema.Schema<string, string, never>>,
+    Schema.transform<
+      Schema.transform<typeof Schema.Uint8ArrayFromSelf, typeof Schema.String>,
+      Schema.refine<string, typeof Schema.String>
+    >,
     typeof Url
   >
 >

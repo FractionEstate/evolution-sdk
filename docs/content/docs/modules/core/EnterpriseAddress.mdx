@@ -40,7 +40,7 @@ Convert a EnterpriseAddress to bytes.
 **Signature**
 
 ```ts
-export declare const toBytes: (data: EnterpriseAddress) => any
+export declare const toBytes: (data: EnterpriseAddress) => Uint8Array
 ```
 
 Added in v2.0.0
@@ -159,7 +159,7 @@ Added in v2.0.0
 
 ```ts
 export declare const FromBytes: Schema.transformOrFail<
-  Schema.filter<typeof Schema.Uint8ArrayFromSelf>,
+  Schema.SchemaClass<Uint8Array, Uint8Array, never>,
   Schema.SchemaClass<EnterpriseAddress, EnterpriseAddress, never>,
   never
 >
@@ -171,9 +171,9 @@ export declare const FromBytes: Schema.transformOrFail<
 
 ```ts
 export declare const FromHex: Schema.transform<
-  Schema.transform<Schema.Schema<string, string, never>, Schema.Schema<Uint8Array, Uint8Array, never>>,
+  Schema.Schema<Uint8Array, string, never>,
   Schema.transformOrFail<
-    Schema.filter<typeof Schema.Uint8ArrayFromSelf>,
+    Schema.SchemaClass<Uint8Array, Uint8Array, never>,
     Schema.SchemaClass<EnterpriseAddress, EnterpriseAddress, never>,
     never
   >

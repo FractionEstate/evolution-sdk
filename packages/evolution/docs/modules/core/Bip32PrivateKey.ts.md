@@ -164,7 +164,7 @@ Convert a Bip32PrivateKey to raw bytes.
 **Signature**
 
 ```ts
-export declare const toBytes: (a: Bip32PrivateKey, overrideOptions?: ParseOptions) => any
+export declare const toBytes: (a: Bip32PrivateKey, overrideOptions?: ParseOptions) => Uint8Array
 ```
 
 Added in v2.0.0
@@ -204,7 +204,7 @@ Parse a Bip32PrivateKey from raw bytes.
 **Signature**
 
 ```ts
-export declare const fromBytes: (i: any, overrideOptions?: ParseOptions) => Bip32PrivateKey
+export declare const fromBytes: (i: Uint8Array, overrideOptions?: ParseOptions) => Bip32PrivateKey
 ```
 
 Added in v2.0.0
@@ -285,8 +285,8 @@ Schema for transforming between Uint8Array and Bip32PrivateKey.
 
 ```ts
 export declare const FromBytes: Schema.transform<
-  Schema.filter<typeof Schema.Uint8ArrayFromSelf>,
-  typeof Bip32PrivateKey
+  Schema.SchemaClass<Uint8Array, Uint8Array, never>,
+  Schema.SchemaClass<Bip32PrivateKey, Bip32PrivateKey, never>
 >
 ```
 
@@ -300,8 +300,11 @@ Schema for transforming between hex string and Bip32PrivateKey.
 
 ```ts
 export declare const FromHex: Schema.transform<
-  Schema.transform<Schema.Schema<string, string, never>, Schema.Schema<Uint8Array, Uint8Array, never>>,
-  Schema.transform<Schema.filter<typeof Schema.Uint8ArrayFromSelf>, typeof Bip32PrivateKey>
+  Schema.filter<Schema.Schema<Uint8Array, string, never>>,
+  Schema.transform<
+    Schema.SchemaClass<Uint8Array, Uint8Array, never>,
+    Schema.SchemaClass<Bip32PrivateKey, Bip32PrivateKey, never>
+  >
 >
 ```
 

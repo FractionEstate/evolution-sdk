@@ -407,7 +407,7 @@ export declare const Float: typeof Schema.Number
 export declare const FromHex: (
   options: CodecOptions
 ) => Schema.transform<
-  Schema.transform<Schema.Schema<string, string, never>, Schema.Schema<Uint8Array, Uint8Array, never>>,
+  Schema.Schema<Uint8Array, string, never>,
   Schema.transformOrFail<typeof Schema.Uint8ArrayFromSelf, Schema.declare<CBOR, CBOR, readonly [], never>, never>
 >
 ```

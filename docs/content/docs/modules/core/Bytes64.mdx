@@ -60,7 +60,7 @@ Decode variable-length hex (0..BYTES_LENGTH) into bytes.
 **Signature**
 
 ```ts
-export declare const fromVariableHex: (i: any, overrideOptions?: ParseOptions) => any
+export declare const fromVariableHex: (i: string, overrideOptions?: ParseOptions) => Uint8Array
 ```
 
 Added in v2.0.0
@@ -86,7 +86,7 @@ Encode variable-length bytes (0..BYTES_LENGTH) to hex.
 **Signature**
 
 ```ts
-export declare const toVariableHex: (a: any, overrideOptions?: ParseOptions) => any
+export declare const toVariableHex: (a: Uint8Array, overrideOptions?: ParseOptions) => string
 ```
 
 Added in v2.0.0
@@ -106,7 +106,7 @@ export declare const BytesFromHex: Schema.filter<Schema.Schema<Uint8Array, strin
 **Signature**
 
 ```ts
-export declare const VariableBytesFromHex: Schema.filter<typeof Schema.Uint8ArrayFromSelf>
+export declare const VariableBytesFromHex: Schema.filter<Schema.Schema<Uint8Array, string, never>>
 ```
 
 ## equals

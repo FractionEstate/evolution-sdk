@@ -54,7 +54,7 @@ export declare const FromBytes: (
 export declare const FromHex: (
   prefix?: string
 ) => Schema.transform<
-  Schema.transform<Schema.Schema<string, string, never>, Schema.Schema<Uint8Array, Uint8Array, never>>,
+  Schema.Schema<Uint8Array, string, never>,
   Schema.transformOrFail<typeof Schema.Uint8ArrayFromSelf, typeof Schema.String, never>
 >
 ```

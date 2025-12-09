@@ -22,13 +22,9 @@ Added in v2.0.0
 - [encoding](#encoding)
   - [toHex](#tohex)
   - [toVariableHex](#tovariablehex)
-- [schemas](#schemas)
-  - [FromHex](#fromhex-1)
-  - [VariableBytesFromHex](#variablebytesfromhex)
 - [utils](#utils)
-  - [BytesSchema](#bytesschema)
-  - [HexSchema](#hexschema)
-  - [VariableBytes](#variablebytes)
+  - [BytesFromHex](#bytesfromhex)
+  - [VariableBytesFromHex](#variablebytesfromhex)
   - [equals](#equals)
 
 ---
@@ -99,62 +95,22 @@ export declare const toVariableHex: (a: Uint8Array, overrideOptions?: ParseOptio
 
 Added in v2.0.0
 
-# schemas
+# utils
 
-## FromHex
-
-Schema transformation for fixed-length bytes
+## BytesFromHex
 
 **Signature**
 
 ```ts
-export declare const FromHex: Schema.transform<
-  Schema.Schema<string, string, never>,
-  Schema.Schema<Uint8Array, Uint8Array, never>
->
+export declare const BytesFromHex: Schema.filter<Schema.Schema<Uint8Array, string, never>>
 ```
-
-Added in v2.0.0
 
 ## VariableBytesFromHex
 
-Schema transformation for variable-length bytes (0..BYTES_LENGTH).
-
 **Signature**
 
 ```ts
-export declare const VariableBytesFromHex: Schema.transform<
-  Schema.Schema<string, string, never>,
-  Schema.Schema<Uint8Array, Uint8Array, never>
->
-```
-
-Added in v2.0.0
-
-# utils
-
-## BytesSchema
-
-**Signature**
-
-```ts
-export declare const BytesSchema: Schema.filter<typeof Schema.Uint8ArrayFromSelf>
-```
-
-## HexSchema
-
-**Signature**
-
-```ts
-export declare const HexSchema: Schema.filter<Schema.refine<string, typeof Schema.String>>
-```
-
-## VariableBytes
-
-**Signature**
-
-```ts
-export declare const VariableBytes: Schema.filter<typeof Schema.Uint8ArrayFromSelf>
+export declare const VariableBytesFromHex: Schema.filter<Schema.Schema<Uint8Array, string, never>>
 ```
 
 ## equals

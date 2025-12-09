@@ -25,10 +25,9 @@ parent: Modules
 - [schemas](#schemas)
   - [Text128](#text128)
 - [utils](#utils)
-  - [FromVariableBytes](#fromvariablebytes)
-  - [FromVariableHex](#fromvariablehex)
+  - [FromBytes](#frombytes-1)
+  - [FromHex](#fromhex-1)
   - [TEXT128_MAX_LENGTH](#text128_max_length)
-  - [Text128 (type alias)](#text128-type-alias)
 
 ---
 
@@ -70,7 +69,7 @@ Encode Text128 to bytes (unsafe)
 **Signature**
 
 ```ts
-export declare const toBytes: (text: Text128) => Uint8Array
+export declare const toBytes: (a: string, overrideOptions?: ParseOptions) => any
 ```
 
 Added in v2.0.0
@@ -82,7 +81,7 @@ Encode Text128 to hex string (unsafe)
 **Signature**
 
 ```ts
-export declare const toHex: (text: Text128) => string
+export declare const toHex: (a: string, overrideOptions?: ParseOptions) => string
 ```
 
 Added in v2.0.0
@@ -96,7 +95,7 @@ Parse Text128 from bytes (unsafe)
 **Signature**
 
 ```ts
-export declare const fromBytes: (bytes: Uint8Array) => Text128
+export declare const fromBytes: (i: any, overrideOptions?: ParseOptions) => string
 ```
 
 Added in v2.0.0
@@ -108,7 +107,7 @@ Parse Text128 from hex string (unsafe)
 **Signature**
 
 ```ts
-export declare const fromHex: (hex: string) => Text128
+export declare const fromHex: (i: string, overrideOptions?: ParseOptions) => string
 ```
 
 Added in v2.0.0
@@ -138,32 +137,35 @@ Follows the Conway-era CDDL specification.
 **Signature**
 
 ```ts
-export declare const Text128: Schema.filter<typeof Schema.String>
+export declare const Text128: Schema.refine<string, typeof Schema.String>
 ```
 
 Added in v2.0.0
 
 # utils
 
-## FromVariableBytes
+## FromBytes
 
 **Signature**
 
 ```ts
-export declare const FromVariableBytes: Schema.transform<
-  Schema.Schema<Uint8Array, Uint8Array, never>,
-  Schema.Schema<string, string, never>
+export declare const FromBytes: Schema.transform<
+  Schema.transform<typeof Schema.Uint8ArrayFromSelf, typeof Schema.String>,
+  Schema.refine<string, typeof Schema.String>
 >
 ```
 
-## FromVariableHex
+## FromHex
 
 **Signature**
 
 ```ts
-export declare const FromVariableHex: Schema.transform<
-  Schema.transform<Schema.Schema<string, string, never>, Schema.Schema<Uint8Array, Uint8Array, never>>,
-  Schema.transform<Schema.Schema<Uint8Array, Uint8Array, never>, Schema.Schema<string, string, never>>
+export declare const FromHex: Schema.transform<
+  Schema.Schema<Uint8Array, string, never>,
+  Schema.transform<
+    Schema.transform<typeof Schema.Uint8ArrayFromSelf, typeof Schema.String>,
+    Schema.refine<string, typeof Schema.String>
+  >
 >
 ```
 
@@ -173,12 +175,4 @@ export declare const FromVariableHex: Schema.transform<
 
 ```ts
 export declare const TEXT128_MAX_LENGTH: 128
-```
-
-## Text128 (type alias)
-
-**Signature**
-
-```ts
-export type Text128 = typeof Text128.Type
 ```

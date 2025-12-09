@@ -127,7 +127,7 @@ export declare const FromBech32: Schema.transformOrFail<
 
 ```ts
 export declare const FromHex: Schema.transformOrFail<
-  Schema.refine<string, typeof Schema.String>,
+  typeof Schema.String,
   Schema.SchemaClass<AddressDetails, AddressDetails, never>,
   never
 >

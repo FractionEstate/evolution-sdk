@@ -222,7 +222,7 @@ CBOR hex transformation schema for VrfCert.
 export declare const FromCBORHex: (
   options?: CBOR.CodecOptions
 ) => Schema.transform<
-  Schema.transform<Schema.Schema<string, string, never>, Schema.Schema<Uint8Array, Uint8Array, never>>,
+  Schema.Schema<Uint8Array, string, never>,
   Schema.transform<
     Schema.transformOrFail<
       typeof Schema.Uint8ArrayFromSelf,
@@ -338,7 +338,7 @@ vrf_output = bytes .size 32
 ```ts
 export declare const VRFOutputHexSchema: Schema.transform<
   Schema.filter<Schema.Schema<Uint8Array, string, never>>,
-  Schema.transform<Schema.SchemaClass<Uint8Array, Uint8Array, never>, Schema.SchemaClass<VRFOutput, VRFOutput, never>>
+  Schema.SchemaClass<VRFOutput, VRFOutput, never>
 >
 ```
 
@@ -406,8 +406,8 @@ vrf_proof = bytes .size 80
 
 ```ts
 export declare const VRFProofFromBytes: Schema.transform<
-  Schema.filter<typeof Schema.Uint8ArrayFromSelf>,
-  typeof VRFProof
+  Schema.SchemaClass<Uint8Array, Uint8Array, never>,
+  Schema.SchemaClass<VRFProof, VRFProof, never>
 >
 ```
 
@@ -422,8 +422,8 @@ vrf_proof = bytes .size 80
 
 ```ts
 export declare const VRFProofHexSchema: Schema.transform<
-  Schema.transform<Schema.Schema<string, string, never>, Schema.Schema<Uint8Array, Uint8Array, never>>,
-  Schema.transform<Schema.filter<typeof Schema.Uint8ArrayFromSelf>, typeof VRFProof>
+  Schema.filter<Schema.Schema<Uint8Array, string, never>>,
+  Schema.SchemaClass<VRFProof, VRFProof, never>
 >
 ```
 

@@ -275,7 +275,7 @@ Schema for encoding/decoding addresses as hex strings.
 
 ```ts
 export declare const FromHex: Schema.transform<
-  Schema.transform<Schema.Schema<string, string, never>, Schema.Schema<Uint8Array, Uint8Array, never>>,
+  Schema.Schema<Uint8Array, string, never>,
   Schema.transformOrFail<
     typeof Schema.Uint8ArrayFromSelf,
     Schema.SchemaClass<

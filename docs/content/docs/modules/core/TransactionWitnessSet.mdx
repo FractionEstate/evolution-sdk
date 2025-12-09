@@ -393,7 +393,7 @@ export declare const FromCBORHex: (
   options?: CBOR.CodecOptions
 ) => Schema.transform<
   Schema.transform<
-    Schema.transform<Schema.Schema<string, string, never>, Schema.Schema<Uint8Array, Uint8Array, never>>,
+    Schema.Schema<Uint8Array, string, never>,
     Schema.transformOrFail<
       typeof Schema.Uint8ArrayFromSelf,
       Schema.declare<CBOR.CBOR, CBOR.CBOR, readonly [], never>,

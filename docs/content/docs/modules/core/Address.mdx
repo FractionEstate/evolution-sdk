@@ -147,7 +147,7 @@ Handles both BaseAddress (57 bytes) and EnterpriseAddress (29 bytes)
 
 ```ts
 export declare const FromBytes: Schema.transformOrFail<
-  Schema.Union<[Schema.filter<typeof Schema.Uint8ArrayFromSelf>, Schema.filter<typeof Schema.Uint8ArrayFromSelf>]>,
+  Schema.Union<[Schema.SchemaClass<Uint8Array, Uint8Array, never>, Schema.SchemaClass<Uint8Array, Uint8Array, never>]>,
   Schema.SchemaClass<Address, Address, never>,
   never
 >
@@ -163,9 +163,11 @@ Transform from hex string to AddressStructure
 
 ```ts
 export declare const FromHex: Schema.transform<
-  Schema.transform<Schema.Schema<string, string, never>, Schema.Schema<Uint8Array, Uint8Array, never>>,
+  Schema.Schema<Uint8Array, string, never>,
   Schema.transformOrFail<
-    Schema.Union<[Schema.filter<typeof Schema.Uint8ArrayFromSelf>, Schema.filter<typeof Schema.Uint8ArrayFromSelf>]>,
+    Schema.Union<
+      [Schema.SchemaClass<Uint8Array, Uint8Array, never>, Schema.SchemaClass<Uint8Array, Uint8Array, never>]
+    >,
     Schema.SchemaClass<Address, Address, never>,
     never
   >
@@ -219,7 +221,7 @@ Added in v1.0.0
 **Signature**
 
 ```ts
-export declare const fromBytes: (i: any, overrideOptions?: ParseOptions) => Address
+export declare const fromBytes: (i: Uint8Array, overrideOptions?: ParseOptions) => Address
 ```
 
 ## fromHex
@@ -243,7 +245,7 @@ export declare const toBech32: (a: Address, overrideOptions?: ParseOptions) => s
 **Signature**
 
 ```ts
-export declare const toBytes: (a: Address, overrideOptions?: ParseOptions) => any
+export declare const toBytes: (a: Address, overrideOptions?: ParseOptions) => Uint8Array
 ```
 
 ## toHex

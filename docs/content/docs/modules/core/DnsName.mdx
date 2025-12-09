@@ -52,7 +52,7 @@ Encode DnsName to bytes.
 **Signature**
 
 ```ts
-export declare const toBytes: (dnsName: DnsName) => Uint8Array
+export declare const toBytes: (a: string & Brand<"DnsName">, overrideOptions?: ParseOptions) => any
 ```
 
 Added in v2.0.0
@@ -64,7 +64,7 @@ Encode DnsName to hex string.
 **Signature**
 
 ```ts
-export declare const toHex: (dnsName: DnsName) => string
+export declare const toHex: (a: string & Brand<"DnsName">, overrideOptions?: ParseOptions) => string
 ```
 
 Added in v2.0.0
@@ -79,13 +79,7 @@ dns_name = text .size (0 .. 128)
 **Signature**
 
 ```ts
-export declare const DnsName: Schema.brand<
-  Schema.transform<
-    Schema.transform<Schema.Schema<string, string, never>, Schema.Schema<Uint8Array, Uint8Array, never>>,
-    Schema.transform<Schema.Schema<Uint8Array, Uint8Array, never>, Schema.Schema<string, string, never>>
-  >,
-  "DnsName"
->
+export declare const DnsName: Schema.brand<Schema.refine<string, typeof Schema.String>, "DnsName">
 ```
 
 Added in v2.0.0
@@ -111,7 +105,7 @@ Parse DnsName from bytes.
 **Signature**
 
 ```ts
-export declare const fromBytes: (bytes: Uint8Array) => DnsName
+export declare const fromBytes: (i: any, overrideOptions?: ParseOptions) => string & Brand<"DnsName">
 ```
 
 Added in v2.0.0
@@ -123,7 +117,7 @@ Parse DnsName from hex string.
 **Signature**
 
 ```ts
-export declare const fromHex: (hex: string) => DnsName
+export declare const fromHex: (i: string, overrideOptions?: ParseOptions) => string & Brand<"DnsName">
 ```
 
 Added in v2.0.0
@@ -150,14 +144,11 @@ Added in v2.0.0
 
 ```ts
 export declare const FromBytes: Schema.transform<
-  Schema.transform<Schema.Schema<Uint8Array, Uint8Array, never>, Schema.Schema<string, string, never>>,
-  Schema.brand<
-    Schema.transform<
-      Schema.transform<Schema.Schema<string, string, never>, Schema.Schema<Uint8Array, Uint8Array, never>>,
-      Schema.transform<Schema.Schema<Uint8Array, Uint8Array, never>, Schema.Schema<string, string, never>>
-    >,
-    "DnsName"
-  >
+  Schema.transform<
+    Schema.transform<typeof Schema.Uint8ArrayFromSelf, typeof Schema.String>,
+    Schema.refine<string, typeof Schema.String>
+  >,
+  Schema.brand<Schema.refine<string, typeof Schema.String>, "DnsName">
 >
 ```
 
@@ -168,15 +159,12 @@ export declare const FromBytes: Schema.transform<
 ```ts
 export declare const FromHex: Schema.transform<
   Schema.transform<
-    Schema.transform<Schema.Schema<string, string, never>, Schema.Schema<Uint8Array, Uint8Array, never>>,
-    Schema.transform<Schema.Schema<Uint8Array, Uint8Array, never>, Schema.Schema<string, string, never>>
-  >,
-  Schema.brand<
+    Schema.Schema<Uint8Array, string, never>,
     Schema.transform<
-      Schema.transform<Schema.Schema<string, string, never>, Schema.Schema<Uint8Array, Uint8Array, never>>,
-      Schema.transform<Schema.Schema<Uint8Array, Uint8Array, never>, Schema.Schema<string, string, never>>
-    >,
-    "DnsName"
-  >
+      Schema.transform<typeof Schema.Uint8ArrayFromSelf, typeof Schema.String>,
+      Schema.refine<string, typeof Schema.String>
+    >
+  >,
+  Schema.brand<Schema.refine<string, typeof Schema.String>, "DnsName">
 >
 ```
