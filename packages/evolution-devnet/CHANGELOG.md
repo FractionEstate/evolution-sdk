@@ -1,13 +1,13 @@
 # @evolution-sdk/devnet
 
-## 2.0.0
+## 1.1.2
 
 ### Patch Changes
 
 - [#93](https://github.com/IntersectMBO/evolution-sdk/pull/93) [`7edb423`](https://github.com/IntersectMBO/evolution-sdk/commit/7edb4237059b39815241823cf46ce3bf128e7600) Thanks [@solidsnakedev](https://github.com/solidsnakedev)! - Fix module resolution error by moving @noble/hashes from peerDependencies to dependencies. This resolves the "Package subpath './blake2' is not defined by exports" error when users install the package.
 
 - Updated dependencies [[`61ffded`](https://github.com/IntersectMBO/evolution-sdk/commit/61ffded47892f12bda6f538e8028b3fd64492187)]:
-  - @evolution-sdk/evolution@0.4.0
+  - @evolution-sdk/evolution@0.3.2
 
 ## 1.1.1
 

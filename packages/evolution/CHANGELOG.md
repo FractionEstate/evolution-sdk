@@ -1,8 +1,8 @@
 # @evolution-sdk/evolution
 
-## 0.4.0
+## 0.3.2
 
-### Minor Changes
+### Patch Changes
 
 - [#88](https://github.com/IntersectMBO/evolution-sdk/pull/88) [`61ffded`](https://github.com/IntersectMBO/evolution-sdk/commit/61ffded47892f12bda6f538e8028b3fd64492187) Thanks [@solidsnakedev](https://github.com/solidsnakedev)! - Add CIP-30 message signing support with modular architecture
 
