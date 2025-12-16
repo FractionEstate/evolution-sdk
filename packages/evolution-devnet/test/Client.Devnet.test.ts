@@ -4,12 +4,9 @@ import * as Config from "@evolution-sdk/devnet/Config"
 import * as Genesis from "@evolution-sdk/devnet/Genesis"
 import { Core } from "@evolution-sdk/evolution"
 import * as CoreAddress from "@evolution-sdk/evolution/core/Address"
-import * as Assets from "@evolution-sdk/evolution/sdk/Assets"
 import { createClient } from "@evolution-sdk/evolution/sdk/client/ClientImpl"
 import type { ProtocolParameters } from "@evolution-sdk/evolution/sdk/ProtocolParameters"
-import type { UTxO } from "@evolution-sdk/evolution/sdk/UTxO"
 import { afterAll, beforeAll } from "vitest"
-import { createCoreTestUtxo } from "./utils/utxo-helpers"
 
 // Alias for Core.Assets
 const CoreAssets = Core.Assets
@@ -19,7 +16,7 @@ const CoreAssets = Core.Assets
  */
 describe("Client with Devnet", () => {
   let devnetCluster: Cluster.Cluster | undefined
-  let genesisUtxos: Array<UTxO> = []
+  let genesisUtxos: Array<Core.UTxO.UTxO> = []
   let genesisConfig: Config.ShelleyGenesis
 
   const TEST_MNEMONIC =
@@ -83,11 +80,11 @@ describe("Client with Devnet", () => {
     expect(calculatedUtxos.length).toBe(1)
 
     const utxo = calculatedUtxos[0]
-    expect(utxo.txHash).toBeDefined()
-    expect(utxo.txHash.length).toBe(64)
-    expect(utxo.outputIndex).toBe(0)
-    expect(utxo.address).toMatch(/^addr_test/)
-    expect(Assets.getAsset(utxo.assets, "lovelace")).toBe(900_000_000_000n)
+    expect(utxo.transactionId).toBeDefined()
+    expect(Core.TransactionHash.toHex(utxo.transactionId).length).toBe(64)
+    expect(utxo.index).toBe(0n)
+    expect(CoreAddress.toBech32(utxo.address)).toMatch(/^addr_test/)
+    expect(utxo.assets.lovelace).toBe(900_000_000_000n)
 
     genesisUtxos = [...calculatedUtxos]
   })
@@ -130,19 +127,11 @@ describe("Client with Devnet", () => {
     const client = createTestClient()
     const genesisAddress = await client.address()
     const genesisAddressBech32 = CoreAddress.toBech32(genesisAddress)
-    const genesisUtxoSdk = genesisUtxos.find((u) => u.address === genesisAddressBech32)
+    const genesisUtxo = genesisUtxos.find((u) => CoreAddress.toBech32(u.address) === genesisAddressBech32)
 
-    if (!genesisUtxoSdk) {
+    if (!genesisUtxo) {
       throw new Error("Genesis UTxO not found")
     }
-
-    // Convert SDK UTxO to Core UTxO
-    const genesisUtxo = createCoreTestUtxo({
-      address: genesisUtxoSdk.address,
-      transactionId: genesisUtxoSdk.txHash,
-      index: genesisUtxoSdk.outputIndex,
-      lovelace: Assets.getAsset(genesisUtxoSdk.assets, "lovelace")
-    })
 
     const receiverAddress =
       "addr_test1qz2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgs68faae"
@@ -168,12 +157,12 @@ describe("Client with Devnet", () => {
     const utxos = await client.getWalletUtxos()
     expect(utxos.length).toBeGreaterThan(0)
 
-    const totalInput = Assets.getAsset(genesisUtxo.assets, "lovelace")
+    const totalInput = genesisUtxo.assets.lovelace
     const payment = 5_000_000n
     const fee = await signBuilder.estimateFee()
     const expectedChange = totalInput - payment - fee
 
-    const changeUtxo = utxos.find((u) => Assets.getAsset(u.assets, "lovelace") === expectedChange)
+    const changeUtxo = utxos.find((u) => u.assets.lovelace === expectedChange)
     expect(changeUtxo).toBeDefined()
   })
 })
