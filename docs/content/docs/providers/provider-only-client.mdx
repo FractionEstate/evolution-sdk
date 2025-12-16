@@ -29,7 +29,7 @@ Provider-only clients are ideal when you need blockchain data but not wallet-spe
 Create a client with only provider configuration:
 
 ```typescript twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { Core, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -41,7 +41,9 @@ const client = createClient({
 });
 
 // Query any address
-const utxos = await client.getUtxos("addr1qxy...");
+const utxos = await client.getUtxos(
+  Core.Address.fromBech32("addr1qxy8sclc58rsck0pzsc0v4skmqjwuqsqpwfcvrdldl5sjvvhyltp7fk0fmtmrlnykgmhnzcns2msa2cmpvllzgqd2azqhpv8e4")
+);
 console.log("Found UTxOs:", utxos.length);
 
 // Get protocol parameters
@@ -54,7 +56,7 @@ console.log("Min fee A:", params.minFeeA);
 Provider-only clients expose all provider methods directly:
 
 ```typescript twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { Core, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -68,11 +70,12 @@ const client = createClient({
 // Protocol parameters
 const params = await client.getProtocolParameters();
 
-// UTxO queries
-const utxos = await client.getUtxos("addr1...");
-const utxosWithAda = await client.getUtxosWithUnit("addr1...", "lovelace");
+// UTxO queries - use Core.Address.fromBech32 for addresses
+const address = Core.Address.fromBech32("addr1qxy8sclc58rsck0pzsc0v4skmqjwuqsqpwfcvrdldl5sjvvhyltp7fk0fmtmrlnykgmhnzcns2msa2cmpvllzgqd2azqhpv8e4");
+const utxos = await client.getUtxos(address);
+const utxosWithAda = await client.getUtxosWithUnit(address, "lovelace");
 const utxosByRefs = await client.getUtxosByOutRef([
-  { txHash: "abc123...", outputIndex: 0 }
+  { txHash: "abc123def456...", outputIndex: 0 }
 ]);
 
 // Delegation
@@ -95,7 +98,7 @@ const evaluated = await client.evaluateTx(unsignedTxCbor);
 Portfolio tracker for multiple addresses:
 
 ```typescript twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { Core, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -107,27 +110,27 @@ const client = createClient({
 });
 
 // Portfolio tracker
-async function getPortfolioBalance(addresses: string[]) {
+async function getPortfolioBalance(addressesBech32: string[]) {
   const results = await Promise.all(
-    addresses.map(async (address) => {
-      const utxos = await client.getUtxos(address);
+    addressesBech32.map(async (addressBech32) => {
+      const utxos = await client.getUtxos(
+        Core.Address.fromBech32(addressBech32)
+      );
       const lovelace = utxos.reduce(
-        (sum, utxo) => sum + (utxo.assets.lovelace ?? 0n),
+        (sum, utxo) => sum + utxo.assets.lovelace,
         0n
       );
-      return { address, lovelace };
+      return { address: addressBech32, lovelace };
     })
   );
   
   return results;
 }
 
+// Usage with actual addresses
 const portfolio = await getPortfolioBalance([
-  "addr1qxy...",
-  "addr1qzz...",
-  "addr1qaa..."
+  "addr1qxy8sclc58rsck0pzsc0v4skmqjwuqsqpwfcvrdldl5sjvvhyltp7fk0fmtmrlnykgmhnzcns2msa2cmpvllzgqd2azqhpv8e4"
 ]);
-```
 ```
 
 ## Transaction Submission Service
@@ -212,7 +215,7 @@ Provider-only clients cannot perform wallet-specific operations:
 
 ```typescript twoslash
 // @errors: 2339
-import { createClient } from "@evolution-sdk/evolution";
+import { Core, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -236,7 +239,8 @@ client.signTx();
 client.address();
 
 // CAN query any address
-const utxos = await client.getUtxos("addr1...");
+const address = Core.Address.fromBech32("addr1qxy8sclc58rsck0pzsc0v4skmqjwuqsqpwfcvrdldl5sjvvhyltp7fk0fmtmrlnykgmhnzcns2msa2cmpvllzgqd2azqhpv8e4");
+const utxos = await client.getUtxos(address);
 
 // CAN submit pre-signed transactions
 const signedCbor = "84a400..."; // Example signed transaction CBOR
@@ -248,7 +252,7 @@ const txHash = await client.submitTx(signedCbor);
 Add wallet to provider-only client using `attachWallet()`:
 
 ```typescript twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { createClient, Core } from "@evolution-sdk/evolution";
 
 // Start with provider only
 const providerClient = createClient({
@@ -263,14 +267,14 @@ const providerClient = createClient({
 // Later, attach wallet for specific user
 const readOnlyClient = providerClient.attachWallet({
   type: "read-only",
-  address: "addr1qxy..."
+  address: "addr1qxy8g0m3dnvxpk6dlh40u9vgc8m6hyqyjf6qn6j6t47wnhvcpqp0aw50nln8nyzfh6fjp6sxgajx5q0c6p73xqf2qhvq5pzqsh"
 });
 
 // Now can build transactions for this address
 const builder = readOnlyClient.newTx();
 builder.payToAddress({
-  address: "addr1qzz...",
-  assets: { lovelace: 5000000n }
+  address: Core.Address.fromBech32("addr1qxh7f8gxv43dxz7k2vf6x5cxj5f5mk5mmqfk5u7qp7t2nvw9pqp0aw50nln8nyzfh6fjp6sxgajx5q0c6p73xqf2qhvqwlx8f7"),
+  assets: Core.Assets.fromLovelace(5000000n)
 });
 
 const result = await builder.build();

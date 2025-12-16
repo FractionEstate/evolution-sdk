@@ -83,8 +83,8 @@ Backend services use read-only clients configured with user addresses to build u
 ```typescript twoslash
 import { createClient, Core } from "@evolution-sdk/evolution";
 
-export async function buildTransaction(userAddress: string) {
-  // Create read-only client with user's address
+export async function buildTransaction(userAddressBech32: string) {
+  // Create read-only client with user's address (bech32 string)
   const client = createClient({
     network: "mainnet",
     provider: {
@@ -94,15 +94,15 @@ export async function buildTransaction(userAddress: string) {
     },
     wallet: {
       type: "read-only",
-      address: userAddress
+      address: userAddressBech32
     }
   });
 
   // Build unsigned transaction
   const builder = client.newTx();
   builder.payToAddress({
-    address: "addr1qz8eg0aknl96hd3v6x3qfmmz5zhtrq5hn8hmq0x4qd6m2qdppx88rnw3eumv9zv2ctjns05c8jhsqwg98qaxcz2qh45qhjv39c",
-    assets: { lovelace: 5000000n }
+    address: Core.Address.fromBech32("addr1qz8eg0aknl96hd3v6x3qfmmz5zhtrq5hn8hmq0x4qd6m2qdppx88rnw3eumv9zv2ctjns05c8jhsqwg98qaxcz2qh45qhjv39c"),
+    assets: Core.Assets.fromLovelace(5000000n)
   });
 
   // Build and return unsigned transaction
@@ -142,7 +142,7 @@ export type BuildPaymentResponse = {
 
 // @filename: frontend.ts
 // ===== Frontend (Browser) =====
-import { createClient } from "@evolution-sdk/evolution";
+import { Core, createClient } from "@evolution-sdk/evolution";
 import type { BuildPaymentRequest, BuildPaymentResponse } from "./shared";
 
 declare const cardano: any;
@@ -157,8 +157,8 @@ async function sendPayment(recipientAddress: string, lovelace: bigint) {
     wallet: { type: "api", api: walletApi }
   });
 
-  // 3. Get user address
-  const userAddress = await walletClient.address();
+  // 3. Get user address (returns Core Address, convert to bech32 for backend)
+  const userAddress = Core.Address.toBech32(await walletClient.address());
 
   // 4. Request backend to build transaction
   const requestBody: BuildPaymentRequest = {
@@ -190,11 +190,14 @@ import { createClient, Core } from "@evolution-sdk/evolution";
 import type { BuildPaymentResponse } from "./shared";
 
 export async function buildPayment(
-  userAddress: string,
-  recipientAddress: string,
+  userAddressBech32: string,
+  recipientAddressBech32: string,
   lovelace: bigint
 ): Promise<BuildPaymentResponse> {
-  // Create read-only client with user's address
+  // Convert recipient to Core Address for payToAddress
+  const recipientAddress = Core.Address.fromBech32(recipientAddressBech32);
+
+  // Create read-only client with user's address (bech32 string)
   const client = createClient({
     network: "mainnet",
     provider: {
@@ -204,7 +207,7 @@ export async function buildPayment(
     },
     wallet: {
       type: "read-only",
-      address: userAddress
+      address: userAddressBech32
     }
   });
 
@@ -212,7 +215,7 @@ export async function buildPayment(
   const builder = client.newTx();
   builder.payToAddress({
     address: recipientAddress,
-    assets: { lovelace }
+    assets: Core.Assets.fromLovelace(lovelace)
   });
 
   // Return unsigned CBOR for frontend to sign

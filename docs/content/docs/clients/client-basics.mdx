@@ -40,7 +40,7 @@ Evolution SDK follows a three-stage pattern: build, sign, submit. Each stage ret
 Start with `client.newTx()` and chain operations to specify outputs, metadata, or validity ranges:
 
 ```ts twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { createClient, Core } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "preprod",
@@ -51,8 +51,8 @@ const client = createClient({
 const builder = client.newTx();
 
 builder.payToAddress({
-  address: "addr_test1qzx9hu8j4ah3auytk0mwcupd69hpc52t0cw39a65ndrah86djs784u92a3m5w475w3w35tyd6v3qumkze80j8a6h5tuqq5xe8y",
-  assets: { lovelace: 2000000n }
+  address: Core.Address.fromBech32("addr_test1qzx9hu8j4ah3auytk0mwcupd69hpc52t0cw39a65ndrah86djs784u92a3m5w475w3w35tyd6v3qumkze80j8a6h5tuqq5xe8y"),
+  assets: Core.Assets.fromLovelace(2000000n)
 });
 
 const signBuilder = await builder.build();
@@ -63,7 +63,7 @@ const signBuilder = await builder.build();
 Call `.sign()` on the built transaction to create signatures with your wallet:
 
 ```ts twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { createClient, Core } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "preprod",
@@ -72,7 +72,7 @@ const client = createClient({
 });
 
 const builder = client.newTx();
-builder.payToAddress({ address: "", assets: { lovelace: 2000000n } });
+builder.payToAddress({ address: Core.Address.fromBech32("addr_test1qzx9hu8j4ah3auytk0mwcupd69hpc52t0cw39a65ndrah86djs784u92a3m5w475w3w35tyd6v3qumkze80j8a6h5tuqq5xe8y"), assets: Core.Assets.fromLovelace(2000000n) });
 const signBuilder = await builder.build();
 
 const submitBuilder = await signBuilder.sign();
@@ -83,7 +83,7 @@ const submitBuilder = await signBuilder.sign();
 Finally, `.submit()` broadcasts the signed transaction to the blockchain and returns the transaction hash:
 
 ```ts twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { createClient, Core } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "preprod",
@@ -92,7 +92,7 @@ const client = createClient({
 });
 
 const builder = client.newTx();
-builder.payToAddress({ address: "", assets: { lovelace: 2000000n } });
+builder.payToAddress({ address: Core.Address.fromBech32("addr_test1qzx9hu8j4ah3auytk0mwcupd69hpc52t0cw39a65ndrah86djs784u92a3m5w475w3w35tyd6v3qumkze80j8a6h5tuqq5xe8y"), assets: Core.Assets.fromLovelace(2000000n) });
 const signBuilder = await builder.build();
 const submitBuilder = await signBuilder.sign();
 
@@ -105,7 +105,7 @@ console.log("Transaction submitted:", txId);
 Here's the complete workflow in a single example—from client creation through transaction submission:
 
 ```ts twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { createClient, Core } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "preprod",
@@ -124,8 +124,8 @@ const client = createClient({
 // Build transaction
 const builder = client.newTx();
 builder.payToAddress({
-  address: "addr_test1qzx9hu8j4ah3auytk0mwcupd69hpc52t0cw39a65ndrah86djs784u92a3m5w475w3w35tyd6v3qumkze80j8a6h5tuqq5xe8y",
-  assets: { lovelace: 2000000n }
+  address: Core.Address.fromBech32("addr_test1qzx9hu8j4ah3auytk0mwcupd69hpc52t0cw39a65ndrah86djs784u92a3m5w475w3w35tyd6v3qumkze80j8a6h5tuqq5xe8y"),
+  assets: Core.Assets.fromLovelace(2000000n)
 });
 
 // Build, sign, and submit

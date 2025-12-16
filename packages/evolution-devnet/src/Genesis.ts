@@ -1,7 +1,6 @@
-import * as Address from "@evolution-sdk/evolution/core/AddressEras"
+import { Core } from "@evolution-sdk/evolution"
+import * as AddressEras from "@evolution-sdk/evolution/core/AddressEras"
 import * as TransactionHash from "@evolution-sdk/evolution/core/TransactionHash"
-import * as Assets from "@evolution-sdk/evolution/sdk/Assets"
-import type * as UTxO from "@evolution-sdk/evolution/sdk/UTxO"
 import { blake2b } from "@noble/hashes/blake2"
 import { Data, Effect } from "effect"
 
@@ -60,39 +59,38 @@ export interface Cluster {
  */
 export const calculateUtxosFromConfigEffect = (
   genesisConfig: Config.ShelleyGenesis
-): Effect.Effect<ReadonlyArray<UTxO.UTxO>, GenesisError> =>
+): Effect.Effect<ReadonlyArray<Core.UTxO.UTxO>, GenesisError> =>
   Effect.gen(function* () {
-    const utxos: Array<UTxO.UTxO> = []
+    const utxos: Array<Core.UTxO.UTxO> = []
     const fundEntries = Object.entries(genesisConfig.initialFunds)
 
     for (const [addressHex, lovelace] of fundEntries) {
-      // Convert hex address to Address object and bech32
-      const addressBech32 = yield* Effect.try({
-        try: () => {
-          const addr = Address.fromHex(addressHex)
-          return Address.toBech32(addr)
-        },
+      // Convert hex address to Core Address
+      const address = yield* Effect.try({
+        try: () => Core.Address.fromHex(addressHex),
         catch: (e) =>
           new GenesisError({
             reason: "address_conversion_failed",
-            message: `Failed to convert genesis address hex to bech32: ${addressHex}`,
+            message: `Failed to convert genesis address hex: ${addressHex}`,
             cause: e
           })
       })
 
       // Calculate pseudo-TxId by hashing the address bytes
       // This matches Cardano's: Hash.hashWith serialiseAddr addr
-      const addr = Address.fromHex(addressHex)
-      const addressBytes = Address.toBytes(addr)
+      const addr = AddressEras.fromHex(addressHex)
+      const addressBytes = AddressEras.toBytes(addr)
       const txHashBytes = blake2b(addressBytes, { dkLen: 32 })
-      const txHash = TransactionHash.toHex(new TransactionHash.TransactionHash({ hash: txHashBytes }))
+      const transactionId = new TransactionHash.TransactionHash({ hash: txHashBytes })
 
-      utxos.push({
-        txHash,
-        outputIndex: 0, // Genesis UTxOs always use index 0 (minBound in Haskell)
-        address: addressBech32,
-        assets: Assets.fromLovelace(BigInt(lovelace))
-      })
+      utxos.push(
+        new Core.UTxO.UTxO({
+          transactionId,
+          index: 0n, // Genesis UTxOs always use index 0 (minBound in Haskell)
+          address,
+          assets: Core.Assets.fromLovelace(BigInt(lovelace))
+        })
+      )
     }
 
     return utxos
@@ -114,7 +112,7 @@ export const calculateUtxosFromConfig = (genesisConfig: Config.ShelleyGenesis) =
  * @since 2.0.0
  * @category genesis
  */
-export const queryUtxosEffect = (cluster: Cluster): Effect.Effect<ReadonlyArray<UTxO.UTxO>, GenesisError> =>
+export const queryUtxosEffect = (cluster: Cluster): Effect.Effect<ReadonlyArray<Core.UTxO.UTxO>, GenesisError> =>
   Effect.gen(function* () {
     // Need to import Container functions dynamically to avoid circular dependency
     const ContainerModule = yield* Effect.promise(() => import("./Container.js"))
@@ -153,13 +151,15 @@ export const queryUtxosEffect = (cluster: Cluster): Effect.Effect<ReadonlyArray<
     })
 
     return Object.entries(parsed).map(([key, data]) => {
-      const [txHash, outputIndex] = key.split("#")
-      return {
-        txHash,
-        outputIndex: parseInt(outputIndex),
-        address: data.address,
-        assets: Assets.fromLovelace(BigInt(data.value.lovelace))
-      }
+      const [txHashHex, outputIndex] = key.split("#")
+      const transactionId = TransactionHash.fromHex(txHashHex)
+      const address = Core.Address.fromBech32(data.address)
+      return new Core.UTxO.UTxO({
+        transactionId,
+        index: BigInt(parseInt(outputIndex)),
+        address,
+        assets: Core.Assets.fromLovelace(BigInt(data.value.lovelace))
+      })
     })
   })
 

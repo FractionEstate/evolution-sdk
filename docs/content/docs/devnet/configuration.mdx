@@ -35,11 +35,11 @@ const client = createClient({
   }
 });
 
-// Get the address in Bech32 format
-const addressBech32 = await client.address();
+// Get the address
+const address = await client.address();
 
 // Convert to hex for genesis configuration
-const addressHex = Core.Address.toHex(Core.Address.fromBech32(addressBech32));
+const addressHex = Core.Address.toHex(address);
 
 // Create custom genesis with funded address
 const genesisConfig = {
@@ -91,8 +91,8 @@ const client2 = createClient({
   }
 });
 
-const address1 = Core.Address.toHex(Core.Address.fromBech32(await client1.address()));
-const address2 = Core.Address.toHex(Core.Address.fromBech32(await client2.address()));
+const address1 = Core.Address.toHex(await client1.address());
+const address2 = Core.Address.toHex(await client2.address());
 
 const genesisConfig = {
   ...Config.DEFAULT_SHELLEY_GENESIS,
@@ -324,8 +324,8 @@ const wallet2 = createClient({
   }
 });
 
-const addr1 = Core.Address.toHex(Core.Address.fromBech32(await wallet1.address()));
-const addr2 = Core.Address.toHex(Core.Address.fromBech32(await wallet2.address()));
+const addr1 = Core.Address.toHex(await wallet1.address());
+const addr2 = Core.Address.toHex(await wallet2.address());
 
 // Custom genesis configuration
 const genesisConfig = {
@@ -453,7 +453,7 @@ With custom genesis configuration, you can now:
 
 ## Troubleshooting
 
-**Address format errors**: Ensure addresses are in hexadecimal format, not Bech32. Use `Core.Address.toHex(Core.Address.fromBech32(addr))` to convert.
+**Address format errors**: Ensure addresses are in hexadecimal format, not Bech32. Use `Core.Address.toHex(address)` to convert from an Address object.
 
 **Genesis UTxO not found**: Wait 3-5 seconds after cluster start for full initialization. Query timing matters for fast block configurations.
 

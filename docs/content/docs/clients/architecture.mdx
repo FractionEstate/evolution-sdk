@@ -34,25 +34,27 @@ interface ReadOnlyWalletConfig {
 ```typescript twoslash
 import { createClient, Core } from "@evolution-sdk/evolution";
 
-// Backend: read-only wallet with user's address (from frontend)
-const backendClient = createClient({
+// Backend: Create provider client, then attach read-only wallet
+const providerClient = createClient({
   network: "mainnet",
   provider: {
     type: "blockfrost",
     baseUrl: "https://cardano-mainnet.blockfrost.io/api/v0",
     projectId: process.env.BLOCKFROST_PROJECT_ID!
-  },
-  wallet: {
-    type: "read-only",
-    address: "addr1qz8eg0aknl96hd3v6x3qfmmz5zhtrq5hn8hmq0x4qd6m2qdppx88rnw3eumv9zv2ctjns05c8jhsqwg98qaxcz2qh45qhjv39c"
   }
+});
+
+// Attach user's address as read-only wallet (expects bech32 string)
+const backendClient = providerClient.attachWallet({
+  type: "read-only",
+  address: "addr1qz8eg0aknl96hd3v6x3qfmmz5zhtrq5hn8hmq0x4qd6m2qdppx88rnw3eumv9zv2ctjns05c8jhsqwg98qaxcz2qh45qhjv39c"
 });
 
 // Build unsigned transaction
 const builder = backendClient.newTx();
 builder.payToAddress({
-  address: "addr1...",
-  assets: { lovelace: 5000000n }
+  address: Core.Address.fromBech32("addr1qz8eg0aknl96hd3v6x3qfmmz5zhtrq5hn8hmq0x4qd6m2qdppx88rnw3eumv9zv2ctjns05c8jhsqwg98qaxcz2qh45qhjv39c"),
+  assets: Core.Assets.fromLovelace(5_000_000n)
 });
 
 // Build returns result, get transaction and serialize
@@ -157,8 +159,8 @@ export async function buildTransaction(userAddress: string) {
   // Build unsigned transaction
   const builder = client.newTx();
   builder.payToAddress({
-    address: "addr1...",
-    assets: { lovelace: 5000000n }
+    address: Core.Address.fromBech32("addr1qz8eg0aknl96hd3v6x3qfmmz5zhtrq5hn8hmq0x4qd6m2qdppx88rnw3eumv9zv2ctjns05c8jhsqwg98qaxcz2qh45qhjv39c"),
+    assets: Core.Assets.fromLovelace(5_000_000n)
   });
 
   // Returns unsigned transaction
@@ -191,7 +193,7 @@ export type BuildPaymentResponse = { txCbor: string };
 
 // @filename: frontend.ts
 // ===== Frontend (Browser) =====
-import { createClient } from "@evolution-sdk/evolution";
+import { Core, createClient } from "@evolution-sdk/evolution";
 import type { BuildPaymentResponse } from "./shared";
 
 declare const cardano: any;
@@ -204,8 +206,8 @@ async function sendPayment(recipientAddress: string, lovelace: bigint) {
     wallet: { type: "api", api: walletApi }
   });
 
-  // 2. Get user address
-  const userAddress = await walletClient.address();
+  // 2. Get user address (returns Core Address, convert to bech32 for backend)
+  const userAddress = Core.Address.toBech32(await walletClient.address());
 
   // 3. Request backend to build transaction
   const response = await fetch("/api/build-payment", {
@@ -233,29 +235,34 @@ async function sendPayment(recipientAddress: string, lovelace: bigint) {
 import { createClient, Core } from "@evolution-sdk/evolution";
 
 export async function buildPayment(
-  userAddress: string,
-  recipientAddress: string,
+  userAddressBech32: string,
+  recipientAddressBech32: string,
   lovelace: bigint
 ) {
-  // Create read-only client with user's address
-  const client = createClient({
+  // Convert bech32 addresses from frontend to Core Address
+  const recipientAddress = Core.Address.fromBech32(recipientAddressBech32);
+
+  // Create provider client first, then attach read-only wallet
+  const providerClient = createClient({
     network: "mainnet",
     provider: {
       type: "blockfrost",
       baseUrl: "https://cardano-mainnet.blockfrost.io/api/v0",
       projectId: process.env.BLOCKFROST_PROJECT_ID!
-    },
-    wallet: {
-      type: "read-only",
-      address: userAddress
     }
+  });
+
+  // Attach user's address as read-only wallet
+  const client = providerClient.attachWallet({
+    type: "read-only",
+    address: userAddressBech32
   });
 
   // Build unsigned transaction
   const builder = client.newTx();
   builder.payToAddress({
     address: recipientAddress,
-    assets: { lovelace }
+    assets: Core.Assets.fromLovelace(lovelace)
   });
 
   // Return unsigned CBOR for frontend to sign
