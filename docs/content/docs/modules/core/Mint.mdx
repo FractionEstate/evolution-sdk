@@ -19,6 +19,9 @@ parent: Modules
 - [encoding](#encoding)
   - [toCBORBytes](#tocborbytes)
   - [toCBORHex](#tocborhex)
+- [lookup](#lookup)
+  - [getAssetsByPolicyHex](#getassetsbypolicyhex)
+  - [getByHex](#getbyhex)
 - [model](#model)
   - [Mint (class)](#mint-class)
     - [toJSON (method)](#tojson-method)
@@ -42,11 +45,11 @@ parent: Modules
   - [get](#get)
   - [insert](#insert)
   - [policyCount](#policycount)
+  - [removeAsset](#removeasset)
   - [removePolicy](#removepolicy)
 - [utils](#utils)
   - [AssetMap (type alias)](#assetmap-type-alias)
   - [CDDLSchema](#cddlschema)
-  - [removeAsset](#removeasset)
 
 ---
 
@@ -130,6 +133,41 @@ Encode Mint to CBOR hex string.
 
 ```ts
 export declare const toCBORHex: (mint: Mint, options?: CBOR.CodecOptions) => string
+```
+
+Added in v2.0.0
+
+# lookup
+
+## getAssetsByPolicyHex
+
+Get the asset map for a specific policy by hex string.
+Uses content-based equality (Equal.equals) to find matching PolicyId.
+
+**Signature**
+
+```ts
+export declare const getAssetsByPolicyHex: (
+  mint: Mint,
+  policyIdHex: string
+) => Map<AssetName.AssetName, NonZeroInt64.NonZeroInt64> | undefined
+```
+
+Added in v2.0.0
+
+## getByHex
+
+Get an asset amount by policy ID hex and asset name hex strings.
+Convenience function for tests and lookups using hex strings.
+
+**Signature**
+
+```ts
+export declare const getByHex: (
+  mint: Mint,
+  policyIdHex: string,
+  assetNameHex: string
+) => NonZeroInt64.NonZeroInt64 | undefined
 ```
 
 Added in v2.0.0
@@ -393,6 +431,7 @@ Added in v2.0.0
 ## get
 
 Get the amount for a specific policy and asset.
+Uses content-based equality (Equal.equals) to find matching PolicyId and AssetName.
 
 **Signature**
 
@@ -409,6 +448,8 @@ Added in v2.0.0
 ## insert
 
 Add or update an asset in the Mint.
+Uses content-based equality (Equal.equals) to find matching PolicyId and AssetName
+since JavaScript Maps use reference equality by default.
 
 **Signature**
 
@@ -435,9 +476,23 @@ export declare const policyCount: (mint: Mint) => number
 
 Added in v2.0.0
 
-## removePolicy
+## removeAsset
 
 Remove an asset from the Mint.
+Uses content-based equality (Equal.equals) to find matching PolicyId and AssetName.
+
+**Signature**
+
+```ts
+export declare const removeAsset: (mint: Mint, policyId: PolicyId.PolicyId, assetName: AssetName.AssetName) => Mint
+```
+
+Added in v2.0.0
+
+## removePolicy
+
+Remove a policy from the Mint.
+Uses content-based equality (Equal.equals) to find matching PolicyId.
 
 **Signature**
 
@@ -466,12 +521,4 @@ export declare const CDDLSchema: Schema.MapFromSelf<
   typeof Schema.Uint8ArrayFromSelf,
   Schema.MapFromSelf<typeof Schema.Uint8ArrayFromSelf, typeof Schema.BigIntFromSelf>
 >
-```
-
-## removeAsset
-
-**Signature**
-
-```ts
-export declare const removeAsset: (mint: Mint, policyId: PolicyId.PolicyId, assetName: AssetName.AssetName) => Mint
 ```

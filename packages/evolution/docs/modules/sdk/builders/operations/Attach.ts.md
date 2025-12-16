@@ -19,7 +19,7 @@ parent: Modules
 
 ## attachScriptToState
 
-Attaches a Plutus script to the transaction by storing it in the builder state.
+Attaches a script to the transaction by storing it in the builder state.
 The script is indexed by its hash for efficient lookup during transaction assembly.
 
 This is an internal helper used by the public attachScript() method.
@@ -29,7 +29,7 @@ Scripts must be attached before being referenced by transaction inputs or mintin
 
 ```ts
 export declare const attachScriptToState: (
-  script: Script.Script
+  script: ScriptCore.Script
 ) => Effect.Effect<void, TransactionBuilderError, TxContext>
 ```
 

@@ -41,6 +41,8 @@ parent: Modules
   - [NativeScriptVariants](#nativescriptvariants)
 - [testing](#testing)
   - [arbitrary](#arbitrary)
+- [utilities](#utilities)
+  - [countRequiredSigners](#countrequiredsigners)
 - [utils](#utils)
   - [CDDLSchema](#cddlschema)
   - [FromCBORBytes](#fromcborbytes-1)
@@ -345,6 +347,29 @@ FastCheck arbitrary for generating random NativeScript instances
 
 ```ts
 export declare const arbitrary: FastCheck.Arbitrary<NativeScript>
+```
+
+Added in v2.0.0
+
+# utilities
+
+## countRequiredSigners
+
+Count the maximum number of key hashes (signers) required to satisfy a native script.
+This is used for fee calculation to ensure the fake witness set has the correct size.
+
+Algorithm:
+
+- ScriptPubKey: 1 signer required
+- ScriptAll: sum of all nested scripts (all must be satisfied)
+- ScriptAny: maximum of nested scripts (pessimistic - assume most expensive path)
+- ScriptNOfK: sum of top N most expensive nested scripts
+- InvalidBefore/InvalidHereafter: 0 signers (time-based only)
+
+**Signature**
+
+```ts
+export declare const countRequiredSigners: (script: NativeScriptVariants) => number
 ```
 
 Added in v2.0.0

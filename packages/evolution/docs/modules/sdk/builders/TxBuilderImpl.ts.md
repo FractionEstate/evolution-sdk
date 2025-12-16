@@ -1,6 +1,6 @@
 ---
 title: sdk/builders/TxBuilderImpl.ts
-nav_order: 171
+nav_order: 172
 parent: Modules
 ---
 
@@ -147,13 +147,14 @@ Added in v2.0.0
 Build a fake witness set for fee estimation from transaction inputs.
 Extracts unique payment key hashes from input addresses and creates
 fake witnesses to accurately estimate witness set size in CBOR.
+Includes any attached scripts from builder state for accurate size estimation.
 
 **Signature**
 
 ```ts
 export declare const buildFakeWitnessSet: (
   inputUtxos: ReadonlyArray<CoreUTxO.UTxO>
-) => Effect.Effect<TransactionWitnessSet.TransactionWitnessSet, TransactionBuilderError>
+) => Effect.Effect<TransactionWitnessSet.TransactionWitnessSet, TransactionBuilderError, TxContext>
 ```
 
 Added in v2.0.0
@@ -186,7 +187,7 @@ export declare const calculateFeeIteratively: (
     }
   >,
   protocolParams: { minFeeCoefficient: bigint; minFeeConstant: bigint; priceMem?: number; priceStep?: number }
-) => Effect.Effect<bigint, TransactionBuilderError>
+) => Effect.Effect<bigint, TransactionBuilderError, TxContext>
 ```
 
 Added in v2.0.0
