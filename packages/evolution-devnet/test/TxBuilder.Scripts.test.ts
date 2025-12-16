@@ -1,9 +1,9 @@
 import { afterAll, beforeAll, describe, expect, it } from "@effect/vitest"
+import { Core } from "@evolution-sdk/evolution"
 import * as CoreAddress from "@evolution-sdk/evolution/core/Address"
 import * as Data from "@evolution-sdk/evolution/core/Data"
 import * as PlutusV2 from "@evolution-sdk/evolution/core/PlutusV2"
 import * as ScriptHash from "@evolution-sdk/evolution/core/ScriptHash"
-import * as Assets from "@evolution-sdk/evolution/sdk/Assets"
 import type { TxBuilderConfig } from "@evolution-sdk/evolution/sdk/builders/TransactionBuilder"
 import { makeTxBuilder } from "@evolution-sdk/evolution/sdk/builders/TransactionBuilder"
 import { KupmiosProvider } from "@evolution-sdk/evolution/sdk/provider/Kupmios"
@@ -11,7 +11,10 @@ import * as Script from "@evolution-sdk/evolution/sdk/Script"
 import { Schema } from "effect"
 
 import * as Cluster from "../src/Cluster.js"
-import { createTestUtxo } from "./utils/utxo-helpers.js"
+import { createCoreTestUtxo } from "./utils/utxo-helpers.js"
+
+// Alias for Core.Assets
+const CoreAssets = Core.Assets
 
 describe("TxBuilder Script Handling", () => {
   // ============================================================================
@@ -133,18 +136,18 @@ describe("TxBuilder Script Handling", () => {
     const ownerPubKeyHash = "00000000000000000000000000000000000000000000000000000000"
     const datum = Data.toCBORHex(Data.constr(0n, [Data.bytearray(ownerPubKeyHash)]))
 
-    const scriptUtxo = createTestUtxo({
-      txHash: "a".repeat(64),
-      outputIndex: 0,
+    const scriptUtxo = createCoreTestUtxo({
+      transactionId: "a".repeat(64),
+      index: 0,
       address: scriptAddress,
       lovelace: 5_000_000n,
       datumOption: { type: "inlineDatum", inline: datum }
     })
 
     // Create funding UTxO
-    const fundingUtxo = createTestUtxo({
-      txHash: "b".repeat(64),
-      outputIndex: 0,
+    const fundingUtxo = createCoreTestUtxo({
+      transactionId: "b".repeat(64),
+      index: 0,
       address: CHANGE_ADDRESS,
       lovelace: 10_000_000n
     })
@@ -159,12 +162,12 @@ describe("TxBuilder Script Handling", () => {
       })
       .attachScript(alwaysSucceedsScript)
       .payToAddress({
-        address: RECEIVER_ADDRESS,
-        assets: Assets.fromLovelace(2_000_000n)
+        address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
+        assets: CoreAssets.fromLovelace(2_000_000n)
       })
 
     const signBuilder = await builder.build({
-      changeAddress: CHANGE_ADDRESS,
+      changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
       availableUtxos: [fundingUtxo],
       protocolParameters: PROTOCOL_PARAMS
     })
@@ -200,20 +203,20 @@ describe("TxBuilder Script Handling", () => {
     const ownerPubKeyHash = "00000000000000000000000000000000000000000000000000000000"
     const datum = Data.toCBORHex(Data.constr(0n, [Data.bytearray(ownerPubKeyHash)]))
 
-    const scriptUtxo = createTestUtxo({
-      txHash: "a".repeat(64),
-      outputIndex: 0,
+    const scriptUtxo = createCoreTestUtxo({
+      transactionId: "a".repeat(64),
+      index: 0,
       address: scriptAddress,
       lovelace: 5_000_000n,
       datumOption: { type: "inlineDatum", inline: datum }
     })
 
-    const multiAssetUtxo = {
-      txHash: "b".repeat(64),
-      outputIndex: 0,
+    const multiAssetUtxo = createCoreTestUtxo({
+      transactionId: "b".repeat(64),
+      index: 0,
       address: CHANGE_ADDRESS,
-      assets: {
-        lovelace: 10_000_000n,
+      lovelace: 10_000_000n,
+      nativeAssets: {
         // 10 different native assets (worst case for estimation accuracy)
         [`${policyId}544f4b454e3031`]: 100n, // "TOKEN01"
         [`${policyId}544f4b454e3032`]: 100n, // "TOKEN02"
@@ -226,7 +229,7 @@ describe("TxBuilder Script Handling", () => {
         [`${policyId}544f4b454e3039`]: 100n, // "TOKEN09"
         [`${policyId}544f4b454e3130`]: 100n // "TOKEN10"
       }
-    }
+    })
 
     // Create redeemer
     const redeemerData = Data.toCBORHex(Data.constr(0n, [Data.bytearray("48656c6c6f2c20576f726c6421")]))
@@ -238,12 +241,12 @@ describe("TxBuilder Script Handling", () => {
       })
       .attachScript(alwaysSucceedsScript)
       .payToAddress({
-        address: RECEIVER_ADDRESS,
-        assets: Assets.fromLovelace(2_000_000n)
+        address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
+        assets: CoreAssets.fromLovelace(2_000_000n)
       })
 
     const signBuilder = await builder.build({
-      changeAddress: CHANGE_ADDRESS,
+      changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
       availableUtxos: [multiAssetUtxo],
       protocolParameters: PROTOCOL_PARAMS
     })
@@ -292,9 +295,9 @@ describe("TxBuilder Script Handling", () => {
     const ownerPubKeyHash = "00000000000000000000000000000000000000000000000000000000"
     const datum = Data.toCBORHex(Data.constr(0n, [Data.bytearray(ownerPubKeyHash)]))
 
-    const scriptUtxo = createTestUtxo({
-      txHash: "a".repeat(64),
-      outputIndex: 0,
+    const scriptUtxo = createCoreTestUtxo({
+      transactionId: "a".repeat(64),
+      index: 0,
       address: scriptAddress,
       lovelace: 5_000_000n,
       datumOption: { type: "inlineDatum", inline: datum }
@@ -305,12 +308,12 @@ describe("TxBuilder Script Handling", () => {
     // - Return will be: 1.5 ADA - ~0.26 ADA (totalCollateral) = ~1.24 ADA
     // - Need minUTxO > 1.24 ADA to trigger failure
     // - Add more tokens to increase minUTxO above 1.24 ADA
-    const collateralUtxo = {
-      txHash: "b".repeat(64),
-      outputIndex: 0,
+    const collateralUtxo = createCoreTestUtxo({
+      transactionId: "b".repeat(64),
+      index: 0,
       address: CHANGE_ADDRESS,
-      assets: {
-        lovelace: 1_500_000n, // 1.5 ADA - matches setCollateral target
+      lovelace: 1_500_000n, // 1.5 ADA - matches setCollateral target
+      nativeAssets: {
         // Add many tokens to increase minUTxO requirement above 1.24 ADA
         [`${policyId}544f4b454e3031`]: 100n,
         [`${policyId}544f4b454e3032`]: 100n,
@@ -320,7 +323,7 @@ describe("TxBuilder Script Handling", () => {
         [`${policyId}544f4b454e3036`]: 100n,
         [`${policyId}544f4b454e3037`]: 100n
       }
-    }
+    })
 
     // Create redeemer
     const redeemerData = Data.toCBORHex(Data.constr(0n, [Data.bytearray("48656c6c6f2c20576f726c6421")]))
@@ -332,14 +335,14 @@ describe("TxBuilder Script Handling", () => {
       })
       .attachScript(alwaysSucceedsScript)
       .payToAddress({
-        address: RECEIVER_ADDRESS,
-        assets: Assets.fromLovelace(2_000_000n)
+        address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
+        assets: CoreAssets.fromLovelace(2_000_000n)
       })
 
     // Build with lower setCollateral to trigger minUTxO failure
     await expect(
       builder.build({
-        changeAddress: CHANGE_ADDRESS,
+        changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
         availableUtxos: [collateralUtxo],
         protocolParameters: PROTOCOL_PARAMS,
         setCollateral: 1_500_000n // Lower target so return (1.5 - 0.26 = 1.24 ADA) < minUTxO with 7 tokens
@@ -355,9 +358,9 @@ describe("TxBuilder Script Handling", () => {
     const ownerPubKeyHash = "00000000000000000000000000000000000000000000000000000000"
     const datum = Data.toCBORHex(Data.constr(0n, [Data.bytearray(ownerPubKeyHash)]))
 
-    const scriptUtxo = createTestUtxo({
-      txHash: "a".repeat(64),
-      outputIndex: 0,
+    const scriptUtxo = createCoreTestUtxo({
+      transactionId: "a".repeat(64),
+      index: 0,
       address: scriptAddress,
       lovelace: 5_000_000n,
       datumOption: { type: "inlineDatum", inline: datum }
@@ -365,16 +368,16 @@ describe("TxBuilder Script Handling", () => {
 
     // Create collateral UTxOs that are too small (total < 5 ADA default target)
     // With default setCollateral of 5 ADA, these won't be enough
-    const smallUtxo1 = createTestUtxo({
-      txHash: "b".repeat(64),
-      outputIndex: 0,
+    const smallUtxo1 = createCoreTestUtxo({
+      transactionId: "b".repeat(64),
+      index: 0,
       address: CHANGE_ADDRESS,
       lovelace: 2_000_000n // 2 ADA
     })
 
-    const smallUtxo2 = createTestUtxo({
-      txHash: "c".repeat(64),
-      outputIndex: 0,
+    const smallUtxo2 = createCoreTestUtxo({
+      transactionId: "c".repeat(64),
+      index: 0,
       address: CHANGE_ADDRESS,
       lovelace: 2_500_000n // 2.5 ADA
     })
@@ -391,14 +394,14 @@ describe("TxBuilder Script Handling", () => {
       })
       .attachScript(alwaysSucceedsScript)
       .payToAddress({
-        address: RECEIVER_ADDRESS,
-        assets: Assets.fromLovelace(2_000_000n)
+        address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
+        assets: CoreAssets.fromLovelace(2_000_000n)
       })
 
     // Should fail because total collateral available (4.5 ADA) < target (5 ADA)
     await expect(
       builder.build({
-        changeAddress: CHANGE_ADDRESS,
+        changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
         availableUtxos: [smallUtxo1, smallUtxo2],
         protocolParameters: PROTOCOL_PARAMS
         // Using default setCollateral of 5 ADA
@@ -414,28 +417,27 @@ describe("TxBuilder Script Handling", () => {
     const ownerPubKeyHash = "00000000000000000000000000000000000000000000000000000000"
     const datum = Data.toCBORHex(Data.constr(0n, [Data.bytearray(ownerPubKeyHash)]))
 
-    const scriptUtxo = createTestUtxo({
-      txHash: "a".repeat(64),
-      outputIndex: 0,
+    const scriptUtxo = createCoreTestUtxo({
+      transactionId: "a".repeat(64),
+      index: 0,
       address: scriptAddress,
       lovelace: 5_000_000n,
       datumOption: { type: "inlineDatum", inline: datum }
     })
 
     // Create UTxO WITH reference script (should be excluded from collateral)
-    // Manually create since createTestUtxo doesn't support scriptRef
-    const utxoWithRefScript = {
-      txHash: "b".repeat(64),
-      outputIndex: 0,
+    const utxoWithRefScript = createCoreTestUtxo({
+      transactionId: "b".repeat(64),
+      index: 0,
       address: CHANGE_ADDRESS,
-      assets: { lovelace: 10_000_000n },
+      lovelace: 10_000_000n,
       scriptRef: alwaysSucceedsScript // Has reference script - should NOT be used as collateral
-    }
+    })
 
     // Create UTxO WITHOUT reference script (should be used as collateral)
-    const utxoWithoutRefScript = createTestUtxo({
-      txHash: "c".repeat(64),
-      outputIndex: 0,
+    const utxoWithoutRefScript = createCoreTestUtxo({
+      transactionId: "c".repeat(64),
+      index: 0,
       address: CHANGE_ADDRESS,
       lovelace: 8_000_000n
       // No scriptRef - can be used as collateral
@@ -451,12 +453,12 @@ describe("TxBuilder Script Handling", () => {
       })
       .attachScript(alwaysSucceedsScript)
       .payToAddress({
-        address: RECEIVER_ADDRESS,
-        assets: Assets.fromLovelace(2_000_000n)
+        address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
+        assets: CoreAssets.fromLovelace(2_000_000n)
       })
 
     const signBuilder = await builder.build({
-      changeAddress: CHANGE_ADDRESS,
+      changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
       availableUtxos: [utxoWithRefScript, utxoWithoutRefScript],
       protocolParameters: PROTOCOL_PARAMS
     })
@@ -486,26 +488,26 @@ describe("TxBuilder Script Handling", () => {
     const ownerPubKeyHash = "00000000000000000000000000000000000000000000000000000000"
     const datum = Data.toCBORHex(Data.constr(0n, [Data.bytearray(ownerPubKeyHash)]))
 
-    const scriptUtxo = createTestUtxo({
-      txHash: "a".repeat(64),
-      outputIndex: 0,
+    const scriptUtxo = createCoreTestUtxo({
+      transactionId: "a".repeat(64),
+      index: 0,
       address: scriptAddress,
       lovelace: 5_000_000n,
       datumOption: { type: "inlineDatum", inline: datum }
     })
 
     // Create funding UTxO (smaller amount to test largest-first selection)
-    const tightFundingUtxo = createTestUtxo({
-      txHash: "b".repeat(64),
-      outputIndex: 0,
+    const tightFundingUtxo = createCoreTestUtxo({
+      transactionId: "b".repeat(64),
+      index: 0,
       address: CHANGE_ADDRESS,
       lovelace: 3_200_000n // 3.2 ADA - smaller than collateral UTxO
     })
 
     // Create collateral UTxO (exactly matches 5 ADA target)
-    const collateralUtxo = createTestUtxo({
-      txHash: "c".repeat(64),
-      outputIndex: 0,
+    const collateralUtxo = createCoreTestUtxo({
+      transactionId: "c".repeat(64),
+      index: 0,
       address: CHANGE_ADDRESS,
       lovelace: 5_000_000n // 5 ADA - exact match with target
     })
@@ -520,8 +522,8 @@ describe("TxBuilder Script Handling", () => {
       })
       .attachScript(alwaysSucceedsScript)
       .payToAddress({
-        address: RECEIVER_ADDRESS,
-        assets: Assets.fromLovelace(2_000_000n) // 2 ADA payment
+        address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
+        assets: CoreAssets.fromLovelace(2_000_000n) // 2 ADA payment
       })
 
     // Test phase reordering: Collateral runs BEFORE ChangeCreation
@@ -530,7 +532,7 @@ describe("TxBuilder Script Handling", () => {
     // 2. FeeCalculation includes collateral size in fee calculation
     // 3. Change is created with correct fee from the start (no imbalance)
     const signBuilder = await builder.build({
-      changeAddress: CHANGE_ADDRESS,
+      changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
       availableUtxos: [tightFundingUtxo, collateralUtxo],
       protocolParameters: PROTOCOL_PARAMS
     })
@@ -559,7 +561,7 @@ describe("TxBuilder Script Handling", () => {
     // - Collateral added to transaction first
     // - FeeCalculation includes collateral size (188 bytes)
     // - Change created with correct fee from the start
-    const expectedChange = Assets.getLovelace(scriptUtxo.assets) - 2_000_000n - fee
+    const expectedChange = CoreAssets.lovelaceOf(scriptUtxo.assets) - 2_000_000n - fee
     
     expect(changeAmount).toBe(expectedChange)
     
@@ -576,18 +578,18 @@ describe("TxBuilder Script Handling", () => {
     const ownerPubKeyHash = "00000000000000000000000000000000000000000000000000000000"
     const datum = Data.toCBORHex(Data.constr(0n, [Data.bytearray(ownerPubKeyHash)]))
 
-    const scriptUtxo = createTestUtxo({
-      txHash: "a".repeat(64),
-      outputIndex: 0,
+    const scriptUtxo = createCoreTestUtxo({
+      transactionId: "a".repeat(64),
+      index: 0,
       address: scriptAddress,
       lovelace: 5_000_000n,
       datumOption: { type: "inlineDatum", inline: datum }
     })
 
     // Create collateral UTxO with MORE than 5 ADA (should create return)
-    const collateralUtxo = createTestUtxo({
-      txHash: "b".repeat(64),
-      outputIndex: 0,
+    const collateralUtxo = createCoreTestUtxo({
+      transactionId: "b".repeat(64),
+      index: 0,
       address: CHANGE_ADDRESS,
       lovelace: 10_000_000n // 10 ADA - exceeds 5 ADA target
     })
@@ -602,8 +604,8 @@ describe("TxBuilder Script Handling", () => {
       })
       .attachScript(alwaysSucceedsScript)
       .payToAddress({
-        address: RECEIVER_ADDRESS,
-        assets: Assets.fromLovelace(2_000_000n)
+        address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
+        assets: CoreAssets.fromLovelace(2_000_000n)
       })
 
     // Test collateral return creation
@@ -611,7 +613,7 @@ describe("TxBuilder Script Handling", () => {
     // - Target: 5 ADA
     // - Expected: 5 ADA return output should be created
     const signBuilder = await builder.build({
-      changeAddress: CHANGE_ADDRESS,
+      changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
       availableUtxos: [collateralUtxo],
       protocolParameters: PROTOCOL_PARAMS
     })
@@ -654,14 +656,14 @@ describe("TxBuilder Script Handling", () => {
     }
 
     // Create UTxO with reference script
-    const refScriptUtxo = createTestUtxo({
+    const refScriptUtxo = createCoreTestUtxo({
       address: CHANGE_ADDRESS,
       lovelace: 3_000_000n,
       scriptRef: referenceScript
     })
 
     // Create regular UTxO for spending
-    const spendUtxo = createTestUtxo({
+    const spendUtxo = createCoreTestUtxo({
       address: CHANGE_ADDRESS,
       lovelace: 10_000_000n
     })
@@ -670,12 +672,12 @@ describe("TxBuilder Script Handling", () => {
       .readFrom({ referenceInputs: [refScriptUtxo] })
       .collectFrom({ inputs: [spendUtxo] })
       .payToAddress({
-        address: RECEIVER_ADDRESS,
-        assets: Assets.fromLovelace(2_000_000n)
+        address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
+        assets: CoreAssets.fromLovelace(2_000_000n)
       })
 
     const signBuilder = await builder.build({
-      changeAddress: CHANGE_ADDRESS,
+      changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
       availableUtxos: [],
       protocolParameters: PROTOCOL_PARAMS
     })
@@ -705,13 +707,13 @@ describe("TxBuilder Script Handling", () => {
       script: scriptHex
     }
 
-    const refScriptUtxo = createTestUtxo({
+    const refScriptUtxo = createCoreTestUtxo({
       address: CHANGE_ADDRESS,
       lovelace: 3_000_000n,
       scriptRef: referenceScript
     })
 
-    const spendUtxo = createTestUtxo({
+    const spendUtxo = createCoreTestUtxo({
       address: CHANGE_ADDRESS,
       lovelace: 10_000_000n
     })
@@ -720,12 +722,12 @@ describe("TxBuilder Script Handling", () => {
       .readFrom({ referenceInputs: [refScriptUtxo] })
       .collectFrom({ inputs: [spendUtxo] })
       .payToAddress({
-        address: RECEIVER_ADDRESS,
-        assets: Assets.fromLovelace(2_000_000n)
+        address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
+        assets: CoreAssets.fromLovelace(2_000_000n)
       })
 
     const signBuilder = await builder.build({
-      changeAddress: CHANGE_ADDRESS,
+      changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
       availableUtxos: [],
       protocolParameters: PROTOCOL_PARAMS
     })
@@ -753,13 +755,13 @@ describe("TxBuilder Script Handling", () => {
       script: scriptHex
     }
 
-    const refScriptUtxo = createTestUtxo({
+    const refScriptUtxo = createCoreTestUtxo({
       address: CHANGE_ADDRESS,
       lovelace: 3_000_000n,
       scriptRef: referenceScript
     })
 
-    const spendUtxo = createTestUtxo({
+    const spendUtxo = createCoreTestUtxo({
       address: CHANGE_ADDRESS,
       lovelace: 10_000_000n
     })
@@ -768,12 +770,12 @@ describe("TxBuilder Script Handling", () => {
       .readFrom({ referenceInputs: [refScriptUtxo] })
       .collectFrom({ inputs: [spendUtxo] })
       .payToAddress({
-        address: RECEIVER_ADDRESS,
-        assets: Assets.fromLovelace(2_000_000n)
+        address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
+        assets: CoreAssets.fromLovelace(2_000_000n)
       })
 
     const signBuilder = await builder.build({
-      changeAddress: CHANGE_ADDRESS,
+      changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
       availableUtxos: [],
       protocolParameters: PROTOCOL_PARAMS
     })
@@ -802,13 +804,13 @@ describe("TxBuilder Script Handling", () => {
       script: scriptHex
     }
 
-    const refScriptUtxo = createTestUtxo({
+    const refScriptUtxo = createCoreTestUtxo({
       address: CHANGE_ADDRESS,
       lovelace: 3_000_000n,
       scriptRef: referenceScript
     })
 
-    const spendUtxo = createTestUtxo({
+    const spendUtxo = createCoreTestUtxo({
       address: CHANGE_ADDRESS,
       lovelace: 10_000_000n
     })
@@ -817,14 +819,14 @@ describe("TxBuilder Script Handling", () => {
       .readFrom({ referenceInputs: [refScriptUtxo] })
       .collectFrom({ inputs: [spendUtxo] })
       .payToAddress({
-        address: RECEIVER_ADDRESS,
-        assets: Assets.fromLovelace(2_000_000n)
+        address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
+        assets: CoreAssets.fromLovelace(2_000_000n)
       })
 
     // Should fail during build due to 200KB limit
     await expect(
       builder.build({
-        changeAddress: CHANGE_ADDRESS,
+        changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
         availableUtxos: [],
         protocolParameters: PROTOCOL_PARAMS
       })
@@ -846,19 +848,19 @@ describe("TxBuilder Script Handling", () => {
       script: "48".repeat(script2Size)
     }
 
-    const refScriptUtxo1 = createTestUtxo({
+    const refScriptUtxo1 = createCoreTestUtxo({
       address: CHANGE_ADDRESS,
       lovelace: 3_000_000n,
       scriptRef: referenceScript1
     })
 
-    const refScriptUtxo2 = createTestUtxo({
+    const refScriptUtxo2 = createCoreTestUtxo({
       address: CHANGE_ADDRESS,
       lovelace: 3_000_000n,
       scriptRef: referenceScript2
     })
 
-    const spendUtxo = createTestUtxo({
+    const spendUtxo = createCoreTestUtxo({
       address: CHANGE_ADDRESS,
       lovelace: 10_000_000n
     })
@@ -867,12 +869,12 @@ describe("TxBuilder Script Handling", () => {
       .readFrom({ referenceInputs: [refScriptUtxo1, refScriptUtxo2] })
       .collectFrom({ inputs: [spendUtxo] })
       .payToAddress({
-        address: RECEIVER_ADDRESS,
-        assets: Assets.fromLovelace(2_000_000n)
+        address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
+        assets: CoreAssets.fromLovelace(2_000_000n)
       })
 
     const signBuilder = await builder.build({
-      changeAddress: CHANGE_ADDRESS,
+      changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
       availableUtxos: [],
       protocolParameters: PROTOCOL_PARAMS
     })
@@ -894,13 +896,13 @@ describe("TxBuilder Script Handling", () => {
 
   it("should not charge reference script fee when no scriptRef present", async () => {
     // Create UTxO WITHOUT reference script
-    const refUtxo = createTestUtxo({
+    const refUtxo = createCoreTestUtxo({
       address: CHANGE_ADDRESS,
       lovelace: 3_000_000n
       // No scriptRef
     })
 
-    const spendUtxo = createTestUtxo({
+    const spendUtxo = createCoreTestUtxo({
       address: CHANGE_ADDRESS,
       lovelace: 10_000_000n
     })
@@ -909,12 +911,12 @@ describe("TxBuilder Script Handling", () => {
       .readFrom({ referenceInputs: [refUtxo] })
       .collectFrom({ inputs: [spendUtxo] })
       .payToAddress({
-        address: RECEIVER_ADDRESS,
-        assets: Assets.fromLovelace(2_000_000n)
+        address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
+        assets: CoreAssets.fromLovelace(2_000_000n)
       })
 
     const signBuilder = await builder.build({
-      changeAddress: CHANGE_ADDRESS,
+      changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
       availableUtxos: [],
       protocolParameters: PROTOCOL_PARAMS
     })
@@ -938,7 +940,7 @@ describe("TxBuilder Script Handling", () => {
     const scriptAddress = scriptToAddress(ALWAYS_SUCCEED_SCRIPT_CBOR)
     const alwaysSucceedsScript = Script.makePlutusV2Script(ALWAYS_SUCCEED_SCRIPT_CBOR)
 
-    const scriptUtxo = createTestUtxo({
+    const scriptUtxo = createCoreTestUtxo({
       address: scriptAddress,
       lovelace: 5_000_000n,
       datumOption: {
@@ -951,32 +953,32 @@ describe("TxBuilder Script Handling", () => {
     // - Three large ones (2 ADA each = 6 ADA total, which is sufficient)
     // - One small one (1 ADA)
     // The builder should pick only the 3 largest (protocol limit)
-    const collateralUtxo1 = createTestUtxo({
+    const collateralUtxo1 = createCoreTestUtxo({
       address: CHANGE_ADDRESS,
       lovelace: 2_000_000n,
-      txHash: "c".repeat(64),
-      outputIndex: 0
+      transactionId: "c".repeat(64),
+      index: 0
     })
 
-    const collateralUtxo2 = createTestUtxo({
+    const collateralUtxo2 = createCoreTestUtxo({
       address: CHANGE_ADDRESS,
       lovelace: 2_000_000n,
-      txHash: "c".repeat(64),
-      outputIndex: 1
+      transactionId: "c".repeat(64),
+      index: 1
     })
 
-    const collateralUtxo3 = createTestUtxo({
+    const collateralUtxo3 = createCoreTestUtxo({
       address: CHANGE_ADDRESS,
       lovelace: 2_000_000n,
-      txHash: "c".repeat(64),
-      outputIndex: 2
+      transactionId: "c".repeat(64),
+      index: 2
     })
 
-    const collateralUtxo4 = createTestUtxo({
+    const collateralUtxo4 = createCoreTestUtxo({
       address: CHANGE_ADDRESS,
       lovelace: 1_000_000n,
-      txHash: "c".repeat(64),
-      outputIndex: 3
+      transactionId: "c".repeat(64),
+      index: 3
     })
 
     // Create redeemer
@@ -989,12 +991,12 @@ describe("TxBuilder Script Handling", () => {
       })
       .attachScript(alwaysSucceedsScript)
       .payToAddress({
-        address: RECEIVER_ADDRESS,
-        assets: Assets.fromLovelace(2_000_000n)
+        address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
+        assets: CoreAssets.fromLovelace(2_000_000n)
       })
 
     const signBuilder = await builder.build({
-      changeAddress: CHANGE_ADDRESS,
+      changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
       availableUtxos: [collateralUtxo1, collateralUtxo2, collateralUtxo3, collateralUtxo4],
       protocolParameters: PROTOCOL_PARAMS
     })
@@ -1023,7 +1025,7 @@ describe("TxBuilder Script Handling", () => {
     const scriptAddress = scriptToAddress(ALWAYS_SUCCEED_SCRIPT_CBOR)
     const alwaysSucceedsScript = Script.makePlutusV2Script(ALWAYS_SUCCEED_SCRIPT_CBOR)
 
-    const scriptUtxo = createTestUtxo({
+    const scriptUtxo = createCoreTestUtxo({
       address: scriptAddress,
       lovelace: 5_000_000n,
       datumOption: {
@@ -1033,25 +1035,25 @@ describe("TxBuilder Script Handling", () => {
     })
 
     // Create 3 collateral candidates (each with 2 ADA, total 6 ADA > 5 ADA target)
-    const collateralUtxo1 = createTestUtxo({
+    const collateralUtxo1 = createCoreTestUtxo({
       address: CHANGE_ADDRESS,
       lovelace: 2_000_000n,
-      txHash: "d".repeat(64),
-      outputIndex: 0
+      transactionId: "d".repeat(64),
+      index: 0
     })
 
-    const collateralUtxo2 = createTestUtxo({
+    const collateralUtxo2 = createCoreTestUtxo({
       address: CHANGE_ADDRESS,
       lovelace: 2_000_000n,
-      txHash: "d".repeat(64),
-      outputIndex: 1
+      transactionId: "d".repeat(64),
+      index: 1
     })
 
-    const collateralUtxo3 = createTestUtxo({
+    const collateralUtxo3 = createCoreTestUtxo({
       address: CHANGE_ADDRESS,
       lovelace: 2_000_000n,
-      txHash: "d".repeat(64),
-      outputIndex: 2
+      transactionId: "d".repeat(64),
+      index: 2
     })
 
     // Create redeemer
@@ -1064,12 +1066,12 @@ describe("TxBuilder Script Handling", () => {
       })
       .attachScript(alwaysSucceedsScript)
       .payToAddress({
-        address: RECEIVER_ADDRESS,
-        assets: Assets.fromLovelace(2_000_000n)
+        address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
+        assets: CoreAssets.fromLovelace(2_000_000n)
       })
 
     const signBuilder = await builder.build({
-      changeAddress: CHANGE_ADDRESS,
+      changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
       availableUtxos: [collateralUtxo1, collateralUtxo2, collateralUtxo3],
       protocolParameters: PROTOCOL_PARAMS
     })
@@ -1095,7 +1097,7 @@ describe("TxBuilder Script Handling", () => {
     const scriptAddress = scriptToAddress(ALWAYS_SUCCEED_SCRIPT_CBOR)
     const alwaysSucceedsScript = Script.makePlutusV2Script(ALWAYS_SUCCEED_SCRIPT_CBOR)
 
-    const scriptUtxo = createTestUtxo({
+    const scriptUtxo = createCoreTestUtxo({
       address: scriptAddress,
       lovelace: 5_000_000n,
       datumOption: {
@@ -1108,11 +1110,11 @@ describe("TxBuilder Script Handling", () => {
     // Even though 4 would be enough (6 ADA), protocol limits us to 3
     // 3 × 1.5 ADA = 4.5 ADA < 5 ADA target
     const collateralUtxos = Array.from({ length: 5 }, (_, i) =>
-      createTestUtxo({
+      createCoreTestUtxo({
         address: CHANGE_ADDRESS,
         lovelace: 1_500_000n,
-        txHash: "e".repeat(64),
-        outputIndex: i
+        transactionId: "e".repeat(64),
+        index: i
       })
     )
 
@@ -1125,14 +1127,14 @@ describe("TxBuilder Script Handling", () => {
       })
       .attachScript(alwaysSucceedsScript)
       .payToAddress({
-        address: RECEIVER_ADDRESS,
-        assets: Assets.fromLovelace(2_000_000n)
+        address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
+        assets: CoreAssets.fromLovelace(2_000_000n)
       })
 
     // Should fail: max 3 inputs selected = 4.5 ADA < 5 ADA target
     await expect(
       builder.build({
-        changeAddress: CHANGE_ADDRESS,
+        changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
         availableUtxos: collateralUtxos,
         protocolParameters: PROTOCOL_PARAMS
       })

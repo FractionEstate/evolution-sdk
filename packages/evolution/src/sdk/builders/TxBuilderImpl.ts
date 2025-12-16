@@ -57,7 +57,7 @@ import * as Unfrack from "./Unfrack.js"
  * @category helpers
  */
 export const isScriptAddressCore = (address: CoreAddress.Address): boolean => {
-  return address.paymentCredential._tag === "ScriptHash"
+  return address.paymentCredential?._tag === "ScriptHash"
 }
 
 /**
