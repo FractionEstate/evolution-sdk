@@ -3,7 +3,7 @@ import { Effect, Ref, Schema } from "effect"
 import type * as Array from "effect/Array"
 
 // Core imports
-import * as CoreAddress from "../../core/Address.js"
+import type * as CoreAddress from "../../core/Address.js"
 import * as CoreAssets from "../../core/Assets/index.js"
 import * as Bytes32 from "../../core/Bytes32.js"
 import * as PlutusData from "../../core/Data.js"
@@ -234,14 +234,14 @@ export const makeDatumOption = (datum: Datum.Datum): Effect.Effect<DatumOption.D
  * @category helpers
  */
 export const makeTxOutput = (params: {
-  address: string
+  address: CoreAddress.Address
   assets: CoreAssets.Assets
   datum?: Datum.Datum
   scriptRef?: any // TODO: Add ScriptRef type
 }): Effect.Effect<TxOut.TransactionOutput, TransactionBuilderError> =>
   Effect.gen(function* () {
-    // Parse address from bech32 string to core Address type
-    const address = yield* Schema.decodeUnknown(CoreAddress.FromBech32)(params.address)
+    // Address is already a Core Address type
+    const address = params.address
 
     // Convert datum if provided
     let datumOption: DatumOption.DatumOption | undefined
@@ -262,7 +262,7 @@ export const makeTxOutput = (params: {
     Effect.mapError(
       (error) =>
         new TransactionBuilderError({
-          message: `Failed to create TxOutput for address: ${params.address}`,
+          message: `Failed to create TxOutput`,
           cause: error
         })
     )
@@ -278,14 +278,14 @@ export const makeTxOutput = (params: {
  * @internal
  */
 export const txOutputToTransactionOutput = (params: {
-  address: string
+  address: CoreAddress.Address
   assets: CoreAssets.Assets
   datum?: Datum.Datum
   scriptRef?: any // TODO: Add ScriptRef type
 }): Effect.Effect<TxOut.TransactionOutput, TransactionBuilderError> =>
   Effect.gen(function* () {
-    // Parse address from bech32 string to core Address type using Schema
-    const address = yield* Schema.decodeUnknown(CoreAddress.FromBech32)(params.address)
+    // Address is already a Core Address type
+    const address = params.address
 
     // Convert datum if provided
     let datumOption: DatumOption.DatumOption | undefined
@@ -306,7 +306,7 @@ export const txOutputToTransactionOutput = (params: {
     Effect.mapError(
       (error) =>
         new TransactionBuilderError({
-          message: `Failed to create transaction output for address: ${params.address}`,
+          message: `Failed to create transaction output`,
           cause: error
         })
     )
@@ -1114,7 +1114,7 @@ export const calculateLeftoverAssets = (params: {
  * @category change
  */
 export const calculateMinimumUtxoLovelace = (params: {
-  address: string
+  address: CoreAddress.Address
   assets: CoreAssets.Assets
   datum?: Datum.Datum
   scriptRef?: any
@@ -1165,7 +1165,7 @@ export const calculateMinimumUtxoLovelace = (params: {
  */
 export const createChangeOutput = (params: {
   leftoverAssets: CoreAssets.Assets
-  changeAddress: string
+  changeAddress: CoreAddress.Address
   coinsPerUtxoByte: bigint
   unfrackOptions?: UnfrackOptions
 }): Effect.Effect<ReadonlyArray<TxOut.TransactionOutput>, TransactionBuilderError> =>

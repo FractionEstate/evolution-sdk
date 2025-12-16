@@ -1,5 +1,6 @@
 import { describe, expect, it } from "@effect/vitest"
 
+import * as CoreAddress from "../src/core/Address.js"
 import * as CoreAssets from "../src/core/Assets/index.js"
 import type * as CoreUTxO from "../src/core/UTxO.js"
 import type { TxBuilderConfig } from "../src/sdk/builders/TransactionBuilder.js"
@@ -29,11 +30,11 @@ describe("Insufficient Lovelace", () => {
     ]
 
     const builder = makeTxBuilder(baseConfig).payToAddress({
-      address: RECEIVER_ADDRESS,
+      address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
       assets: CoreAssets.fromLovelace(5_000_000n)
     })
 
-    await expect(builder.build({ changeAddress: CHANGE_ADDRESS, availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })).rejects.toThrow(/Coin selection failed for/)
+    await expect(builder.build({ changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS), availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })).rejects.toThrow(/Coin selection failed for/)
   })
 
   it("should fail when lovelace covers payment but not payment + fees", async () => {
@@ -43,11 +44,11 @@ describe("Insufficient Lovelace", () => {
     ]
 
     const builder = makeTxBuilder(baseConfig).payToAddress({
-      address: RECEIVER_ADDRESS,
+      address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
       assets: CoreAssets.fromLovelace(1_950_000n)
     })
 
-    await expect(builder.build({ changeAddress: CHANGE_ADDRESS, availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })).rejects.toThrow(/Cannot create valid change|Coin must be between/)
+    await expect(builder.build({ changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS), availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })).rejects.toThrow(/Cannot create valid change|Coin must be between/)
   })
 
   it("should fail with multiple small UTxOs that sum to insufficient amount", async () => {
@@ -61,11 +62,11 @@ describe("Insufficient Lovelace", () => {
     ]
 
     const builder = makeTxBuilder(baseConfig).payToAddress({
-      address: RECEIVER_ADDRESS,
+      address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
       assets: CoreAssets.fromLovelace(1_000_000n)
     })
 
-    await expect(builder.build({ changeAddress: CHANGE_ADDRESS, availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })).rejects.toThrow(/Coin selection failed for/)
+    await expect(builder.build({ changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS), availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })).rejects.toThrow(/Coin selection failed for/)
   })
 })
 
@@ -96,11 +97,11 @@ describe("Missing Native Assets", () => {
     )
 
     const builder = makeTxBuilder(baseConfig).payToAddress({
-      address: RECEIVER_ADDRESS,
+      address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
       assets: paymentAssets
     })
 
-    await expect(builder.build({ changeAddress: CHANGE_ADDRESS, availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })).rejects.toThrow(/Coin selection failed for/)
+    await expect(builder.build({ changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS), availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })).rejects.toThrow(/Coin selection failed for/)
   })
 
   it("should fail when multiple assets requested but one is missing", async () => {
@@ -145,11 +146,11 @@ describe("Missing Native Assets", () => {
     )
 
     const builder = makeTxBuilder(baseConfig).payToAddress({
-      address: RECEIVER_ADDRESS,
+      address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
       assets: paymentAssets
     })
 
-    await expect(builder.build({ changeAddress: CHANGE_ADDRESS, availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })).rejects.toThrow(/Coin selection failed for/)
+    await expect(builder.build({ changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS), availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })).rejects.toThrow(/Coin selection failed for/)
   })
 })
 
@@ -177,11 +178,11 @@ describe("Insufficient Native Asset Quantity", () => {
     )
 
     const builder = makeTxBuilder(baseConfig).payToAddress({
-      address: RECEIVER_ADDRESS,
+      address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
       assets: paymentAssets
     })
 
-    await expect(builder.build({ changeAddress: CHANGE_ADDRESS, availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })).rejects.toThrow(/Coin selection failed for/)
+    await expect(builder.build({ changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS), availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })).rejects.toThrow(/Coin selection failed for/)
   })
 
   it("should fail when tokens are fragmented across UTxOs but total is insufficient", async () => {
@@ -221,11 +222,11 @@ describe("Insufficient Native Asset Quantity", () => {
     )
 
     const builder = makeTxBuilder(baseConfig).payToAddress({
-      address: RECEIVER_ADDRESS,
+      address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
       assets: paymentAssets
     })
 
-    await expect(builder.build({ changeAddress: CHANGE_ADDRESS, availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })).rejects.toThrow(/Coin selection failed for/)
+    await expect(builder.build({ changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS), availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })).rejects.toThrow(/Coin selection failed for/)
   })
 
   it("should fail when one of multiple required assets is insufficient", async () => {
@@ -262,11 +263,11 @@ describe("Insufficient Native Asset Quantity", () => {
     )
 
     const builder = makeTxBuilder(baseConfig).payToAddress({
-      address: RECEIVER_ADDRESS,
+      address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
       assets: paymentAssets
     })
 
-    await expect(builder.build({ changeAddress: CHANGE_ADDRESS, availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })).rejects.toThrow(/Coin selection failed for/)
+    await expect(builder.build({ changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS), availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })).rejects.toThrow(/Coin selection failed for/)
   })
 })
 
@@ -275,12 +276,12 @@ describe("Complex Mixed Failures", () => {
     const utxos: Array<CoreUTxO.UTxO> = []
 
     const builder = makeTxBuilder(baseConfig).payToAddress({
-      address: RECEIVER_ADDRESS,
+      address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
       assets: CoreAssets.fromLovelace(1_000_000n)
     })
 
     // Empty wallet fails coin selection
-    await expect(builder.build({ changeAddress: CHANGE_ADDRESS, availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })).rejects.toThrow(/Coin selection failed/)
+    await expect(builder.build({ changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS), availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })).rejects.toThrow(/Coin selection failed/)
   })
 
   it("should fail when UTxOs exist but all are too small for min UTxO + fees", async () => {
@@ -291,11 +292,11 @@ describe("Complex Mixed Failures", () => {
     )
 
     const builder = makeTxBuilder(baseConfig).payToAddress({
-      address: RECEIVER_ADDRESS,
+      address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
       assets: CoreAssets.fromLovelace(50_000n)
     })
 
-    await expect(builder.build({ changeAddress: CHANGE_ADDRESS, availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })).rejects.toThrow(/Coin selection failed for/)
+    await expect(builder.build({ changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS), availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })).rejects.toThrow(/Coin selection failed for/)
   })
 
   it("should fail with sufficient lovelace but missing native asset", async () => {
@@ -315,11 +316,11 @@ describe("Complex Mixed Failures", () => {
     )
 
     const builder = makeTxBuilder(baseConfig).payToAddress({
-      address: RECEIVER_ADDRESS,
+      address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
       assets: paymentAssets
     })
 
-    await expect(builder.build({ changeAddress: CHANGE_ADDRESS, availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })).rejects.toThrow(/Coin selection failed for/)
+    await expect(builder.build({ changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS), availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })).rejects.toThrow(/Coin selection failed for/)
   })
 
   it("should fail when combined shortfalls across lovelace and multiple assets", async () => {
@@ -356,11 +357,11 @@ describe("Complex Mixed Failures", () => {
     )
 
     const builder = makeTxBuilder(baseConfig).payToAddress({
-      address: RECEIVER_ADDRESS,
+      address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
       assets: paymentAssets
     })
 
-    await expect(builder.build({ changeAddress: CHANGE_ADDRESS, availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })).rejects.toThrow(/Coin selection failed for/)
+    await expect(builder.build({ changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS), availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })).rejects.toThrow(/Coin selection failed for/)
   })
 })
 
@@ -374,12 +375,12 @@ describe("Edge Case: drainTo Cannot Save Insufficient Funds", () => {
     ]
 
     const builder = makeTxBuilder(baseConfig).payToAddress({
-      address: RECEIVER_ADDRESS,
+      address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
       assets: CoreAssets.fromLovelace(5_000_000n) // Way more than available
     })
 
     await expect(
-      builder.build({ changeAddress: CHANGE_ADDRESS, availableUtxos: utxos, drainTo: 0, protocolParameters: PROTOCOL_PARAMS }) // drainTo cannot save this
+      builder.build({ changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS), availableUtxos: utxos, drainTo: 0, protocolParameters: PROTOCOL_PARAMS }) // drainTo cannot save this
     ).rejects.toThrow(/Coin selection failed for/)
   })
 
@@ -391,10 +392,10 @@ describe("Edge Case: drainTo Cannot Save Insufficient Funds", () => {
     ]
 
     const builder = makeTxBuilder(baseConfig).payToAddress({
-      address: RECEIVER_ADDRESS,
+      address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
       assets: CoreAssets.fromLovelace(2_000_000n)
     })
 
-    await expect(builder.build({ changeAddress: CHANGE_ADDRESS, availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })).rejects.toThrow(/Coin selection failed for/)
+    await expect(builder.build({ changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS), availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })).rejects.toThrow(/Coin selection failed for/)
   })
 })

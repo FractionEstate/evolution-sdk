@@ -11,7 +11,6 @@
 
 import { Effect, Ref } from "effect"
 
-import * as CoreAddress from "../../../core/Address.js"
 import * as CoreAssets from "../../../core/Assets/index.js"
 import * as TxOut from "../../../core/TxOut.js"
 import * as UTxO from "../../../core/UTxO.js"
@@ -302,9 +301,8 @@ export const executeCollateral = (): Effect.Effect<
     // ═══════════════════════════════════════════════════════════
     // STEP 9: Create Return Output
     // ═══════════════════════════════════════════════════════════
-    const coreAddress = CoreAddress.fromBech32(changeAddress)
     const collateralReturn = new TxOut.TransactionOutput({
-      address: coreAddress,
+      address: changeAddress,
       assets: returnAssets,
       datumOption: undefined, // No datum for collateral return
       scriptRef: undefined // No script reference

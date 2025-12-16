@@ -5,9 +5,9 @@
 
 import { Effect, Schedule, Schema } from "effect"
 
+import * as CoreAddress from "../../../core/Address.js"
 import * as Bytes from "../../../core/Bytes.js"
 import type * as CoreUTxO from "../../../core/UTxO.js"
-import type * as Address from "../../Address.js"
 import type * as Credential from "../../Credential.js"
 import type * as OutRef from "../../OutRef.js"
 import type * as RewardAddress from "../../RewardAddress.js"
@@ -50,10 +50,13 @@ const wrapError = (operation: string) => (error: unknown) =>
 /**
  * Convert address or credential to appropriate Blockfrost endpoint path
  */
-const getAddressPath = (addressOrCredential: Address.Address | Credential.Credential): string => {
-  // For now, assume it's an address string
-  // In a full implementation, you'd need to handle credential conversion
-  return typeof addressOrCredential === "string" ? addressOrCredential : addressOrCredential.toString()
+const getAddressPath = (addressOrCredential: CoreAddress.Address | Credential.Credential): string => {
+  // For Core Address, convert to bech32 string
+  if (addressOrCredential instanceof CoreAddress.Address) {
+    return CoreAddress.toBech32(addressOrCredential)
+  }
+  // For Credential, convert to string representation
+  return addressOrCredential.toString()
 }
 
 // ============================================================================
@@ -81,7 +84,7 @@ export const getProtocolParameters = (baseUrl: string, projectId?: string) =>
  * Returns: (baseUrl, projectId?) => (addressOrCredential) => Effect<UTxO[], ProviderError>
  */
 export const getUtxos = (baseUrl: string, projectId?: string) => 
-  (addressOrCredential: Address.Address | Credential.Credential) => {
+  (addressOrCredential: CoreAddress.Address | Credential.Credential) => {
     const addressPath = getAddressPath(addressOrCredential)
     
     return withRateLimit(
@@ -103,7 +106,7 @@ export const getUtxos = (baseUrl: string, projectId?: string) =>
  * Returns: (baseUrl, projectId?) => (addressOrCredential, unit) => Effect<UTxO[], ProviderError>
  */
 export const getUtxosWithUnit = (baseUrl: string, projectId?: string) =>
-  (addressOrCredential: Address.Address | Credential.Credential, unit: string) => {
+  (addressOrCredential: CoreAddress.Address | Credential.Credential, unit: string) => {
     const addressPath = getAddressPath(addressOrCredential)
     
     return withRateLimit(

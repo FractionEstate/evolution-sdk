@@ -39,10 +39,10 @@ describe("TxBuilder P0 Edge Cases - Reselection Loop Boundaries", () => {
     await expect(
       txBuilder
         .payToAddress({
-          address: RECEIVER_ADDRESS,
+          address: Address.fromBech32(RECEIVER_ADDRESS),
           assets: CoreAssets.fromLovelace(5_000_000n)
         })
-        .build({ changeAddress: CHANGE_ADDRESS, availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })
+        .build({ changeAddress: Address.fromBech32(CHANGE_ADDRESS), availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })
     ).rejects.toThrow()
   })
 
@@ -150,10 +150,10 @@ describe("TxBuilder P0 Edge Cases - Reselection Loop Boundaries", () => {
 
     const signBuilder = await txBuilder
       .payToAddress({
-        address: RECEIVER_ADDRESS,
+        address: Address.fromBech32(RECEIVER_ADDRESS),
         assets: paymentAssets
       })
-      .build({ changeAddress: CHANGE_ADDRESS, availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })
+      .build({ changeAddress: Address.fromBech32(CHANGE_ADDRESS), availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })
 
     const tx = await signBuilder.toTransaction()
 
@@ -207,10 +207,10 @@ describe("TxBuilder P0 Edge Cases - MinUTxO Boundary Precision", () => {
     // Payment that will leave insufficient change with the first UTxO
     const signBuilder = await txBuilder
       .payToAddress({
-        address: RECEIVER_ADDRESS,
+        address: Address.fromBech32(RECEIVER_ADDRESS),
         assets: CoreAssets.fromLovelace(1_000_000n)
       })
-      .build({ changeAddress: CHANGE_ADDRESS, availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })
+      .build({ changeAddress: Address.fromBech32(CHANGE_ADDRESS), availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })
 
     const tx = await signBuilder.toTransaction()
 
@@ -284,10 +284,10 @@ describe("TxBuilder P0 Edge Cases - MinUTxO Boundary Precision", () => {
     // Small payment to leave change with max-length asset names
     const signBuilder = await txBuilder
       .payToAddress({
-        address: RECEIVER_ADDRESS,
+        address: Address.fromBech32(RECEIVER_ADDRESS),
         assets: CoreAssets.fromLovelace(2_000_000n)
       })
-      .build({ changeAddress: CHANGE_ADDRESS, availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })
+      .build({ changeAddress: Address.fromBech32(CHANGE_ADDRESS), availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })
 
     const tx = await signBuilder.toTransaction()
 
@@ -371,10 +371,10 @@ describe("TxBuilder P0 Edge Cases - MinUTxO Boundary Precision", () => {
     // Triggers reselection!
     const signBuilder = await txBuilder
       .payToAddress({
-        address: RECEIVER_ADDRESS,
+        address: Address.fromBech32(RECEIVER_ADDRESS),
         assets: CoreAssets.fromLovelace(4_000_000n) // 4.0 ADA (no native assets in payment)
       })
-      .build({ changeAddress: CHANGE_ADDRESS, availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })
+      .build({ changeAddress: Address.fromBech32(CHANGE_ADDRESS), availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })
 
     const tx = await signBuilder.toTransaction()
 

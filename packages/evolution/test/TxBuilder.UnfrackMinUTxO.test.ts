@@ -79,13 +79,13 @@ describe.concurrent("TxBuilder - Unfrack MinUTxO", () => {
 
     const builder = makeTxBuilder(baseConfig)
       .payToAddress({
-        address: RECIPIENT_ADDRESS,
+        address: Address.fromBech32(RECIPIENT_ADDRESS),
         assets: CoreAssets.fromLovelace(2_000_000n) // 2.0 ADA only
       })
 
     // Act: Build transaction with unfrack enabled
     const signBuilder = await builder.build({ 
-      changeAddress: CHANGE_ADDRESS,
+      changeAddress: Address.fromBech32(CHANGE_ADDRESS),
       availableUtxos: [utxo1, utxo2],
       
       protocolParameters: PROTOCOL_PARAMS,
@@ -177,13 +177,13 @@ describe.concurrent("TxBuilder - Unfrack MinUTxO", () => {
 
     const builder = makeTxBuilder(baseConfig)
       .payToAddress({
-        address: RECIPIENT_ADDRESS,
+        address: Address.fromBech32(RECIPIENT_ADDRESS),
         assets: CoreAssets.fromLovelace(2_000_000n)
       })
 
     // Act: Build transaction with unfrack (bundleSize=5 → 3 bundles for 15 tokens)
     const signBuilder = await builder.build({ 
-      changeAddress: CHANGE_ADDRESS,
+      changeAddress: Address.fromBech32(CHANGE_ADDRESS),
       availableUtxos: [utxo1, utxo2, utxo3],
       
       protocolParameters: PROTOCOL_PARAMS,
@@ -242,13 +242,13 @@ describe.concurrent("TxBuilder - Unfrack MinUTxO", () => {
 
     const builder = makeTxBuilder(baseConfig)
       .payToAddress({
-        address: RECIPIENT_ADDRESS,
+        address: Address.fromBech32(RECIPIENT_ADDRESS),
         assets: CoreAssets.fromLovelace(2_000_000n)
       })
 
     // Build with drainTo option
     const signBuilder = await builder.build({ 
-      changeAddress: CHANGE_ADDRESS,
+      changeAddress: Address.fromBech32(CHANGE_ADDRESS),
       availableUtxos: [utxo],
       
       protocolParameters: PROTOCOL_PARAMS,
@@ -289,14 +289,14 @@ describe.concurrent("TxBuilder - Unfrack MinUTxO", () => {
 
     const builder = makeTxBuilder(baseConfig)
       .payToAddress({
-        address: RECIPIENT_ADDRESS,
+        address: Address.fromBech32(RECIPIENT_ADDRESS),
         assets: CoreAssets.fromLovelace(2_000_000n)
       })
 
     // Try with burnAsFee - should fail because of native assets
     await expect(
       builder.build({ 
-        changeAddress: CHANGE_ADDRESS,
+        changeAddress: Address.fromBech32(CHANGE_ADDRESS),
         availableUtxos: [utxo],
         
         protocolParameters: PROTOCOL_PARAMS,

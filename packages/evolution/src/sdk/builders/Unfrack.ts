@@ -12,6 +12,7 @@
 
 import * as Effect from "effect/Effect"
 
+import type * as CoreAddress from "../../core/Address.js"
 import * as CoreAssets from "../../core/Assets/index.js"
 import type * as TxOut from "../../core/TxOut.js"
 import type { UnfrackOptions } from "./TransactionBuilder.js"
@@ -117,7 +118,7 @@ export interface TokenBundle {
  */
 const calculateBundleMinUTxO = (
   bundleTokens: ReadonlyArray<TokenInfo>,
-  changeAddress: string,
+  changeAddress: CoreAddress.Address,
   coinsPerUtxoByte: bigint
 ): Effect.Effect<bigint, Error, never> => Effect.gen(function* () {
   // Build Assets object with the bundle tokens using CoreAssets
@@ -147,7 +148,7 @@ const calculateBundleMinUTxO = (
 export const calculateTokenBundles = (
   tokens: ReadonlyArray<TokenInfo>,
   options: UnfrackOptions,
-  changeAddress: string,
+  changeAddress: CoreAddress.Address,
   coinsPerUtxoByte: bigint
 ): Effect.Effect<ReadonlyArray<TokenBundle>, Error, never> => Effect.gen(function* () {
   const bundleSize = options.tokens?.bundleSize ?? 10
@@ -208,7 +209,7 @@ export const calculateTokenBundles = (
 const bundleTokensWithRules = (
   tokens: ReadonlyArray<TokenInfo>,
   bundleSize: number,
-  changeAddress: string,
+  changeAddress: CoreAddress.Address,
   coinsPerUtxoByte: bigint
 ): Effect.Effect<ReadonlyArray<TokenBundle>, Error, never> => Effect.gen(function* () {
   const bundles: Array<TokenBundle> = []
@@ -349,7 +350,7 @@ export type UnfrackResult = {
  * @category builders
  */
 export const createUnfrackedChangeOutputs = (
-  changeAddress: string,
+  changeAddress: CoreAddress.Address,
   changeAssets: CoreAssets.Assets,
   options: UnfrackOptions = {},
   coinsPerUtxoByte: bigint

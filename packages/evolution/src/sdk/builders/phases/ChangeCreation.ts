@@ -10,6 +10,7 @@
 
 import { Effect, Ref } from "effect"
 
+import type * as CoreAddress from "../../../core/Address.js"
 import * as CoreAssets from "../../../core/Assets/index.js"
 import type * as TxOut from "../../../core/TxOut.js"
 import * as CoreUTxO from "../../../core/UTxO.js"
@@ -57,7 +58,7 @@ const getAvailableUtxos = (
  */
 const createChangeOutputs = (
   leftoverAfterFee: CoreAssets.Assets,
-  changeAddress: string,
+  changeAddress: CoreAddress.Address,
   coinsPerUtxoByte: bigint
 ): Effect.Effect<ReadonlyArray<TxOut.TransactionOutput>, TransactionBuilderError, BuildOptionsTag> =>
   Effect.gen(function* () {

@@ -28,6 +28,7 @@
 import { Context, Data, Effect, Layer, Logger, LogLevel, Ref } from "effect"
 import type { Either } from "effect/Either"
 
+import type * as CoreAddress from "../../core/Address.js"
 import * as CoreAssets from "../../core/Assets/index.js"
 import type * as Coin from "../../core/Coin.js"
 import type * as Network from "../../core/Network.js"
@@ -150,7 +151,7 @@ const resolveProtocolParameters = (
 const resolveChangeAddress = (
   config: TxBuilderConfig,
   options?: BuildOptions
-): Effect.Effect<string, TransactionBuilderError | WalletNew.WalletError> => {
+): Effect.Effect<CoreAddress.Address, TransactionBuilderError | WalletNew.WalletError> => {
   if (options?.changeAddress) {
     return Effect.succeed(options.changeAddress)
   }
@@ -781,13 +782,13 @@ export interface BuildOptions {
    * // Use different account for change
    * builder.build({ changeAddress: wallet.addresses[5] })
    *
-   * // Custom address
-   * builder.build({ changeAddress: "addr_test1..." })
+   * // Custom Core Address
+   * builder.build({ changeAddress: Core.Address.fromBech32("addr_test1...") })
    * ```
    *
    * @since 2.0.0
    */
-  readonly changeAddress?: string
+  readonly changeAddress?: CoreAddress.Address
 
   /**
    * Override the available UTxOs for this specific transaction build.
@@ -1216,7 +1217,7 @@ export class TxContext extends Context.Tag("TxContext")<TxContext, Ref.Ref<TxBui
  * @since 2.0.0
  * @category context
  */
-export class ChangeAddressTag extends Context.Tag("ChangeAddress")<ChangeAddressTag, string>() {}
+export class ChangeAddressTag extends Context.Tag("ChangeAddress")<ChangeAddressTag, CoreAddress.Address>() {}
 
 /**
  * Resolved protocol parameters for the current build.

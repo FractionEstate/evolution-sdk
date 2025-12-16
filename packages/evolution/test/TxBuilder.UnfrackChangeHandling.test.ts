@@ -1,5 +1,6 @@
 import { describe, expect, it } from "@effect/vitest"
 
+import * as CoreAddress from "../src/core/Address.js"
 import * as CoreAssets from "../src/core/Assets/index.js"
 import * as CoreUTxO from "../src/core/UTxO.js"
 import { makeTxBuilder } from "../src/sdk/builders/TransactionBuilder.js"
@@ -63,12 +64,12 @@ describe("TxBuilder: Unfrack Change Handling Integration", () => {
       })
         .collectFrom({ inputs: [initialUtxo] })
         .payToAddress({
-          address: DESTINATION_ADDRESS,
+          address: CoreAddress.fromBech32(DESTINATION_ADDRESS),
           assets: CoreAssets.fromLovelace(100_000n) // Small payment to maximize leftover
         })
 
       const signBuilder = await builder.build({
-        changeAddress: CHANGE_ADDRESS,
+        changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
         availableUtxos: additionalUtxos, // Available for re-selection
         protocolParameters: PROTOCOL_PARAMS,
         unfrack: {
@@ -138,12 +139,12 @@ describe("TxBuilder: Unfrack Change Handling Integration", () => {
       })
         .collectFrom({ inputs: [initialUtxo] })
         .payToAddress({
-          address: DESTINATION_ADDRESS,
+          address: CoreAddress.fromBech32(DESTINATION_ADDRESS),
           assets: CoreAssets.fromLovelace(100_000n)
         })
 
       const signBuilder = await builder.build({
-        changeAddress: CHANGE_ADDRESS,
+        changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
         availableUtxos: tinyUtxos, // Available but won't be used
         protocolParameters: PROTOCOL_PARAMS,
         unfrack: {
@@ -203,14 +204,14 @@ describe("TxBuilder: Unfrack Change Handling Integration", () => {
       })
         .collectFrom({ inputs: [initialUtxo] })
         .payToAddress({
-          address: DESTINATION_ADDRESS,
+          address: CoreAddress.fromBech32(DESTINATION_ADDRESS),
           assets: CoreAssets.fromLovelace(200_000n)
         })
 
       // Expect build to throw error
       await expect(async () => {
         await builder.build({
-          changeAddress: CHANGE_ADDRESS,
+          changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
           availableUtxos: [], // No more UTxOs available
           protocolParameters: PROTOCOL_PARAMS,
           unfrack: {
@@ -242,12 +243,12 @@ describe("TxBuilder: Unfrack Change Handling Integration", () => {
       })
         .collectFrom({ inputs: [initialUtxo] })
         .payToAddress({
-          address: DESTINATION_ADDRESS,
+          address: CoreAddress.fromBech32(DESTINATION_ADDRESS),
           assets: CoreAssets.fromLovelace(2_000_000n)
         })
 
       const signBuilder = await builder.build({
-        changeAddress: CHANGE_ADDRESS,
+        changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
         availableUtxos: [],
         protocolParameters: PROTOCOL_PARAMS,
         unfrack: {
@@ -283,12 +284,12 @@ describe("TxBuilder: Unfrack Change Handling Integration", () => {
       })
         .collectFrom({ inputs: [initialUtxo] })
         .payToAddress({
-          address: DESTINATION_ADDRESS,
+          address: CoreAddress.fromBech32(DESTINATION_ADDRESS),
           assets: CoreAssets.fromLovelace(1_200_000n)
         })
 
       const signBuilder = await builder.build({
-        changeAddress: CHANGE_ADDRESS,
+        changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
         availableUtxos: [],
         protocolParameters: PROTOCOL_PARAMS,
         unfrack: {
@@ -319,12 +320,12 @@ describe("TxBuilder: Unfrack Change Handling Integration", () => {
       })
         .collectFrom({ inputs: [initialUtxo] })
         .payToAddress({
-          address: DESTINATION_ADDRESS,
+          address: CoreAddress.fromBech32(DESTINATION_ADDRESS),
           assets: CoreAssets.fromLovelace(100_000n)
         })
 
       const signBuilder = await builder.build({
-        changeAddress: CHANGE_ADDRESS,
+        changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
         availableUtxos: [],
         drainTo: 0,
         protocolParameters: PROTOCOL_PARAMS,
@@ -357,12 +358,12 @@ describe("TxBuilder: Unfrack Change Handling Integration", () => {
       })
         .collectFrom({ inputs: [initialUtxo] })
         .payToAddress({
-          address: DESTINATION_ADDRESS,
+          address: CoreAddress.fromBech32(DESTINATION_ADDRESS),
           assets: CoreAssets.fromLovelace(100_000n)
         })
 
       const signBuilder = await builder.build({
-        changeAddress: CHANGE_ADDRESS,
+        changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
         availableUtxos: [],
         onInsufficientChange: "burn",
         protocolParameters: PROTOCOL_PARAMS,

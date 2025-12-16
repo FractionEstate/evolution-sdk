@@ -1,8 +1,8 @@
 import type { Effect } from "effect"
 import { Context, Data } from "effect"
 
+import type * as CoreAddress from "../../core/Address.js"
 import type * as CoreUTxO from "../../core/UTxO.js"
-import type * as Address from "../Address.js"
 import type * as Credential from "../Credential.js"
 import type * as Delegation from "../Delegation.js"
 import type { EvalRedeemer } from "../EvalRedeemer.js"
@@ -38,12 +38,12 @@ export interface ProviderEffect {
   /**
    * Query UTxOs at a given address or by credential.
    */
-  readonly getUtxos: (addressOrCredential: Address.Address | Credential.Credential) => Effect.Effect<Array<CoreUTxO.UTxO>, ProviderError>
+  readonly getUtxos: (addressOrCredential: CoreAddress.Address | Credential.Credential) => Effect.Effect<Array<CoreUTxO.UTxO>, ProviderError>
   /**
    * Query UTxOs at a given address or credential filtered by specific unit.
    */
   readonly getUtxosWithUnit: (
-    addressOrCredential: Address.Address | Credential.Credential,
+    addressOrCredential: CoreAddress.Address | Credential.Credential,
     unit: string
   ) => Effect.Effect<Array<CoreUTxO.UTxO>, ProviderError>
   /**

@@ -8,7 +8,6 @@ import * as DatumOption from "../../../core/DatumOption.js"
 import * as ScriptRef from "../../../core/ScriptRef.js"
 import * as TransactionHash from "../../../core/TransactionHash.js"
 import * as CoreUTxO from "../../../core/UTxO.js"
-import type * as Address from "../../Address.js"
 import type * as Credential from "../../Credential.js"
 import type { EvalRedeemer } from "../../EvalRedeemer.js"
 import type * as OutRef from "../../OutRef.js"
@@ -182,10 +181,11 @@ export const getProtocolParametersEffect = Effect.fn("getProtocolParameters")(fu
 })
 
 export const getUtxosEffect = (kupoUrl: string, headers?: { kupoHeader?: Record<string, string> }) =>
-  Effect.fn("getUtxos")(function* (addressOrCredential: Address.Address | Credential.Credential) {
+  Effect.fn("getUtxos")(function* (addressOrCredential: CoreAddress.Address | Credential.Credential) {
     let pattern: string
-    if (typeof addressOrCredential === "string") {
-      pattern = `${kupoUrl}/matches/${addressOrCredential}?unspent`
+    if (addressOrCredential instanceof CoreAddress.Address) {
+      const addressStr = CoreAddress.toBech32(addressOrCredential)
+      pattern = `${kupoUrl}/matches/${addressStr}?unspent`
     } else {
       pattern = `${kupoUrl}/matches/${addressOrCredential.hash}/*?unspent`
     }
@@ -293,9 +293,9 @@ export const submitTxEffect = (ogmiosUrl: string, headers?: { ogmiosHeader?: Rec
   })
 
 export const getUtxosWithUnitEffect = (kupoUrl: string, headers?: { kupoHeader?: Record<string, string> }) =>
-  Effect.fn("getUtxosWithUnit")(function* (addressOrCredential: Address.Address | Credential.Credential, unit: Unit.Unit) {
-    const isAddress = typeof addressOrCredential === "string"
-    const queryPredicate = isAddress ? addressOrCredential : addressOrCredential.hash
+  Effect.fn("getUtxosWithUnit")(function* (addressOrCredential: CoreAddress.Address | Credential.Credential, unit: Unit.Unit) {
+    const isAddress = addressOrCredential instanceof CoreAddress.Address
+    const queryPredicate = isAddress ? CoreAddress.toBech32(addressOrCredential) : addressOrCredential.hash
     const { assetName, policyId } = Unit.fromUnit(unit)
     const pattern = `${kupoUrl}/matches/${queryPredicate}${isAddress ? "" : "/*"}?unspent&policy_id=${policyId}${assetName ? `&asset_name=${assetName}` : ""}`
 

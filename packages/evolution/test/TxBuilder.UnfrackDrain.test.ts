@@ -1,5 +1,6 @@
 import { describe, expect, it } from "@effect/vitest"
 
+import * as CoreAddress from "../src/core/Address.js"
 import * as CoreAssets from "../src/core/Assets/index.js"
 import * as CoreUTxO from "../src/core/UTxO.js"
 import type { TxBuilderConfig } from "../src/sdk/builders/TransactionBuilder.js"
@@ -144,13 +145,13 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
 
       const builder = makeTxBuilder(baseConfig)
         .payToAddress({
-          address: DESTINATION_ADDRESS,
+          address: CoreAddress.fromBech32(DESTINATION_ADDRESS),
           assets: CoreAssets.fromLovelace(1_000_000n) // 1 ADA minimum payment
         })
 
       // Act: Drain to output 0 with ADA subdivision
       const signBuilder = await builder.build({
-        changeAddress: SOURCE_ADDRESS,
+        changeAddress: CoreAddress.fromBech32(SOURCE_ADDRESS),
         availableUtxos: utxos,
         drainTo: 0,
         protocolParameters: PROTOCOL_PARAMS,
@@ -200,13 +201,13 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
 
       const builder = makeTxBuilder(baseConfig)
         .payToAddress({
-          address: DESTINATION_ADDRESS,
+          address: CoreAddress.fromBech32(DESTINATION_ADDRESS),
           assets: CoreAssets.fromLovelace(1_000_000n)
         })
 
       // Act: Drain with subdivision threshold of 100 ADA (total is 80 ADA, below threshold)
       const signBuilder = await builder.build({
-        changeAddress: SOURCE_ADDRESS,
+        changeAddress: CoreAddress.fromBech32(SOURCE_ADDRESS),
         availableUtxos: utxos,
         drainTo: 0,
         protocolParameters: PROTOCOL_PARAMS,
@@ -247,13 +248,13 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
       const builder = makeTxBuilder(baseConfig)
         .collectFrom({ inputs: utxos })
         .payToAddress({
-          address: DESTINATION_ADDRESS,
+          address: CoreAddress.fromBech32(DESTINATION_ADDRESS),
           assets: CoreAssets.fromLovelace(1_000_000n)
         })
 
       // Act: Drain with token bundling (no isolation or grouping)
       const signBuilder = await builder.build({
-        changeAddress: SOURCE_ADDRESS,
+        changeAddress: CoreAddress.fromBech32(SOURCE_ADDRESS),
         availableUtxos: utxos,
         drainTo: 0,
         protocolParameters: PROTOCOL_PARAMS,
@@ -288,13 +289,13 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
       const builder = makeTxBuilder(baseConfig)
         .collectFrom({ inputs: utxos })
         .payToAddress({
-          address: DESTINATION_ADDRESS,
+          address: CoreAddress.fromBech32(DESTINATION_ADDRESS),
           assets: CoreAssets.fromLovelace(1_000_000n)
         })
 
       // Act: Drain with fungible isolation
       const signBuilder = await builder.build({
-        changeAddress: SOURCE_ADDRESS,
+        changeAddress: CoreAddress.fromBech32(SOURCE_ADDRESS),
         availableUtxos: utxos,
         drainTo: 0,
         protocolParameters: PROTOCOL_PARAMS,
@@ -330,13 +331,13 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
       const builder = makeTxBuilder(baseConfig)
         .collectFrom({ inputs: utxos })
         .payToAddress({
-          address: DESTINATION_ADDRESS,
+          address: CoreAddress.fromBech32(DESTINATION_ADDRESS),
           assets: CoreAssets.fromLovelace(1_000_000n)
         })
 
       // Act: Drain with NFT policy grouping
       const signBuilder = await builder.build({
-        changeAddress: SOURCE_ADDRESS,
+        changeAddress: CoreAddress.fromBech32(SOURCE_ADDRESS),
         availableUtxos: utxos,
         drainTo: 0,
         protocolParameters: PROTOCOL_PARAMS,
@@ -372,13 +373,13 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
       const builder = makeTxBuilder(baseConfig)
         .collectFrom({ inputs: utxos })
         .payToAddress({
-          address: DESTINATION_ADDRESS,
+          address: CoreAddress.fromBech32(DESTINATION_ADDRESS),
           assets: CoreAssets.fromLovelace(1_000_000n)
         })
 
       // Act: Drain with full Unfrack.It optimization
       const signBuilder = await builder.build({
-        changeAddress: SOURCE_ADDRESS,
+        changeAddress: CoreAddress.fromBech32(SOURCE_ADDRESS),
         availableUtxos: utxos,
         drainTo: 0,
         protocolParameters: PROTOCOL_PARAMS,
@@ -428,13 +429,13 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
       const builder = makeTxBuilder(baseConfig)
         .collectFrom({ inputs: utxos })
         .payToAddress({
-          address: DESTINATION_ADDRESS,
+          address: CoreAddress.fromBech32(DESTINATION_ADDRESS),
           assets: CoreAssets.fromLovelace(1_000_000n)
         })
 
       // Act: Drain without any unfracking (standard consolidation)
       const signBuilder = await builder.build({
-        changeAddress: SOURCE_ADDRESS,
+        changeAddress: CoreAddress.fromBech32(SOURCE_ADDRESS),
         availableUtxos: utxos,
         drainTo: 0,
         // No unfrack options
@@ -467,13 +468,13 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
       const builder = makeTxBuilder(baseConfig)
         .collectFrom({ inputs: utxos })
         .payToAddress({
-          address: DESTINATION_ADDRESS,
+          address: CoreAddress.fromBech32(DESTINATION_ADDRESS),
           assets: CoreAssets.fromLovelace(1_000_000n)
         })
 
       // Act: Drain with empty token options (only ADA subdivision active)
       const signBuilder = await builder.build({
-        changeAddress: SOURCE_ADDRESS,
+        changeAddress: CoreAddress.fromBech32(SOURCE_ADDRESS),
         availableUtxos: utxos,
         drainTo: 0,
         protocolParameters: PROTOCOL_PARAMS,
@@ -521,13 +522,13 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
       const builder = makeTxBuilder(baseConfig)
         .collectFrom({ inputs: utxos })
         .payToAddress({
-          address: DESTINATION_ADDRESS,
+          address: CoreAddress.fromBech32(DESTINATION_ADDRESS),
           assets: CoreAssets.fromLovelace(10_000_000n) // 10 ADA payment
         })
 
       // Act: Drain with subdivision threshold much higher than leftover
       const signBuilder = await builder.build({
-        changeAddress: SOURCE_ADDRESS,
+        changeAddress: CoreAddress.fromBech32(SOURCE_ADDRESS),
         availableUtxos: utxos,
         drainTo: 0,
         protocolParameters: PROTOCOL_PARAMS,
@@ -560,17 +561,17 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
       const builder = makeTxBuilder(baseConfig)
         .collectFrom({ inputs: utxos })
         .payToAddress({
-          address: DESTINATION_ADDRESS,
+          address: CoreAddress.fromBech32(DESTINATION_ADDRESS),
           assets: CoreAssets.fromLovelace(5_000_000n) // First payment
         })
         .payToAddress({
-          address: DESTINATION_ADDRESS,
+          address: CoreAddress.fromBech32(DESTINATION_ADDRESS),
           assets: CoreAssets.fromLovelace(3_000_000n) // Second payment
         })
 
       // Act: Drain to first output with unfracking
       const signBuilder = await builder.build({
-        changeAddress: SOURCE_ADDRESS,
+        changeAddress: CoreAddress.fromBech32(SOURCE_ADDRESS),
         availableUtxos: utxos,
         drainTo: 0, // Drain into first payment output
         protocolParameters: PROTOCOL_PARAMS,
@@ -613,7 +614,7 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
       const builder = makeTxBuilder(baseConfig)
         .collectFrom({ inputs: utxos })
         .payToAddress({
-          address: DESTINATION_ADDRESS,
+          address: CoreAddress.fromBech32(DESTINATION_ADDRESS),
           assets: CoreAssets.fromLovelace(1_000_000n) // 1 ADA payment
         })
 
@@ -622,7 +623,7 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
       // Subdividing by [25, 25, 25, 25] would create 4 outputs of ~0.46 ADA each
       // which is BELOW minimum UTxO requirement of ~1.72 ADA
       const signBuilder = await builder.build({
-        changeAddress: SOURCE_ADDRESS,
+        changeAddress: CoreAddress.fromBech32(SOURCE_ADDRESS),
         availableUtxos: utxos,
         drainTo: 0,
         protocolParameters: PROTOCOL_PARAMS,
@@ -664,13 +665,13 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
       const builder = makeTxBuilder(baseConfig)
         .collectFrom({ inputs: utxos })
         .payToAddress({
-          address: DESTINATION_ADDRESS,
+          address: CoreAddress.fromBech32(DESTINATION_ADDRESS),
           assets: CoreAssets.fromLovelace(1_000_000n) // Minimal payment to trigger consolidation
         })
 
       // Act: Full wallet optimization
       const signBuilder = await builder.build({
-        changeAddress: SOURCE_ADDRESS,
+        changeAddress: CoreAddress.fromBech32(SOURCE_ADDRESS),
         availableUtxos: utxos,
         drainTo: 0,
         protocolParameters: PROTOCOL_PARAMS,
@@ -711,13 +712,13 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
       const builder = makeTxBuilder(baseConfig)
         .collectFrom({ inputs: utxos })
         .payToAddress({
-          address: DESTINATION_ADDRESS,
+          address: CoreAddress.fromBech32(DESTINATION_ADDRESS),
           assets: CoreAssets.fromLovelace(1_000_000n)
         })
 
       // Act: Migrate everything to destination with optimization
       const signBuilder = await builder.build({
-        changeAddress: SOURCE_ADDRESS,
+        changeAddress: CoreAddress.fromBech32(SOURCE_ADDRESS),
         availableUtxos: utxos,
         drainTo: 0,
         protocolParameters: PROTOCOL_PARAMS,

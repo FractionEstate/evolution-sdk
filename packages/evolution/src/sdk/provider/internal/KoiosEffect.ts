@@ -1,11 +1,11 @@
 import { FetchHttpClient } from "@effect/platform"
 import { Effect, pipe, Schedule, Schema } from "effect"
 
+import * as CoreAddress from "../../../core/Address.js"
 import * as CoreAssets from "../../../core/Assets/index.js"
 import * as Bytes from "../../../core/Bytes.js"
 import * as TransactionHash from "../../../core/TransactionHash.js"
 import type * as CoreUTxO from "../../../core/UTxO.js"
-import type * as Address from "../../Address.js"
 import type * as Credential from "../../Credential.js"
 import type * as Delegation from "../../Delegation.js"
 import type * as EvalRedeemer from "../../EvalRedeemer.js"
@@ -58,20 +58,29 @@ export const getProtocolParameters = (baseUrl: string, token?: string) =>
   })
 
 export const getUtxos =
-  (baseUrl: string, token?: string) => (addressOrCredential: Address.Address | Credential.Credential) =>
-    pipe(
-      _Koios.getUtxosEffect(baseUrl, addressOrCredential, token ? { Authorization: `Bearer ${token}` } : undefined),
+  (baseUrl: string, token?: string) => (addressOrCredential: CoreAddress.Address | Credential.Credential) => {
+    // Convert Core Address to bech32 string for API call
+    const addressStr = addressOrCredential instanceof CoreAddress.Address 
+      ? CoreAddress.toBech32(addressOrCredential) 
+      : addressOrCredential
+    return pipe(
+      _Koios.getUtxosEffect(baseUrl, addressStr, token ? { Authorization: `Bearer ${token}` } : undefined),
       Effect.timeout(10_000),
       Effect.catchAllCause(
         (cause) => new Provider.ProviderError({ cause, message: "Failed to fetch UTxOs from Koios" })
       )
     )
+  }
 
 export const getUtxosWithUnit =
   (baseUrl: string, token?: string) =>
-  (addressOrCredential: Address.Address | Credential.Credential, unit: Unit.Unit) =>
-    pipe(
-      _Koios.getUtxosEffect(baseUrl, addressOrCredential, token ? { Authorization: `Bearer ${token}` } : undefined),
+  (addressOrCredential: CoreAddress.Address | Credential.Credential, unit: Unit.Unit) => {
+    // Convert Core Address to bech32 string for API call
+    const addressStr = addressOrCredential instanceof CoreAddress.Address 
+      ? CoreAddress.toBech32(addressOrCredential) 
+      : addressOrCredential
+    return pipe(
+      _Koios.getUtxosEffect(baseUrl, addressStr, token ? { Authorization: `Bearer ${token}` } : undefined),
       Effect.map((utxos) =>
         utxos.filter((utxo) => {
           const units = CoreAssets.getUnits(utxo.assets)
@@ -83,6 +92,7 @@ export const getUtxosWithUnit =
         (cause) => new Provider.ProviderError({ cause, message: "Failed to fetch UTxOs with unit from Koios" })
       )
     )
+  }
 
 export const getUtxoByUnit = (baseUrl: string, token?: string) => (unit: Unit.Unit) =>
   pipe(

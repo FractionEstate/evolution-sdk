@@ -23,7 +23,7 @@ describe("TxBuilder Re-selection Loop", () => {
     maxTxSize: 16_384
   }
 
-  // Sample testnet addresses
+  // Sample testnet addresses (bech32 strings)
   const TESTNET_ADDRESSES = [
     "addr_test1qz2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgs68faae",
     "addr_test1qpw0djgj0x59ngrjvqthn7enhvruxnsavsw5th63la3mjel3tkc974sr23jmlzgq5zda4gtv8k9cy38756r9y3qgmkqqjz6aa7",
@@ -32,6 +32,7 @@ describe("TxBuilder Re-selection Loop", () => {
     "addr_test1qpm9q3v5gnvjwx7kw0ml7dxqxd6h9fqxgu2s7umd9je3c5s3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgslxdxms"
   ] as const
 
+  // Keep as bech32 strings - use CoreAddress.fromBech32() at point of use
   const CHANGE_ADDRESS = TESTNET_ADDRESSES[0]
   const RECEIVER_ADDRESS = TESTNET_ADDRESSES[1]
 
@@ -71,12 +72,12 @@ describe("TxBuilder Re-selection Loop", () => {
       })
 
       const builder = makeTxBuilder(baseConfig).payToAddress({
-        address: RECEIVER_ADDRESS,
+        address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
         assets: CoreAssets.fromLovelace(2_000_000n)
       })
 
       const signBuilder = await builder.build({
-        changeAddress: CHANGE_ADDRESS,
+        changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
         availableUtxos: [utxo],
         protocolParameters: PROTOCOL_PARAMS
       })
@@ -125,13 +126,13 @@ describe("TxBuilder Re-selection Loop", () => {
       })
 
       const builder = makeTxBuilder(baseConfig).payToAddress({
-        address: RECEIVER_ADDRESS,
+        address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
         assets: CoreAssets.fromLovelace(2_000_000n) // 2 ADA payment
       })
 
       const signBuilder = await builder.build({
         drainTo: 0,
-        changeAddress: CHANGE_ADDRESS,
+        changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
         availableUtxos: [utxo1, utxo2, utxo3],
         protocolParameters: PROTOCOL_PARAMS
       })
@@ -165,13 +166,13 @@ describe("TxBuilder Re-selection Loop", () => {
       })
 
       const builder = makeTxBuilder(baseConfig).payToAddress({
-        address: RECEIVER_ADDRESS,
+        address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
         assets: CoreAssets.fromLovelace(2_000_000n) // Requesting 2 ADA
       })
 
       await expect(
         builder.build({
-          changeAddress: CHANGE_ADDRESS,
+          changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
           availableUtxos: [utxo],
           protocolParameters: PROTOCOL_PARAMS
         })
@@ -192,13 +193,13 @@ describe("TxBuilder Re-selection Loop", () => {
       })
 
       const builder = makeTxBuilder(baseConfig).payToAddress({
-        address: RECEIVER_ADDRESS,
+        address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
         assets: CoreAssets.fromLovelace(paymentAmount)
       })
 
       const signBuilder = await builder.build({
         drainTo: 0,
-        changeAddress: CHANGE_ADDRESS,
+        changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
         availableUtxos: [utxo],
         protocolParameters: PROTOCOL_PARAMS
       })
@@ -240,7 +241,7 @@ describe("TxBuilder Re-selection Loop", () => {
       const utxoWithTokens = new CoreUTxO.UTxO({ ...utxo, assets })
 
       const builder = makeTxBuilder(baseConfig).payToAddress({
-        address: RECEIVER_ADDRESS,
+        address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
         // Payment leaves leftover + token
         // 3_000_000 - 2_000_000 - fee(~170k) = ~830k leftover + token
         assets: CoreAssets.fromLovelace(2_000_000n)
@@ -250,7 +251,7 @@ describe("TxBuilder Re-selection Loop", () => {
       // Expected: Transaction succeeds with change output preserving native asset
       const signBuilder = await builder.build({
         drainTo: 0,
-        changeAddress: CHANGE_ADDRESS,
+        changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
         availableUtxos: [utxoWithTokens],
         protocolParameters: PROTOCOL_PARAMS
       })
@@ -298,12 +299,12 @@ describe("TxBuilder Re-selection Loop", () => {
       let paymentAssets = CoreAssets.fromLovelace(2_000_000n)
       paymentAssets = CoreAssets.addByHex(paymentAssets, TOKEN_POLICY, TOKEN_NAME, 50n)
       const builder = makeTxBuilder(baseConfig).payToAddress({
-        address: RECEIVER_ADDRESS,
+        address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
         assets: paymentAssets
       })
 
       const signBuilder = await builder.build({
-        changeAddress: CHANGE_ADDRESS,
+        changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
         availableUtxos: [utxo1, utxo2],
         protocolParameters: PROTOCOL_PARAMS
       })
@@ -366,13 +367,13 @@ describe("TxBuilder Re-selection Loop", () => {
       let paymentAssets = CoreAssets.fromLovelace(2_000_000n)
       paymentAssets = CoreAssets.addByHex(paymentAssets, TOKEN_POLICY, TOKEN_NAME, 100n)
       const builder = makeTxBuilder(builderConfig).payToAddress({
-        address: RECEIVER_ADDRESS,
+        address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
         assets: paymentAssets // Requires tokens!
       })
 
       const signBuilder = await builder.build({
         availableUtxos: [utxo1, utxo2],
-        changeAddress: CHANGE_ADDRESS,
+        changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
         protocolParameters: PROTOCOL_PARAMS
       })
       const tx = await signBuilder.toTransaction()
@@ -410,12 +411,12 @@ describe("TxBuilder Re-selection Loop", () => {
       )
 
       const builder = makeTxBuilder(baseConfig).payToAddress({
-        address: RECEIVER_ADDRESS,
+        address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
         assets: CoreAssets.fromLovelace(5_000_000n) // 5 ADA
       })
 
       const signBuilder = await builder.build({
-        changeAddress: CHANGE_ADDRESS,
+        changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
         availableUtxos: utxos,
         protocolParameters: PROTOCOL_PARAMS
       })
@@ -455,12 +456,12 @@ describe("TxBuilder Re-selection Loop", () => {
       })
 
       const builder = makeTxBuilder(baseConfig).payToAddress({
-        address: RECEIVER_ADDRESS,
+        address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
         assets: CoreAssets.fromLovelace(6_000_000n)
       })
 
       const signBuilder = await builder.build({
-        changeAddress: CHANGE_ADDRESS,
+        changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
         availableUtxos: [utxo1, utxo2],
         protocolParameters: PROTOCOL_PARAMS
       })
@@ -514,7 +515,7 @@ describe("TxBuilder Re-selection Loop", () => {
       })
 
       const builder = makeTxBuilder({ ...baseConfig }).payToAddress({
-        address: RECEIVER_ADDRESS,
+        address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
         // Request 280M to force selection of 140+ UTxOs (each 2M), which will create 140+ witnesses
         // This will exceed the 16KB transaction size limit
         assets: CoreAssets.fromLovelace(280_000_000n)
@@ -524,7 +525,7 @@ describe("TxBuilder Re-selection Loop", () => {
       // With 140+ unique addresses selected, we get 140+ fake witnesses pushing size over 16384 bytes
       await expect(
         builder.build({
-          changeAddress: CHANGE_ADDRESS,
+          changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
           availableUtxos: utxos,
           protocolParameters: PROTOCOL_PARAMS
         })
@@ -556,7 +557,7 @@ describe("TxBuilder Re-selection Loop", () => {
       ]
 
       const builder = makeTxBuilder(baseConfig).payToAddress({
-        address: RECEIVER_ADDRESS,
+        address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
         assets: CoreAssets.fromLovelace(2_500_000n) // 2.5 ADA payment
       })
 
@@ -564,7 +565,7 @@ describe("TxBuilder Re-selection Loop", () => {
       // Use drainTo since the change will be small (33K < minUTxO)
       const signBuilder = await builder.build({
         drainTo: 0,
-        changeAddress: CHANGE_ADDRESS,
+        changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
         availableUtxos: utxos,
         protocolParameters: PROTOCOL_PARAMS
       })
@@ -615,13 +616,13 @@ describe("TxBuilder Re-selection Loop", () => {
       // Each UTxO contributes 350K, minus ~2K fee overhead = ~348K net
       // To get 3M payment, need ~9 UTxOs initially, but fee will increase
       const builder = makeTxBuilder(baseConfig).payToAddress({
-        address: RECEIVER_ADDRESS,
+        address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
         assets: CoreAssets.fromLovelace(3_000_000n) // 3 ADA
       })
 
       // Build should succeed after multiple reselection attempts
       const signBuilder = await builder.build({
-        changeAddress: CHANGE_ADDRESS,
+        changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
         availableUtxos: tinyUtxos,
         protocolParameters: PROTOCOL_PARAMS
       })
@@ -665,12 +666,12 @@ describe("TxBuilder Re-selection Loop", () => {
       ]
 
       const builder = makeTxBuilder(baseConfig).payToAddress({
-        address: RECEIVER_ADDRESS,
+        address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
         assets: CoreAssets.fromLovelace(2_500_000n) // 2.5 ADA - requires reselection
       })
 
       const signBuilder = await builder.build({
-        changeAddress: CHANGE_ADDRESS,
+        changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
         availableUtxos: utxos,
         protocolParameters: PROTOCOL_PARAMS
       })
@@ -722,12 +723,12 @@ describe("TxBuilder Reselection After Change", () => {
     })
 
     const builder = makeTxBuilder(baseConfig).payToAddress({
-      address: RECEIVER_ADDRESS,
+      address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
       assets: CoreAssets.fromLovelace(5_000_000n) // 5 ADA payment
     })
 
     const signBuilder = await builder.build({
-      changeAddress: CHANGE_ADDRESS,
+      changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
       availableUtxos: [largeUtxo],
       protocolParameters: PROTOCOL_PARAMS
     })
@@ -778,12 +779,12 @@ describe("TxBuilder Reselection After Change", () => {
     })
 
     const builder = makeTxBuilder(baseConfig).payToAddress({
-      address: RECEIVER_ADDRESS,
+      address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
       assets: CoreAssets.fromLovelace(3_500_000n) // Needs 2 UTxOs
     })
 
     const signBuilder = await builder.build({
-      changeAddress: CHANGE_ADDRESS,
+      changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
       availableUtxos: [utxo1, utxo2, utxo3],
       protocolParameters: PROTOCOL_PARAMS
     })
@@ -821,12 +822,12 @@ describe("TxBuilder Reselection After Change", () => {
     const utxoWithAssets = new CoreUTxO.UTxO({ ...utxoBase, assets })
 
     const builder = makeTxBuilder(baseConfig).payToAddress({
-      address: RECEIVER_ADDRESS,
+      address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
       assets: CoreAssets.fromLovelace(3_000_000n) // Send only lovelace
     })
 
     const signBuilder = await builder.build({
-      changeAddress: CHANGE_ADDRESS,
+      changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
       availableUtxos: [utxoWithAssets],
       protocolParameters: PROTOCOL_PARAMS
     })
@@ -871,12 +872,12 @@ describe("TxBuilder Reselection After Change", () => {
     })
 
     const builder = makeTxBuilder(baseConfig).payToAddress({
-      address: RECEIVER_ADDRESS,
+      address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
       assets: CoreAssets.fromLovelace(3_000_000n)
     })
 
     const signBuilder = await builder.build({
-      changeAddress: CHANGE_ADDRESS,
+      changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
       availableUtxos: [utxo1, utxo2],
       protocolParameters: PROTOCOL_PARAMS
     })

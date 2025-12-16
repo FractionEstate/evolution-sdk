@@ -30,8 +30,9 @@ describe("Unfrack UTxO Optimization", () => {
   // ============================================================================
 
   // Test constants for calculateTokenBundles
-  const testAddress =
+  const testAddressBech32 =
     "addr_test1qz2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3jcu5d8ps7zex2k2xt3uqxgjqnnj83ws8lhrn648jjxtwq2ytjqp"
+  const testAddress = Address.fromBech32(testAddressBech32)
   const testCoinsPerUtxoByte = 4310n // Mainnet protocol parameter
 
   // Helper function to convert string to hex (for asset names)
@@ -503,8 +504,9 @@ describe("Unfrack UTxO Optimization", () => {
   // ============================================================================
 
   describe("Unfracked Change Output Creation", () => {
-    const changeTestAddress =
+    const changeTestAddressBech32 =
       "addr_test1qz2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3jcu5d8ps7zex2k2xt3uqxgjqnnj83ws8lhrn648jjxtwq2ytjqp"
+    const changeTestAddress = Address.fromBech32(changeTestAddressBech32)
 
     it.effect("should create single output for ADA-only change", () =>
       Effect.gen(function* () {
@@ -531,7 +533,7 @@ describe("Unfrack UTxO Optimization", () => {
         expect(outputs).toBeDefined()
         expect(outputs).toHaveLength(1)
         expect(outputs![0].assets.lovelace).toBe(50_000000n)
-        expect(Address.toBech32(outputs![0].address)).toBe(changeTestAddress)
+        expect(Address.toBech32(outputs![0].address)).toBe(changeTestAddressBech32)
       })
     )
 
