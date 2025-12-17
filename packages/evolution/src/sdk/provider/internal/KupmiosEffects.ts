@@ -1,6 +1,7 @@
 import { FetchHttpClient } from "@effect/platform"
 import { Array as _Array, Effect, pipe, Schedule, Schema } from "effect"
 
+import * as Bytes from "../../../core/Bytes.js"
 import * as CoreAddress from "../../../core/Address.js"
 import * as CoreAssets from "../../../core/Assets/index.js"
 import * as PlutusData from "../../../core/Data.js"
@@ -89,7 +90,7 @@ const retrieveDatumEffect =
           Effect.catchAll((cause) => new ProviderError({ cause, message: "Failed to retrieve datum" }))
         )
       } else if (datum_type === "hash" && datum_hash) {
-        const hashBytes = new Uint8Array(Buffer.from(datum_hash, "hex"))
+        const hashBytes = Bytes.fromHex(datum_hash)
         return new DatumOption.DatumHash({ hash: hashBytes })
       }
 
@@ -121,7 +122,7 @@ const getScriptEffect =
                 break
             }
             // Convert hex script to bytes and wrap in ScriptRef
-            const scriptBytes = new Uint8Array(Buffer.from(encodedScript, "hex"))
+            const scriptBytes = Bytes.fromHex(encodedScript)
             return new ScriptRef.ScriptRef({ bytes: scriptBytes })
           }),
           Effect.catchAll((cause) => new ProviderError({ cause, message: "Failed to get script" }))

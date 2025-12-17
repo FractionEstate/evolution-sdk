@@ -1,6 +1,7 @@
 import { Effect as Eff, Equal, FastCheck, Hash, Inspectable, ParseResult, Schema } from "effect"
 
 import * as AssetName from "../AssetName.js"
+import * as Bytes from "../Bytes.js"
 import * as CBOR from "../CBOR.js"
 import * as Coin from "../Coin.js"
 import * as MultiAsset from "../MultiAsset.js"
@@ -107,12 +108,12 @@ export const fromUnit = (
     const assetNameHex = dotIndex === -1 ? "" : unit.slice(dotIndex + 1)
     
     // Decode policy ID from hex (28 bytes = 56 hex chars)
-    const policyIdBytes = new Uint8Array(Buffer.from(policyIdHex, "hex"))
+    const policyIdBytes = Bytes.fromHex(policyIdHex)
     const policyId = new PolicyId.PolicyId({ hash: policyIdBytes })
     
     // Decode asset name from hex (empty string yields empty bytes)
     const assetNameBytes = assetNameHex 
-      ? new Uint8Array(Buffer.from(assetNameHex, "hex"))
+      ? Bytes.fromHex(assetNameHex)
       : new Uint8Array(0)
     const assetName = new AssetName.AssetName({ bytes: assetNameBytes })
     

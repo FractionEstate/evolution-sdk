@@ -5,6 +5,7 @@
 
 import { Effect, Schema } from "effect"
 
+import * as Bytes from "../../../core/Bytes.js"
 import * as CoreAddress from "../../../core/Address.js"
 import type * as CoreUTxO from "../../../core/UTxO.js"
 import type * as Credential from "../../Credential.js"
@@ -169,7 +170,7 @@ export const submitTx = (baseUrl: string, apiKey: string, turboSubmit?: boolean)
     const endpoint = turboSubmit ? "/turbo/submit" : "/submit"
     
     // Convert hex string to Uint8Array for submission
-    const txBytes = new Uint8Array(Buffer.from(cbor, "hex"))
+    const txBytes = Bytes.fromHex(cbor)
     
     const response = yield* HttpUtils.postUint8Array(
       `${baseUrl}${endpoint}`,

@@ -5,6 +5,7 @@ import type * as Array from "effect/Array"
 // Core imports
 import type * as CoreAddress from "../../core/Address.js"
 import * as CoreAssets from "../../core/Assets/index.js"
+import * as Bytes from "../../core/Bytes.js"
 import * as Bytes32 from "../../core/Bytes32.js"
 import * as PlutusData from "../../core/Data.js"
 import * as DatumOption from "../../core/DatumOption.js"
@@ -825,7 +826,7 @@ export const buildFakeWitnessSet = (
     for (const utxo of inputUtxos) {
       const keyHash = extractPaymentKeyHashFromCore(utxo.address)
       if (keyHash) {
-        const keyHashHex = Buffer.from(keyHash).toString("hex")
+        const keyHashHex = Bytes.toHex(keyHash)
         if (!keyHashesSet.has(keyHashHex)) {
           keyHashesSet.add(keyHashHex)
           keyHashes.push(keyHash)
@@ -854,7 +855,7 @@ export const buildFakeWitnessSet = (
             // Fill with unique pattern: 0xFF prefix + counter to distinguish from real keys
             dummyKeyHash[0] = 0xFF
             dummyKeyHash[1] = (keyHashesSet.size + i) & 0xFF
-            const dummyHashHex = Buffer.from(dummyKeyHash).toString("hex")
+            const dummyHashHex = Bytes.toHex(dummyKeyHash)
             
             // Only add if not already in the set
             if (!keyHashesSet.has(dummyHashHex)) {

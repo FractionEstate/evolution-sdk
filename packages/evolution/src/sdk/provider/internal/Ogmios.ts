@@ -1,6 +1,7 @@
 import type { Record } from "effect"
 import { Schema } from "effect"
 
+import * as Bytes from "../../../core/Bytes.js"
 import * as CoreAddress from "../../../core/Address.js"
 import * as AssetName from "../../../core/AssetName.js"
 import type * as CoreAssets from "../../../core/Assets/index.js"
@@ -185,7 +186,7 @@ export const toOgmiosUTxOs = (utxos: Array<CoreUTxO.UTxO> | undefined): Array<Og
   const toOgmiosDatum = (datumOption: DatumOption.DatumOption | undefined): { datumHash?: string; datum?: string } => {
     if (!datumOption) return {}
     if (datumOption._tag === "DatumHash") {
-      return { datumHash: Buffer.from(datumOption.hash).toString("hex") }
+      return { datumHash: Bytes.toHex(datumOption.hash) }
     }
     if (datumOption._tag === "InlineDatum") {
       // Convert PlutusData to hex CBOR
