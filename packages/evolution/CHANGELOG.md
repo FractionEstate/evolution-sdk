@@ -1,5 +1,71 @@
 # @evolution-sdk/evolution
 
+## 0.3.4
+
+### Patch Changes
+
+- [#101](https://github.com/IntersectMBO/evolution-sdk/pull/101) [`aaf0882`](https://github.com/IntersectMBO/evolution-sdk/commit/aaf0882e280fad9769410a81419ebf1c6af48785) Thanks [@solidsnakedev](https://github.com/solidsnakedev)! - ### Core Module Enhancements
+
+  **Mint Module**
+  - Added `Mint.getByHex()` and `Mint.getAssetsByPolicyHex()` utilities for hex-based lookups
+  - Fixed `Mint.insert`, `removePolicy`, `removeAsset`, and `get` to use content-based equality (`Equal.equals`) instead of reference equality for PolicyId/AssetName lookups
+
+  **Fee Calculation**
+  - Fixed `calculateFeeIteratively` to include mint field in fee calculation via TxContext access
+  - Removed unnecessary 5000n fee buffer that caused fee overpayment
+
+  **Transaction Builder**
+  - Added `.mint()` method to TransactionBuilder for native token minting/burning
+  - `.attachScript()` now accepts `{ script: CoreScript }` parameter format
+  - Improved type safety by using Core types directly instead of SDK wrappers
+
+  ### Devnet Package
+
+  **Test Infrastructure**
+  - Added `TxBuilder.Mint.test.ts` with devnet submit tests for minting and burning
+  - Updated `TxBuilder.Scripts.test.ts` to use Core types (`PlutusV2.PlutusV2`) instead of SDK format
+  - Refactored `createCoreTestUtxo` helper to accept Core `Script` types directly
+  - Removed unused `createTestUtxo` (SDK format) helper
+  - Added `Genesis.calculateUtxosFromConfig()` for retrieving initial UTxOs from genesis config
+  - Replaced all `Buffer.from().toString("hex")` with `Text.toHex()` in tests
+
+  ### Breaking Changes
+  - `attachScript()` now requires `{ script: ... }` object format instead of passing script directly
+  - Test helpers now use Core types exclusively
+
+- [#103](https://github.com/IntersectMBO/evolution-sdk/pull/103) [`65b7259`](https://github.com/IntersectMBO/evolution-sdk/commit/65b7259b8b250b87d5420bca6458a5e862ba9406) Thanks [@solidsnakedev](https://github.com/solidsnakedev)! - ### Remove Buffer Usage from Source Code
+
+  Replaced all `Buffer.from()` usage with `Bytes.fromHex()` and `Bytes.toHex()` from the core module for better cross-platform compatibility.
+
+  **Files Updated:**
+  - `TxBuilderImpl.ts` - Use `Bytes.toHex()` for key hash hex conversion in `buildFakeWitnessSet`
+  - `Assets/index.ts` - Use `Bytes.fromHex()` for policy ID and asset name decoding
+  - `MaestroEffect.ts` - Use `Bytes.fromHex()` for transaction CBOR conversion
+  - `Ogmios.ts` - Use `Bytes.toHex()` for datum hash hex conversion
+  - `KupmiosEffects.ts` - Use `Bytes.fromHex()` for datum hash and script bytes decoding
+
+- [#104](https://github.com/IntersectMBO/evolution-sdk/pull/104) [`c26391a`](https://github.com/IntersectMBO/evolution-sdk/commit/c26391a3783a5dca95b2ab1b2af95c98c62e4966) Thanks [@solidsnakedev](https://github.com/solidsnakedev)! - ### PlutusV3 Minting Support
+  - Add PlutusV3 script minting with automatic script evaluation via Ogmios
+  - Add `mintAssets` builder method for Plutus script-based minting policies
+  - Add `attachScript` builder method for attaching Plutus scripts to transactions
+  - Support both minting (positive amounts) and burning (negative amounts)
+
+  ### Redeemer API Improvements
+  - **Breaking**: Change `redeemer` parameter type from `string` (CBOR hex) to `Data.Data`
+    - Affects `collectFrom()` and `mintAssets()` builder methods
+    - Provides type-safe redeemer construction without manual CBOR encoding
+    - Example: `redeemer: Data.constr(0n, [Data.int(1n)])` instead of hex strings
+
+  ### Core Module Additions
+  - Add `Redeemers` module with Conway CDDL-compliant encoding (array format)
+  - Refactor `hashScriptData` to use proper module encoders for redeemers and datums
+  - Add `Redeemers.toCBORBytes()` for script data hash computation
+
+  ### Internal Improvements
+  - Store `PlutusData.Data` directly in builder state instead of CBOR hex strings
+  - Remove redundant CBOR hex encoding/decoding in transaction assembly
+  - Add PlutusV3 minting devnet tests with real script evaluation
+
 ## 0.3.3
 
 ### Patch Changes
