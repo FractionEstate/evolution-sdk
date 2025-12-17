@@ -66,8 +66,7 @@ export const createCollectFromProgram = (params: CollectFromParams) =>
           const inputKey = UTxO.toOutRefString(utxo)
           newRedeemers.set(inputKey, {
             tag: "spend",
-            data: params.redeemer!, // PlutusData CBOR hex
-            // exUnits will be filled by script evaluator during build phase
+            data: params.redeemer!,
             exUnits: undefined
           })
         })

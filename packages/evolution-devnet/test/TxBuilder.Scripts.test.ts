@@ -161,7 +161,7 @@ describe("TxBuilder Script Handling", () => {
     })
 
     // Create redeemer
-    const redeemerData = Data.toCBORHex(Data.constr(0n, [Data.bytearray("48656c6c6f2c20576f726c6421")]))
+    const redeemerData = Data.constr(0n, [Data.bytearray("48656c6c6f2c20576f726c6421")])
 
     const builder = makeTxBuilder(baseConfig)
       .collectFrom({
@@ -240,7 +240,7 @@ describe("TxBuilder Script Handling", () => {
     })
 
     // Create redeemer
-    const redeemerData = Data.toCBORHex(Data.constr(0n, [Data.bytearray("48656c6c6f2c20576f726c6421")]))
+    const redeemerData = Data.constr(0n, [Data.bytearray("48656c6c6f2c20576f726c6421")])
 
     const builder = makeTxBuilder(baseConfig)
       .collectFrom({
@@ -334,7 +334,7 @@ describe("TxBuilder Script Handling", () => {
     })
 
     // Create redeemer
-    const redeemerData = Data.toCBORHex(Data.constr(0n, [Data.bytearray("48656c6c6f2c20576f726c6421")]))
+    const redeemerData = Data.constr(0n, [Data.bytearray("48656c6c6f2c20576f726c6421")])
 
     const builder = makeTxBuilder(baseConfig)
       .collectFrom({
@@ -393,7 +393,7 @@ describe("TxBuilder Script Handling", () => {
     // Total available: 4.5 ADA, but need 5 ADA
 
     // Create redeemer
-    const redeemerData = Data.toCBORHex(Data.constr(0n, [Data.bytearray("48656c6c6f2c20576f726c6421")]))
+    const redeemerData = Data.constr(0n, [Data.bytearray("48656c6c6f2c20576f726c6421")])
 
     const builder = makeTxBuilder(baseConfig)
       .collectFrom({
@@ -452,7 +452,7 @@ describe("TxBuilder Script Handling", () => {
     })
 
     // Create redeemer
-    const redeemerData = Data.toCBORHex(Data.constr(0n, [Data.bytearray("48656c6c6f2c20576f726c6421")]))
+    const redeemerData = Data.constr(0n, [Data.bytearray("48656c6c6f2c20576f726c6421")])
 
     const builder = makeTxBuilder(baseConfig)
       .collectFrom({
@@ -521,7 +521,7 @@ describe("TxBuilder Script Handling", () => {
     })
 
     // Create redeemer
-    const redeemerData = Data.toCBORHex(Data.constr(0n, [Data.bytearray("48656c6c6f2c20576f726c6421")]))
+    const redeemerData = Data.constr(0n, [Data.bytearray("48656c6c6f2c20576f726c6421")])
 
     const builder = makeTxBuilder(baseConfig)
       .collectFrom({
@@ -603,7 +603,7 @@ describe("TxBuilder Script Handling", () => {
     })
 
     // Create redeemer
-    const redeemerData = Data.toCBORHex(Data.constr(0n, [Data.bytearray("48656c6c6f2c20576f726c6421")]))
+    const redeemerData = Data.constr(0n, [Data.bytearray("48656c6c6f2c20576f726c6421")])
 
     const builder = makeTxBuilder(baseConfig)
       .collectFrom({
@@ -972,7 +972,7 @@ describe("TxBuilder Script Handling", () => {
     })
 
     // Create redeemer
-    const redeemerData = Data.toCBORHex(Data.constr(0n, [Data.bytearray("48656c6c6f2c20576f726c6421")]))
+    const redeemerData = Data.constr(0n, [Data.bytearray("48656c6c6f2c20576f726c6421")])
 
     const builder = makeTxBuilder(baseConfig)
       .collectFrom({
@@ -1047,7 +1047,7 @@ describe("TxBuilder Script Handling", () => {
     })
 
     // Create redeemer
-    const redeemerData = Data.toCBORHex(Data.constr(0n, [Data.bytearray("48656c6c6f2c20576f726c6421")]))
+    const redeemerData = Data.constr(0n, [Data.bytearray("48656c6c6f2c20576f726c6421")])
 
     const builder = makeTxBuilder(baseConfig)
       .collectFrom({
@@ -1108,7 +1108,7 @@ describe("TxBuilder Script Handling", () => {
       })
     )
 
-    const redeemerData = Data.toCBORHex(Data.constr(0n, [Data.bytearray("48656c6c6f2c20576f726c6421")]))
+    const redeemerData = Data.constr(0n, [Data.bytearray("48656c6c6f2c20576f726c6421")])
 
     const builder = makeTxBuilder(baseConfig)
       .collectFrom({

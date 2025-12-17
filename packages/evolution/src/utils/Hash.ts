@@ -1,5 +1,4 @@
 import { blake2b } from "@noble/hashes/blake2"
-import { Schema } from "effect"
 
 import * as AuxiliaryData from "../core/AuxiliaryData.js"
 import * as AuxiliaryDataHash from "../core/AuxiliaryDataHash.js"
@@ -8,6 +7,7 @@ import * as CostModel from "../core/CostModel.js"
 import * as Data from "../core/Data.js"
 import * as DatumOption from "../core/DatumOption.js"
 import * as Redeemer from "../core/Redeemer.js"
+import * as Redeemers from "../core/Redeemers.js"
 import * as ScriptDataHash from "../core/ScriptDataHash.js"
 import * as TransactionBody from "../core/TransactionBody.js"
 import * as TransactionHash from "../core/TransactionHash.js"
@@ -95,55 +95,84 @@ export const hashTransaction = (body: TransactionBody.TransactionBody): Transact
  * script_data_hash = hash32
  * ```
  */
+
+/**
+ * Encode an array of datums as tag(258) set.
+ * Each datum is encoded individually, then wrapped in a definite-length array with tag 258.
+ */
+const encodeDatumsTaggedSet = (
+  datums: ReadonlyArray<Data.Data>,
+  options: CBOR.CodecOptions = CBOR.CML_DATA_DEFAULT_OPTIONS
+): Uint8Array => {
+  const items = datums.map((d) => Data.toCBORBytes(d, options))
+  const arr = CBOR.encodeArrayAsDefinite(items)
+  return CBOR.encodeTaggedValue(258, arr)
+}
+
+/**
+ * Concatenate multiple Uint8Arrays into one.
+ */
+const concatBytes = (...arrays: ReadonlyArray<Uint8Array>): Uint8Array => {
+  const totalLen = arrays.reduce((sum, arr) => sum + arr.length, 0)
+  const result = new Uint8Array(totalLen)
+  let offset = 0
+  for (const arr of arrays) {
+    result.set(arr, offset)
+    offset += arr.length
+  }
+  return result
+}
+
+/**
+ * Format for encoding redeemers in the script data hash.
+ *
+ * - "array": Legacy format `[ + redeemer ]` (Shelley-Babbage)
+ * - "map": Conway format `{ + [tag, index] => [data, ex_units] }`
+ */
+export type RedeemersFormat = "array" | "map"
+
+/**
+ * Compute script_data_hash using standard module encoders.
+ *
+ * The payload format per CDDL spec is raw concatenation (not a CBOR structure):
+ * ```
+ * redeemers_bytes || datums_bytes || language_views_bytes
+ * ```
+ */
 export const hashScriptData = (
   redeemers: ReadonlyArray<Redeemer.Redeemer>,
   costModels: CostModel.CostModels,
-  datums?: ReadonlyArray<Data.Data>
+  datums?: ReadonlyArray<Data.Data>,
+  format: RedeemersFormat = "array",
+  options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS
 ): ScriptDataHash.ScriptDataHash => {
-  // Helper: build tag(258) bytes around a definite-length array of datum bytes
-  // Each datum is encoded using Data.toCBORBytes (which uses CML_DATA_DEFAULT_OPTIONS),
-  // while the outer array is encoded as a definite-length CBOR array for stability.
-  const buildDatumsSetBytes = (ds: ReadonlyArray<Data.Data>): Uint8Array => {
-    // Pre-encode each datum using Data's encoding
-    const items = ds.map((d) => Data.toCBORBytes(d))
-    // Use CBOR helper to build definite-length array
-    const arr = CBOR.encodeArrayAsDefinite(items)
-    // Wrap with tag(258) using CBOR helper
-    return CBOR.encodeTaggedValue(258, arr)
-  }
-  // 1) Encode redeemers to CBOR values via CDDL
-  const encodeRedeemer = Schema.encodeSync(Redeemer.FromCDDL)
-  const redeemersCbor = redeemers.map((r) => encodeRedeemer(r))
+  const hasDatums = Array.isArray(datums) && datums.length > 0
 
-  // 2) Encode optional datums to CBOR values via CDDL (if provided and non-empty)
-  //    Note: CML treats empty datums array as "no datums provided" (undefined)
-  const hasDatums = Array.isArray(datums) && datums.length > 0 // Only include datums if array is non-empty
-
-  // 3) Get language_views encoding using CML's exact method
-  //    This handles PlutusV1 indefinite length bug and PlutusV2/V3 definite length
+  // Language views encoding (handles PlutusV1 indefinite-length quirk per spec)
   const langViewsBytes = CostModel.languageViewsEncoding(costModels)
 
-  // 4) Build payload per CML's exact algorithm
   let payload: Uint8Array
 
   if (hasDatums && redeemers.length === 0) {
     // Special case (CDDL): [ A0 | tag(258) datums | A0 ]
-    const datumsSetBytes = buildDatumsSetBytes(datums)
-    const totalLen = 1 + datumsSetBytes.length + 1
-    payload = new Uint8Array(totalLen)
-    payload.set([0xa0], 0) // Empty map
-    payload.set(datumsSetBytes, 1)
-    payload.set([0xa0], 1 + datumsSetBytes.length) // Empty map
+    const datumsBytes = encodeDatumsTaggedSet(datums)
+    payload = concatBytes(
+      new Uint8Array([0xa0]), // Empty map
+      datumsBytes,
+      new Uint8Array([0xa0]) // Empty map
+    )
   } else {
     // Normal case: [ redeemers | datums | language_views ]
-    const redeemersBytes = CBOR.internalEncodeSync(redeemersCbor, CBOR.CML_DEFAULT_OPTIONS)
-    const datumsSetBytes = hasDatums ? buildDatumsSetBytes(datums) : undefined
+    const redeemersCollection = new Redeemers.Redeemers({ values: [...redeemers] })
+    const redeemersBytes =
+      format === "map"
+        ? Redeemers.toCBORBytesMap(redeemersCollection, options)
+        : Redeemers.toCBORBytes(redeemersCollection, options)
+    const datumsBytes = hasDatums ? encodeDatumsTaggedSet(datums) : undefined
 
-    const totalLen = redeemersBytes.length + (datumsSetBytes ? datumsSetBytes.length : 0) + langViewsBytes.length
-    payload = new Uint8Array(totalLen)
-    payload.set(redeemersBytes, 0)
-    if (datumsSetBytes) payload.set(datumsSetBytes, redeemersBytes.length)
-    payload.set(langViewsBytes, redeemersBytes.length + (datumsSetBytes ? datumsSetBytes.length : 0))
+    payload = datumsBytes
+      ? concatBytes(redeemersBytes, datumsBytes, langViewsBytes)
+      : concatBytes(redeemersBytes, langViewsBytes)
   }
 
   const digest = blake2b(payload, { dkLen: 32 })

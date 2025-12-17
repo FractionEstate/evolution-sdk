@@ -31,6 +31,7 @@ import type { Either } from "effect/Either"
 import type * as CoreAddress from "../../core/Address.js"
 import * as CoreAssets from "../../core/Assets/index.js"
 import type * as Coin from "../../core/Coin.js"
+import type * as PlutusData from "../../core/Data.js"
 import type * as Mint from "../../core/Mint.js"
 import type * as Network from "../../core/Network.js"
 import type * as CoreScript from "../../core/Script.js"
@@ -131,7 +132,9 @@ const resolveProtocolParameters = (
         minFeeCoefficient: BigInt(params.minFeeA),
         minFeeConstant: BigInt(params.minFeeB),
         coinsPerUtxoByte: params.coinsPerUtxoByte,
-        maxTxSize: params.maxTxSize
+        maxTxSize: params.maxTxSize,
+        priceMem: params.priceMem,
+        priceStep: params.priceStep
       })
     )
   }
@@ -1179,7 +1182,7 @@ export interface TxBuilderState {
  */
 export interface RedeemerData {
   readonly tag: "spend" | "mint" | "cert" | "reward"
-  readonly data: string // PlutusData CBOR hex
+  readonly data: PlutusData.Data
   readonly exUnits?: {
     // Optional: from script evaluation
     readonly mem: bigint

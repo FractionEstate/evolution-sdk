@@ -1,5 +1,6 @@
 import type * as CoreAddress from "../../../core/Address.js"
 import type * as CoreAssets from "../../../core/Assets/index.js"
+import type * as Data from "../../../core/Data.js"
 import type * as UTxO from "../../../core/UTxO.js"
 import type * as Datum from "../../Datum.js"
 import type * as Script from "../../Script.js"
@@ -17,7 +18,7 @@ export interface PayToAddressParams {
 
 export interface CollectFromParams {
   readonly inputs: ReadonlyArray<UTxO.UTxO> // Mandatory: UTxOs to consume as inputs
-  readonly redeemer?: string
+  readonly redeemer?: Data.Data // Optional: Redeemer for script-locked UTxOs
 }
 
 export interface ReadFromParams {
@@ -26,5 +27,5 @@ export interface ReadFromParams {
 
 export interface MintTokensParams {
   readonly assets: CoreAssets.Assets // Mandatory: Tokens to mint (excluding lovelace)
-  readonly redeemer?: string // Optional: Redeemer for minting script
+  readonly redeemer?: Data.Data // Optional: Redeemer for minting script
 }

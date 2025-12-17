@@ -326,7 +326,8 @@ export const languageViewsEncoding = (costModels: CostModels): Uint8Array => {
       const v1KeyBytes = new Uint8Array([0])
 
       // Value: indefinite length array encoded as bytes
-      const costsArray: ReadonlyArray<CBOR.CBOR> = costs.map((cost) => (cost >= 0n ? cost : -(cost + 1n)))
+      // Cost values are passed directly - the CBOR encoder handles negative integers properly
+      const costsArray: ReadonlyArray<CBOR.CBOR> = costs as ReadonlyArray<bigint>
       const indefiniteArrayCbor = CBOR.internalEncodeSync(
         costsArray,
         CBOR.CML_DATA_DEFAULT_OPTIONS // indefinite length
@@ -335,7 +336,8 @@ export const languageViewsEncoding = (costModels: CostModels): Uint8Array => {
       mapEntries.set(v1KeyBytes, indefiniteArrayCbor)
     } else {
       // PlutusV2/V3: Standard definite length encoding
-      const costsArray: ReadonlyArray<CBOR.CBOR> = costs.map((cost) => (cost >= 0n ? cost : -(cost + 1n)))
+      // Cost values are passed directly - the CBOR encoder handles negative integers properly
+      const costsArray: ReadonlyArray<CBOR.CBOR> = costs as ReadonlyArray<bigint>
 
       mapEntries.set(BigInt(languageId), costsArray)
     }

@@ -9,6 +9,7 @@ import * as PlutusV1 from "./PlutusV1.js"
 import * as PlutusV2 from "./PlutusV2.js"
 import * as PlutusV3 from "./PlutusV3.js"
 import * as Redeemer from "./Redeemer.js"
+import * as Redeemers from "./Redeemers.js"
 import * as VKey from "./VKey.js"
 
 // Helper function for array comparison
@@ -359,16 +360,9 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Tra
 
       // 5: redeemers
       if (toA.redeemers && toA.redeemers.length > 0) {
-        const redeemers = yield* Eff.all(
-          toA.redeemers.map((redeemer) =>
-            Eff.gen(function* () {
-              const dataCBOR = yield* ParseResult.encode(PlutusData.FromCDDL)(redeemer.data)
-              const tagInteger = Redeemer.tagToInteger(redeemer.tag)
-              return [tagInteger, redeemer.index, dataCBOR, [redeemer.exUnits.mem, redeemer.exUnits.steps]] as const
-            })
-          )
-        )
-        record.set(5n, redeemers)
+        const redeemersCollection = new Redeemers.Redeemers({ values: [...toA.redeemers] })
+        const redeemersEncoded = yield* ParseResult.encode(Redeemers.FromArrayCDDL)(redeemersCollection)
+        record.set(5n, redeemersEncoded)
       }
 
       // 6: plutus_v2_scripts
@@ -471,45 +465,24 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Tra
       // 5: redeemers (note: some producers may wrap this in nonempty_set tag 258 even though CDDL doesn't require it)
       const asRedeemersArray = (
         value: unknown
-      ):
-        | ReadonlyArray<readonly [bigint, bigint, typeof PlutusData.CDDLSchema.Type, readonly [bigint, bigint]]>
-        | undefined => {
+      ): ReadonlyArray<Schema.Schema.Type<typeof Redeemers.ArrayCDDLSchema>[number]> | undefined => {
         if (value === undefined) return undefined
         if (CBOR.isTag(value)) {
           const tag = value as { _tag: "Tag"; tag: number; value: unknown }
           if (tag.tag !== 258) return undefined
           if (Array.isArray(tag.value))
-            return tag.value as ReadonlyArray<
-              readonly [bigint, bigint, typeof PlutusData.CDDLSchema.Type, readonly [bigint, bigint]]
-            >
+            return tag.value as ReadonlyArray<Schema.Schema.Type<typeof Redeemers.ArrayCDDLSchema>[number]>
           return undefined
         }
         if (Array.isArray(value))
-          return value as ReadonlyArray<
-            readonly [bigint, bigint, typeof PlutusData.CDDLSchema.Type, readonly [bigint, bigint]]
-          >
+          return value as ReadonlyArray<Schema.Schema.Type<typeof Redeemers.ArrayCDDLSchema>[number]>
         return undefined
       }
 
       const redeemersArray = asRedeemersArray(fromA.get(5n))
       if (redeemersArray !== undefined) {
-        const redeemers: Array<Redeemer.Redeemer> = []
-        for (const [tag, index, dataCBOR, [mem, steps]] of redeemersArray) {
-          // Guard against unexpected CBOR simple `undefined` in datum position by substituting empty bytes
-          const safeDataCBOR = (
-            dataCBOR === undefined ? new Uint8Array(0) : dataCBOR
-          ) as typeof PlutusData.CDDLSchema.Type
-          const data = yield* ParseResult.decode(PlutusData.FromCDDL)(safeDataCBOR)
-          redeemers.push(
-            new Redeemer.Redeemer({
-              tag: Redeemer.integerToTag(tag),
-              index,
-              data,
-              exUnits: new Redeemer.ExUnits({ mem, steps })
-            })
-          )
-        }
-        witnessSet.redeemers = redeemers
+        const redeemersCollection = yield* ParseResult.decode(Redeemers.FromArrayCDDL)(redeemersArray)
+        witnessSet.redeemers = [...redeemersCollection.values]
       }
 
       // 6: plutus_v2_scripts

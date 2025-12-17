@@ -12,6 +12,7 @@ import { Effect, Ref } from "effect"
 
 import * as Bytes from "../../../core/Bytes.js"
 import * as CostModel from "../../../core/CostModel.js"
+import * as PolicyId from "../../../core/PolicyId.js"
 import * as Transaction from "../../../core/Transaction.js"
 import * as CoreUTxO from "../../../core/UTxO.js"
 import type * as ProtocolParametersModule from "../../ProtocolParameters.js"
@@ -187,6 +188,20 @@ export const executeEvaluation = (): Effect.Effect<
       inputIndexMapping.set(i, key)
       yield* Effect.logDebug(`[Evaluation] Input ${i} maps to UTxO: ${key}`)
     }
+
+    // Build mint index mapping: index → policyIdHex
+    // Mint redeemers are indexed by sorted policy ID order
+    const mintIndexMapping = new Map<number, string>()
+    if (state.mint && state.mint.map.size > 0) {
+      const sortedPolicyIds = Array.from(state.mint.map.keys())
+        .map((pid) => PolicyId.toHex(pid))
+        .sort()
+      
+      for (let i = 0; i < sortedPolicyIds.length; i++) {
+        mintIndexMapping.set(i, sortedPolicyIds[i]!)
+        yield* Effect.logDebug(`[Evaluation] Mint ${i} maps to policy: ${sortedPolicyIds[i]}`)
+      }
+    }
     
     const inputs = yield* buildTransactionInputs(sortedUtxos)
     const allOutputs = [...state.outputs, ...buildCtx.changeOutputs]
@@ -311,9 +326,41 @@ export const executeEvaluation = (): Effect.Effect<
             `[Evaluation] No redeemer found in state for UTxO ${utxoRef}`
           )
         }
+      } else if (evalRedeemer.redeemer_tag === "mint") {
+        // For mint redeemers, map mint index to policy ID hex
+        const policyIdHex = mintIndexMapping.get(evalRedeemer.redeemer_index)
+        if (!policyIdHex) {
+          yield* Effect.logWarning(
+            `[Evaluation] Could not map mint index ${evalRedeemer.redeemer_index} to policy ID`
+          )
+          continue
+        }
+
+        const redeemer = state.redeemers.get(policyIdHex)
+        if (redeemer) {
+          // Update redeemer with ExUnits from evaluation
+          const updatedRedeemer = {
+            ...redeemer,
+            exUnits: {
+              mem: BigInt(evalRedeemer.ex_units.mem),
+              steps: BigInt(evalRedeemer.ex_units.steps)
+            }
+          }
+
+          state.redeemers.set(policyIdHex, updatedRedeemer)
+
+          yield* Effect.logDebug(
+            `[Evaluation] Updated redeemer for policy ${policyIdHex} (mint:${evalRedeemer.redeemer_index}): ` +
+              `mem=${evalRedeemer.ex_units.mem}, steps=${evalRedeemer.ex_units.steps}`
+          )
+        } else {
+          yield* Effect.logWarning(
+            `[Evaluation] No redeemer found in state for policy ${policyIdHex}`
+          )
+        }
       } else {
-        // For mint/cert/reward redeemers, we'd need different logic
-        // TODO: Implement matching for other redeemer types
+        // For cert/reward redeemers, we'd need different logic
+        // TODO: Implement matching for cert and reward redeemer types
         yield* Effect.logWarning(
           `[Evaluation] Redeemer type ${evalRedeemer.redeemer_tag} not yet supported for matching`
         )

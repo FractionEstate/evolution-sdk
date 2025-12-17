@@ -7,6 +7,7 @@ import type * as CoreAddress from "../../core/Address.js"
 import * as CoreAssets from "../../core/Assets/index.js"
 import * as Bytes from "../../core/Bytes.js"
 import * as Bytes32 from "../../core/Bytes32.js"
+import * as CostModel from "../../core/CostModel.js"
 import * as PlutusData from "../../core/Data.js"
 import * as DatumOption from "../../core/DatumOption.js"
 import * as Ed25519Signature from "../../core/Ed25519Signature.js"
@@ -14,7 +15,9 @@ import * as NativeScripts from "../../core/NativeScripts.js"
 import type * as PlutusV1 from "../../core/PlutusV1.js"
 import type * as PlutusV2 from "../../core/PlutusV2.js"
 import type * as PlutusV3 from "../../core/PlutusV3.js"
+import * as PolicyId from "../../core/PolicyId.js"
 import * as Redeemer from "../../core/Redeemer.js"
+import * as ScriptDataHash from "../../core/ScriptDataHash.js"
 import * as Transaction from "../../core/Transaction.js"
 import * as TransactionBody from "../../core/TransactionBody.js"
 import * as TransactionHash from "../../core/TransactionHash.js"
@@ -23,12 +26,13 @@ import * as TransactionWitnessSet from "../../core/TransactionWitnessSet.js"
 import * as TxOut from "../../core/TxOut.js"
 import * as CoreUTxO from "../../core/UTxO.js"
 import * as VKey from "../../core/VKey.js"
+import { hashScriptData } from "../../utils/Hash.js"
 // SDK imports (for conversion utilities)
 import * as Address from "../Address.js"
 import type * as Datum from "../Datum.js"
 // Internal imports
 import type { UnfrackOptions } from "./TransactionBuilder.js"
-import { TransactionBuilderError, TxContext } from "./TransactionBuilder.js"
+import { TransactionBuilderError, TxBuilderConfigTag,TxContext } from "./TransactionBuilder.js"
 import * as Unfrack from "./Unfrack.js"
 
 // ============================================================================
@@ -459,7 +463,7 @@ export const assembleTransaction = (
   inputs: ReadonlyArray<TransactionInput.TransactionInput>,
   outputs: ReadonlyArray<TxOut.TransactionOutput>,
   fee: bigint
-): Effect.Effect<Transaction.Transaction, TransactionBuilderError, TxContext> =>
+): Effect.Effect<Transaction.Transaction, TransactionBuilderError, TxContext | TxBuilderConfigTag> =>
   Effect.gen(function* () {
     // Get state ref to access scripts and redeemers
     const stateRef = yield* TxContext
@@ -508,36 +512,7 @@ export const assembleTransaction = (
       ]
     }
 
-    // Create TransactionBody with calculated fee
-    const body = new TransactionBody.TransactionBody({
-      inputs: inputs as Array<TransactionInput.TransactionInput>,
-      outputs: transactionOutputs,
-      fee, // Now using actual calculated fee, not placeholder
-      collateralInputs, // Collateral inputs from Collateral phase
-      collateralReturn, // Collateral return output from Collateral phase
-      totalCollateral, // Total collateral amount from Collateral phase
-      referenceInputs, // Reference inputs for reading on-chain data (undefined if none)
-      mint: state.mint && state.mint.map.size > 0 ? state.mint : undefined // Mint field from minting operations
-      // Optional fields omitted for now:
-      // - ttl: will be set if setValidityRange is called
-      // - certificates: will be set if certificate operations added
-      // - withdrawals: will be set if withdrawal operations added
-      // - auxiliaryDataHash: will be set if metadata added
-      // - validityIntervalStart: will be set if setValidityRange is called
-      // - mint: will be set if mint/burn operations added
-      // - scriptDataHash: will be calculated when building witness set
-      // - collateralInputs: will be set during witness building
-      // - requiredSigners: will be set if addSigner is called
-      // - networkId: will be set from config
-      // - collateralReturn: will be calculated during witness building
-      // - totalCollateral: will be calculated during witness building
-      // - votingProcedures: N/A for transaction building
-      // - proposalProcedures: N/A for transaction building
-      // - currentTreasuryValue: N/A for transaction building
-      // - donation: N/A for transaction building
-    })
-
-    // Populate witness set with scripts and redeemers from state
+    // Populate witness set with scripts from state
     const plutusV1Scripts: Array<PlutusV1.PlutusV1> = []
     const plutusV2Scripts: Array<PlutusV2.PlutusV2> = []
     const plutusV3Scripts: Array<PlutusV3.PlutusV3> = []
@@ -549,13 +524,13 @@ export const assembleTransaction = (
 
       switch (coreScript._tag) {
         case "PlutusV1":
-          plutusV1Scripts.push(coreScript) // Push whole script object, not just bytes
+          plutusV1Scripts.push(coreScript)
           break
         case "PlutusV2":
-          plutusV2Scripts.push(coreScript) // Push whole script object, not just bytes
+          plutusV2Scripts.push(coreScript)
           break
         case "PlutusV3":
-          plutusV3Scripts.push(coreScript) // Push whole script object, not just bytes
+          plutusV3Scripts.push(coreScript)
           break
         case "NativeScript":
           nativeScripts.push(coreScript)
@@ -563,7 +538,7 @@ export const assembleTransaction = (
       }
     }
 
-    // Build redeemers array from state
+    // Build redeemers array from state FIRST (needed for scriptDataHash)
     const redeemers: Array<Redeemer.Redeemer> = []
 
     // Create a mapping from UTxO reference (txHash#outputIndex) to input index
@@ -579,19 +554,41 @@ export const assembleTransaction = (
     yield* Effect.logDebug(`[Assembly] Input index map has ${inputIndexMap.size} entries`)
     yield* Effect.logDebug(`[Assembly] Redeemer map keys: ${globalThis.Array.from(state.redeemers.keys()).join(", ")}`)
 
+    // Create a mapping from PolicyId hex to mint index (sorted order)
+    const mintIndexMap = new Map<string, number>()
+    if (state.mint && state.mint.map.size > 0) {
+      // Get sorted policy IDs (Cardano redeemer indices require sorted order)
+      const sortedPolicyIds = globalThis.Array.from(state.mint.map.keys())
+        .map((pid) => PolicyId.toHex(pid))
+        .sort()
+      
+      for (let i = 0; i < sortedPolicyIds.length; i++) {
+        mintIndexMap.set(sortedPolicyIds[i]!, i)
+        yield* Effect.logDebug(`[Assembly] Mint policy ${i}: ${sortedPolicyIds[i]}`)
+      }
+    }
+
     // Build redeemers with correct indices
     for (const [key, redeemerData] of state.redeemers) {
-      yield* Effect.logDebug(`[Assembly] Processing redeemer for key: ${key}`)
+      yield* Effect.logDebug(`[Assembly] Processing redeemer for key: ${key}, tag: ${redeemerData.tag}`)
 
-      // Find the index of this input
-      const inputIndex = inputIndexMap.get(key)
-      if (inputIndex === undefined) {
-        yield* Effect.logWarning(`[Assembly] Could not find input index for redeemer key: ${key}`)
-        continue
+      let redeemerIndex: number | undefined
+      
+      if (redeemerData.tag === "mint") {
+        // For mint redeemers, look up in mint index map
+        redeemerIndex = mintIndexMap.get(key)
+        if (redeemerIndex === undefined) {
+          yield* Effect.logWarning(`[Assembly] Could not find mint index for policy: ${key}`)
+          continue
+        }
+      } else {
+        // For spend/cert/reward redeemers, look up in input index map
+        redeemerIndex = inputIndexMap.get(key)
+        if (redeemerIndex === undefined) {
+          yield* Effect.logWarning(`[Assembly] Could not find input index for redeemer key: ${key}`)
+          continue
+        }
       }
-
-      // Parse the redeemer data from CBOR hex
-      const plutusData = PlutusData.fromCBORHex(redeemerData.data)
 
       yield* Effect.logDebug(
         `[Assembly] Redeemer exUnits before creating: mem=${redeemerData.exUnits?.mem ?? 0n}, steps=${redeemerData.exUnits?.steps ?? 0n}`
@@ -600,8 +597,8 @@ export const assembleTransaction = (
       // Create proper Redeemer object
       const redeemer = new Redeemer.Redeemer({
         tag: redeemerData.tag, // "spend", "mint", "cert", or "reward"
-        index: BigInt(inputIndex), // Use actual input index
-        data: plutusData,
+        index: BigInt(redeemerIndex), // Use actual redeemer index
+        data: redeemerData.data,
         exUnits: redeemerData.exUnits
           ? new Redeemer.ExUnits({ mem: redeemerData.exUnits.mem, steps: redeemerData.exUnits.steps })
           : new Redeemer.ExUnits({ mem: 0n, steps: 0n }) // will be updated by script evaluation
@@ -624,10 +621,78 @@ export const assembleTransaction = (
       }
     }
 
+    // Compute scriptDataHash if there are Plutus scripts (redeemers present)
+    let scriptDataHash: ReturnType<typeof hashScriptData> | undefined
+    if (redeemers.length > 0) {
+      // Get config to access provider for full protocol parameters
+      const config = yield* TxBuilderConfigTag
+
+      if (!config.provider) {
+        throw new TransactionBuilderError({
+          message: "Script transactions require a provider to fetch full protocol parameters for scriptDataHash calculation",
+          cause: { redeemerCount: redeemers.length }
+        })
+      }
+
+      // Fetch full protocol params from provider (includes cost models)
+      const fullProtocolParams = yield* config.provider.Effect.getProtocolParameters().pipe(
+        Effect.mapError(
+          (providerError) =>
+            new TransactionBuilderError({
+              message: "Failed to fetch full protocol parameters for scriptDataHash calculation",
+              cause: providerError
+            })
+        )
+      )
+
+      // Only include cost models for Plutus versions actually used in the transaction
+      // The scriptDataHash must use the same languages as the node will compute
+      const hasPlutusV1 = plutusV1Scripts.length > 0
+      const hasPlutusV2 = plutusV2Scripts.length > 0
+      const hasPlutusV3 = plutusV3Scripts.length > 0
+
+      const plutusV1Costs = hasPlutusV1
+        ? Object.values(fullProtocolParams.costModels.PlutusV1).map((v) => BigInt(v))
+        : [] // Empty array = not included in language_views
+      const plutusV2Costs = hasPlutusV2
+        ? Object.values(fullProtocolParams.costModels.PlutusV2).map((v) => BigInt(v))
+        : [] // Empty array = not included in language_views
+      const plutusV3Costs = hasPlutusV3
+        ? Object.values(fullProtocolParams.costModels.PlutusV3).map((v) => BigInt(v))
+        : [] // Empty array = not included in language_views
+
+      yield* Effect.logDebug(`[Assembly] Cost models included: V1=${hasPlutusV1}, V2=${hasPlutusV2}, V3=${hasPlutusV3}`)
+
+      const costModels = new CostModel.CostModels({
+        PlutusV1: new CostModel.CostModel({ costs: plutusV1Costs }),
+        PlutusV2: new CostModel.CostModel({ costs: plutusV2Costs }),
+        PlutusV3: new CostModel.CostModel({ costs: plutusV3Costs })
+      })
+
+      // Compute the hash of script data (redeemers + optional datums + cost models)
+      scriptDataHash = hashScriptData(redeemers, costModels, plutusDataArray.length > 0 ? plutusDataArray : undefined)
+      yield* Effect.logDebug(`[Assembly] Computed scriptDataHash: ${scriptDataHash.hash.toString()}`)
+    }
+
     yield* Effect.logDebug(`[Assembly] WitnessSet populated:`)
+    yield* Effect.logDebug(`  - PlutusV1 scripts: ${plutusV1Scripts.length}`)
     yield* Effect.logDebug(`  - PlutusV2 scripts: ${plutusV2Scripts.length}`)
+    yield* Effect.logDebug(`  - PlutusV3 scripts: ${plutusV3Scripts.length}`)
     yield* Effect.logDebug(`  - Redeemers: ${redeemers.length}`)
     yield* Effect.logDebug(`  - Plutus data: ${plutusDataArray.length}`)
+
+    // Create TransactionBody with calculated fee and scriptDataHash
+    const body = new TransactionBody.TransactionBody({
+      inputs: inputs as Array<TransactionInput.TransactionInput>,
+      outputs: transactionOutputs,
+      fee, // Now using actual calculated fee, not placeholder
+      collateralInputs, // Collateral inputs from Collateral phase
+      collateralReturn, // Collateral return output from Collateral phase
+      totalCollateral, // Total collateral amount from Collateral phase
+      referenceInputs, // Reference inputs for reading on-chain data (undefined if none)
+      mint: state.mint && state.mint.map.size > 0 ? state.mint : undefined, // Mint field from minting operations
+      scriptDataHash // Hash of redeemers + datums + cost models (required for Plutus scripts)
+    })
 
     // Create witness set with scripts and redeemers
     const witnessSet = new TransactionWitnessSet.TransactionWitnessSet({
@@ -884,13 +949,32 @@ export const buildFakeWitnessSet = (
       vkeyWitnesses.push(witness)
     }
 
+    // Build fake redeemers from state.redeemers for accurate size estimation
+    // Redeemers contribute to transaction size and must be included in fee calculation
+    const fakeRedeemers: Array<Redeemer.Redeemer> = []
+    for (const [_key, redeemerData] of state.redeemers) {
+      // Use placeholder exUnits if not yet evaluated (will be updated after UPLC evaluation)
+      const exUnits = redeemerData.exUnits ?? { mem: 0n, steps: 0n }
+      
+      // Create a redeemer with index 0 - the actual index will be computed in assembly
+      // For fee calculation, we just need accurate CBOR size estimation
+      fakeRedeemers.push(
+        new Redeemer.Redeemer({
+          tag: redeemerData.tag,
+          index: 0n, // Placeholder, will be set correctly in assembly
+          data: redeemerData.data,
+          exUnits: new Redeemer.ExUnits({ mem: exUnits.mem, steps: exUnits.steps })
+        })
+      )
+    }
+
     return new TransactionWitnessSet.TransactionWitnessSet({
       vkeyWitnesses,
       nativeScripts,
       bootstrapWitnesses: [],
       plutusV1Scripts,
       plutusData: [],
-      redeemers: [],
+      redeemers: fakeRedeemers,
       plutusV2Scripts,
       plutusV3Scripts
     })
@@ -917,7 +1001,7 @@ export const calculateFeeIteratively = (
     string,
     {
       readonly tag: "spend" | "mint" | "cert" | "reward"
-      readonly data: string
+      readonly data: PlutusData.Data
       readonly exUnits?: { readonly mem: bigint; readonly steps: bigint }
     }
   >,
@@ -942,6 +1026,34 @@ export const calculateFeeIteratively = (
     // Get mint field from state (if present)
     const mint = state.mint && state.mint.map.size > 0 ? state.mint : undefined
 
+    // Get collateral from state (for script transactions)
+    let collateralInputs: Array.NonEmptyReadonlyArray<TransactionInput.TransactionInput> | undefined
+    let collateralReturn: TxOut.TransactionOutput | undefined  
+    let totalCollateral: bigint | undefined
+    if (state.collateral) {
+      const builtCollateralInputs = yield* buildTransactionInputs(state.collateral.inputs)
+      // Only set collateralInputs if there's at least one input
+      if (builtCollateralInputs.length > 0) {
+        collateralInputs = builtCollateralInputs as Array.NonEmptyReadonlyArray<TransactionInput.TransactionInput>
+      }
+      collateralReturn = state.collateral.returnOutput
+      totalCollateral = state.collateral.totalAmount
+    }
+
+    // Check if Plutus scripts are present (need scriptDataHash for accurate size)
+    const hasPlutusScripts = 
+      (fakeWitnessSet.plutusV1Scripts && fakeWitnessSet.plutusV1Scripts.length > 0) ||
+      (fakeWitnessSet.plutusV2Scripts && fakeWitnessSet.plutusV2Scripts.length > 0) ||
+      (fakeWitnessSet.plutusV3Scripts && fakeWitnessSet.plutusV3Scripts.length > 0)
+
+    // Create placeholder scriptDataHash if Plutus scripts are present
+    // This is needed for accurate size estimation (32 bytes + CBOR overhead)
+    const placeholderScriptDataHash = hasPlutusScripts
+      ? new ScriptDataHash.ScriptDataHash({ 
+          hash: new Uint8Array(32) // Placeholder hash for size calculation
+        })
+      : undefined
+
     let currentFee = 0n
     let previousSize = 0
     let previousFee = 0n
@@ -954,7 +1066,11 @@ export const calculateFeeIteratively = (
         inputs: inputs as Array<TransactionInput.TransactionInput>,
         outputs: transactionOutputs,
         fee: currentFee,
-        mint // Include mint field for accurate size calculation
+        mint, // Include mint field for accurate size calculation
+        scriptDataHash: placeholderScriptDataHash, // Include scriptDataHash for accurate size
+        collateralInputs, // Include collateral for accurate size
+        collateralReturn, // Include collateral return for accurate size
+        totalCollateral // Include total collateral for accurate size
       })
 
       const transaction = new Transaction.Transaction({
