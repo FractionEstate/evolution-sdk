@@ -198,9 +198,6 @@ describe("TxBuilder Script Handling", () => {
     expect(redeemer.tag).toBe("spend")
     expect(redeemer.exUnits.mem).toBeGreaterThan(0n) // mem > 0
     expect(redeemer.exUnits.steps).toBeGreaterThan(0n) // steps > 0
-
-    // Note: Inline datums don't require plutusData in witness set
-    // The datum is already stored on-chain in the UTxO
   })
   it("should handle collateral inputs with multiassets and return excess to user as collateral return", async () => {
     const alwaysSucceedsScript = makePlutusV2Script(ALWAYS_SUCCEED_SCRIPT_CBOR)
