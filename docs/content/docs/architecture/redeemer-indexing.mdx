@@ -1,71 +1,90 @@
 ---
 title: Redeemer Indexing
-description: Deferred redeemer construction for Plutus script index optimization
+description: Deferred redeemer construction for efficient validator input lookup
 ---
 
 import { Mermaid } from "@/components/mdx/mermaid"
 
 ## Abstract
 
-Plutus validators receive transaction context including sorted input indices. Validators can use these indices for efficient lookups instead of traversing entire input lists. However, input indices depend on the **final sorted order** of all transaction inputs, including those added during coin selection. This creates a circular dependency: redeemer construction needs final indices, but final indices aren't known until after coin selection. The architecture resolves this through **deferred redeemer construction**: store a builder function instead of a concrete redeemer, then invoke it during the build phase once all inputs are known and sorted.
+Plutus validators can receive input indices via redeemers for O(1) array lookup instead of O(n) traversal. On-chain traversal is expensive in execution units, so passing indices allows validators to directly access only the inputs they care about.
 
-## Purpose and Scope
+The challenge: Cardano currently enforces canonical sorting of inputs, and indices depend on this final sorted order. When coin selection or other operations add inputs to the transaction, they insert into the sorted order and shift existing indices.
 
-**Purpose**: Enable Plutus validators to use input indices efficiently by deferring redeemer construction until final input ordering is determined.
+The solution: **defer redeemer construction** until all inputs are known and sorted.
 
-**Scope**:
-- Defines the `RedeemerBuilder` pattern for deferred redeemer construction
-- Supports two variants: `"batch"` (multiple inputs) and `"self"` (single input per UTxO)
-- Provides both index and UTxO data to builder functions
-- Integrates with deferred execution model
-- Resolves indices after coin selection when canonical input order is final
+> **Note**: [CIP-128](https://github.com/cardano-foundation/CIPs/tree/master/CIP-0128) proposes removing the canonical ordering requirement, allowing user-controlled input order. Once implemented, you could place contract inputs at known positions (e.g., indices 0, 1, 2) and append wallet inputs after, making indices predictable without deferred construction.
 
-**Out of Scope**:
-- Redeemer encoding/serialization
-- Script evaluation and execution units
-- Plutus validator implementation patterns (on-chain concerns)
+## Why Index-Based Lookup Matters
 
-## Design Philosophy
-
-### The Index Problem
-
-Cardano transactions sort inputs lexicographically by `(txHash, outputIndex)` before validation. When a Plutus validator executes, it receives inputs in this canonical order. Validators often need to correlate their own input with corresponding outputs. This is the classic "UTxO indexer" pattern for preventing double satisfaction attacks.
+Cardano transactions sort inputs lexicographically by `(txHash, outputIndex)`. A validator receives all transaction inputs in this canonical order. Without indices, finding relevant inputs requires traversing the entire list.
 
 <Mermaid chart={`
 graph LR
-    subgraph Naive["Naive: O(n) Lookup"]
-        N1[Iterate through<br/>all inputs] --> N2[Compare each<br/>to own reference] --> N3[Found after<br/>n comparisons]
+    subgraph Traversal["Without Indices: O(n)"]
+        T1[For each input] --> T2[Check if relevant] --> T3[Process if match]
     end
     
-    subgraph Optimized["Optimized: O(1) Lookup"]
-        O1[Redeemer contains<br/>input index] --> O2[Direct array access<br/>inputs#91;index#93;] --> O3[Single equality<br/>check]
+    subgraph Direct["With Indices: O(1)"]
+        D1[Redeemer contains indices] --> D2["Access inputs[i] directly"] --> D3[Process immediately]
     end
-    
-    style Naive fill:#fee2e2,stroke:#b91c1c,stroke-width:2px
-    style Optimized fill:#d1fae5,stroke:#059669,stroke-width:2px
 `} />
 
-This optimization requires the off-chain code to know the input's index. But the index depends on the final sorted order of **all** inputs, including wallet UTxOs added during coin selection for fees and balancing.
+Consider a transaction with 15 inputs: 5 contract UTxOs and 10 wallet UTxOs for fees. A naive validator would check all 15 inputs to find the 5 it cares about. With indices in the redeemer, it directly accesses `inputs[3]`, `inputs[7]`, `inputs[12]`, etc.
 
-### The Circular Dependency
+## The Stake Validator Pattern
+
+A common pattern uses a stake validator as the main coordinator. Spend validators are "dumb" and only verify that the stake validator ran. The stake validator receives all relevant input indices and performs the actual business logic.
 
 <Mermaid chart={`
 graph TD
-    subgraph Problem["The Circular Dependency"]
-        P1["1. User specifies script inputs<br/>with redeemer"] --> P2["2. Redeemer needs input index..."]
-        P2 -.->|"depends on"| P4
-        P3["3. Transaction structure completed"] --> P4["4. Coin selection adds<br/>wallet UTxOs"]
-        P4 --> P5["5. Inputs sorted canonically<br/>→ indices now known"]
-        P5 --> P6["6. Too late!<br/>Redeemer already built"]
+    subgraph Transaction
+        SW[Stake Validator Withdrawal]
+        S1[Spend Input 1]
+        S2[Spend Input 2]
+        S3[Spend Input 3]
+        W1[Wallet Input]
+        W2[Wallet Input]
     end
     
-    style P2 fill:#fef3c7,stroke:#d97706,stroke-width:2px
-    style P6 fill:#fee2e2,stroke:#b91c1c,stroke-width:2px
+    subgraph Validation
+        SW -->|"redeemer: [0, 2, 4]"| Logic[Business Logic]
+        Logic -->|"inputs[0]"| S1
+        Logic -->|"inputs[2]"| S2
+        Logic -->|"inputs[4]"| S3
+        S1 -->|check withdrawal exists| SW
+        S2 -->|check withdrawal exists| SW
+        S3 -->|check withdrawal exists| SW
+    end
 `} />
 
-The architecture resolves this by **deferring** redeemer construction: instead of building the redeemer immediately, store a **builder function** that will be invoked after coin selection completes.
+The stake validator:
+1. Receives indices of contract inputs in its redeemer
+2. Directly accesses those inputs via index
+3. Validates business logic for all contract inputs in one execution
 
-### Deferred Redeemer Construction
+The spend validators:
+1. Simply verify the stake validator ran (withdrawal exists in transaction)
+2. Delegate all logic to the stake validator
+
+This pattern reduces total execution cost since the stake validator runs once instead of N spend validators running independently.
+
+## The Circular Dependency
+
+The problem: input indices depend on the final sorted order of **all** inputs. But coin selection adds wallet UTxOs after the user specifies script inputs. The indices change.
+
+<Mermaid chart={`
+graph LR
+    P1["User specifies<br/>script inputs"] --> P2["Needs indices<br/>for redeemer"]
+    P2 -.->|"depends on"| P4
+    P3["Transaction built"] --> P4["Coin selection<br/>adds wallet UTxOs"]
+    P4 --> P5["Inputs sorted<br/>indices known"]
+    P5 --> P6["Too late!<br/>Redeemer built"]
+`} />
+
+## Deferred Construction
+
+Instead of building the redeemer immediately, store a **builder function** that will be invoked after coin selection:
 
 <Mermaid chart={`
 sequenceDiagram
@@ -74,233 +93,73 @@ sequenceDiagram
     participant CoinSelection
     participant Resolver
 
-    User->>Builder: Add script inputs with RedeemerBuilder
-    Note over Builder: Store builder function<br/>(don't execute yet)
-    
+    User->>Builder: Specify inputs with redeemer function
+    Note over Builder: Store function, don't execute
+
     User->>Builder: build()
     Builder->>CoinSelection: Run selection
     CoinSelection-->>Builder: Wallet UTxOs added
-    
+
     Builder->>Resolver: All inputs now known
     Resolver->>Resolver: Sort inputs canonically
-    Resolver->>Resolver: Compute index for each input
-    Resolver->>Resolver: Call makeRedeemer(index, utxo)
+    Resolver->>Resolver: Compute indices
+    Resolver->>Resolver: Invoke redeemer function with indices
     Resolver-->>Builder: Concrete redeemer returned
-    
+
     Builder-->>User: Transaction ready
 `} />
 
-When a user provides a `RedeemerBuilder` instead of a concrete redeemer:
+## Three Modes
 
-1. The builder stores a **deferred operation** (the intent without the final redeemer)
-2. During `build()`, coin selection runs and all inputs are collected
-3. Inputs are sorted canonically and indices are computed
-4. The builder function is called with both **index and UTxO data**
-5. The returned redeemer completes the operation
+### Batch Mode
 
-## Index-Only vs Full-Context Callbacks
-
-Some transaction building approaches only provide indices to the redeemer builder callback. This becomes problematic when validators need UTxO data to construct the redeemer. For example, unique token minting where the asset name derives from the output reference being spent.
-
-**The Problem**: If the callback only receives an index, the UTxO data must be captured externally and correlated manually. This is error-prone and awkward.
-
-**The Solution**: Provide both index **and** UTxO to the callback.
+For validators that need indices of multiple inputs. The function receives all indexed inputs and returns a single redeemer.
 
 <Mermaid chart={`
 graph TD
-    subgraph IndexOnly["Index-Only Approach"]
-        L1["makeRedeemer(indices)"]
-        L2[Only Index]
-        L1 --> L2
-        L2 --> L3["No UTxO Data<br/>Must capture externally"]
-    end
-    
-    subgraph IndexedInput["Full-Context Approach"]
-        E1["makeRedeemer(indexedInputs)"]
-        E2["{ index, utxo }"]
-        E1 --> E2
-        E2 --> E3["Full Context<br/>Index + UTxO Data"]
-    end
-    
-    style IndexOnly fill:#fee2e2,stroke:#b91c1c,stroke-width:2px
-    style IndexedInput fill:#d1fae5,stroke:#059669,stroke-width:2px
-    style L3 fill:#fecaca,stroke:#b91c1c,stroke-width:2px,color:#7f1d1d
-    style E3 fill:#a7f3d0,stroke:#059669,stroke-width:2px,color:#064e3b
+    B1[Specify inputs to track] --> B2[Function called once after sorting] --> B3["Receives all { index, utxo } pairs"] --> B4[Returns redeemer with indices list]
 `} />
 
-The `IndexedInput` structure provides both:
-- **index**: Position in canonical input order (for the validator's O(1) lookup)
-- **utxo**: Full UTxO data (for constructing redeemers that depend on output references)
+Primary use case: stake validator coordinator receiving list of contract input indices.
 
-## RedeemerBuilder Variants
+### Self Mode
 
-### Batch Variant
-
-For operations requiring indices of **multiple specified inputs**. The callback receives an array of `{ index, utxo }` pairs, maintaining the same order as the originally specified inputs.
+For spend validators that need their own index. The function is called once per script UTxO.
 
 <Mermaid chart={`
 graph TD
-    Start([Specify script inputs<br/>with RedeemerBuilder]) --> Store[Store deferred operation<br/>+ input list]
-    
-    Store --> Build["build() called"]
-    Build --> CoinSelect[Coin Selection<br/>adds wallet UTxOs]
-    CoinSelect --> SortInputs[Sort All Inputs<br/>Canonically]
-    
-    SortInputs --> ComputeIndices[Compute Index Map<br/>txHash+outputIndex → index]
-    ComputeIndices --> LookupBatch[Lookup Indices for<br/>all specified inputs]
-    
-    LookupBatch --> CallMaker["Call makeRedeemer with<br/>array of { index, utxo }"]
-    
-    CallMaker --> ReturnRedeemer[Single Redeemer Returned<br/>with all indices]
-    ReturnRedeemer --> CompleteOp[Complete operation<br/>with concrete redeemer]
-    
-    CompleteOp --> End([Transaction Built])
-    
-    style Start fill:#ecf0f1,stroke:#34495e,stroke-width:3px,color:#000000
-    style End fill:#2ecc71,stroke:#27ae60,stroke-width:3px,color:#ffffff
-    style CallMaker fill:#3b82f6,stroke:#1e3a8a,stroke-width:3px,color:#ffffff
+    SE1[Each script UTxO] --> SE2[Function called per UTxO] --> SE3["Receives own { index, utxo }"] --> SE4[Returns redeemer with own index]
 `} />
 
-**Use Cases**:
-- Batch spending: redeemer contains list of `(inputIndex, outputIndex)` pairs
-- Multi-validator coordination: indices reference inputs across multiple scripts
-- Mint policies checking specific spend indices
+Use case: spend validator that looks up its own input by index for validation.
 
-### Self Variant
+### Static Mode
 
-For operations where **each input needs its own redeemer with its own index**. The callback is invoked once per UTxO, receiving a single `{ index, utxo }` each time.
+For redeemers that don't need indices. The data is used directly.
 
 <Mermaid chart={`
 graph TD
-    Start([Specify script inputs<br/>with self RedeemerBuilder]) --> Store[Store deferred operation<br/>for each UTxO]
-    
-    Store --> Build["build() called"]
-    Build --> CoinSelect[Coin Selection<br/>adds wallet UTxOs]
-    CoinSelect --> SortInputs[Sort All Inputs<br/>Canonically]
-    
-    SortInputs --> ComputeIndices[Compute Index Map]
-    
-    ComputeIndices --> ForEach["For each UTxO:"]
-    ForEach --> LookupIndex[Lookup this UTxO's Index]
-    LookupIndex --> CallMaker["Call makeRedeemer with<br/>single { index, utxo }"]
-    
-    CallMaker --> AddInput[Add Input with<br/>this UTxO's Redeemer]
-    AddInput --> MoreUtxos{More UTxOs?}
-    MoreUtxos -->|Yes| ForEach
-    MoreUtxos -->|No| End([Transaction Built])
-    
-    style Start fill:#ecf0f1,stroke:#34495e,stroke-width:3px,color:#000000
-    style End fill:#2ecc71,stroke:#27ae60,stroke-width:3px,color:#ffffff
-    style CallMaker fill:#3b82f6,stroke:#1e3a8a,stroke-width:3px,color:#ffffff
-    style ForEach fill:#f59e0b,stroke:#92400e,stroke-width:3px,color:#ffffff
+    S1[Concrete redeemer data] --> S2[No computation needed] --> S3[Used directly]
 `} />
 
-**Use Cases**:
-- Simple spend validators that only need their own index
-- Validators that lookup their input via `inputs[redeemer]`
-- Unique token minting where asset name derives from output reference
+## Indexed Input
 
-## Integration with Deferred Execution
+Both Batch and Self modes receive indexed inputs containing:
 
-RedeemerBuilder integrates with the deferred execution model:
+- **Index**: Final 0-based position in canonically sorted transaction inputs
+- **UTxO**: The original UTxO data
 
-<Mermaid chart={`
-sequenceDiagram
-    participant User
-    participant Builder
-    participant State
-    participant Resolver
+The UTxO is included because redeemers may need output reference data, not just the index.
 
-    User->>Builder: Add inputs with RedeemerBuilder
-    Note over Builder: [1] Store deferred operation<br/>NO execution yet
-    
-    User->>Builder: Add outputs, metadata, etc.
-    Note over Builder: [2] Store more operations
-    
-    User->>Builder: build()
-    Builder->>State: [3] Create fresh state
-    Builder->>State: [4] Execute operations<br/>(deferred ones wait)
-    State->>State: [5] Coin selection runs<br/>wallet UTxOs added
-    
-    Builder->>Resolver: [6] Resolve all RedeemerBuilders
-    Resolver->>Resolver: Sort all inputs canonically
-    Resolver->>Resolver: Build index map
-    
-    loop For each deferred operation
-        Resolver->>Resolver: Lookup indices for specified inputs
-        Resolver->>Resolver: Call makeRedeemer({ index, utxo })
-        Resolver->>State: Complete operation with concrete redeemer
-    end
-    
-    Builder-->>User: [7] Transaction ready for signing
-`} />
+## When to Use Each Mode
 
-**Phase Integration:**
-
-1. **Operation Storage**: Adding inputs with `RedeemerBuilder` stores a deferred operation instead of executing immediately
-2. **Fresh State**: Each `build()` creates new state; redeemer resolution is independent per execution
-3. **Operation Execution**: Regular operations execute, accumulating inputs and outputs
-4. **Coin Selection**: Selection phase adds wallet UTxOs to cover requirements
-5. **Redeemer Resolution**: After selection, all inputs are known; resolve deferred operations
-6. **Index Computation**: Sort inputs canonically, build lookup table for indices
-7. **Builder Invocation**: Call each builder function with computed `{ index, utxo }`
-
-## Index Resolution Algorithm
-
-<Mermaid chart={`
-graph TD
-    Start([Start Resolution]) --> CollectInputs[Collect All Inputs<br/>from Transaction State]
-    CollectInputs --> Sort[Sort Canonically<br/>by txHash, outputIndex]
-    
-    Sort --> BuildMap[Build Index Lookup Table]
-    BuildMap --> MapLogic["key = txHash + outputIndex<br/>value = position in sorted list"]
-    
-    MapLogic --> IterateBuilders[Iterate Deferred Operations]
-    IterateBuilders --> CheckVariant{Builder Variant?}
-    
-    CheckVariant -->|batch| LookupMultiple[Lookup Index for<br/>each specified input]
-    CheckVariant -->|self| LookupEach[For each UTxO<br/>lookup its index]
-    
-    LookupMultiple --> CallBatch["Call makeRedeemer with<br/>array of { index, utxo }"]
-    LookupEach --> CallSelf["Call makeRedeemer with<br/>single { index, utxo }"]
-    
-    CallBatch --> UseRedeemer[Use Redeemer for<br/>all inputs together]
-    CallSelf --> UseRedeemerPer[Use Redeemer for<br/>this specific input]
-    
-    UseRedeemer --> MoreBuilders{More Operations?}
-    UseRedeemerPer --> MoreBuilders
-    MoreBuilders -->|Yes| IterateBuilders
-    MoreBuilders -->|No| End([Resolution Complete])
-    
-    style Start fill:#ecf0f1,stroke:#34495e,stroke-width:3px,color:#000000
-    style End fill:#2ecc71,stroke:#27ae60,stroke-width:3px,color:#ffffff
-    style CheckVariant fill:#fff3cd,stroke:#856404,stroke-width:2px,color:#000000
-    style CallBatch fill:#3b82f6,stroke:#1e3a8a,stroke-width:3px,color:#ffffff
-    style CallSelf fill:#3b82f6,stroke:#1e3a8a,stroke-width:3px,color:#ffffff
-`} />
-
-**Algorithm Steps:**
-
-1. **Collect**: Gather all inputs from transaction state (explicit inputs + coin selection additions)
-2. **Sort**: Apply canonical ordering, lexicographic by `(txHash, outputIndex)`
-3. **Index Map**: Create lookup table mapping each input's identifier to its position
-4. **Resolve Batch**: For `"batch"` variant, lookup all specified input indices, call builder once with array
-5. **Resolve Self**: For `"self"` variant, iterate inputs, call builder per UTxO with its index
-
-## Error Handling
-
-Resolution can fail if specified inputs are missing from the final transaction:
-
-**Missing Input Error**: A `RedeemerBuilder` references a UTxO that wasn't included in the final input set. This occurs if:
-- The UTxO was never added via `collectFrom`
-- The UTxO was filtered out during processing
-- The UTxO reference is malformed
-
-**Resolution After Selection Error**: If coin selection adds inputs that change the transaction balance, requiring another selection round, previously-resolved redeemers may have stale indices. The system detects this and fails with guidance to set a minimum fee.
+| Mode | Use Case |
+|------|----------|
+| **Batch** | Stake validator coordinator with list of contract input indices |
+| **Self** | Spend validator needing its own index |
+| **Static** | Redeemer doesn't depend on indices |
 
 ## Related Topics
 
 - [Deferred Execution](/docs/architecture/deferred-execution) - Program storage and fresh state model
 - [Transaction Flow](/docs/architecture/transaction-flow) - Build phases and state machine
-- [Coin Selection](/docs/architecture/coin-selection) - How wallet UTxOs are added
-- [Script Evaluation](/docs/architecture/script-evaluation) - ExUnits calculation after redeemer resolution
