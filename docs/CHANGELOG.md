@@ -1,5 +1,13 @@
 # docs
 
+## 0.0.13
+
+### Patch Changes
+
+- Updated dependencies [[`1e1aec8`](https://github.com/IntersectMBO/evolution-sdk/commit/1e1aec88dfc726ff66809f51671d80b3f469eb5c)]:
+  - @evolution-sdk/evolution@0.3.6
+  - @evolution-sdk/devnet@1.1.6
+
 ## 0.0.12
 
 ### Patch Changes
