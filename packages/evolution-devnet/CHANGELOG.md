@@ -1,5 +1,58 @@
 # @evolution-sdk/devnet
 
+## 1.1.7
+
+### Patch Changes
+
+- [#109](https://github.com/IntersectMBO/evolution-sdk/pull/109) [`0730f23`](https://github.com/IntersectMBO/evolution-sdk/commit/0730f2353490ff1fa75743cccc0d05b33cff1b23) Thanks [@solidsnakedev](https://github.com/solidsnakedev)! - ### TxBuilder setValidity API
+
+  Add `setValidity()` method to TxBuilder for setting transaction validity intervals:
+
+  ```ts
+  client.newTx()
+    .setValidity({
+      from: Date.now(),           // Valid after this Unix time (optional)
+      to: Date.now() + 300_000    // Expires after this Unix time (optional)
+    })
+    .payToAddress({ ... })
+    .build()
+  ```
+
+  - Times are provided as Unix milliseconds and converted to slots during transaction assembly
+  - At least one of `from` or `to` must be specified
+  - Validates that `from < to` when both are provided
+
+  ### slotConfig support for devnets
+
+  Add `slotConfig` parameter to `createClient()` for custom slot configurations:
+
+  ```ts
+  const slotConfig = Cluster.getSlotConfig(devnetCluster)
+  const client = createClient({
+    network: 0,
+    slotConfig,  // Custom slot config for devnet
+    provider: { ... },
+    wallet: { ... }
+  })
+  ```
+
+  Priority chain for slot config resolution:
+  1. `BuildOptions.slotConfig` (per-transaction override)
+  2. `TxBuilderConfig.slotConfig` (client default)
+  3. `SLOT_CONFIG_NETWORK[network]` (hardcoded fallback)
+
+  ### Cluster.getSlotConfig helper
+
+  Add `getSlotConfig()` helper to derive slot configuration from devnet cluster genesis:
+
+  ```ts
+  const slotConfig = Cluster.getSlotConfig(cluster)
+  // Returns: { zeroTime, zeroSlot, slotLength }
+  ```
+
+- Updated dependencies [[`c59507e`](https://github.com/IntersectMBO/evolution-sdk/commit/c59507eafd942cd5bce1d3608c9c3e9c99a4cac8), [`9ddc79d`](https://github.com/IntersectMBO/evolution-sdk/commit/9ddc79dbc9b6667b3f2981dd06875878d9ad14f5), [`0730f23`](https://github.com/IntersectMBO/evolution-sdk/commit/0730f2353490ff1fa75743cccc0d05b33cff1b23)]:
+  - @evolution-sdk/evolution@0.3.7
+
 ## 1.1.6
 
 ### Patch Changes
