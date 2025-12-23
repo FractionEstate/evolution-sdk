@@ -46,6 +46,8 @@ export declare const makeSignBuilder: (params: {
   referenceUtxos: ReadonlyArray<CoreUTxO.UTxO>
   provider: Provider.Provider
   wallet: Wallet
+  outputs: ReadonlyArray<TxOut.TransactionOutput>
+  availableUtxos: ReadonlyArray<CoreUTxO.UTxO>
 }) => SignBuilder
 ```
 

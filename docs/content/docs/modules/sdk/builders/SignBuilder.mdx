@@ -25,11 +25,21 @@ SignBuilder extends TransactionResultBase with signing capabilities.
 Only available when the client has a signing wallet (seed, private key, or API wallet).
 Provides access to unsigned transaction (via base interface) and signing operations.
 
+Includes `chainResult` for transaction chaining - use `chainResult.available` as
+`availableUtxos` for the next transaction in a chain.
+
 **Signature**
 
 ```ts
 export interface SignBuilder extends TransactionResultBase, EffectToPromiseAPI<SignBuilderEffect> {
   readonly Effect: SignBuilderEffect
+  /**
+   * Compute chain result for building dependent transactions.
+   * Contains consumed UTxOs, available UTxOs (remaining + created), and txHash.
+   *
+   * Result is memoized - computed once on first call, cached for subsequent calls.
+   */
+  readonly chainResult: () => ChainResult
 }
 ```
 
@@ -52,6 +62,7 @@ export interface SignBuilderEffect {
 
   // Signing methods
   readonly sign: () => Effect.Effect<SubmitBuilder, TransactionBuilderError>
+  readonly signAndSubmit: () => Effect.Effect<string, TransactionBuilderError>
   readonly signWithWitness: (
     witnessSet: TransactionWitnessSet.TransactionWitnessSet
   ) => Effect.Effect<SubmitBuilder, TransactionBuilderError>

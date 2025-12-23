@@ -629,6 +629,36 @@ export interface TransactionBuilderBase {
    * @category builder-methods
    */
   readonly addSigner: (params: AddSignerParams) => this
+
+  // ============================================================================
+  // Transaction Chaining Methods
+  // ============================================================================
+
+  /**
+   * Execute transaction build and return consumed/available UTxOs for chaining.
+   *
+   * Runs the full build pipeline (coin selection, fee calculation, evaluation) and returns
+   * which UTxOs were consumed and which remain available for subsequent transactions.
+   * Use this when building multiple dependent transactions in sequence.
+   *
+   * @returns Promise<ChainResult> with consumed and available UTxOs
+   *
+   * @example
+   * ```typescript
+   * // Build first transaction, get remaining UTxOs
+   * const tx1 = await builder
+   *   .payTo({ address, value: { lovelace: 5_000_000n } })
+   *   .build({ availableUtxos: walletUtxos })
+   *
+   * // Build second transaction using remaining UTxOs from chainResult
+   * const tx2 = await builder
+   *   .payTo({ address, value: { lovelace: 3_000_000n } })
+   *   .build({ availableUtxos: tx1.chainResult().available })
+   * ```
+   *
+   * @since 2.0.0
+   * @category chaining-methods
+   */
 }
 ````
 
@@ -1021,17 +1051,22 @@ Added in v2.0.0
 
 Result type for transaction chaining operations.
 
-**NOTE: NOT YET IMPLEMENTED** - This interface is reserved for future implementation
-of multi-transaction workflows. Current chain methods return stub implementations.
+Provides consumed and available UTxOs for building chained transactions.
+The available UTxOs include both remaining unspent inputs AND newly created outputs
+with pre-computed txHash, ready to be spent in subsequent transactions.
+
+Accessed via `SignBuilder.chainResult()` after calling `build()`.
 
 **Signature**
 
 ```ts
 export interface ChainResult {
-  readonly transaction: Transaction.Transaction
-  readonly newOutputs: ReadonlyArray<CoreUTxO.UTxO> // UTxOs created by this transaction
-  readonly updatedUtxos: ReadonlyArray<CoreUTxO.UTxO> // Available UTxOs for next transaction (original - spent + new)
-  readonly spentUtxos: ReadonlyArray<CoreUTxO.UTxO> // UTxOs consumed by this transaction
+  /** UTxOs consumed from availableUtxos by coin selection */
+  readonly consumed: ReadonlyArray<CoreUTxO.UTxO>
+  /** Available UTxOs: remaining unspent + newly created (with computed txHash) */
+  readonly available: ReadonlyArray<CoreUTxO.UTxO>
+  /** Pre-computed transaction hash (blake2b-256 of transaction body) */
+  readonly txHash: string
 }
 ```
 

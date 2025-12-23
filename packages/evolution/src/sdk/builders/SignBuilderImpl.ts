@@ -16,14 +16,18 @@
 
 import { Effect } from "effect"
 
+import * as Script from "../../core/Script.js"
 import * as Transaction from "../../core/Transaction.js"
+import * as TransactionHash from "../../core/TransactionHash.js"
 import * as TransactionWitnessSet from "../../core/TransactionWitnessSet.js"
-import type * as CoreUTxO from "../../core/UTxO.js"
+import type * as TxOut from "../../core/TxOut.js"
+import * as CoreUTxO from "../../core/UTxO.js"
+import { hashTransaction } from "../../utils/Hash.js"
 import type * as Provider from "../provider/Provider.js"
 import type * as WalletNew from "../wallet/WalletNew.js"
 import type { SignBuilder, SignBuilderEffect } from "./SignBuilder.js"
 import { makeSubmitBuilder } from "./SubmitBuilderImpl.js"
-import { TransactionBuilderError } from "./TransactionBuilder.js"
+import { type ChainResult, TransactionBuilderError } from "./TransactionBuilder.js"
 
 // ============================================================================
 // SignBuilder Factory
@@ -48,8 +52,38 @@ export const makeSignBuilder = (params: {
   referenceUtxos: ReadonlyArray<CoreUTxO.UTxO>
   provider: Provider.Provider
   wallet: Wallet
+  // Data for lazy chainResult computation
+  outputs: ReadonlyArray<TxOut.TransactionOutput>
+  availableUtxos: ReadonlyArray<CoreUTxO.UTxO>
 }): SignBuilder => {
-  const { fee, provider, referenceUtxos, transaction, transactionWithFakeWitnesses, utxos, wallet } = params
+  const { availableUtxos, fee, outputs, provider, referenceUtxos, transaction, transactionWithFakeWitnesses, utxos, wallet } = params
+
+  // Memoized chainResult - computed once on first access
+  let _chainResult: ChainResult | undefined
+  const chainResult = (): ChainResult => {
+    if (_chainResult) return _chainResult
+
+    const consumed = utxos
+    const txHash = hashTransaction(transaction.body)
+
+    const created: Array<CoreUTxO.UTxO> = outputs.map((output, index) =>
+      new CoreUTxO.UTxO({
+        transactionId: txHash,
+        index: BigInt(index),
+        address: output.address,
+        assets: output.assets,
+        datumOption: output.datumOption,
+        scriptRef: output.scriptRef ? Script.fromCBOR(output.scriptRef.bytes) : undefined
+      })
+    )
+
+    const consumedSet = new Set(consumed.map((u) => CoreUTxO.toOutRefString(u)))
+    const remaining = availableUtxos.filter((u) => !consumedSet.has(CoreUTxO.toOutRefString(u)))
+    const available = [...remaining, ...created]
+
+    _chainResult = { consumed, available, txHash: TransactionHash.toHex(txHash) }
+    return _chainResult
+  }
 
   // ============================================================================
   // Effect Namespace Implementation
@@ -106,6 +140,18 @@ export const makeSignBuilder = (params: {
 
         // Return SubmitBuilder
         return makeSubmitBuilder(signedTransaction, mergedWitnessSet, provider)
+      }),
+
+    /**
+     * Sign and submit the transaction in one step.
+     * 
+     * Convenience method that combines sign() and submit().
+     * Returns the transaction hash on success.
+     */
+    signAndSubmit: () =>
+      Effect.gen(function* () {
+        const submitBuilder = yield* signEffect.sign()
+        return yield* submitBuilder.Effect.submit()
       }),
 
     /**
@@ -236,7 +282,9 @@ export const makeSignBuilder = (params: {
 
   return {
     Effect: signEffect,
+    chainResult,
     sign: () => Effect.runPromise(signEffect.sign()),
+    signAndSubmit: () => Effect.runPromise(signEffect.signAndSubmit()),
     signWithWitness: (witnessSet: TransactionWitnessSet.TransactionWitnessSet) =>
       Effect.runPromise(signEffect.signWithWitness(witnessSet)),
     assemble: (witnesses: ReadonlyArray<TransactionWitnessSet.TransactionWitnessSet>) =>

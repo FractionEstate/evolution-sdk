@@ -134,6 +134,8 @@ const getScriptEffect =
                 const doubleCborHex = Script.applyDoubleCborEncoding(script)
                 return new PlutusV3.PlutusV3({ bytes: Bytes.fromHex(doubleCborHex) })
               }
+              default:
+                throw new Error(`Unknown script language: ${language}`)
             }
           }),
           Effect.catchAll((cause) => new ProviderError({ cause, message: "Failed to get script" }))
