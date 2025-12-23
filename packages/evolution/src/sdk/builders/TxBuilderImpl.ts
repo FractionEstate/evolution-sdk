@@ -152,21 +152,25 @@ export const calculateReferenceScriptFee = (
   referenceInputs: ReadonlyArray<CoreUTxO.UTxO>
 ): Effect.Effect<bigint, TransactionBuilderError> =>
   Effect.gen(function* () {
-    // Calculate total reference script size in bytes
+    // Calculate total reference script size in bytes (both native and Plutus)
+    // Per ADR 2024-08-14_009: "Native scripts that are used as reference scripts also contribute their size to this calculation"
     let totalScriptSize = 0
     
     for (const utxo of referenceInputs) {
       if (utxo.scriptRef) {
-        // Get script CBOR bytes length from Core Script type
         const scriptBytes = CoreScript.toCBOR(utxo.scriptRef).length
         totalScriptSize += scriptBytes
+        const scriptType = utxo.scriptRef._tag === "NativeScript" ? "Native" : "Plutus"
+        yield* Effect.logDebug(`[RefScriptFee] ${scriptType} script in ref input: ${scriptBytes} bytes`)
       }
     }
     
-    // No reference scripts = no fee
+    // No reference scripts = no tiered fee
     if (totalScriptSize === 0) {
       return 0n
     }
+    
+    yield* Effect.logDebug(`[RefScriptFee] Total reference script size: ${totalScriptSize} bytes`)
     
     // Check maximum size limit (200KB)
     if (totalScriptSize > 200_000) {
@@ -177,7 +181,7 @@ export const calculateReferenceScriptFee = (
       )
     }
     
-    // Calculate tiered fees
+    // Calculate tiered fees for all reference scripts
     let fee = 0n
     let remainingSize = totalScriptSize
     let tierIndex = 0
@@ -188,10 +192,13 @@ export const calculateReferenceScriptFee = (
       const bytesInThisTier = Math.min(remainingSize, tierSize)
       const tierFee = BigInt(Math.ceil(bytesInThisTier * tierPrices[tierIndex]!))
       fee += tierFee
+      yield* Effect.logDebug(`[RefScriptFee] Tier ${tierIndex + 1}: ${bytesInThisTier} bytes × ${tierPrices[tierIndex]} lovelace/byte = ${tierFee} lovelace`)
       
       remainingSize -= tierSize
       tierIndex++
     }
+    
+    yield* Effect.logDebug(`[RefScriptFee] Total tiered fee (Plutus only): ${fee} lovelace`)
     
     return fee
   })
@@ -1224,6 +1231,19 @@ export const calculateFeeIteratively = (
       ? (state.requiredSigners as [KeyHash.KeyHash, ...Array<KeyHash.KeyHash>])
       : undefined
 
+    // Build referenceInputs for size estimation
+    // Reference inputs add to transaction size and must be included in fee calculation
+    let referenceInputsForFee:
+      | readonly [TransactionInput.TransactionInput, ...Array<TransactionInput.TransactionInput>]
+      | undefined
+    if (state.referenceInputs.length > 0) {
+      const refInputs = yield* buildTransactionInputs(state.referenceInputs)
+      referenceInputsForFee = refInputs as readonly [
+        TransactionInput.TransactionInput,
+        ...Array<TransactionInput.TransactionInput>,
+      ]
+    }
+
     while (iterations < maxIterations) {
       // Build transaction with current fee estimate
       const body = new TransactionBody.TransactionBody({
@@ -1237,7 +1257,8 @@ export const calculateFeeIteratively = (
         totalCollateral, // Include total collateral for accurate size
         certificates, // Include certificates for accurate size calculation
         withdrawals, // Include withdrawals for accurate size calculation
-        requiredSigners // Include requiredSigners for accurate size calculation
+        requiredSigners, // Include requiredSigners for accurate size calculation
+        referenceInputs: referenceInputsForFee // Include reference inputs for accurate size calculation
       })
 
       const transaction = new Transaction.Transaction({
@@ -1249,9 +1270,20 @@ export const calculateFeeIteratively = (
 
       // Calculate size
       const size = yield* calculateTransactionSize(transaction)
+      
+      // Add reference script sizes to transaction size for base fee calculation
+      // Despite ADR docs, actual node behavior includes ref scripts in tx size for base fee
+      let refScriptSize = 0
+      for (const utxo of state.referenceInputs) {
+        if (utxo.scriptRef) {
+          const scriptBytes = CoreScript.toCBOR(utxo.scriptRef).length
+          refScriptSize += scriptBytes
+        }
+      }
+      const sizeWithRefScripts = size + refScriptSize
 
-      // Calculate base fee based on size
-      const baseFee = calculateMinimumFee(size, {
+      // Calculate base fee based on size including reference scripts
+      const baseFee = calculateMinimumFee(sizeWithRefScripts, {
         minFeeCoefficient: protocolParams.minFeeCoefficient,
         minFeeConstant: protocolParams.minFeeConstant
       })

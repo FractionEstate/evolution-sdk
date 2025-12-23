@@ -52,19 +52,29 @@ export const createCollectFromProgram = (params: CollectFromParams) =>
     // 2. Filter script-locked UTxOs
     const scriptUtxos = yield* filterScriptUtxos(params.inputs)
 
-    // 3. Filter out native script UTxOs (those with attached native scripts don't need redeemers)
+    // 3. Filter out native script UTxOs (those with native scripts don't need redeemers)
     // Native scripts are validated by signatures, not redeemers
+    // Check: attached scripts, inline scriptRef, and reference inputs
     const plutusScriptUtxos = scriptUtxos.filter((utxo) => {
       const credential = utxo.address.paymentCredential
       if (credential?._tag !== "ScriptHash") return false
       
       const scriptHashHex = ScriptHash.toHex(credential)
-      const attachedScript = state.scripts.get(scriptHashHex)
       
-      // If script is attached and is a NativeScript, no redeemer needed
+      // Check 1: Script attached via attachScript()
+      const attachedScript = state.scripts.get(scriptHashHex)
       if (attachedScript?._tag === "NativeScript") return false
       
-      // Otherwise it's a Plutus script (or script not attached yet)
+      // Check 2: Script inline in the UTxO being spent
+      if (utxo.scriptRef?._tag === "NativeScript") return false
+      
+      // Check 3: Script available via reference input
+      const refScript = state.referenceInputs.find((ref) => 
+        ref.scriptRef && ScriptHash.toHex(ScriptHash.fromScript(ref.scriptRef)) === scriptHashHex
+      )
+      if (refScript?.scriptRef?._tag === "NativeScript") return false
+      
+      // Otherwise it's a Plutus script (or script not found)
       return true
     })
 

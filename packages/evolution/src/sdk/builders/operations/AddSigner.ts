@@ -9,7 +9,7 @@
  * @since 2.0.0
  */
 
-import { Effect, Ref } from "effect"
+import { Effect, Equal, Ref } from "effect"
 
 import { TxContext } from "../TransactionBuilder.js"
 import type { AddSignerParams } from "./Operations.js"
@@ -31,11 +31,7 @@ export const createAddSignerProgram = (params: AddSignerParams) =>
 
     yield* Ref.update(ctx, (state) => {
       // Check if this key hash is already in requiredSigners (deduplicate)
-      const alreadyExists = state.requiredSigners.some(
-        (existing) => 
-          existing.hash.length === params.keyHash.hash.length &&
-          existing.hash.every((b, i) => b === params.keyHash.hash[i])
-      )
+      const alreadyExists = state.requiredSigners.some((existing) => Equal.equals(existing, params.keyHash))
 
       if (alreadyExists) {
         return state

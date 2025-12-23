@@ -324,9 +324,7 @@ describe("TxBuilder NativeScript (Devnet Submit)", () => {
 
     const submitBuilder = await signBuilder.sign()
     const txHash = await submitBuilder.submit()
-
     expect(txHash.length).toBe(64)
-
     const confirmed = await client.awaitTx(txHash, 1000)
     expect(confirmed).toBe(true)
   })
@@ -557,5 +555,106 @@ describe("TxBuilder NativeScript (Devnet Submit)", () => {
 
     const mintConfirmed = await client1.awaitTx(mintTxHash, 1000)
     expect(mintConfirmed).toBe(true)
+  })
+
+  it("should spend from script address using native script as reference input", { timeout: 60_000 }, async () => {
+    const client1 = createTestClient(0)
+    const client2 = createTestClient(1)
+
+    const address1 = await client1.address()
+    const address2 = await client2.address()
+
+    const credential1 = address1.paymentCredential
+    const credential2 = address2.paymentCredential
+
+    if (credential1._tag !== "KeyHash" || credential2._tag !== "KeyHash") {
+      throw new Error("Expected KeyHash credentials")
+    }
+
+    // Create a 2-of-2 multi-sig native script
+    const script1 = NativeScripts.makeScriptPubKey(credential1.hash)
+    const script2 = NativeScripts.makeScriptPubKey(credential2.hash)
+    const multiSigScript = NativeScripts.makeScriptAll([script1.script, script2.script])
+
+    const scriptHash = ScriptHash.fromScript(multiSigScript)
+
+    // Create script address
+    const scriptAddress = new Address.Address({
+      networkId: 0,
+      paymentCredential: scriptHash,
+      stakingCredential: undefined
+    })
+
+    // Step 1: Create a UTxO with the native script as a reference script
+    const refScriptSignBuilder = await client1
+      .newTx()
+      .payToAddress({
+        address: address1,
+        assets: Core.Assets.fromLovelace(5_000_000n),
+        script: multiSigScript
+      })
+      .build()
+
+    const refScriptSubmitBuilder = await refScriptSignBuilder.sign()
+    const refScriptTxHash = await refScriptSubmitBuilder.submit()
+
+    expect(refScriptTxHash.length).toBe(64)
+    await client1.awaitTx(refScriptTxHash, 1000)
+    await new Promise((resolve) => setTimeout(resolve, 2_000))
+
+    // Step 2: Fund the script address
+    const fundSignBuilder = await client1
+      .newTx()
+      .payToAddress({
+        address: scriptAddress,
+        assets: Core.Assets.fromLovelace(10_000_000n)
+      })
+      .build()
+
+    const fundSubmitBuilder = await fundSignBuilder.sign()
+    const fundTxHash = await fundSubmitBuilder.submit()
+
+    await client1.awaitTx(fundTxHash, 1000)
+    await new Promise((resolve) => setTimeout(resolve, 2_000))
+
+    // Fetch UTxOs at the script address
+    const scriptUtxos = await client1.getUtxos(scriptAddress)
+    expect(scriptUtxos.length).toBeGreaterThan(0)
+
+    const scriptUtxo = scriptUtxos.find((u) => UTxO.toOutRefString(u).startsWith(fundTxHash))
+    expect(scriptUtxo).toBeDefined()
+
+    // Find the UTxO with the reference script (fetch AFTER fund tx to get fresh state)
+    const walletUtxos = await client1.getUtxos(address1)
+    const refScriptUtxo = walletUtxos.find(
+      (u) => UTxO.toOutRefString(u).startsWith(refScriptTxHash) && u.scriptRef !== undefined
+    )
+    expect(refScriptUtxo).toBeDefined()
+    expect(refScriptUtxo!.scriptRef).toBeDefined()
+
+    // Step 3: Spend from script address using readFrom (reference input) instead of attachScript
+    // This tests that native scripts provided via reference inputs don't incorrectly require redeemers
+    const spendSignBuilder = await client1
+      .newTx()
+      .readFrom({ referenceInputs: [refScriptUtxo!] }) // Reference the UTxO with the script
+      .collectFrom({ inputs: [scriptUtxo!] }) // Spend from the script address
+      .payToAddress({
+        address: address1,
+        assets: Core.Assets.fromLovelace(5_000_000n)
+      })
+      .build()
+
+    const spendTx = await spendSignBuilder.toTransaction()
+
+    // Both clients must sign (native script requires signatures)
+    const witness1 = await spendSignBuilder.partialSign()
+    const witness2 = await client2.signTx(spendTx)
+
+    const spendSubmitBuilder = await spendSignBuilder.assemble([witness1, witness2])
+    const spendTxHash = await spendSubmitBuilder.submit()
+    
+    expect(spendTxHash.length).toBe(64)
+    const spendConfirmed = await client1.awaitTx(spendTxHash, 1000)
+    expect(spendConfirmed).toBe(true)
   })
 })

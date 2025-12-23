@@ -636,3 +636,35 @@ export const countRequiredSigners = (script: NativeScriptVariants): number => {
       return 0
   }
 }
+/**
+ * Extract all key hashes from a native script.
+ * Recursively traverses nested scripts to find all ScriptPubKey key hashes.
+ *
+ * @since 2.0.0
+ * @category utilities
+ */
+export const extractKeyHashes = (script: NativeScriptVariants): ReadonlyArray<Uint8Array> => {
+  const keyHashes: Array<Uint8Array> = []
+  
+  const traverse = (s: NativeScriptVariants): void => {
+    switch (s._tag) {
+      case "ScriptPubKey":
+        keyHashes.push(s.keyHash)
+        break
+      case "ScriptAll":
+      case "ScriptAny":
+        for (const nested of s.scripts) traverse(nested)
+        break
+      case "ScriptNOfK":
+        for (const nested of s.scripts) traverse(nested)
+        break
+      case "InvalidBefore":
+      case "InvalidHereafter":
+        // Time-based scripts don't contain key hashes
+        break
+    }
+  }
+  
+  traverse(script)
+  return keyHashes
+}
