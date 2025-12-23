@@ -38,11 +38,14 @@ import type * as Mint from "../../core/Mint.js"
 import type * as Network from "../../core/Network.js"
 import type * as RewardAccount from "../../core/RewardAccount.js"
 import type * as CoreScript from "../../core/Script.js"
+import * as Script from "../../core/Script.js"
 import * as Time from "../../core/Time/index.js"
 import * as Transaction from "../../core/Transaction.js"
+import * as TransactionHash from "../../core/TransactionHash.js"
 import type * as TxOut from "../../core/TxOut.js"
-import type * as CoreUTxO from "../../core/UTxO.js"
+import * as CoreUTxO from "../../core/UTxO.js"
 import { runEffectPromise } from "../../utils/effect-runtime.js"
+import { hashTransaction } from "../../utils/Hash.js"
 import type { EvalRedeemer } from "../EvalRedeemer.js"
 import type * as ProtocolParametersSDK from "../ProtocolParameters.js"
 import type * as Provider from "../provider/Provider.js"
@@ -277,7 +280,8 @@ const resolveSlotConfig = (config: TxBuilderConfig, options?: BuildOptions): Tim
 const assembleFinalResult = (
   config: TxBuilderConfig,
   transaction: Transaction.Transaction,
-  txWithFakeWitnesses: Transaction.Transaction
+  txWithFakeWitnesses: Transaction.Transaction,
+  availableUtxos: ReadonlyArray<CoreUTxO.UTxO>
 ): Effect.Effect<SignBuilder | TransactionResultBase, never, PhaseContextTag | TxContext> =>
   Effect.gen(function* () {
     const buildCtxRef = yield* PhaseContextTag
@@ -295,7 +299,10 @@ const assembleFinalResult = (
         utxos: state.selectedUtxos,
         referenceUtxos: state.referenceInputs,
         provider: config.provider!,
-        wallet
+        wallet,
+        // Pass raw data for lazy chainResult computation
+        outputs: state.outputs,
+        availableUtxos
       })
     }
 
@@ -456,7 +463,7 @@ const makeBuild = (
     )
 
     // Assemble and return final result
-    return yield* assembleFinalResult(config, transaction, txWithFakeWitnesses)
+    return yield* assembleFinalResult(config, transaction, txWithFakeWitnesses, availableUtxos)
   }).pipe(
     Effect.provideServiceEffect(TxContext, Ref.make(initialTxBuilderState)),
     Effect.provideService(BuildOptionsTag, {
@@ -476,26 +483,6 @@ const makeBuild = (
         leftoverAfterFee: CoreAssets.zero,
         canUnfrack: options?.unfrack !== undefined
       })
-    )
-  )
-
-// Core Effect logic for chaining
-const chainEffectCore = (
-  config: TxBuilderConfig,
-  programs: Array<ProgramStep>,
-  _options: BuildOptions = DEFAULT_BUILD_OPTIONS
-) =>
-  Effect.gen(function* () {
-    // Chain logic: Execute programs and return intermediate state
-    return {} as ChainResult
-  }).pipe(
-    Effect.provideServiceEffect(TxContext, Ref.make(initialTxBuilderState)),
-    Effect.mapError(
-      (error) =>
-        new TransactionBuilderError({
-          message: "Chain failed",
-          cause: error
-        })
     )
   )
 
@@ -526,18 +513,35 @@ const buildPartialEffectCore = (
 /**
  * Result type for transaction chaining operations.
  *
- * **NOTE: NOT YET IMPLEMENTED** - This interface is reserved for future implementation
- * of multi-transaction workflows. Current chain methods return stub implementations.
+ * Provides consumed and available UTxOs for building chained transactions.
+ * The available UTxOs include both remaining unspent inputs AND newly created outputs
+ * with pre-computed txHash, ready to be spent in subsequent transactions.
+ *
+ * Accessed via `SignBuilder.chainResult()` after calling `build()`.
+ *
+ * @example
+ * ```ts
+ * const tx1 = await TxBuilder.create(sdk)
+ *   .payTo({ address, value: { lovelace: 5_000_000n } })
+ *   .build({ availableUtxos: walletUtxos })
+ *
+ * // tx1.chainResult().available contains remaining unspent + new UTxOs with computed txHash
+ *
+ * const tx2 = await TxBuilder.create(sdk)
+ *   .payTo({ address, value: { lovelace: 3_000_000n } })
+ *   .build({ availableUtxos: tx1.chainResult().available })
+ * ```
  *
  * @since 2.0.0
  * @category model
- * @experimental
  */
 export interface ChainResult {
-  readonly transaction: Transaction.Transaction
-  readonly newOutputs: ReadonlyArray<CoreUTxO.UTxO> // UTxOs created by this transaction
-  readonly updatedUtxos: ReadonlyArray<CoreUTxO.UTxO> // Available UTxOs for next transaction (original - spent + new)
-  readonly spentUtxos: ReadonlyArray<CoreUTxO.UTxO> // UTxOs consumed by this transaction
+  /** UTxOs consumed from availableUtxos by coin selection */
+  readonly consumed: ReadonlyArray<CoreUTxO.UTxO>
+  /** Available UTxOs: remaining unspent + newly created (with computed txHash) */
+  readonly available: ReadonlyArray<CoreUTxO.UTxO>
+  /** Pre-computed transaction hash (blake2b-256 of transaction body) */
+  readonly txHash: string
 }
 
 // ============================================================================
@@ -1912,6 +1916,36 @@ export interface TransactionBuilderBase {
    * @category builder-methods
    */
   readonly addSigner: (params: AddSignerParams) => this
+
+  // ============================================================================
+  // Transaction Chaining Methods
+  // ============================================================================
+
+  /**
+   * Execute transaction build and return consumed/available UTxOs for chaining.
+   *
+   * Runs the full build pipeline (coin selection, fee calculation, evaluation) and returns
+   * which UTxOs were consumed and which remain available for subsequent transactions.
+   * Use this when building multiple dependent transactions in sequence.
+   *
+   * @returns Promise<ChainResult> with consumed and available UTxOs
+   *
+   * @example
+   * ```typescript
+   * // Build first transaction, get remaining UTxOs
+   * const tx1 = await builder
+   *   .payTo({ address, value: { lovelace: 5_000_000n } })
+   *   .build({ availableUtxos: walletUtxos })
+   *
+   * // Build second transaction using remaining UTxOs from chainResult
+   * const tx2 = await builder
+   *   .payTo({ address, value: { lovelace: 3_000_000n } })
+   *   .build({ availableUtxos: tx1.chainResult().available })
+   * ```
+   *
+   * @since 2.0.0
+   * @category chaining-methods
+   */
 }
 
 /**
@@ -2210,16 +2244,6 @@ export function makeTxBuilder(config: TxBuilderConfig) {
           : effect
       )
     },
-
-    // ============================================================================
-    // Transaction chaining methods
-    // ============================================================================
-
-    chainEffect: (options?: BuildOptions) => chainEffectCore(config, programs, options),
-
-    chain: (options?: BuildOptions) => runEffectPromise(chainEffectCore(config, programs, options)),
-
-    chainEither: (options?: BuildOptions) => runEffectPromise(chainEffectCore(config, programs, options).pipe(Effect.either)),
 
     // ============================================================================
     // Debug methods - Execute with fresh state, return partial transaction

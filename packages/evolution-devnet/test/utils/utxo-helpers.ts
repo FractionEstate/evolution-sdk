@@ -2,8 +2,7 @@ import { Core } from "@evolution-sdk/evolution"
 import * as CoreAddress from "@evolution-sdk/evolution/core/Address"
 import * as CoreData from "@evolution-sdk/evolution/core/Data"
 import * as CoreDatumOption from "@evolution-sdk/evolution/core/DatumOption"
-import * as CoreScript from "@evolution-sdk/evolution/core/Script"
-import * as CoreScriptRef from "@evolution-sdk/evolution/core/ScriptRef"
+import type * as CoreScript from "@evolution-sdk/evolution/core/Script"
 import * as CoreTransactionHash from "@evolution-sdk/evolution/core/TransactionHash"
 import * as CoreUTxO from "@evolution-sdk/evolution/core/UTxO"
 import type * as Datum from "@evolution-sdk/evolution/sdk/Datum"
@@ -103,20 +102,12 @@ export const createCoreTestUtxo = (options: CreateCoreTestUtxoOptions): CoreUTxO
     }
   }
 
-  // Convert Core Script to ScriptRef
-  let coreScriptRef: CoreScriptRef.ScriptRef | undefined
-  if (scriptRef) {
-    // Convert Script to ScriptRef bytes (CBOR-encoded script)
-    const scriptBytes = CoreScript.toCBOR(scriptRef)
-    coreScriptRef = new CoreScriptRef.ScriptRef({ bytes: scriptBytes })
-  }
-
   return new CoreUTxO.UTxO({
     transactionId: CoreTransactionHash.fromHex(paddedTxId),
     index: BigInt(index),
     address: CoreAddress.fromBech32(address),
     assets,
-    scriptRef: coreScriptRef,
+    scriptRef,
     datumOption: coreDatumOption
   })
 }
