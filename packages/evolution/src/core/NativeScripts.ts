@@ -640,16 +640,6 @@ export const countRequiredSigners = (script: NativeScriptVariants): number => {
  * Extract all key hashes from a native script.
  * Recursively traverses nested scripts to find all ScriptPubKey key hashes.
  *
- * @example
- * import { NativeScripts } from "@evolution-sdk/core"
- *
- * const script = NativeScripts.makeScriptAll([
- *   NativeScripts.makeScriptPubKey(keyHash1).script,
- *   NativeScripts.makeScriptPubKey(keyHash2).script
- * ])
- * const keyHashes = NativeScripts.extractKeyHashes(script.script)
- * // Returns Set<Uint8Array> containing keyHash1 and keyHash2
- *
  * @since 2.0.0
  * @category utilities
  */

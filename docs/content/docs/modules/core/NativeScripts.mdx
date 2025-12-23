@@ -43,6 +43,7 @@ parent: Modules
   - [arbitrary](#arbitrary)
 - [utilities](#utilities)
   - [countRequiredSigners](#countrequiredsigners)
+  - [extractKeyHashes](#extractkeyhashes)
 - [utils](#utils)
   - [CDDLSchema](#cddlschema)
   - [FromCBORBytes](#fromcborbytes-1)
@@ -370,6 +371,19 @@ Algorithm:
 
 ```ts
 export declare const countRequiredSigners: (script: NativeScriptVariants) => number
+```
+
+Added in v2.0.0
+
+## extractKeyHashes
+
+Extract all key hashes from a native script.
+Recursively traverses nested scripts to find all ScriptPubKey key hashes.
+
+**Signature**
+
+```ts
+export declare const extractKeyHashes: (script: NativeScriptVariants) => ReadonlyArray<Uint8Array>
 ```
 
 Added in v2.0.0
