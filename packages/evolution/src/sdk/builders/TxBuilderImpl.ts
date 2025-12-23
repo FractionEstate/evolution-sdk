@@ -20,6 +20,7 @@ import * as PolicyId from "../../core/PolicyId.js"
 import * as Redeemer from "../../core/Redeemer.js"
 import type * as RewardAccount from "../../core/RewardAccount.js"
 import * as ScriptDataHash from "../../core/ScriptDataHash.js"
+import * as Time from "../../core/Time/index.js"
 import * as Transaction from "../../core/Transaction.js"
 import * as TransactionBody from "../../core/TransactionBody.js"
 import * as TransactionHash from "../../core/TransactionHash.js"
@@ -725,10 +726,28 @@ export const assembleTransaction = (
         ? new Withdrawals.Withdrawals({ withdrawals: state.withdrawals as Map<RewardAccount.RewardAccount, bigint> })
         : undefined
 
+    // Convert validity interval from Unix time to slots
+    const config = yield* TxBuilderConfigTag
+    const slotConfig = Time.SLOT_CONFIG_NETWORK[config.network ?? "Mainnet"]
+    
+    let ttl: bigint | undefined
+    let validityIntervalStart: bigint | undefined
+    
+    if (state.validity?.to !== undefined) {
+      ttl = Time.unixTimeToSlot(state.validity.to, slotConfig)
+      yield* Effect.logDebug(`[Assembly] Validity TTL: ${ttl} (from unix ${state.validity.to})`)
+    }
+    if (state.validity?.from !== undefined) {
+      validityIntervalStart = Time.unixTimeToSlot(state.validity.from, slotConfig)
+      yield* Effect.logDebug(`[Assembly] Validity start: ${validityIntervalStart} (from unix ${state.validity.from})`)
+    }
+
     const body = new TransactionBody.TransactionBody({
       inputs: inputs as Array<TransactionInput.TransactionInput>,
       outputs: transactionOutputs,
       fee, // Now using actual calculated fee, not placeholder
+      ttl, // Transaction expiration slot
+      validityIntervalStart, // Transaction valid-from slot
       collateralInputs, // Collateral inputs from Collateral phase
       collateralReturn, // Collateral return output from Collateral phase
       totalCollateral, // Total collateral amount from Collateral phase

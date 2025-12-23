@@ -30,6 +30,8 @@ parent: Modules
   - [MintTokensParams (interface)](#minttokensparams-interface)
   - [PayToAddressParams (interface)](#paytoaddressparams-interface)
   - [ReadFromParams (interface)](#readfromparams-interface)
+- [validity](#validity)
+  - [ValidityParams (interface)](#validityparams-interface)
 
 ---
 
@@ -378,3 +380,29 @@ export interface ReadFromParams {
   readonly referenceInputs: ReadonlyArray<UTxO.UTxO> // Mandatory: UTxOs to read as reference inputs
 }
 ```
+
+# validity
+
+## ValidityParams (interface)
+
+Parameters for setting transaction validity interval.
+
+Both bounds are optional:
+
+- `from`: Transaction is valid after this time (validityIntervalStart)
+- `to`: Transaction expires after this time (ttl)
+
+Times are in Unix milliseconds and will be converted to slots based on network config.
+
+**Signature**
+
+```ts
+export interface ValidityParams {
+  /** Transaction valid after this Unix time (milliseconds). Converted to slot. */
+  readonly from?: Time.UnixTime
+  /** Transaction expires after this Unix time (milliseconds). Converted to slot. */
+  readonly to?: Time.UnixTime
+}
+```
+
+Added in v2.0.0

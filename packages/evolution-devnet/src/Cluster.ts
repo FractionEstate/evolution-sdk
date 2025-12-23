@@ -20,6 +20,8 @@ export interface Cluster {
   readonly kupo?: Container.Container | undefined
   readonly ogmios?: Container.Container | undefined
   readonly networkName: string
+  /** The Shelley genesis config used by this cluster (needed for slot config) */
+  readonly shelleyGenesis: Config.ShelleyGenesis
 }
 
 /**
@@ -288,7 +290,8 @@ export const makeEffect = (config: Config.DevNetConfig = {}): Effect.Effect<Clus
             name: `${fullConfig.clusterName}-ogmios`
           }
         : undefined,
-      networkName
+      networkName,
+      shelleyGenesis: fullConfig.shelleyGenesis as Config.ShelleyGenesis
     }
   })
 
@@ -489,3 +492,58 @@ export const removeEffect = (cluster: Cluster): Effect.Effect<void, ClusterError
  * @category lifecycle
  */
 export const remove = (cluster: Cluster) => Effect.runPromise(removeEffect(cluster))
+
+/**
+ * Slot configuration type for Unix time to slot conversion.
+ *
+ * @since 2.0.0
+ * @category model
+ */
+export interface SlotConfig {
+  readonly zeroTime: bigint
+  readonly zeroSlot: bigint
+  readonly slotLength: number
+}
+
+/**
+ * Extract slot configuration from a devnet cluster.
+ *
+ * This returns the slot config needed for converting Unix timestamps to slots
+ * when using setValidity() or other time-based transaction operations.
+ *
+ * The slot config is derived from the cluster's Shelley genesis:
+ * - zeroTime: Genesis system start time (in milliseconds)
+ * - zeroSlot: Always 0 for devnets
+ * - slotLength: Slot duration in milliseconds
+ *
+ * @example
+ * ```typescript
+ * import * as Cluster from "@evolution-sdk/devnet/Cluster"
+ * import { createClient } from "@evolution-sdk/evolution/sdk/client/ClientImpl"
+ *
+ * const cluster = await Cluster.make({ ... })
+ * const slotConfig = Cluster.getSlotConfig(cluster)
+ *
+ * const client = createClient({
+ *   network: 0,
+ *   slotConfig,
+ *   provider: { type: "kupmios", kupoUrl: "...", ogmiosUrl: "..." },
+ *   wallet: { type: "seed", mnemonic: "..." }
+ * })
+ * ```
+ *
+ * @since 2.0.0
+ * @category utilities
+ */
+export const getSlotConfig = (cluster: Cluster): SlotConfig => {
+  const genesis = cluster.shelleyGenesis
+  // systemStart is ISO string, convert to Unix ms
+  const zeroTime = BigInt(new Date(genesis.systemStart).getTime())
+  // slotLength in genesis is in seconds, convert to ms
+  const slotLength = genesis.slotLength * 1000
+  return {
+    zeroTime,
+    zeroSlot: 0n,
+    slotLength
+  }
+}

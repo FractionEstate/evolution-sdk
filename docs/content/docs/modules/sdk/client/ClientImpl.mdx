@@ -1,6 +1,6 @@
 ---
 title: sdk/client/ClientImpl.ts
-nav_order: 178
+nav_order: 179
 parent: Modules
 ---
 
@@ -32,21 +32,25 @@ export declare function createClient(config: {
   network?: NetworkId
   provider: ProviderConfig
   wallet: ReadOnlyWalletConfig
+  slotConfig?: Time.SlotConfig
 }): ReadOnlyClient
 export declare function createClient(config: {
   network?: NetworkId
   provider: ProviderConfig
   wallet: SeedWalletConfig
+  slotConfig?: Time.SlotConfig
 }): SigningClient
 export declare function createClient(config: {
   network?: NetworkId
   provider: ProviderConfig
   wallet: PrivateKeyWalletConfig
+  slotConfig?: Time.SlotConfig
 }): SigningClient
 export declare function createClient(config: {
   network?: NetworkId
   provider: ProviderConfig
   wallet: ApiWalletConfig
+  slotConfig?: Time.SlotConfig
 }): SigningClient
 export declare function createClient(config: { network?: NetworkId; provider: ProviderConfig }): ProviderOnlyClient
 export declare function createClient(config: {

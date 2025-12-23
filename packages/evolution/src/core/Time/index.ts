@@ -7,13 +7,22 @@
  */
 
 import type * as Network from "../Network.js"
-import type * as Slot from "./Slot.js"
-import * as SlotConfig from "./SlotConfig.js"
-import * as UnixTime from "./UnixTime.js"
+import type { Slot } from "./Slot.js"
+import type { SlotConfig } from "./SlotConfig.js"
+import { SLOT_CONFIG_NETWORK } from "./SlotConfig.js"
+import type { UnixTime } from "./UnixTime.js"
+import { now as nowFn } from "./UnixTime.js"
 
-export * as Slot from "./Slot.js"
-export * as SlotConfig from "./SlotConfig.js"
-export * as UnixTime from "./UnixTime.js"
+// Re-export types
+export type { Slot } from "./Slot.js"
+export type { SlotConfig } from "./SlotConfig.js"
+export type { UnixTime } from "./UnixTime.js"
+
+// Re-export slot config
+export { getSlotConfig,SLOT_CONFIG_NETWORK } from "./SlotConfig.js"
+
+// Re-export UnixTime utilities
+export { fromDate, fromSeconds,now, toDate, toSeconds } from "./UnixTime.js"
 
 /**
  * Convert a slot number to Unix time (in milliseconds).
@@ -30,12 +39,12 @@ export * as UnixTime from "./UnixTime.js"
  * import * as Time from "@evolution-sdk/core/Time"
  *
  * const slot = 12345678n
- * const config = Time.SlotConfig.SLOT_CONFIG_NETWORK.Mainnet
+ * const config = Time.SLOT_CONFIG_NETWORK.Mainnet
  * const unixTime = Time.slotToUnixTime(slot, config)
  * console.log(unixTime) // Unix time in milliseconds
  * ```
  */
-export const slotToUnixTime = (slot: Slot.Slot, slotConfig: SlotConfig.SlotConfig): UnixTime.UnixTime => {
+export const slotToUnixTime = (slot: Slot, slotConfig: SlotConfig): UnixTime => {
   const msAfterBegin = (slot - slotConfig.zeroSlot) * BigInt(slotConfig.slotLength)
   return slotConfig.zeroTime + msAfterBegin
 }
@@ -56,12 +65,12 @@ export const slotToUnixTime = (slot: Slot.Slot, slotConfig: SlotConfig.SlotConfi
  * import * as Time from "@evolution-sdk/core/Time"
  *
  * const unixTime = 1596059091000n // Mainnet Shelley start
- * const config = Time.SlotConfig.SLOT_CONFIG_NETWORK.Mainnet
+ * const config = Time.SLOT_CONFIG_NETWORK.Mainnet
  * const slot = Time.unixTimeToSlot(unixTime, config)
  * console.log(slot) // 4492800n
  * ```
  */
-export const unixTimeToSlot = (unixTime: UnixTime.UnixTime, slotConfig: SlotConfig.SlotConfig): Slot.Slot => {
+export const unixTimeToSlot = (unixTime: UnixTime, slotConfig: SlotConfig): Slot => {
   const timePassed = unixTime - slotConfig.zeroTime
   const slotsPassed = timePassed / BigInt(slotConfig.slotLength)
   return slotsPassed + slotConfig.zeroSlot
@@ -84,10 +93,10 @@ export const unixTimeToSlot = (unixTime: UnixTime.UnixTime, slotConfig: SlotConf
  * console.log(currentSlot) // Current mainnet slot
  * ```
  */
-export const getCurrentSlot = (network: Network.Network): Slot.Slot => {
-  const config = SlotConfig.SLOT_CONFIG_NETWORK[network]
-  const now = UnixTime.now()
-  return unixTimeToSlot(now, config)
+export const getCurrentSlot = (network: Network.Network): Slot => {
+  const config = SLOT_CONFIG_NETWORK[network]
+  const currentTime = nowFn()
+  return unixTimeToSlot(currentTime, config)
 }
 
 /**
@@ -100,10 +109,10 @@ export const getCurrentSlot = (network: Network.Network): Slot.Slot => {
  * @category Utility
  * @since 2.0.0
  */
-export const isSlotInFuture = (slot: Slot.Slot, slotConfig: SlotConfig.SlotConfig): boolean => {
-  const now = UnixTime.now()
+export const isSlotInFuture = (slot: Slot, slotConfig: SlotConfig): boolean => {
+  const currentTime = nowFn()
   const slotTime = slotToUnixTime(slot, slotConfig)
-  return slotTime > now
+  return slotTime > currentTime
 }
 
 /**
@@ -116,10 +125,10 @@ export const isSlotInFuture = (slot: Slot.Slot, slotConfig: SlotConfig.SlotConfi
  * @category Utility
  * @since 2.0.0
  */
-export const isSlotInPast = (slot: Slot.Slot, slotConfig: SlotConfig.SlotConfig): boolean => {
-  const now = UnixTime.now()
+export const isSlotInPast = (slot: Slot, slotConfig: SlotConfig): boolean => {
+  const currentTime = nowFn()
   const slotTime = slotToUnixTime(slot, slotConfig)
-  return slotTime < now
+  return slotTime < currentTime
 }
 
 /**
@@ -143,8 +152,8 @@ export const isSlotInPast = (slot: Slot.Slot, slotConfig: SlotConfig.SlotConfig)
  * const pastSlot = Time.getSlotAt(-10 * 60 * 1000, "Mainnet")
  * ```
  */
-export const getSlotAt = (offsetMs: number, network: Network.Network): Slot.Slot => {
-  const config = SlotConfig.SLOT_CONFIG_NETWORK[network]
-  const targetTime = UnixTime.now() + BigInt(offsetMs)
+export const getSlotAt = (offsetMs: number, network: Network.Network): Slot => {
+  const config = SLOT_CONFIG_NETWORK[network]
+  const targetTime = nowFn() + BigInt(offsetMs)
   return unixTimeToSlot(targetTime, config)
 }

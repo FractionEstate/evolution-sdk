@@ -3,6 +3,7 @@ import { Effect, Equal, ParseResult } from "effect"
 import * as CoreAddress from "../../core/Address.js"
 import * as KeyHash from "../../core/KeyHash.js"
 import * as PrivateKey from "../../core/PrivateKey.js"
+import type * as Time from "../../core/Time/index.js"
 import * as Transaction from "../../core/Transaction.js"
 import * as TransactionHash from "../../core/TransactionHash.js"
 import * as TransactionWitnessSet from "../../core/TransactionWitnessSet.js"
@@ -163,7 +164,8 @@ const createReadOnlyWalletClient = (network: NetworkId, config: ReadOnlyWalletCo
 const createReadOnlyClient = (
   network: NetworkId,
   providerConfig: ProviderConfig,
-  walletConfig: ReadOnlyWalletConfig
+  walletConfig: ReadOnlyWalletConfig,
+  slotConfig?: Time.SlotConfig
 ): ReadOnlyClient => {
   const provider = createProvider(providerConfig)
   const walletNetwork = toWalletNetwork(network)
@@ -184,7 +186,8 @@ const createReadOnlyClient = (
     newTx: (): ReadOnlyTransactionBuilder => {
       return makeTxBuilder({
         wallet,
-        provider
+        provider,
+        slotConfig
       })
     },
     Effect: {
@@ -575,7 +578,8 @@ const createApiWalletClient = (network: NetworkId, config: ApiWalletConfig): Api
 const createSigningClient = (
   network: NetworkId,
   providerConfig: ProviderConfig,
-  walletConfig: SeedWalletConfig | PrivateKeyWalletConfig | ApiWalletConfig
+  walletConfig: SeedWalletConfig | PrivateKeyWalletConfig | ApiWalletConfig,
+  slotConfig?: Time.SlotConfig
 ): SigningClient => {
   const provider = createProvider(providerConfig)
   const walletNetwork = toWalletNetwork(network)
@@ -616,7 +620,8 @@ const createSigningClient = (
       // Protocol parameters are auto-fetched from provider during build()
       return makeTxBuilder({
         provider, // Pass provider for submission
-        wallet // Pass wallet for signing
+        wallet, // Pass wallet for signing
+        slotConfig // Pass slot config for time conversion
       })
     },
     // Effect namespace
@@ -712,6 +717,7 @@ export function createClient(config: {
   network?: NetworkId
   provider: ProviderConfig
   wallet: ReadOnlyWalletConfig
+  slotConfig?: Time.SlotConfig
 }): ReadOnlyClient
 
 // Provider + Seed Wallet → SigningClient
@@ -719,6 +725,7 @@ export function createClient(config: {
   network?: NetworkId
   provider: ProviderConfig
   wallet: SeedWalletConfig
+  slotConfig?: Time.SlotConfig
 }): SigningClient
 
 // Provider + PrivateKey Wallet → SigningClient
@@ -726,6 +733,7 @@ export function createClient(config: {
   network?: NetworkId
   provider: ProviderConfig
   wallet: PrivateKeyWalletConfig
+  slotConfig?: Time.SlotConfig
 }): SigningClient
 
 // Provider + API Wallet → SigningClient
@@ -733,6 +741,7 @@ export function createClient(config: {
   network?: NetworkId
   provider: ProviderConfig
   wallet: ApiWalletConfig
+  slotConfig?: Time.SlotConfig
 }): SigningClient
 
 // Provider only → ProviderOnlyClient
@@ -758,6 +767,7 @@ export function createClient(config?: {
   network?: NetworkId
   provider?: ProviderConfig
   wallet?: WalletConfig
+  slotConfig?: Time.SlotConfig
 }):
   | MinimalClient
   | ReadOnlyClient
@@ -767,17 +777,18 @@ export function createClient(config?: {
   | SigningWalletClient
   | ApiWalletClient {
   const network = config?.network ?? "mainnet"
+  const slotConfig = config?.slotConfig
 
   if (config?.provider && config?.wallet) {
     switch (config.wallet.type) {
       case "read-only":
-        return createReadOnlyClient(network, config.provider, config.wallet)
+        return createReadOnlyClient(network, config.provider, config.wallet, slotConfig)
       case "seed":
-        return createSigningClient(network, config.provider, config.wallet)
+        return createSigningClient(network, config.provider, config.wallet, slotConfig)
       case "private-key":
-        return createSigningClient(network, config.provider, config.wallet)
+        return createSigningClient(network, config.provider, config.wallet, slotConfig)
       case "api":
-        return createSigningClient(network, config.provider, config.wallet)
+        return createSigningClient(network, config.provider, config.wallet, slotConfig)
     }
   }
 

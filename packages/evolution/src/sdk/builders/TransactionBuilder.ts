@@ -50,10 +50,11 @@ import type { CoinSelectionAlgorithm, CoinSelectionFunction } from "./CoinSelect
 import { attachScriptToState } from "./operations/Attach.js"
 import { createCollectFromProgram } from "./operations/Collect.js"
 import { createMintProgram } from "./operations/Mint.js"
-import type { AuthCommitteeHotParams, CollectFromParams, DelegateToParams, DeregisterDRepParams, DeregisterStakeParams, MintTokensParams, PayToAddressParams, ReadFromParams, RegisterAndDelegateToParams, RegisterDRepParams, RegisterPoolParams, RegisterStakeParams, ResignCommitteeColdParams, RetirePoolParams,UpdateDRepParams, WithdrawParams } from "./operations/Operations.js"
+import type { AuthCommitteeHotParams, CollectFromParams, DelegateToParams, DeregisterDRepParams, DeregisterStakeParams, MintTokensParams, PayToAddressParams, ReadFromParams, RegisterAndDelegateToParams, RegisterDRepParams, RegisterPoolParams, RegisterStakeParams, ResignCommitteeColdParams, RetirePoolParams, UpdateDRepParams, ValidityParams, WithdrawParams } from "./operations/Operations.js"
 import { createPayToAddressProgram } from "./operations/Pay.js"
 import { createReadFromProgram } from "./operations/ReadFrom.js"
 import { createDelegateToProgram, createDeregisterStakeProgram, createRegisterAndDelegateToProgram, createRegisterStakeProgram, createWithdrawProgram } from "./operations/Stake.js"
+import { createSetValidityProgram } from "./operations/Validity.js"
 import { executeBalance } from "./phases/Balance.js"
 import { executeChangeCreation } from "./phases/ChangeCreation.js"
 import { executeCollateral } from "./phases/Collateral.js"
@@ -244,21 +245,26 @@ const resolveEvaluator = (config: TxBuilderConfig, options?: BuildOptions): Eval
 }
 
 /**
- * Resolve slot configuration from config network or BuildOptions override.
- * Priority: BuildOptions.slotConfig > SLOT_CONFIG_NETWORK[config.network] > SLOT_CONFIG_NETWORK.Mainnet (default)
+ * Resolve slot configuration from BuildOptions, TxBuilderConfig, or network default.
+ * Priority: BuildOptions.slotConfig > TxBuilderConfig.slotConfig > SLOT_CONFIG_NETWORK[config.network]
  *
  * Slot configuration defines the relationship between slots and Unix time,
- * required for UPLC evaluation of time-based validators.
+ * required for UPLC evaluation of time-based validators and validity interval conversion.
  */
-const resolveSlotConfig = (config: TxBuilderConfig, options?: BuildOptions): Time.SlotConfig.SlotConfig => {
-  // Priority 1: Explicit slot config from BuildOptions (for custom networks)
+const resolveSlotConfig = (config: TxBuilderConfig, options?: BuildOptions): Time.SlotConfig => {
+  // Priority 1: Explicit slot config from BuildOptions (per-transaction override)
   if (options?.slotConfig) {
     return options.slotConfig
   }
 
-  // Priority 2: Network-specific slot config from TxBuilderConfig
+  // Priority 2: Slot config from TxBuilderConfig (set at client level)
+  if (config.slotConfig) {
+    return config.slotConfig
+  }
+
+  // Priority 3: Network-specific slot config preset
   const network: Network.Network = config.network ?? "Mainnet"
-  return Time.SlotConfig.SLOT_CONFIG_NETWORK[network]
+  return Time.SLOT_CONFIG_NETWORK[network]
 }
 
 /**
@@ -998,7 +1004,7 @@ export interface BuildOptions {
    *
    * @since 2.0.0
    */
-  readonly slotConfig?: Time.SlotConfig.SlotConfig
+  readonly slotConfig?: Time.SlotConfig
 
   /**
    * Amount to set as collateral return output (in lovelace).
@@ -1173,7 +1179,7 @@ export interface TxBuilderConfig {
    * - `"Mainnet"`: Production network
    * - `"Preview"`: Preview testnet
    * - `"Preprod"`: Pre-production testnet
-   * - `"Custom"`: Custom network (emulator/devnet) - requires slotConfig in BuildOptions
+   * - `"Custom"`: Custom network (emulator/devnet) - requires slotConfig
    *
    * When omitted, defaults to "Mainnet".
    *
@@ -1181,6 +1187,41 @@ export interface TxBuilderConfig {
    * @since 2.0.0
    */
   readonly network?: Network.Network
+
+  /**
+   * Custom slot configuration for the network.
+   *
+   * Slot configuration defines the relationship between slots and Unix time,
+   * which is required for:
+   * - UPLC evaluation of time-based validators
+   * - Converting validity bounds (from/to) from Unix time to slots
+   *
+   * By default, slot config is determined from the network (mainnet/preview/preprod).
+   * Set this for custom networks (devnet, emulator, private chains).
+   *
+   * Priority: BuildOptions.slotConfig > TxBuilderConfig.slotConfig > SLOT_CONFIG_NETWORK[network]
+   *
+   * Use cases:
+   * - Devnet with custom genesis time
+   * - Emulator with specific slot configuration
+   * - Private networks with custom parameters
+   *
+   * Example:
+   * ```typescript
+   * makeTxBuilder({
+   *   slotConfig: {
+   *     zeroTime: clusterGenesisTime,
+   *     zeroSlot: 0n,
+   *     slotLength: 1000 // 1 second per slot
+   *   },
+   *   wallet,
+   *   provider
+   * })
+   * ```
+   *
+   * @since 2.0.0
+   */
+  readonly slotConfig?: Time.SlotConfig
 
   // Future fields:
   // readonly costModels?: Uint8Array // Cost models for script evaluation
@@ -1239,6 +1280,11 @@ export interface TxBuilderState {
     readonly inputs: ReadonlyArray<CoreUTxO.UTxO>
     readonly totalAmount: bigint
     readonly returnOutput?: TxOut.TransactionOutput // Optional: only if there are leftover assets
+  }
+  readonly validity?: {
+    // Transaction validity interval (Unix times, converted to slots during assembly)
+    readonly from?: Time.UnixTime // validityIntervalStart
+    readonly to?: Time.UnixTime // ttl
   }
 }
 
@@ -1790,6 +1836,42 @@ export interface TransactionBuilderBase {
    * @category pool-methods
    */
   readonly retirePool: (params: RetirePoolParams) => this
+
+  /**
+   * Set the transaction validity interval.
+   *
+   * Configures the time window during which the transaction is valid:
+   * - `from`: Transaction is valid after this time (converted to validityIntervalStart slot)
+   * - `to`: Transaction expires after this time (converted to ttl slot)
+   *
+   * Times are Unix timestamps in milliseconds. At least one bound must be specified.
+   * For time-locked scripts, `to` is typically required for script evaluation.
+   *
+   * Queues a deferred operation that will be executed when build() is called.
+   * Returns the same builder for method chaining.
+   *
+   * @example
+   * ```typescript
+   * import * as Time from "@evolution-sdk/core/Time"
+   *
+   * // Transaction valid for 10 minutes from now
+   * const tx = await builder
+   *   .setValidity({
+   *     from: Time.now(),
+   *     to: Time.now() + 600_000n  // 10 minutes
+   *   })
+   *   .build()
+   *
+   * // Only set expiration (most common)
+   * const tx = await builder
+   *   .setValidity({ to: Time.now() + 300_000n })  // 5 minute TTL
+   *   .build()
+   * ```
+   *
+   * @since 2.0.0
+   * @category validity-methods
+   */
+  readonly setValidity: (params: ValidityParams) => this
 }
 
 /**
@@ -2054,6 +2136,10 @@ export function makeTxBuilder(config: TxBuilderConfig) {
     },
     retirePool: (_params: RetirePoolParams) => {
       throw new Error("retirePool not yet implemented")
+    },
+    setValidity: (params: ValidityParams) => {
+      programs.push(createSetValidityProgram(params))
+      return txBuilder
     },
 
     // ============================================================================

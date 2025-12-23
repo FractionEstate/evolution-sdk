@@ -8,12 +8,32 @@ import type * as EpochNo from "../../../core/EpochNo.js"
 import type * as PoolKeyHash from "../../../core/PoolKeyHash.js"
 import type * as PoolParams from "../../../core/PoolParams.js"
 import type * as CoreScriptRef from "../../../core/ScriptRef.js"
+import type * as Time from "../../../core/Time/index.js"
 import type * as UTxO from "../../../core/UTxO.js"
 import type * as RedeemerBuilder from "../RedeemerBuilder.js"
 
 // ============================================================================
 // Operation Parameter Types
 // ============================================================================
+
+/**
+ * Parameters for setting transaction validity interval.
+ *
+ * Both bounds are optional:
+ * - `from`: Transaction is valid after this time (validityIntervalStart)
+ * - `to`: Transaction expires after this time (ttl)
+ *
+ * Times are in Unix milliseconds and will be converted to slots based on network config.
+ *
+ * @since 2.0.0
+ * @category validity
+ */
+export interface ValidityParams {
+  /** Transaction valid after this Unix time (milliseconds). Converted to slot. */
+  readonly from?: Time.UnixTime
+  /** Transaction expires after this Unix time (milliseconds). Converted to slot. */
+  readonly to?: Time.UnixTime
+}
 
 export interface PayToAddressParams {
   readonly address: CoreAddress.Address
