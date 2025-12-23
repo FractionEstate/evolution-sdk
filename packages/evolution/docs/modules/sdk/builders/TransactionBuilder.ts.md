@@ -1,6 +1,6 @@
 ---
 title: sdk/builders/TransactionBuilder.ts
-nav_order: 174
+nav_order: 175
 parent: Modules
 ---
 
@@ -594,6 +594,41 @@ export interface TransactionBuilderBase {
    * @category validity-methods
    */
   readonly setValidity: (params: ValidityParams) => this
+
+  /**
+   * Add a required signer to the transaction.
+   *
+   * Adds a key hash to the transaction's requiredSigners field. This is used to
+   * require specific key signatures even when those keys don't control inputs.
+   * Common use cases include:
+   * - Multi-sig schemes requiring explicit signature verification
+   * - Plutus scripts that check for specific signers in the transaction
+   * - Governance transactions requiring DRep or committee member signatures
+   *
+   * Duplicate key hashes are automatically deduplicated.
+   *
+   * Queues a deferred operation that will be executed when build() is called.
+   * Returns the same builder for method chaining.
+   *
+   * @example
+   * ```typescript
+   * import * as KeyHash from "@evolution-sdk/core/KeyHash"
+   * import * as Address from "@evolution-sdk/core/Address"
+   *
+   * // Add signer from address credential
+   * const address = Address.fromBech32("addr_test1...")
+   * const cred = address.paymentCredential
+   * if (cred._tag === "KeyHash") {
+   *   const tx = await builder
+   *     .addSigner({ keyHash: cred })
+   *     .build()
+   * }
+   * ```
+   *
+   * @since 2.0.0
+   * @category builder-methods
+   */
+  readonly addSigner: (params: AddSignerParams) => this
 }
 ````
 
@@ -1134,6 +1169,7 @@ export interface TxBuilderState {
     readonly from?: Time.UnixTime // validityIntervalStart
     readonly to?: Time.UnixTime // ttl
   }
+  readonly requiredSigners: ReadonlyArray<KeyHash.KeyHash> // Extra signers required (for script validation)
 }
 ```
 

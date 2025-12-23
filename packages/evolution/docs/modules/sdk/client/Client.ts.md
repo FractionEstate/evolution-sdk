@@ -1,6 +1,6 @@
 ---
 title: sdk/client/Client.ts
-nav_order: 178
+nav_order: 179
 parent: Modules
 ---
 

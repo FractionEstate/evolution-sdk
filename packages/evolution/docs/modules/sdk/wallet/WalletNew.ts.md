@@ -1,6 +1,6 @@
 ---
 title: sdk/wallet/WalletNew.ts
-nav_order: 201
+nav_order: 202
 parent: Modules
 ---
 
@@ -139,7 +139,7 @@ API wallets handle both signing and submission through the wallet extension.
 export interface ApiWalletEffect extends ReadOnlyWalletEffect {
   readonly signTx: (
     tx: Transaction.Transaction | string,
-    context?: { utxos?: ReadonlyArray<CoreUTxO.UTxO> }
+    context?: { utxos?: ReadonlyArray<CoreUTxO.UTxO>; referenceUtxos?: ReadonlyArray<CoreUTxO.UTxO> }
   ) => Effect.Effect<TransactionWitnessSet.TransactionWitnessSet, WalletError>
   readonly signMessage: (
     address: CoreAddress.Address | RewardAddress.RewardAddress,
@@ -255,11 +255,12 @@ export interface SigningWalletEffect extends ReadOnlyWalletEffect {
   /**
    * Sign a transaction given its structured representation. UTxOs required for correctness
    * (e.g. to determine required signers) must be supplied by the caller (client) and not
-   * fetched internally.
+   * fetched internally. Reference UTxOs are used to extract required signers from native scripts
+   * that are used via reference inputs.
    */
   readonly signTx: (
     tx: Transaction.Transaction | string,
-    context?: { utxos?: ReadonlyArray<CoreUTxO.UTxO> }
+    context?: { utxos?: ReadonlyArray<CoreUTxO.UTxO>; referenceUtxos?: ReadonlyArray<CoreUTxO.UTxO> }
   ) => Effect.Effect<TransactionWitnessSet.TransactionWitnessSet, WalletError>
   readonly signMessage: (
     address: CoreAddress.Address | RewardAddress.RewardAddress,

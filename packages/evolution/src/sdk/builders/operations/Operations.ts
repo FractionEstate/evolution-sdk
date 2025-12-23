@@ -334,22 +334,6 @@ export interface RetirePoolParams {
  *
  * @since 2.0.0
  * @category signers
- * @example
- * ```typescript
- * // From address payment credential:
- * const cred = Core.Address.getPaymentCredential("addr1...")
- * if (cred?._tag === "KeyHash") {
- *   client.newTx()
- *     .addSigner({ keyHash: cred })
- *     .build()
- * }
- *
- * // From verification key:
- * const keyHash = Core.KeyHash.fromVKey(vkey)
- * client.newTx()
- *   .addSigner({ keyHash })
- *   .build()
- * ```
  */
 export interface AddSignerParams {
   /** The key hash that must sign the transaction */

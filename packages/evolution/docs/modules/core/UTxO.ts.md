@@ -25,8 +25,8 @@ parent: Modules
   - [datumOptionToSDK](#datumoptiontosdk)
   - [fromSDK](#fromsdk)
   - [fromSDKArray](#fromsdkarray)
-  - [scriptRefFromSDK](#scriptreffromsdk)
-  - [scriptRefToSDKHex](#scriptreftosdkhex)
+  - [scriptFromSDK](#scriptfromsdk)
+  - [scriptToSDK](#scripttosdk)
   - [toArray](#toarray)
   - [toSDK](#tosdk)
   - [toSDKArray](#tosdkarray)
@@ -37,7 +37,6 @@ parent: Modules
   - [UTxO (class)](#utxo-class)
     - [toJSON (method)](#tojson-method)
     - [toString (method)](#tostring-method)
-    - [[Inspectable.NodeInspectSymbol] (method)](#inspectablenodeinspectsymbol-method)
     - [[Equal.symbol] (method)](#equalsymbol-method)
     - [[Hash.symbol] (method)](#hashsymbol-method)
 - [models](#models)
@@ -207,29 +206,28 @@ export declare const fromSDKArray: (
 
 Added in v2.0.0
 
-## scriptRefFromSDK
+## scriptFromSDK
 
-Convert SDK Script to Core ScriptRef.
+Convert SDK Script to Core Script.
 
 **Signature**
 
 ```ts
-export declare const scriptRefFromSDK: (
-  script: SDKScript.Script
-) => Effect.Effect<ScriptRef.ScriptRef, ParseResult.ParseError>
+export declare const scriptFromSDK: (
+  sdkScript: SDKScript.Script
+) => Effect.Effect<Script.Script, ParseResult.ParseError>
 ```
 
 Added in v2.0.0
 
-## scriptRefToSDKHex
+## scriptToSDK
 
-Convert Core ScriptRef to SDK Script type string.
-Note: We lose the script type information as ScriptRef only stores bytes.
+Convert Core Script to SDK Script.
 
 **Signature**
 
 ```ts
-export declare const scriptRefToSDKHex: (scriptRef: ScriptRef.ScriptRef) => string
+export declare const scriptToSDK: (script: Script.Script) => SDKScript.Script
 ```
 
 Added in v2.0.0
@@ -330,14 +328,6 @@ toJSON()
 
 ```ts
 toString(): string
-```
-
-### [Inspectable.NodeInspectSymbol] (method)
-
-**Signature**
-
-```ts
-[Inspectable.NodeInspectSymbol](): unknown
 ```
 
 ### [Equal.symbol] (method)

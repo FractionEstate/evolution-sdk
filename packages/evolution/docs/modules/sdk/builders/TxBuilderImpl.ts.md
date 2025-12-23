@@ -1,6 +1,6 @@
 ---
 title: sdk/builders/TxBuilderImpl.ts
-nav_order: 176
+nav_order: 177
 parent: Modules
 ---
 
@@ -62,7 +62,7 @@ export declare const assembleTransaction: (
   inputs: ReadonlyArray<TransactionInput.TransactionInput>,
   outputs: ReadonlyArray<TxOut.TransactionOutput>,
   fee: bigint
-) => Effect.Effect<Transaction.Transaction, TransactionBuilderError, TxContext | TxBuilderConfigTag>
+) => Effect.Effect<Transaction.Transaction, TransactionBuilderError, TxContext | TxBuilderConfigTag | BuildOptionsTag>
 ```
 
 Added in v2.0.0
@@ -100,7 +100,7 @@ export declare const calculateMinimumUtxoLovelace: (params: {
   address: CoreAddress.Address
   assets: CoreAssets.Assets
   datum?: DatumOption.DatumOption
-  scriptRef?: TxOut.TransactionOutput["scriptRef"]
+  scriptRef?: CoreScript.Script
   coinsPerUtxoByte: bigint
 }) => Effect.Effect<bigint, TransactionBuilderError>
 ```
@@ -349,7 +349,7 @@ export declare const makeTxOutput: (params: {
   address: CoreAddress.Address
   assets: CoreAssets.Assets
   datum?: DatumOption.DatumOption
-  scriptRef?: TxOut.TransactionOutput["scriptRef"]
+  scriptRef?: CoreScript.Script
 }) => Effect.Effect<TxOut.TransactionOutput, TransactionBuilderError>
 ```
 

@@ -1,6 +1,6 @@
 ---
 title: sdk/builders/operations/Operations.ts
-nav_order: 156
+nav_order: 157
 parent: Modules
 ---
 
@@ -19,6 +19,8 @@ parent: Modules
 - [pool](#pool)
   - [RegisterPoolParams (interface)](#registerpoolparams-interface)
   - [RetirePoolParams (interface)](#retirepoolparams-interface)
+- [signers](#signers)
+  - [AddSignerParams (interface)](#addsignerparams-interface)
 - [staking](#staking)
   - [DelegateToParams (interface)](#delegatetoparams-interface)
   - [DeregisterStakeParams (interface)](#deregisterstakeparams-interface)
@@ -175,6 +177,26 @@ export interface RetirePoolParams {
   readonly poolKeyHash: PoolKeyHash.PoolKeyHash
   /** Epoch at which retirement takes effect */
   readonly epoch: EpochNo.EpochNo
+}
+```
+
+Added in v2.0.0
+
+# signers
+
+## AddSignerParams (interface)
+
+Parameters for adding a required signer to the transaction.
+
+Required signers must sign the transaction even if they don't control any inputs.
+This is commonly used for scripts that check for specific signers in their validation logic.
+
+**Signature**
+
+```ts
+export interface AddSignerParams {
+  /** The key hash that must sign the transaction */
+  readonly keyHash: KeyHash.KeyHash
 }
 ```
 
@@ -367,7 +389,8 @@ export interface PayToAddressParams {
   readonly address: CoreAddress.Address
   readonly assets: CoreAssets.Assets
   readonly datum?: CoreDatumOption.DatumOption
-  readonly scriptRef?: CoreScriptRef.ScriptRef
+  /** Optional script to store as a reference script in the output */
+  readonly script?: CoreScript.Script
 }
 ```
 
