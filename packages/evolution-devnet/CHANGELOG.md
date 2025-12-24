@@ -1,5 +1,12 @@
 # @evolution-sdk/devnet
 
+## 1.1.8
+
+### Patch Changes
+
+- Updated dependencies [[`7905507`](https://github.com/IntersectMBO/evolution-sdk/commit/79055076ab31214dc4c7462553484e9c2bcaf22c)]:
+  - @evolution-sdk/evolution@0.3.8
+
 ## 1.1.7
 
 ### Patch Changes
