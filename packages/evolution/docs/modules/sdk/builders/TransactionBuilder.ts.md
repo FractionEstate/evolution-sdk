@@ -633,7 +633,7 @@ export interface TransactionBuilderBase {
   /**
    * Attach metadata to the transaction.
    *
-   * Metadata is stored in the auxiliary data section and identified by labels (0-255)
+   * Metadata is stored in the auxiliary data section and identified by numeric labels
    * following the CIP-10 standard. Common use cases include:
    * - Transaction messages/comments (label 674, CIP-20)
    * - NFT metadata (label 721, CIP-25)
@@ -648,28 +648,19 @@ export interface TransactionBuilderBase {
    *
    * @example
    * ```typescript
-   * import * as TransactionMetadatum from "@evolution-sdk/core/TransactionMetadatum"
+   * import { fromEntries } from "@evolution-sdk/evolution/core/TransactionMetadatum"
    *
    * // Attach a simple message (CIP-20)
    * const tx = await builder
    *   .payToAddress({ address, assets: { lovelace: 2_000_000n } })
-   *   .attachMetadata({
-   *     label: 674n,
-   *     metadata: TransactionMetadatum.makeTransactionMetadatumMap(
-   *       new Map([[0n, TransactionMetadatum.makeTransactionMetadatumText("Hello, Cardano!")]])
-   *     )
-   *   })
+   *   .attachMetadata({ label: 674n, metadata: "Hello, Cardano!" })
    *   .build()
    *
    * // Attach NFT metadata (CIP-25)
-   * const nftMetadata = TransactionMetadatum.makeTransactionMetadatumMap(
-   *   new Map([
-   *     [TransactionMetadatum.makeTransactionMetadatumText("name"),
-   *      TransactionMetadatum.makeTransactionMetadatumText("My NFT #42")],
-   *     [TransactionMetadatum.makeTransactionMetadatumText("image"),
-   *      TransactionMetadatum.makeTransactionMetadatumText("ipfs://Qm...")],
-   *   ])
-   * )
+   * const nftMetadata = fromEntries([
+   *   ["name", "My NFT #42"],
+   *   ["image", "ipfs://Qm..."]
+   * ])
    * const tx = await builder
    *   .mintAssets({ assets: { [policyId + assetName]: 1n } })
    *   .attachMetadata({ label: 721n, metadata: nftMetadata })
@@ -680,6 +671,65 @@ export interface TransactionBuilderBase {
    * @category metadata-methods
    */
   readonly attachMetadata: (params: AttachMetadataParams) => this
+
+  // ============================================================================
+  // Composition Methods
+  // ============================================================================
+
+  /**
+   * Compose this builder with another builder's accumulated operations.
+   *
+   * Merges all queued operations from another transaction builder into this one.
+   * The other builder's programs are captured at compose time and will be executed
+   * when build() is called on this builder.
+   *
+   * This enables modular transaction building where common patterns can be
+   * encapsulated in reusable builder fragments.
+   *
+   * **Important**: Composition is one-way - changes to the other builder after
+   * compose() is called will not affect this builder.
+   *
+   * @example
+   * ```typescript
+   * // Create reusable builder for common operations
+   * const mintBuilder = builder
+   *   .mintAssets({ policyId, assets: { tokenName: 1n }, redeemer })
+   *   .attachScript({ script: mintingPolicy })
+   *
+   * // Compose into a transaction that also pays to an address
+   * const tx = await builder
+   *   .payToAddress({ address, assets: { lovelace: 5_000_000n } })
+   *   .compose(mintBuilder)
+   *   .build()
+   *
+   * // Compose multiple builders
+   * const fullTx = await builder
+   *   .compose(mintBuilder)
+   *   .compose(metadataBuilder)
+   *   .compose(certBuilder)
+   *   .build()
+   * ```
+   *
+   * @param other - Another transaction builder whose operations will be merged
+   * @returns The same builder for method chaining
+   *
+   * @since 2.0.0
+   * @category composition-methods
+   */
+  readonly compose: (other: TransactionBuilder) => this
+
+  /**
+   * Get a snapshot of the accumulated programs.
+   *
+   * Returns a read-only copy of all queued operations that have been added
+   * to this builder. Useful for inspection, debugging, or advanced composition patterns.
+   *
+   * @returns Read-only array of accumulated program steps
+   *
+   * @since 2.0.0
+   * @category composition-methods
+   */
+  readonly getPrograms: () => ReadonlyArray<ProgramStep>
 
   // ============================================================================
   // Transaction Chaining Methods

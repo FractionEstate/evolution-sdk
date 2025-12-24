@@ -78,7 +78,7 @@ Uses Core UTxO types directly.
 ```ts
 export declare const buildTransactionInputs: (
   utxos: ReadonlyArray<CoreUTxO.UTxO>
-) => Effect.Effect<ReadonlyArray<TransactionInput.TransactionInput>, TransactionBuilderError>
+) => Effect.Effect<ReadonlyArray<TransactionInput.TransactionInput>, never>
 ```
 
 Added in v2.0.0
@@ -187,7 +187,7 @@ export declare const calculateFeeIteratively: (
     }
   >,
   protocolParams: { minFeeCoefficient: bigint; minFeeConstant: bigint; priceMem?: number; priceStep?: number }
-) => Effect.Effect<bigint, TransactionBuilderError, TxContext>
+) => Effect.Effect<bigint, TransactionBuilderError, TxContext | BuildOptionsTag>
 ```
 
 Added in v2.0.0
@@ -350,7 +350,7 @@ export declare const makeTxOutput: (params: {
   assets: CoreAssets.Assets
   datum?: DatumOption.DatumOption
   scriptRef?: CoreScript.Script
-}) => Effect.Effect<TxOut.TransactionOutput, TransactionBuilderError>
+}) => Effect.Effect<TxOut.TransactionOutput, never>
 ```
 
 Added in v2.0.0
@@ -368,7 +368,7 @@ Use case: Draining wallet by merging leftover into an existing payment output.
 export declare const mergeAssetsIntoOutput: (
   output: TxOut.TransactionOutput,
   additionalAssets: CoreAssets.Assets
-) => Effect.Effect<TxOut.TransactionOutput, TransactionBuilderError>
+) => Effect.Effect<TxOut.TransactionOutput, never>
 ```
 
 Added in v2.0.0
@@ -386,7 +386,7 @@ Use case: Draining wallet by merging leftover into an existing payment output.
 export declare const mergeAssetsIntoUTxO: (
   utxo: CoreUTxO.UTxO,
   additionalAssets: CoreAssets.Assets
-) => Effect.Effect<CoreUTxO.UTxO, TransactionBuilderError>
+) => Effect.Effect<CoreUTxO.UTxO, never>
 ```
 
 Added in v2.0.0

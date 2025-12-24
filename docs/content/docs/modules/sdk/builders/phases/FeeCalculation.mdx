@@ -68,6 +68,6 @@ goto balance
 export declare const executeFeeCalculation: () => Effect.Effect<
   PhaseResult,
   TransactionBuilderError,
-  PhaseContextTag | TxContext | ProtocolParametersTag
+  PhaseContextTag | TxContext | ProtocolParametersTag | BuildOptionsTag
 >
 ```

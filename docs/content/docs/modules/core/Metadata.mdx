@@ -497,8 +497,8 @@ Added in v2.0.0
 
 ## MetadataLabel
 
-Schema for transaction metadatum label (uint - unbounded positive integer).
-Uses Numeric.NonNegativeInteger for consistency with other numeric types.
+Schema for transaction metadatum label (uint64 per Cardano CDDL spec).
+Labels must be in range 0 to 2^64-1.
 
 **Signature**
 

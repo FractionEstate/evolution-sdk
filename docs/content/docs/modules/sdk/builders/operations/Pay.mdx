@@ -35,9 +35,7 @@ Implementation:
 **Signature**
 
 ```ts
-export declare const createPayToAddressProgram: (
-  params: PayToAddressParams
-) => Effect.Effect<void, TransactionBuilderError, TxContext>
+export declare const createPayToAddressProgram: (params: PayToAddressParams) => Effect.Effect<void, never, TxContext>
 ```
 
 Added in v2.0.0

@@ -28,9 +28,7 @@ Scripts must be attached before being referenced by transaction inputs or mintin
 **Signature**
 
 ```ts
-export declare const attachScriptToState: (
-  script: ScriptCore.Script
-) => Effect.Effect<void, TransactionBuilderError, TxContext>
+export declare const attachScriptToState: (script: ScriptCore.Script) => Effect.Effect<void, never, TxContext>
 ```
 
 Added in v2.0.0
