@@ -752,34 +752,7 @@ export class EvaluationError extends Data.TaggedError("EvaluationError")<{
   readonly message?: string
   /** Parsed script failures with labels */
   readonly failures?: ReadonlyArray<ScriptFailure>
-}> {
-  /**
-   * Format failures into a human-readable string.
-   */
-  formatFailures(): string {
-    if (!this.failures || this.failures.length === 0) {
-      return this.message ?? "Script evaluation failed"
-    }
-
-    const lines = ["Script evaluation failed:"]
-    for (const f of this.failures) {
-      const labelPart = f.label ? ` [${f.label}]` : ""
-      const refPart = f.utxoRef
-        ? ` UTxO: ${f.utxoRef}`
-        : f.credential
-          ? ` Credential: ${f.credential}`
-          : f.policyId
-            ? ` Policy: ${f.policyId}`
-            : ""
-      lines.push(`  ${f.purpose}:${f.index}${labelPart}${refPart}`)
-      lines.push(`    Error: ${f.validationError}`)
-      if (f.traces.length > 0) {
-        lines.push(`    Traces: ${f.traces.join(", ")}`)
-      }
-    }
-    return lines.join("\n")
-  }
-}
+}> {}
 
 // ============================================================================
 // Provider Integration

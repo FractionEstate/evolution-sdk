@@ -106,38 +106,23 @@ function evalRedeemerFromCBOR(bytes: Uint8Array): EvalRedeemer.EvalRedeemer {
   // Decode using official Redeemer module
   const redeemer = Redeemer.fromCBORBytes(bytes, CBOR.CML_DEFAULT_OPTIONS)
 
-  const tagBigInt = Redeemer.tagToInteger(redeemer.tag)
-  const indexBigInt = redeemer.index
-  const memBigInt = redeemer.exUnits.mem
-  const stepsBigInt = redeemer.exUnits.steps
-
   // Map Redeemer.RedeemerTag to EvalRedeemer tag format
+  // cert -> publish, reward -> withdraw (different naming conventions)
   const tagMap: Record<Redeemer.RedeemerTag, EvalRedeemer.EvalRedeemer["redeemer_tag"]> = {
     spend: "spend",
     mint: "mint",
     cert: "publish",
-    reward: "withdraw"
+    reward: "withdraw",
+    vote: "vote",
+    propose: "propose"
   }
 
-  const redeemer_tag: EvalRedeemer.EvalRedeemer["redeemer_tag"] = Effect.gen(function* () {
-    // Handle Conway-era tags (vote=4, propose=5)
-    if (tagBigInt === 4n) return "vote"
-    if (tagBigInt === 5n) return "propose"
-
-    // Standard tags (0-3)
-    const mappedTag = tagMap[redeemer.tag]
-    if (!mappedTag) {
-      throw new Error(`Unknown redeemer tag: ${redeemer.tag} (${tagBigInt})`)
-    }
-    return mappedTag
-  }).pipe(Effect.runSync)
-
   return {
-    redeemer_tag,
-    redeemer_index: Number(indexBigInt),
+    redeemer_tag: tagMap[redeemer.tag],
+    redeemer_index: Number(redeemer.index),
     ex_units: {
-      mem: Number(memBigInt),
-      steps: Number(stepsBigInt)
+      mem: Number(redeemer.exUnits.mem),
+      steps: Number(redeemer.exUnits.steps)
     }
   }
 }

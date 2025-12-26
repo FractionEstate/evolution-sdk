@@ -13,8 +13,8 @@ export interface WasmModule {
     utxos_x: Array<Uint8Array>,
     utxos_y: Array<Uint8Array>,
     cost_mdls: Uint8Array,
-    budget_steps: bigint,
-    budget_mem: bigint,
+    initial_budget_n: bigint,
+    initial_budget_d: bigint,
     slot_x: bigint,
     slot_y: bigint,
     slot_z: number
