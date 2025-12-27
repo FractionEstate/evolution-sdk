@@ -7,12 +7,12 @@ import * as Numeric from "./Numeric.js"
 /**
  * Redeemer tag enum for different script execution contexts.
  *
- * CDDL: redeemer_tag = 0 ; spend | 1 ; mint | 2 ; cert | 3 ; reward
+ * CDDL: redeemer_tag = 0 ; spend | 1 ; mint | 2 ; cert | 3 ; reward | 4 ; vote | 5 ; propose
  *
  * @since 2.0.0
  * @category model
  */
-export const RedeemerTag = Schema.Literal("spend", "mint", "cert", "reward").annotations({
+export const RedeemerTag = Schema.Literal("spend", "mint", "cert", "reward", "vote", "propose").annotations({
   identifier: "Redeemer.Tag",
   title: "Redeemer Tag",
   description: "Tag indicating the context where the redeemer is used"
@@ -168,6 +168,10 @@ export const tagToInteger = (tag: RedeemerTag): bigint => {
       return 2n
     case "reward":
       return 3n
+    case "vote":
+      return 4n
+    case "propose":
+      return 5n
   }
 }
 
@@ -187,9 +191,13 @@ export const integerToTag = (value: bigint): RedeemerTag => {
       return "cert"
     case 3n:
       return "reward"
+    case 4n:
+      return "vote"
+    case 5n:
+      return "propose"
     default:
       throw new Error(
-        `Invalid redeemer tag: ${value}. Must be 0 (spend), 1 (mint), 2 (cert), or 3 (reward)`
+        `Invalid redeemer tag: ${value}. Must be 0 (spend), 1 (mint), 2 (cert), 3 (reward), 4 (vote), or 5 (propose)`
       )
   }
 }

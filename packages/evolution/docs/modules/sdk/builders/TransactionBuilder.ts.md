@@ -55,8 +55,6 @@ double-spending. UTxOs can come from any source (wallet, DeFi protocols, other p
     - [formatFailures (method)](#formatfailures-method)
   - [ScriptFailure (interface)](#scriptfailure-interface)
   - [TransactionBuilderError (class)](#transactionbuildererror-class)
-- [evaluators](#evaluators)
-  - [createUPLCEvaluator](#createuplcevaluator)
 - [model](#model)
   - [ChainResult (interface)](#chainresult-interface)
   - [EvaluationContext (interface)](#evaluationcontext-interface)
@@ -67,7 +65,6 @@ double-spending. UTxOs can come from any source (wallet, DeFi protocols, other p
   - [TxBuilderState (interface)](#txbuilderstate-interface)
 - [types](#types)
   - [ProgramStep (type alias)](#programstep-type-alias)
-  - [UPLCEvalFunction (type alias)](#uplcevalfunction-type-alias)
 - [utils](#utils)
   - [BuildOptions (interface)](#buildoptions-interface)
   - [PhaseContextTag (class)](#phasecontexttag-class)
@@ -1129,23 +1126,6 @@ export declare class TransactionBuilderError
 
 Added in v2.0.0
 
-# evaluators
-
-## createUPLCEvaluator
-
-Creates an evaluator from a standard UPLC evaluation function.
-
-**NOTE: NOT YET IMPLEMENTED** - This function currently returns an evaluator
-that produces dummy data. Reserved for future UPLC script evaluation support.
-
-**Signature**
-
-```ts
-export declare const createUPLCEvaluator: (_evalFunction: UPLCEvalFunction) => Evaluator
-```
-
-Added in v2.0.0
-
 # model
 
 ## ChainResult (interface)
@@ -1218,7 +1198,7 @@ export interface Evaluator {
    * @category methods
    */
   evaluate: (
-    tx: string,
+    tx: Transaction.Transaction,
     additionalUtxos: ReadonlyArray<CoreUTxO.UTxO> | undefined,
     context: EvaluationContext
   ) => Effect.Effect<ReadonlyArray<EvalRedeemer>, EvaluationError>
@@ -1347,30 +1327,6 @@ Requirements from context:
 
 ```ts
 export type ProgramStep = Effect.Effect<void, TransactionBuilderError, TxContext | TxBuilderConfigTag>
-```
-
-Added in v2.0.0
-
-## UPLCEvalFunction (type alias)
-
-Standard UPLC evaluation function signature (matches UPLC.eval_phase_two_raw).
-
-**NOTE: NOT YET IMPLEMENTED** - Reserved for future UPLC evaluation support.
-
-**Signature**
-
-```ts
-export type UPLCEvalFunction = (
-  tx_bytes: Uint8Array,
-  utxos_bytes_x: Array<Uint8Array>,
-  utxos_bytes_y: Array<Uint8Array>,
-  cost_mdls_bytes: Uint8Array,
-  initial_budget_n: bigint,
-  initial_budget_d: bigint,
-  slot_config_x: bigint,
-  slot_config_y: bigint,
-  slot_config_z: number
-) => Array<Uint8Array>
 ```
 
 Added in v2.0.0

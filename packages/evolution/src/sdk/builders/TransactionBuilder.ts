@@ -249,6 +249,97 @@ const resolveAvailableUtxos = (
 }
 
 /**
+ * Ogmios error response structure for script failures.
+ */
+interface OgmiosValidatorError {
+  validator: { index: number; purpose: string }
+  error: {
+    code: number
+    message: string
+    data: {
+      validationError: string
+      traces: Array<string>
+    }
+  }
+}
+
+/**
+ * Parse Ogmios/provider error response into raw ScriptFailure array.
+ * Returns failures without labels - enrichment happens in Evaluation phase.
+ */
+const parseProviderError = (error: unknown): Array<ScriptFailure> => {
+  const failures: Array<ScriptFailure> = []
+
+  // Navigate through error chain to find the response body
+  const findErrorData = (e: unknown): Array<OgmiosValidatorError> | undefined => {
+    if (!e || typeof e !== "object") return undefined
+
+    const obj = e as Record<string, unknown>
+
+    // Direct data property (from ProviderError cause chain)
+    if (obj.cause && typeof obj.cause === "object") {
+      const cause = obj.cause as Record<string, unknown>
+
+      // ResponseError with response.body
+      if (cause.response && typeof cause.response === "object") {
+        const resp = cause.response as Record<string, unknown>
+        if (resp.body && typeof resp.body === "object") {
+          const body = resp.body as Record<string, unknown>
+          if (body.error && typeof body.error === "object") {
+            const err = body.error as Record<string, unknown>
+            if (Array.isArray(err.data)) {
+              return err.data as Array<OgmiosValidatorError>
+            }
+          }
+        }
+      }
+
+      // Try description field which contains the JSON string
+      if (typeof cause.description === "string") {
+        try {
+          const match = cause.description.match(/\{.*\}/s)
+          if (match) {
+            const parsed = JSON.parse(match[0])
+            if (parsed.error?.data && Array.isArray(parsed.error.data)) {
+              return parsed.error.data as Array<OgmiosValidatorError>
+            }
+          }
+        } catch {
+          // JSON parse failed, continue looking
+        }
+      }
+
+      // Recurse into cause
+      return findErrorData(cause)
+    }
+
+    return undefined
+  }
+
+  const errorData = findErrorData(error)
+
+  if (!errorData) {
+    return failures
+  }
+
+  // Process each validator error (raw, without labels)
+  for (const validatorError of errorData) {
+    const { error: err, validator } = validatorError
+    const { index, purpose } = validator
+    const { traces, validationError } = err.data
+
+    failures.push({
+      purpose,
+      index,
+      validationError,
+      traces: traces ?? []
+    })
+  }
+
+  return failures
+}
+
+/**
  * Resolve evaluator from options, provider, or return undefined.
  * Priority: BuildOptions.evaluator > provider.evaluateTx (wrapped) > undefined
  *
@@ -264,16 +355,25 @@ const resolveEvaluator = (config: TxBuilderConfig, options?: BuildOptions): Eval
   // Priority 2: Wrap provider's evaluateTx as an Evaluator
   if (config.provider) {
     return {
-      evaluate: (tx: string, additionalUtxos: ReadonlyArray<CoreUTxO.UTxO> | undefined, _context: EvaluationContext) =>
-        config.provider!.Effect.evaluateTx(tx, additionalUtxos as Array<CoreUTxO.UTxO> | undefined).pipe(
-          Effect.mapError(
-            (providerError) =>
-              new EvaluationError({
-                message: `Provider evaluation failed: ${providerError.message}`,
-                cause: providerError
-              })
-          )
+      evaluate: (
+        tx: Transaction.Transaction,
+        additionalUtxos: ReadonlyArray<CoreUTxO.UTxO> | undefined,
+        _context: EvaluationContext
+      ) => {
+        // Serialize Transaction to CBOR hex for provider
+        const txHex = Transaction.toCBORHex(tx)
+        return config.provider!.Effect.evaluateTx(txHex, additionalUtxos as Array<CoreUTxO.UTxO> | undefined).pipe(
+          Effect.mapError((providerError) => {
+            // Parse provider error into structured failures
+            const failures = parseProviderError(providerError)
+            return new EvaluationError({
+              message: `Provider evaluation failed: ${providerError.message}`,
+              cause: providerError,
+              failures
+            })
+          })
         )
+      }
     }
   }
 
@@ -562,20 +662,13 @@ export interface ChainResult {
   readonly txHash: string
 }
 
-// ============================================================================
-// Evaluator Interface - Generic abstraction for script evaluation
-// ============================================================================
-// NOTE: These interfaces are reserved for future UPLC script evaluation support.
-// The createUPLCEvaluator function currently returns dummy data and is not yet implemented.
-
 /**
  * Data required by script evaluators: cost models, execution limits, and slot configuration.
  *
- * **NOTE: NOT YET IMPLEMENTED** - Reserved for future UPLC script evaluation support.
+ * Used by custom evaluators for local UPLC script evaluation.
  *
  * @since 2.0.0
  * @category model
- * @experimental
  */
 export interface EvaluationContext {
   /** Cost models for script evaluation */
@@ -595,12 +688,10 @@ export interface EvaluationContext {
 /**
  * Interface for evaluating transaction scripts and computing execution units.
  *
- * **NOTE: NOT YET IMPLEMENTED** - Reserved for future custom script evaluation support.
- * When implemented, this will enable custom evaluation strategies including local UPLC execution.
+ * Implement this interface to provide custom script evaluation strategies, such as local UPLC execution.
  *
  * @since 2.0.0
  * @category model
- * @experimental
  */
 export interface Evaluator {
   /**
@@ -610,7 +701,7 @@ export interface Evaluator {
    * @category methods
    */
   evaluate: (
-    tx: string,
+    tx: Transaction.Transaction,
     additionalUtxos: ReadonlyArray<CoreUTxO.UTxO> | undefined,
     context: EvaluationContext
   ) => Effect.Effect<ReadonlyArray<EvalRedeemer>, EvaluationError>
@@ -661,96 +752,7 @@ export class EvaluationError extends Data.TaggedError("EvaluationError")<{
   readonly message?: string
   /** Parsed script failures with labels */
   readonly failures?: ReadonlyArray<ScriptFailure>
-}> {
-  /**
-   * Format failures into a human-readable string.
-   */
-  formatFailures(): string {
-    if (!this.failures || this.failures.length === 0) {
-      return this.message ?? "Script evaluation failed"
-    }
-
-    const lines = ["Script evaluation failed:"]
-    for (const f of this.failures) {
-      const labelPart = f.label ? ` [${f.label}]` : ""
-      const refPart = f.utxoRef
-        ? ` UTxO: ${f.utxoRef}`
-        : f.credential
-          ? ` Credential: ${f.credential}`
-          : f.policyId
-            ? ` Policy: ${f.policyId}`
-            : ""
-      lines.push(`  ${f.purpose}:${f.index}${labelPart}${refPart}`)
-      lines.push(`    Error: ${f.validationError}`)
-      if (f.traces.length > 0) {
-        lines.push(`    Traces: ${f.traces.join(", ")}`)
-      }
-    }
-    return lines.join("\n")
-  }
-}
-
-// ============================================================================
-// Factory Functions
-// ============================================================================
-
-/**
- * Standard UPLC evaluation function signature (matches UPLC.eval_phase_two_raw).
- *
- * **NOTE: NOT YET IMPLEMENTED** - Reserved for future UPLC evaluation support.
- *
- * @since 2.0.0
- * @category types
- * @experimental
- */
-export type UPLCEvalFunction = (
-  tx_bytes: Uint8Array,
-  utxos_bytes_x: Array<Uint8Array>,
-  utxos_bytes_y: Array<Uint8Array>,
-  cost_mdls_bytes: Uint8Array,
-  initial_budget_n: bigint,
-  initial_budget_d: bigint,
-  slot_config_x: bigint,
-  slot_config_y: bigint,
-  slot_config_z: number
-) => Array<Uint8Array>
-
-/**
- * Creates an evaluator from a standard UPLC evaluation function.
- *
- * **NOTE: NOT YET IMPLEMENTED** - This function currently returns an evaluator
- * that produces dummy data. Reserved for future UPLC script evaluation support.
- *
- * @since 2.0.0
- * @category evaluators
- * @experimental
- */
-export const createUPLCEvaluator = (_evalFunction: UPLCEvalFunction): Evaluator => ({
-  evaluate: (_tx: string, _additionalUtxos: ReadonlyArray<CoreUTxO.UTxO> | undefined, _context: EvaluationContext) =>
-    Effect.gen(function* () {
-      // Implementation: Call UPLC evaluation with provided parameters
-      // _evalFunction(
-      //   fromHex(_tx),
-      //   utxosToInputBytes(_additionalUtxos),
-      //   utxosToOutputBytes(_additionalUtxos),
-      //   _context.costModels,
-      //   _context.maxTxExSteps,
-      //   _context.maxTxExMem,
-      //   _context.slotConfig.zeroTime,
-      //   _context.slotConfig.zeroSlot,
-      //   _context.slotConfig.slotLength
-      // )
-
-      // Return dummy EvalRedeemer for now
-      const dummyEvalRedeemer: EvalRedeemer = {
-        ex_units: { mem: 1000000, steps: 5000000 },
-        redeemer_index: 0,
-        redeemer_tag: "spend"
-      }
-
-      return [dummyEvalRedeemer] as const
-    })
-})
+}> {}
 
 // ============================================================================
 // Provider Integration

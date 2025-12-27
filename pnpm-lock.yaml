@@ -178,6 +178,19 @@ importers:
         specifier: ^5.9.2
         version: 5.9.2
 
+  packages/aiken-uplc:
+    dependencies:
+      '@evolution-sdk/evolution':
+        specifier: workspace:*
+        version: link:../evolution
+      effect:
+        specifier: ^3.19.3
+        version: 3.19.3
+    devDependencies:
+      typescript:
+        specifier: ^5.9.2
+        version: 5.9.2
+
   packages/evolution:
     dependencies:
       '@effect/platform':
@@ -241,6 +254,9 @@ importers:
       '@effect/platform-node':
         specifier: ^0.96.1
         version: 0.96.1(@effect/cluster@0.48.2(@effect/platform@0.90.10(effect@3.19.3))(@effect/rpc@0.69.1(@effect/platform@0.90.10(effect@3.19.3))(effect@3.19.3))(@effect/sql@0.44.2(@effect/experimental@0.54.6(@effect/platform@0.90.10(effect@3.19.3))(effect@3.19.3))(@effect/platform@0.90.10(effect@3.19.3))(effect@3.19.3))(@effect/workflow@0.9.2(@effect/platform@0.90.10(effect@3.19.3))(@effect/rpc@0.69.1(@effect/platform@0.90.10(effect@3.19.3))(effect@3.19.3))(effect@3.19.3))(effect@3.19.3))(@effect/platform@0.90.10(effect@3.19.3))(@effect/rpc@0.69.1(@effect/platform@0.90.10(effect@3.19.3))(effect@3.19.3))(@effect/sql@0.44.2(@effect/experimental@0.54.6(@effect/platform@0.90.10(effect@3.19.3))(effect@3.19.3))(@effect/platform@0.90.10(effect@3.19.3))(effect@3.19.3))(effect@3.19.3)
+      '@evolution-sdk/aiken-uplc':
+        specifier: workspace:*
+        version: link:../aiken-uplc
       '@evolution-sdk/evolution':
         specifier: workspace:*
         version: link:../evolution

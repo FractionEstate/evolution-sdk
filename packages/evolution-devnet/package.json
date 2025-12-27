@@ -47,6 +47,7 @@
     "dockerode": "^4.0.7"
   },
   "peerDependencies": {
+    "@evolution-sdk/aiken-uplc": "workspace:*",
     "@evolution-sdk/evolution": "workspace:*",
     "@effect/platform": "^0.90.10",
     "@effect/platform-node": "^0.96.1",
