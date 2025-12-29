@@ -1,6 +1,6 @@
 ---
 title: sdk/builders/TransactionBuilder.ts
-nav_order: 176
+nav_order: 179
 parent: Modules
 ---
 
@@ -52,7 +52,6 @@ double-spending. UTxOs can come from any source (wallet, DeFi protocols, other p
   - [TxContext (class)](#txcontext-class)
 - [errors](#errors)
   - [EvaluationError (class)](#evaluationerror-class)
-    - [formatFailures (method)](#formatfailures-method)
   - [ScriptFailure (interface)](#scriptfailure-interface)
   - [TransactionBuilderError (class)](#transactionbuildererror-class)
 - [model](#model)
@@ -408,10 +407,59 @@ export interface TransactionBuilderBase {
    * Queues a deferred operation that will be executed when build() is called.
    * Returns the same builder for method chaining.
    *
+   * @deprecated Use delegateToPool, delegateToDRep, or delegateToPoolAndDRep instead
    * @since 2.0.0
    * @category staking-methods
    */
   readonly delegateTo: (params: DelegateToParams) => this
+
+  /**
+   * Delegate stake to a pool.
+   *
+   * Creates a StakeDelegation certificate to delegate your stake credential
+   * to a specific stake pool for earning staking rewards.
+   *
+   * For script-controlled credentials, provide a redeemer.
+   *
+   * Queues a deferred operation that will be executed when build() is called.
+   * Returns the same builder for method chaining.
+   *
+   * @since 2.0.0
+   * @category staking-methods
+   */
+  readonly delegateToPool: (params: DelegateToPoolParams) => this
+
+  /**
+   * Delegate voting power to a DRep.
+   *
+   * Creates a VoteDelegCert certificate to delegate your governance voting power
+   * to a Delegated Representative (Conway era).
+   *
+   * For script-controlled credentials, provide a redeemer.
+   *
+   * Queues a deferred operation that will be executed when build() is called.
+   * Returns the same builder for method chaining.
+   *
+   * @since 2.0.0
+   * @category staking-methods
+   */
+  readonly delegateToDRep: (params: DelegateToDRepParams) => this
+
+  /**
+   * Delegate both stake and voting power.
+   *
+   * Creates a StakeVoteDelegCert certificate to simultaneously delegate your
+   * stake to a pool and your voting power to a DRep (Conway era).
+   *
+   * For script-controlled credentials, provide a redeemer.
+   *
+   * Queues a deferred operation that will be executed when build() is called.
+   * Returns the same builder for method chaining.
+   *
+   * @since 2.0.0
+   * @category staking-methods
+   */
+  readonly delegateToPoolAndDRep: (params: DelegateToPoolAndDRepParams) => this
 
   /**
    * Withdraw staking rewards from a stake credential.
@@ -1068,16 +1116,6 @@ export declare class EvaluationError
 
 Added in v2.0.0
 
-### formatFailures (method)
-
-Format failures into a human-readable string.
-
-**Signature**
-
-```ts
-formatFailures(): string
-```
-
 ## ScriptFailure (interface)
 
 Represents a single script failure from Ogmios evaluation.
@@ -1157,7 +1195,7 @@ Added in v2.0.0
 
 Data required by script evaluators: cost models, execution limits, and slot configuration.
 
-**NOTE: NOT YET IMPLEMENTED** - Reserved for future UPLC script evaluation support.
+Used by custom evaluators for local UPLC script evaluation.
 
 **Signature**
 
@@ -1184,8 +1222,7 @@ Added in v2.0.0
 
 Interface for evaluating transaction scripts and computing execution units.
 
-**NOTE: NOT YET IMPLEMENTED** - Reserved for future custom script evaluation support.
-When implemented, this will enable custom evaluation strategies including local UPLC execution.
+Implement this interface to provide custom script evaluation strategies, such as local UPLC execution.
 
 **Signature**
 
@@ -1273,6 +1310,7 @@ export interface TxBuilderState {
   readonly referenceInputs: ReadonlyArray<CoreUTxO.UTxO> // Reference inputs (UTxOs with reference scripts)
   readonly certificates: ReadonlyArray<Certificate.Certificate> // Certificates for staking operations
   readonly withdrawals: Map<RewardAccount.RewardAccount, bigint> // Withdrawal amounts by reward account
+  readonly poolDeposits: Map<string, bigint> // Pool deposits keyed by pool key hash
   readonly mint?: Mint.Mint // Assets being minted/burned (positive = mint, negative = burn)
   readonly collateral?: {
     // Collateral data for script transactions

@@ -170,3 +170,56 @@ export const queryUtxosEffect = (cluster: Cluster): Effect.Effect<ReadonlyArray<
  * @category genesis
  */
 export const queryUtxos = (cluster: Cluster) => Effect.runPromise(queryUtxosEffect(cluster))
+
+//TODO: this function does not belong here
+/**
+ * Query the current epoch from the running node using cardano-cli.
+ * Returns the current epoch number from the chain tip.
+ *
+ * @since 2.0.0
+ * @category query
+ */
+export const queryCurrentEpochEffect = (cluster: Cluster): Effect.Effect<bigint, GenesisError> =>
+  Effect.gen(function* () {
+    const ContainerModule = yield* Effect.promise(() => import("./Container.js"))
+
+    const output = yield* ContainerModule.execCommandEffect(cluster.cardanoNode, [
+      "cardano-cli",
+      "conway",
+      "query",
+      "tip",
+      "--socket-path",
+      "/opt/cardano/ipc/node.socket",
+      "--testnet-magic",
+      "42"
+    ]).pipe(
+      Effect.mapError(
+        (e) =>
+          new GenesisError({
+            reason: "tip_query_failed",
+            message: "Failed to query chain tip from node",
+            cause: e
+          })
+      )
+    )
+
+    const parsed = yield* Effect.try({
+      try: () => JSON.parse(output) as { epoch: number },
+      catch: (e) =>
+        new GenesisError({
+          reason: "tip_parse_failed",
+          message: "Failed to parse chain tip output from cardano-cli",
+          cause: e
+        })
+    })
+
+    return BigInt(parsed.epoch)
+  })
+
+/**
+ * Query current epoch from node, throws on error.
+ *
+ * @since 2.0.0
+ * @category genesis
+ */
+export const queryCurrentEpoch = (cluster: Cluster) => Effect.runPromise(queryCurrentEpochEffect(cluster))

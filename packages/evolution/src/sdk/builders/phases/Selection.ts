@@ -258,6 +258,36 @@ export const executeSelection = (): Effect.Effect<PhaseResult, TransactionBuilde
       }
     }
 
+    // Step 5.5: Enforce Cardano protocol requirement: minimum 1 input UTxO
+    // This handles cases where refunds/withdrawals cover all costs, but no UTxO inputs exist
+    const stateAfterSelection = yield* Ref.get(ctx)
+    if (stateAfterSelection.selectedUtxos.length === 0) {
+      //TODO: double check if this is a good approach, it seems that this condition is only needed when refunds/withdrawals cover all costs
+      const allAvailableUtxos = yield* AvailableUtxosTag
+      
+      if (allAvailableUtxos.length === 0) {
+        return yield* Effect.fail(
+          new TransactionBuilderError({
+            message: 
+              "Cannot build transaction: no UTxOs available and no explicit inputs provided. " +
+              "Cardano protocol requires at least one input to prevent transaction replay."
+          })
+        )
+      }
+
+      // Select smallest UTxO to minimize excess
+      const smallestUtxo = allAvailableUtxos.reduce((min, utxo) =>
+        CoreAssets.lovelaceOf(utxo.assets) < CoreAssets.lovelaceOf(min.assets) ? utxo : min
+      )
+
+      yield* Effect.logDebug(
+        `[Selection] Enforcing minimum 1 input: selected smallest UTxO with ${CoreAssets.lovelaceOf(smallestUtxo.assets)} lovelace ` +
+        `(Cardano protocol requirement for replay protection)`
+      )
+
+      yield* addUtxosToState([smallestUtxo])
+    }
+
     // Step 6: Update context and check for scripts
     yield* Ref.update(buildCtxRef, (ctx) => ({ ...ctx, attempt: ctx.attempt + 1, shortfall: 0n }))
 

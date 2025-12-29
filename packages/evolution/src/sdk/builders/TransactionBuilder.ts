@@ -53,13 +53,23 @@ import { createAddSignerProgram } from "./operations/AddSigner.js"
 import { attachScriptToState } from "./operations/Attach.js"
 import { createAttachMetadataProgram } from "./operations/AttachMetadata.js"
 import { createCollectFromProgram } from "./operations/Collect.js"
+import {
+  createAuthCommitteeHotProgram,
+  createDeregisterDRepProgram,
+  createRegisterDRepProgram,
+  createResignCommitteeColdProgram,
+  createUpdateDRepProgram
+} from "./operations/Governance.js"
 import { createMintAssetsProgram } from "./operations/Mint.js"
 import type {
   AddSignerParams,
   AttachMetadataParams,
   AuthCommitteeHotParams,
   CollectFromParams,
+  DelegateToDRepParams,
   DelegateToParams,
+  DelegateToPoolAndDRepParams,
+  DelegateToPoolParams,
   DeregisterDRepParams,
   DeregisterStakeParams,
   MintTokensParams,
@@ -76,8 +86,12 @@ import type {
   WithdrawParams
 } from "./operations/Operations.js"
 import { createPayToAddressProgram } from "./operations/Pay.js"
+import { createRegisterPoolProgram, createRetirePoolProgram } from "./operations/Pool.js"
 import { createReadFromProgram } from "./operations/ReadFrom.js"
 import {
+  createDelegateToDRepProgram,
+  createDelegateToPoolAndDRepProgram,
+  createDelegateToPoolProgram,
   createDelegateToProgram,
   createDeregisterStakeProgram,
   createRegisterAndDelegateToProgram,
@@ -157,6 +171,7 @@ const initialTxBuilderState: TxBuilderState = {
   referenceInputs: [],
   certificates: [],
   withdrawals: new Map(),
+  poolDeposits: new Map(),
   requiredSigners: [],
   auxiliaryData: undefined
 }
@@ -1308,6 +1323,7 @@ export interface TxBuilderState {
   readonly referenceInputs: ReadonlyArray<CoreUTxO.UTxO> // Reference inputs (UTxOs with reference scripts)
   readonly certificates: ReadonlyArray<Certificate.Certificate> // Certificates for staking operations
   readonly withdrawals: Map<RewardAccount.RewardAccount, bigint> // Withdrawal amounts by reward account
+  readonly poolDeposits: Map<string, bigint> // Pool deposits keyed by pool key hash
   readonly mint?: Mint.Mint // Assets being minted/burned (positive = mint, negative = burn)
   readonly collateral?: {
     // Collateral data for script transactions
@@ -1728,10 +1744,59 @@ export interface TransactionBuilderBase {
    * Queues a deferred operation that will be executed when build() is called.
    * Returns the same builder for method chaining.
    *
+   * @deprecated Use delegateToPool, delegateToDRep, or delegateToPoolAndDRep instead
    * @since 2.0.0
    * @category staking-methods
    */
   readonly delegateTo: (params: DelegateToParams) => this
+
+  /**
+   * Delegate stake to a pool.
+   *
+   * Creates a StakeDelegation certificate to delegate your stake credential
+   * to a specific stake pool for earning staking rewards.
+   *
+   * For script-controlled credentials, provide a redeemer.
+   *
+   * Queues a deferred operation that will be executed when build() is called.
+   * Returns the same builder for method chaining.
+   *
+   * @since 2.0.0
+   * @category staking-methods
+   */
+  readonly delegateToPool: (params: DelegateToPoolParams) => this
+
+  /**
+   * Delegate voting power to a DRep.
+   *
+   * Creates a VoteDelegCert certificate to delegate your governance voting power
+   * to a Delegated Representative (Conway era).
+   *
+   * For script-controlled credentials, provide a redeemer.
+   *
+   * Queues a deferred operation that will be executed when build() is called.
+   * Returns the same builder for method chaining.
+   *
+   * @since 2.0.0
+   * @category staking-methods
+   */
+  readonly delegateToDRep: (params: DelegateToDRepParams) => this
+
+  /**
+   * Delegate both stake and voting power.
+   *
+   * Creates a StakeVoteDelegCert certificate to simultaneously delegate your
+   * stake to a pool and your voting power to a DRep (Conway era).
+   *
+   * For script-controlled credentials, provide a redeemer.
+   *
+   * Queues a deferred operation that will be executed when build() is called.
+   * Returns the same builder for method chaining.
+   *
+   * @since 2.0.0
+   * @category staking-methods
+   */
+  readonly delegateToPoolAndDRep: (params: DelegateToPoolAndDRepParams) => this
 
   /**
    * Withdraw staking rewards from a stake credential.
@@ -2311,6 +2376,21 @@ export function makeTxBuilder(config: TxBuilderConfig) {
       programs.push(program)
       return txBuilder
     },
+    delegateToPool: (params: DelegateToPoolParams) => {
+      const program = createDelegateToPoolProgram(params)
+      programs.push(program)
+      return txBuilder
+    },
+    delegateToDRep: (params: DelegateToDRepParams) => {
+      const program = createDelegateToDRepProgram(params)
+      programs.push(program)
+      return txBuilder
+    },
+    delegateToPoolAndDRep: (params: DelegateToPoolAndDRepParams) => {
+      const program = createDelegateToPoolAndDRepProgram(params)
+      programs.push(program)
+      return txBuilder
+    },
     withdraw: (params: WithdrawParams) => {
       const program = createWithdrawProgram(params, config)
       programs.push(program)
@@ -2321,26 +2401,40 @@ export function makeTxBuilder(config: TxBuilderConfig) {
       programs.push(program)
       return txBuilder
     },
-    registerDRep: (_params: RegisterDRepParams) => {
-      throw new Error("registerDRep not yet implemented")
+    registerDRep: (params: RegisterDRepParams) => {
+      const program = createRegisterDRepProgram(params)
+      programs.push(program)
+      return txBuilder
     },
-    updateDRep: (_params: UpdateDRepParams) => {
-      throw new Error("updateDRep not yet implemented")
+    updateDRep: (params: UpdateDRepParams) => {
+      const program = createUpdateDRepProgram(params)
+      programs.push(program)
+      return txBuilder
     },
-    deregisterDRep: (_params: DeregisterDRepParams) => {
-      throw new Error("deregisterDRep not yet implemented")
+    deregisterDRep: (params: DeregisterDRepParams) => {
+      const program = createDeregisterDRepProgram(params)
+      programs.push(program)
+      return txBuilder
     },
-    authCommitteeHot: (_params: AuthCommitteeHotParams) => {
-      throw new Error("authCommitteeHot not yet implemented")
+    authCommitteeHot: (params: AuthCommitteeHotParams) => {
+      const program = createAuthCommitteeHotProgram(params)
+      programs.push(program)
+      return txBuilder
     },
-    resignCommitteeCold: (_params: ResignCommitteeColdParams) => {
-      throw new Error("resignCommitteeCold not yet implemented")
+    resignCommitteeCold: (params: ResignCommitteeColdParams) => {
+      const program = createResignCommitteeColdProgram(params)
+      programs.push(program)
+      return txBuilder
     },
-    registerPool: (_params: RegisterPoolParams) => {
-      throw new Error("registerPool not yet implemented")
+    registerPool: (params: RegisterPoolParams) => {
+      const program = createRegisterPoolProgram(params)
+      programs.push(program)
+      return txBuilder
     },
-    retirePool: (_params: RetirePoolParams) => {
-      throw new Error("retirePool not yet implemented")
+    retirePool: (params: RetirePoolParams) => {
+      const program = createRetirePoolProgram(params)
+      programs.push(program)
+      return txBuilder
     },
     setValidity: (params: ValidityParams) => {
       programs.push(createSetValidityProgram(params))

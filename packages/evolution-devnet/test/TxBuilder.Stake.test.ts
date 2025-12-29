@@ -52,7 +52,7 @@ describe("TxBuilder Stake Operations", () => {
 
   beforeAll(async () => {
     // Create clients for each account we'll use in tests
-    const accounts = [0, 1, 2, 3, 4, 5].map(accountIndex =>
+    const accounts = [0, 1, 2, 3, 4, 5, 6, 7, 8].map(accountIndex =>
       createClient({
         network: 0,
         wallet: { type: "seed", mnemonic: TEST_MNEMONIC, accountIndex, addressType: "Base" }
@@ -74,7 +74,10 @@ describe("TxBuilder Stake Operations", () => {
         [addressHexes[2]]: 300_000_000_000, // Test 3: DRep-only delegation (VoteDelegCert)
         [addressHexes[3]]: 300_000_000_000, // Test 4: Combined register+delegate pool (StakeRegDelegCert)
         [addressHexes[4]]: 300_000_000_000, // Test 5: Combined register+delegate DRep (VoteRegDelegCert)
-        [addressHexes[5]]: 300_000_000_000  // Test 6: Combined register+delegate both (StakeVoteRegDelegCert)
+        [addressHexes[5]]: 300_000_000_000, // Test 6: Combined register+delegate both (StakeVoteRegDelegCert)
+        [addressHexes[6]]: 300_000_000_000, // Test 7: NEW API - delegateToPool
+        [addressHexes[7]]: 300_000_000_000, // Test 8: NEW API - delegateToDRep
+        [addressHexes[8]]: 300_000_000_000  // Test 9: NEW API - delegateToPoolAndDRep
       }
     }
 
@@ -388,6 +391,161 @@ describe("TxBuilder Stake Operations", () => {
     await new Promise((resolve) => setTimeout(resolve, 2000))
 
     // Step 2: Deregister
+    const deregisterTxHash = await client
+      .newTx()
+      .deregisterStake({ stakeCredential })
+      .build()
+      .then((b) => b.sign())
+      .then((b) => b.submit())
+    expect(await client.awaitTx(deregisterTxHash, 1000)).toBe(true)
+  })
+
+  // ============================================================================
+  // New Explicit Delegation API Tests
+  // ============================================================================
+
+  it("NEW API: delegateToPool - delegates stake to pool only", { timeout: 180_000 }, async () => {
+    const ACCOUNT_INDEX = 6
+    const genesisUtxo = genesisUtxosByAccount.get(ACCOUNT_INDEX)
+    if (!genesisUtxo) {
+      throw new Error(`Genesis UTxO not found for account ${ACCOUNT_INDEX}`)
+    }
+
+    const client = createTestClient(ACCOUNT_INDEX)
+    const walletAddress = await client.address()
+    const addressStruct = walletAddress
+
+    if (!("stakingCredential" in addressStruct) || !addressStruct.stakingCredential) {
+      throw new Error(`Expected BaseAddress with stakingCredential`)
+    }
+
+    const stakeCredential = addressStruct.stakingCredential
+
+    // Step 1: Register
+    const registerTxHash = await client
+      .newTx()
+      .registerStake({ stakeCredential })
+      .build({ availableUtxos: [genesisUtxo] })
+      .then((b) => b.sign())
+      .then((b) => b.submit())
+    expect(await client.awaitTx(registerTxHash, 1000)).toBe(true)
+
+    await new Promise((resolve) => setTimeout(resolve, 2000))
+
+    // Step 2: Delegate to pool using NEW API (StakeDelegation certificate)
+    const poolKeyHash = PoolKeyHash.fromHex(DEVNET_POOL_ID)
+    const delegateTxHash = await client
+      .newTx()
+      .delegateToPool({ stakeCredential, poolKeyHash })
+      .build()
+      .then((b) => b.sign())
+      .then((b) => b.submit())
+    expect(await client.awaitTx(delegateTxHash, 1000)).toBe(true)
+
+    await new Promise((resolve) => setTimeout(resolve, 2000))
+
+    // Step 3: Deregister
+    const deregisterTxHash = await client
+      .newTx()
+      .deregisterStake({ stakeCredential })
+      .build()
+      .then((b) => b.sign())
+      .then((b) => b.submit())
+    expect(await client.awaitTx(deregisterTxHash, 1000)).toBe(true)
+  })
+
+  it("NEW API: delegateToDRep - delegates voting power to DRep only", { timeout: 180_000 }, async () => {
+    const ACCOUNT_INDEX = 7
+    const genesisUtxo = genesisUtxosByAccount.get(ACCOUNT_INDEX)
+    if (!genesisUtxo) {
+      throw new Error(`Genesis UTxO not found for account ${ACCOUNT_INDEX}`)
+    }
+
+    const client = createTestClient(ACCOUNT_INDEX)
+    const walletAddress = await client.address()
+    const addressStruct = walletAddress
+
+    if (!("stakingCredential" in addressStruct) || !addressStruct.stakingCredential) {
+      throw new Error(`Expected BaseAddress with stakingCredential`)
+    }
+
+    const stakeCredential = addressStruct.stakingCredential
+
+    // Step 1: Register
+    const registerTxHash = await client
+      .newTx()
+      .registerStake({ stakeCredential })
+      .build({ availableUtxos: [genesisUtxo] })
+      .then((b) => b.sign())
+      .then((b) => b.submit())
+    expect(await client.awaitTx(registerTxHash, 1000)).toBe(true)
+
+    await new Promise((resolve) => setTimeout(resolve, 2000))
+
+    // Step 2: Delegate to DRep using NEW API (VoteDelegCert certificate)
+    const drep = new DRep.AlwaysAbstainDRep({})
+    const delegateTxHash = await client
+      .newTx()
+      .delegateToDRep({ stakeCredential, drep })
+      .build()
+      .then((b) => b.sign())
+      .then((b) => b.submit())
+    expect(await client.awaitTx(delegateTxHash, 1000)).toBe(true)
+
+    await new Promise((resolve) => setTimeout(resolve, 2000))
+
+    // Step 3: Deregister
+    const deregisterTxHash = await client
+      .newTx()
+      .deregisterStake({ stakeCredential })
+      .build()
+      .then((b) => b.sign())
+      .then((b) => b.submit())
+    expect(await client.awaitTx(deregisterTxHash, 1000)).toBe(true)
+  })
+
+  it("NEW API: delegateToPoolAndDRep - delegates both stake and voting power", { timeout: 180_000 }, async () => {
+    const ACCOUNT_INDEX = 8
+    const genesisUtxo = genesisUtxosByAccount.get(ACCOUNT_INDEX)
+    if (!genesisUtxo) {
+      throw new Error(`Genesis UTxO not found for account ${ACCOUNT_INDEX}`)
+    }
+
+    const client = createTestClient(ACCOUNT_INDEX)
+    const walletAddress = await client.address()
+    const addressStruct = walletAddress
+
+    if (!("stakingCredential" in addressStruct) || !addressStruct.stakingCredential) {
+      throw new Error(`Expected BaseAddress with stakingCredential`)
+    }
+
+    const stakeCredential = addressStruct.stakingCredential
+
+    // Step 1: Register
+    const registerTxHash = await client
+      .newTx()
+      .registerStake({ stakeCredential })
+      .build({ availableUtxos: [genesisUtxo] })
+      .then((b) => b.sign())
+      .then((b) => b.submit())
+    expect(await client.awaitTx(registerTxHash, 1000)).toBe(true)
+
+    await new Promise((resolve) => setTimeout(resolve, 2000))
+
+    // Step 2: Delegate to both pool and DRep using NEW API (StakeVoteDelegCert certificate)
+    const poolKeyHash = PoolKeyHash.fromHex(DEVNET_POOL_ID)
+    const drep = new DRep.AlwaysNoConfidenceDRep({})
+    const delegateTxHash = await client
+      .newTx()
+      .delegateToPoolAndDRep({ stakeCredential, poolKeyHash, drep })
+      .build()
+      .then((b) => b.sign())
+      .then((b) => b.submit())
+    expect(await client.awaitTx(delegateTxHash, 1000)).toBe(true)
+
+    await new Promise((resolve) => setTimeout(resolve, 2000))
+
+    // Step 3: Deregister
     const deregisterTxHash = await client
       .newTx()
       .deregisterStake({ stakeCredential })

@@ -27,6 +27,7 @@ import {
 import { calculateMinimumUtxoLovelace, txOutputToTransactionOutput } from "../TxBuilderImpl.js"
 import * as Unfrack from "../Unfrack.js"
 import type { PhaseResult } from "./Phases.js"
+import { calculateCertificateBalance, calculateWithdrawals } from "./utils.js"
 
 /**
  * Helper: Format assets for logging (BigInt-safe, truncates long unit names)
@@ -164,16 +165,29 @@ export const executeChangeCreation = (): Effect.Effect<
 
     yield* Effect.logDebug(`[ChangeCreation] Fee from context: ${buildCtx.calculatedFee}`)
 
-    // Step 2: Calculate leftover assets (inputs + mint - outputs - fee)
+    // Step 2: Calculate leftover assets (inputs + mint + withdrawals + refunds - outputs - fee - deposits)
     const state = yield* Ref.get(stateRef)
     const inputAssets = state.totalInputAssets
     const outputAssets = state.totalOutputAssets
     const mintAssets = mintToAssets(state.mint)
-    // Minted assets add to available (positive), burned assets subtract (negative)
-    const leftoverBeforeFee = CoreAssets.subtract(
-      CoreAssets.merge(inputAssets, mintAssets),
-      outputAssets
+
+    // Calculate certificate deposits and refunds
+    const { deposits: certificateDeposits, refunds: certificateRefunds } = calculateCertificateBalance(
+      state.certificates,
+      state.poolDeposits
     )
+
+    // Calculate total withdrawals
+    const totalWithdrawals = calculateWithdrawals(state.withdrawals)
+
+    // Minted assets add to available (positive), burned assets subtract (negative)
+    // Withdrawals and refunds add to available balance (money IN)
+    // Deposits subtract from available balance (money OUT)
+    let leftoverBeforeFee = CoreAssets.merge(inputAssets, mintAssets)
+    leftoverBeforeFee = CoreAssets.addLovelace(leftoverBeforeFee, totalWithdrawals)
+    leftoverBeforeFee = CoreAssets.addLovelace(leftoverBeforeFee, certificateRefunds)
+    leftoverBeforeFee = CoreAssets.subtract(leftoverBeforeFee, outputAssets)
+    leftoverBeforeFee = CoreAssets.subtractLovelace(leftoverBeforeFee, certificateDeposits)
 
     // Subtract fee and filter out zero-quantity tokens (they shouldn't go into change output)
     const rawLeftover = CoreAssets.subtractLovelace(leftoverBeforeFee, buildCtx.calculatedFee)

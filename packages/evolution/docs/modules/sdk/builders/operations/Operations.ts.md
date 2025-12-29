@@ -1,6 +1,6 @@
 ---
 title: sdk/builders/operations/Operations.ts
-nav_order: 158
+nav_order: 159
 parent: Modules
 ---
 
@@ -24,7 +24,10 @@ parent: Modules
 - [signers](#signers)
   - [AddSignerParams (interface)](#addsignerparams-interface)
 - [staking](#staking)
-  - [DelegateToParams (interface)](#delegatetoparams-interface)
+  - [DelegateToDRepParams (interface)](#delegatetodrepparams-interface)
+  - [~~DelegateToParams~~ (interface)](#delegatetoparams-interface)
+  - [DelegateToPoolAndDRepParams (interface)](#delegatetopoolanddrepparams-interface)
+  - [DelegateToPoolParams (interface)](#delegatetopoolparams-interface)
   - [DeregisterStakeParams (interface)](#deregisterstakeparams-interface)
   - [RegisterAndDelegateToParams (interface)](#registeranddelegatetoparams-interface)
   - [RegisterStakeParams (interface)](#registerstakeparams-interface)
@@ -59,6 +62,8 @@ export interface AuthCommitteeHotParams {
   readonly hotCredential: Credential.Credential
   /** Redeemer for script-controlled cold credentials */
   readonly redeemer?: RedeemerBuilder.RedeemerArg
+  /** Optional label for debugging script failures - identifies this operation in error messages */
+  readonly label?: string
 }
 ```
 
@@ -78,6 +83,8 @@ export interface DeregisterDRepParams {
   readonly drepCredential: Credential.Credential
   /** Redeemer for script-controlled DRep credentials */
   readonly redeemer?: RedeemerBuilder.RedeemerArg
+  /** Optional label for debugging script failures - identifies this operation in error messages */
+  readonly label?: string
 }
 ```
 
@@ -119,6 +126,8 @@ export interface ResignCommitteeColdParams {
   readonly anchor?: Anchor.Anchor
   /** Redeemer for script-controlled cold credentials */
   readonly redeemer?: RedeemerBuilder.RedeemerArg
+  /** Optional label for debugging script failures - identifies this operation in error messages */
+  readonly label?: string
 }
 ```
 
@@ -140,6 +149,8 @@ export interface UpdateDRepParams {
   readonly anchor?: Anchor.Anchor
   /** Redeemer for script-controlled DRep credentials */
   readonly redeemer?: RedeemerBuilder.RedeemerArg
+  /** Optional label for debugging script failures - identifies this operation in error messages */
+  readonly label?: string
 }
 ```
 
@@ -234,7 +245,30 @@ Added in v2.0.0
 
 # staking
 
-## DelegateToParams (interface)
+## DelegateToDRepParams (interface)
+
+Parameters for delegating voting power to a DRep.
+
+Creates a VoteDelegCert certificate (Conway era).
+
+**Signature**
+
+```ts
+export interface DelegateToDRepParams {
+  /** The stake credential delegating */
+  readonly stakeCredential: Credential.Credential
+  /** DRep to delegate voting power to */
+  readonly drep: DRep.DRep
+  /** Redeemer for script-controlled stake credentials */
+  readonly redeemer?: RedeemerBuilder.RedeemerArg
+  /** Optional label for debugging script failures - identifies this operation in error messages */
+  readonly label?: string
+}
+```
+
+Added in v2.0.0
+
+## ~~DelegateToParams~~ (interface)
 
 Parameters for delegating stake and/or voting power.
 
@@ -254,6 +288,54 @@ export interface DelegateToParams {
   readonly poolKeyHash?: PoolKeyHash.PoolKeyHash
   /** DRep to delegate voting power to (optional, Conway) */
   readonly drep?: DRep.DRep
+  /** Redeemer for script-controlled stake credentials */
+  readonly redeemer?: RedeemerBuilder.RedeemerArg
+  /** Optional label for debugging script failures - identifies this operation in error messages */
+  readonly label?: string
+}
+```
+
+Added in v2.0.0
+
+## DelegateToPoolAndDRepParams (interface)
+
+Parameters for delegating both stake and voting power.
+
+Creates a StakeVoteDelegCert certificate (Conway era).
+
+**Signature**
+
+```ts
+export interface DelegateToPoolAndDRepParams {
+  /** The stake credential delegating */
+  readonly stakeCredential: Credential.Credential
+  /** Pool to delegate stake to */
+  readonly poolKeyHash: PoolKeyHash.PoolKeyHash
+  /** DRep to delegate voting power to */
+  readonly drep: DRep.DRep
+  /** Redeemer for script-controlled stake credentials */
+  readonly redeemer?: RedeemerBuilder.RedeemerArg
+  /** Optional label for debugging script failures - identifies this operation in error messages */
+  readonly label?: string
+}
+```
+
+Added in v2.0.0
+
+## DelegateToPoolParams (interface)
+
+Parameters for delegating stake to a pool.
+
+Creates a StakeDelegation certificate.
+
+**Signature**
+
+```ts
+export interface DelegateToPoolParams {
+  /** The stake credential delegating */
+  readonly stakeCredential: Credential.Credential
+  /** Pool to delegate stake to */
+  readonly poolKeyHash: PoolKeyHash.PoolKeyHash
   /** Redeemer for script-controlled stake credentials */
   readonly redeemer?: RedeemerBuilder.RedeemerArg
   /** Optional label for debugging script failures - identifies this operation in error messages */

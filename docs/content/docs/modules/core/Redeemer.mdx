@@ -137,7 +137,9 @@ FastCheck arbitrary for generating random RedeemerTag values.
 **Signature**
 
 ```ts
-export declare const arbitraryRedeemerTag: FastCheck.Arbitrary<"spend" | "mint" | "cert" | "reward">
+export declare const arbitraryRedeemerTag: FastCheck.Arbitrary<
+  "spend" | "mint" | "cert" | "reward" | "vote" | "propose"
+>
 ```
 
 Added in v2.0.0
@@ -267,12 +269,12 @@ Added in v2.0.0
 
 Redeemer tag enum for different script execution contexts.
 
-CDDL: redeemer_tag = 0 ; spend | 1 ; mint | 2 ; cert | 3 ; reward
+CDDL: redeemer_tag = 0 ; spend | 1 ; mint | 2 ; cert | 3 ; reward | 4 ; vote | 5 ; propose
 
 **Signature**
 
 ```ts
-export declare const RedeemerTag: Schema.Literal<["spend", "mint", "cert", "reward"]>
+export declare const RedeemerTag: Schema.Literal<["spend", "mint", "cert", "reward", "vote", "propose"]>
 ```
 
 Added in v2.0.0

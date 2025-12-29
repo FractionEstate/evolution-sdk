@@ -178,20 +178,8 @@ describe("TxBuilder Plutus Minting (Devnet Submit)", () => {
 
     // Submit transaction
     const submitBuilder = await signBuilder.sign()
-    let txHash: string
-    try {
-      txHash = await submitBuilder.submit()
-    } catch (err) {
-      // eslint-disable-next-line no-console
-      console.error("Submission error:", err)
-      // eslint-disable-next-line no-console
-      console.error("Cause:", (err as { cause?: unknown }).cause)
-      throw err
-    }
+    const txHash = await submitBuilder.submit()
     expect(txHash.length).toBe(64)
-
-    // eslint-disable-next-line no-console
-    console.log(`✓ Submitted Plutus mint tx: ${txHash}`)
 
     const confirmed = await client.awaitTx(txHash, 1000)
     expect(confirmed).toBe(true)

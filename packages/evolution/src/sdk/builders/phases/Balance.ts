@@ -20,6 +20,7 @@ import {
   TxContext
 } from "../TransactionBuilder.js"
 import type { PhaseResult } from "./Phases.js"
+import { calculateCertificateBalance, calculateWithdrawals } from "./utils.js"
 
 /**
  * Helper: Format assets for logging (BigInt-safe, truncates long unit names)
@@ -77,11 +78,20 @@ export const executeBalance = (): Effect.Effect<
 
     yield* Effect.logDebug(`[Balance] Starting balance verification (attempt ${buildCtx.attempt})`)
 
-    // Step 2: Calculate delta = inputs + mint - outputs - change - fee
+    // Step 2: Calculate delta = inputs + mint + withdrawals + refunds - outputs - change - fee - deposits
     const state = yield* Ref.get(ctx)
     const inputAssets = state.totalInputAssets
     const outputAssets = state.totalOutputAssets
     const mintAssets = mintToAssets(state.mint)
+
+    // Calculate certificate deposits and refunds
+    const { deposits: certificateDeposits, refunds: certificateRefunds } = calculateCertificateBalance(
+      state.certificates,
+      state.poolDeposits
+    )
+
+    // Calculate total withdrawals
+    const totalWithdrawals = calculateWithdrawals(state.withdrawals)
 
     // Calculate total change assets
     const changeAssets = buildCtx.changeOutputs.reduce(
@@ -89,12 +99,17 @@ export const executeBalance = (): Effect.Effect<
       CoreAssets.zero
     )
 
-    // Delta = inputs + mint - outputs - change - fee
+    // Delta = inputs + mint + withdrawals + refunds - outputs - change - fee - deposits
     // Mint adds assets (positive) or removes assets (negative for burns)
+    // Withdrawals and refunds add to available balance (money IN)
+    // Deposits subtract from available balance (money OUT)
     let delta = CoreAssets.merge(inputAssets, mintAssets)
+    delta = CoreAssets.addLovelace(delta, totalWithdrawals)
+    delta = CoreAssets.addLovelace(delta, certificateRefunds)
     delta = CoreAssets.subtract(delta, outputAssets)
     delta = CoreAssets.subtract(delta, changeAssets)
     delta = CoreAssets.subtractLovelace(delta, buildCtx.calculatedFee)
+    delta = CoreAssets.subtractLovelace(delta, certificateDeposits)
 
     // Check if balanced: lovelace must be exactly 0 and all native assets must be 0
     const deltaLovelace = CoreAssets.lovelaceOf(delta)

@@ -52,17 +52,9 @@ describe("ProposalProcedures CML Compatibility", () => {
     // Create CML ProposalProcedure
     const cmlProcedure = CML.ProposalProcedure.new(deposit, cmlRewardAddress, cmlInfoAction, cmlAnchor)
 
-    // Get CBOR hex from both implementations - now comparing individual procedures
+    // Get CBOR hex from both implementations - comparing individual procedures
     const cmlProcedureCborHex = cmlProcedure.to_cbor_hex()
-
-    // Evolution SDK: use individual ProposalProcedure CBOR method
     const evolutionProcedureCborHex = ProposalProcedure.toCBORHex(evolutionProcedure)
-
-    // Log both for comparison
-    // eslint-disable-next-line no-console
-    console.log("CML individual procedure CBOR (TRUTH):", cmlProcedureCborHex)
-    // eslint-disable-next-line no-console
-    console.log("Evolution individual procedure CBOR:  ", evolutionProcedureCborHex)
 
     // CML CBOR is the truth - Evolution SDK must match exactly
     expect(evolutionProcedureCborHex).toBe(cmlProcedureCborHex)

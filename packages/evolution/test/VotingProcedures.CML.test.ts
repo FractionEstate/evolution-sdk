@@ -55,14 +55,8 @@ describe("VotingProcedures CML Compatibility", () => {
     const cmlProcedure = CML.VotingProcedure.new(cmlVote)
 
     // Get CBOR hex from both implementations
-    const cmlProcedureCborHex = cmlProcedure.to_cbor_hex()
+    const _cmlProcedureCborHex = cmlProcedure.to_cbor_hex()
     const evolutionCborHex = VotingProcedures.toCBORHex(evolutionVotingProcedures)
-
-    // Log both for comparison
-    // eslint-disable-next-line no-console
-    console.log("CML VotingProcedure CBOR (individual):", cmlProcedureCborHex)
-    // eslint-disable-next-line no-console
-    console.log("Evolution VotingProcedures CBOR:      ", evolutionCborHex)
 
     // For Conway governance, CML may not support full VotingProcedures collections yet
     // Focus on verifying Evolution SDK produces valid CBOR
@@ -103,24 +97,16 @@ describe("VotingProcedures CML Compatibility", () => {
     // Test anchor compatibility separately
     const anchorHex = Anchor.toCBORHex(anchor)
     const cmlAnchor = CML.Anchor.from_cbor_hex(anchorHex)
-    const cmlAnchorCbor = cmlAnchor.to_cbor_hex()
+    const _cmlAnchorCbor = cmlAnchor.to_cbor_hex()
 
     // Get CBOR hex from both implementations
-    const cmlProcedureCborHex = cmlProcedure.to_cbor_hex()
+    const _cmlProcedureCborHex = cmlProcedure.to_cbor_hex()
     const evolutionCborHex = VotingProcedures.toCBORHex(evolutionVotingProcedures)
-
-    // Log both for comparison
-    // eslint-disable-next-line no-console
-    console.log("CML VotingProcedure CBOR (no anchor):", cmlProcedureCborHex)
-    // eslint-disable-next-line no-console
-    console.log("CML Anchor CBOR (separate):         ", cmlAnchorCbor)
-    // eslint-disable-next-line no-console
-    console.log("Evolution VotingProcedures CBOR:    ", evolutionCborHex)
 
     // Verify Evolution SDK produces valid CBOR with anchor
     expect(evolutionCborHex).toMatch(/^[0-9a-fA-F]+$/)
     expect(evolutionCborHex.length).toBeGreaterThan(0)
-    expect(evolutionCborHex.length).toBeGreaterThan(cmlProcedureCborHex.length) // Should be longer due to anchor
+    expect(evolutionCborHex.length).toBeGreaterThan(_cmlProcedureCborHex.length) // Should be longer due to anchor
 
     // Test that Evolution SDK can parse its own CBOR
     const evolutionRoundTrip = VotingProcedures.fromCBORHex(evolutionCborHex)

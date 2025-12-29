@@ -12,7 +12,7 @@ import * as Certificate from "../../../core/Certificate.js"
 import * as RewardAccount from "../../../core/RewardAccount.js"
 import * as RedeemerBuilder from "../RedeemerBuilder.js"
 import { TransactionBuilderError, type TxBuilderConfig, TxBuilderConfigTag, TxContext } from "../TransactionBuilder.js"
-import type { DelegateToParams, DeregisterStakeParams, RegisterAndDelegateToParams, RegisterStakeParams, WithdrawParams } from "./Operations.js"
+import type { DelegateToDRepParams, DelegateToParams, DelegateToPoolAndDRepParams, DelegateToPoolParams, DeregisterStakeParams, RegisterAndDelegateToParams, RegisterStakeParams, WithdrawParams } from "./Operations.js"
 
 /**
  * Get hex string from credential hash for use as map key
@@ -210,6 +210,214 @@ export const createDelegateToProgram = (params: DelegateToParams): Effect.Effect
         : "VoteDelegCert (DRep)"
 
     yield* Effect.logDebug(`[DelegateTo] Added ${delegationType} certificate`)
+  })
+
+/**
+ * Creates a ProgramStep for delegateToPool operation.
+ * Adds a StakeDelegation certificate to delegate stake to a pool.
+ *
+ * For script-controlled credentials, tracks redeemer for evaluation.
+ *
+ * @since 2.0.0
+ * @category programs
+ */
+export const createDelegateToPoolProgram = (params: DelegateToPoolParams): Effect.Effect<void, TransactionBuilderError, TxContext> =>
+  Effect.gen(function* () {
+    const ctx = yield* TxContext
+
+    // Check if script-controlled
+    const isScriptControlled = params.stakeCredential._tag === "ScriptHash"
+
+    if (isScriptControlled && !params.redeemer) {
+      return yield* Effect.fail(
+        new TransactionBuilderError({
+          message: "Redeemer required for script-controlled stake credential delegation"
+        })
+      )
+    }
+
+    // Create StakeDelegation certificate
+    const certificate = new Certificate.StakeDelegation({
+      stakeCredential: params.stakeCredential,
+      poolKeyHash: params.poolKeyHash
+    })
+
+    yield* Ref.update(ctx, (state) => {
+      let newRedeemers = state.redeemers
+      let newDeferredRedeemers = state.deferredRedeemers
+
+      // Track redeemer if script-controlled
+      if (params.redeemer && isScriptControlled) {
+        const deferred = RedeemerBuilder.toDeferredRedeemer(params.redeemer)
+        const certKey = `cert:${credentialToKey(params.stakeCredential)}`
+
+        if (deferred._tag === "static") {
+          newRedeemers = new Map(state.redeemers)
+          newRedeemers.set(certKey, {
+            tag: "cert",
+            data: deferred.data,
+            exUnits: undefined,
+            label: params.label
+          })
+        } else {
+          newDeferredRedeemers = new Map(state.deferredRedeemers)
+          newDeferredRedeemers.set(certKey, {
+            tag: "cert",
+            deferred,
+            exUnits: undefined,
+            label: params.label
+          })
+        }
+      }
+
+      return {
+        ...state,
+        certificates: [...state.certificates, certificate],
+        redeemers: newRedeemers,
+        deferredRedeemers: newDeferredRedeemers
+      }
+    })
+
+    yield* Effect.logDebug(`[DelegateToPool] Added StakeDelegation certificate`)
+  })
+
+/**
+ * Creates a ProgramStep for delegateToDRep operation.
+ * Adds a VoteDelegCert certificate to delegate voting power to a DRep.
+ *
+ * For script-controlled credentials, tracks redeemer for evaluation.
+ *
+ * @since 2.0.0
+ * @category programs
+ */
+export const createDelegateToDRepProgram = (params: DelegateToDRepParams): Effect.Effect<void, TransactionBuilderError, TxContext> =>
+  Effect.gen(function* () {
+    const ctx = yield* TxContext
+
+    // Check if script-controlled
+    const isScriptControlled = params.stakeCredential._tag === "ScriptHash"
+
+    if (isScriptControlled && !params.redeemer) {
+      return yield* Effect.fail(
+        new TransactionBuilderError({
+          message: "Redeemer required for script-controlled stake credential delegation"
+        })
+      )
+    }
+
+    // Create VoteDelegCert certificate
+    const certificate = new Certificate.VoteDelegCert({
+      stakeCredential: params.stakeCredential,
+      drep: params.drep
+    })
+
+    yield* Ref.update(ctx, (state) => {
+      let newRedeemers = state.redeemers
+      let newDeferredRedeemers = state.deferredRedeemers
+
+      // Track redeemer if script-controlled
+      if (params.redeemer && isScriptControlled) {
+        const deferred = RedeemerBuilder.toDeferredRedeemer(params.redeemer)
+        const certKey = `cert:${credentialToKey(params.stakeCredential)}`
+
+        if (deferred._tag === "static") {
+          newRedeemers = new Map(state.redeemers)
+          newRedeemers.set(certKey, {
+            tag: "cert",
+            data: deferred.data,
+            exUnits: undefined,
+            label: params.label
+          })
+        } else {
+          newDeferredRedeemers = new Map(state.deferredRedeemers)
+          newDeferredRedeemers.set(certKey, {
+            tag: "cert",
+            deferred,
+            exUnits: undefined,
+            label: params.label
+          })
+        }
+      }
+
+      return {
+        ...state,
+        certificates: [...state.certificates, certificate],
+        redeemers: newRedeemers,
+        deferredRedeemers: newDeferredRedeemers
+      }
+    })
+
+    yield* Effect.logDebug(`[DelegateToDRep] Added VoteDelegCert certificate`)
+  })
+
+/**
+ * Creates a ProgramStep for delegateToPoolAndDRep operation.
+ * Adds a StakeVoteDelegCert certificate to delegate both stake and voting power.
+ *
+ * For script-controlled credentials, tracks redeemer for evaluation.
+ *
+ * @since 2.0.0
+ * @category programs
+ */
+export const createDelegateToPoolAndDRepProgram = (params: DelegateToPoolAndDRepParams): Effect.Effect<void, TransactionBuilderError, TxContext> =>
+  Effect.gen(function* () {
+    const ctx = yield* TxContext
+
+    // Check if script-controlled
+    const isScriptControlled = params.stakeCredential._tag === "ScriptHash"
+
+    if (isScriptControlled && !params.redeemer) {
+      return yield* Effect.fail(
+        new TransactionBuilderError({
+          message: "Redeemer required for script-controlled stake credential delegation"
+        })
+      )
+    }
+
+    // Create StakeVoteDelegCert certificate
+    const certificate = new Certificate.StakeVoteDelegCert({
+      stakeCredential: params.stakeCredential,
+      poolKeyHash: params.poolKeyHash,
+      drep: params.drep
+    })
+
+    yield* Ref.update(ctx, (state) => {
+      let newRedeemers = state.redeemers
+      let newDeferredRedeemers = state.deferredRedeemers
+
+      // Track redeemer if script-controlled
+      if (params.redeemer && isScriptControlled) {
+        const deferred = RedeemerBuilder.toDeferredRedeemer(params.redeemer)
+        const certKey = `cert:${credentialToKey(params.stakeCredential)}`
+
+        if (deferred._tag === "static") {
+          newRedeemers = new Map(state.redeemers)
+          newRedeemers.set(certKey, {
+            tag: "cert",
+            data: deferred.data,
+            exUnits: undefined,
+            label: params.label
+          })
+        } else {
+          newDeferredRedeemers = new Map(state.deferredRedeemers)
+          newDeferredRedeemers.set(certKey, {
+            tag: "cert",
+            deferred,
+            exUnits: undefined,
+            label: params.label
+          })
+        }
+      }
+
+      return {
+        ...state,
+        certificates: [...state.certificates, certificate],
+        redeemers: newRedeemers,
+        deferredRedeemers: newDeferredRedeemers
+      }
+    })
+
+    yield* Effect.logDebug(`[DelegateToPoolAndDRep] Added StakeVoteDelegCert certificate`)
   })
 
 /**

@@ -1,6 +1,6 @@
 ---
 title: sdk/wallet/WalletNew.ts
-nav_order: 203
+nav_order: 206
 parent: Modules
 ---
 
