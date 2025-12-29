@@ -4,10 +4,7 @@ import * as TransactionBuilder from "@evolution-sdk/evolution/sdk/builders/Trans
 import type * as EvalRedeemer from "@evolution-sdk/evolution/sdk/EvalRedeemer"
 import { Effect } from "effect"
 import * as Scalus from "scalus"
-/**
- * Build CBOR-encoded UTxO map for Scalus.
- * Scalus expects: Map[TransactionInput, TransactionOutput]
- */
+
 function buildUtxoMapCBOR(utxos: ReadonlyArray<UTxO.UTxO>): Uint8Array {
   // lucid specific way to encode the utxos as CBOR --  a util most likely exists
   return new Uint8Array([0xa0])
@@ -20,7 +17,7 @@ function decodeCostModels(context: TransactionBuilder.EvaluationContext): Array<
   const plutusV1 = []
   const plutusV2 = []
   const plutusV3 = []
-  return [plutusV1, plutusV2, plutusV3] // PlutusV1, V2, V3
+  return [plutusV1, plutusV2, plutusV3]
 }
 
 /**
