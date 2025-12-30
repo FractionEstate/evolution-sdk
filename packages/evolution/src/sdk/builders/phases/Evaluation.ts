@@ -34,14 +34,14 @@ import { assembleTransaction, buildTransactionInputs } from "../TxBuilderImpl.js
 import type { PhaseResult } from "./Phases.js"
 
 /**
- * Convert ProtocolParameters cost models to CBOR bytes for evaluation.
+ * Convert ProtocolParameters cost models to CostModels core type for evaluation.
  * 
  * Takes the cost models from protocol parameters (Record<string, number> format)
- * and converts them to the CBOR-encoded format expected by UPLC evaluators.
+ * and converts them to the CostModels core type.
  */
-const costModelsToCBOR = (
+const buildCostModels = (
   protocolParams: ProtocolParametersModule.ProtocolParameters
-): Effect.Effect<Uint8Array, TransactionBuilderError> =>
+): Effect.Effect<CostModel.CostModels, TransactionBuilderError> =>
   Effect.gen(function* () {
     // Convert Record<string, number> format to bigint arrays
     const plutusV1Costs = Object.values(protocolParams.costModels.PlutusV1).map((v) => BigInt(v))
@@ -51,21 +51,11 @@ const costModelsToCBOR = (
       .filter((v) => v <= INT64_MAX)
     const plutusV3Costs = Object.values(protocolParams.costModels.PlutusV3).map((v) => BigInt(v))
 
-    // Create CostModels instance
-    const costModels = new CostModel.CostModels({
+    // Create and return CostModels instance
+    return new CostModel.CostModels({
       PlutusV1: new CostModel.CostModel({ costs: plutusV1Costs }),
       PlutusV2: new CostModel.CostModel({ costs: plutusV2Costs }),
       PlutusV3: new CostModel.CostModel({ costs: plutusV3Costs })
-    })
-
-    // Encode to CBOR bytes
-    return yield* Effect.try({
-      try: () => CostModel.toCBOR(costModels),
-      catch: (error) =>
-        new TransactionBuilderError({
-          message: "Failed to encode cost models to CBOR",
-          cause: error
-        })
     })
   })
 
@@ -457,8 +447,8 @@ export const executeEvaluation = (): Effect.Effect<
     }
 
     // Step 6: Prepare evaluation context
-    // Encode cost models from full protocol parameters
-    const costModelsCBOR = yield* costModelsToCBOR(fullProtocolParams)
+    // Build cost models from full protocol parameters
+    const costModels = yield* buildCostModels(fullProtocolParams)
 
     // Get slot configuration from BuildOptions (resolved from network or explicit override)
     const slotConfig = buildOptions.slotConfig ?? {
@@ -468,7 +458,7 @@ export const executeEvaluation = (): Effect.Effect<
     }
 
     const evaluationContext: EvaluationContext = {
-      costModels: costModelsCBOR,
+      costModels,
       maxTxExSteps: fullProtocolParams.maxTxExSteps,
       maxTxExMem: fullProtocolParams.maxTxExMem,
       slotConfig

@@ -260,6 +260,9 @@ importers:
       '@evolution-sdk/evolution':
         specifier: workspace:*
         version: link:../evolution
+      '@evolution-sdk/scalus-uplc':
+        specifier: workspace:*
+        version: link:../scalus-uplc
       '@noble/hashes':
         specifier: ^1.8.0
         version: 1.8.0

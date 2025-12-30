@@ -9,6 +9,7 @@ import * as ScriptHash from "@evolution-sdk/evolution/core/ScriptHash"
 import type { TxBuilderConfig } from "@evolution-sdk/evolution/sdk/builders/TransactionBuilder"
 import { makeTxBuilder } from "@evolution-sdk/evolution/sdk/builders/TransactionBuilder"
 import { KupmiosProvider } from "@evolution-sdk/evolution/sdk/provider/Kupmios"
+import { createScalusEvaluator } from "@evolution-sdk/scalus-uplc"
 import { Schema } from "effect"
 
 import * as Cluster from "../src/Cluster.js"
@@ -264,11 +265,75 @@ describe("TxBuilder Script Handling", () => {
 
     const redeemer = tx.witnessSet.redeemers![0]
     expect(redeemer.tag).toBe("spend")
-    expect(redeemer.exUnits.mem).toBeGreaterThan(0n) // mem > 0
-    expect(redeemer.exUnits.steps).toBeGreaterThan(0n) // steps > 0
-    
-    // eslint-disable-next-line no-console
-    console.log(`✓ Aiken evaluator: mem=${redeemer.exUnits.mem}, steps=${redeemer.exUnits.steps}`)
+    expect(redeemer.exUnits.mem).toBe(1100n)
+    expect(redeemer.exUnits.steps).toBe(160100n)
+  })
+
+  it.fails("should build transaction with Scalus evaluator", async () => {
+    const alwaysSucceedsScript = makePlutusV2Script(ALWAYS_SUCCEED_SCRIPT_CBOR)
+    const scriptAddress = scriptToAddress(ALWAYS_SUCCEED_SCRIPT_CBOR)
+
+    // Create script UTxO with inline datum
+    const ownerPubKeyHash = "00000000000000000000000000000000000000000000000000000000"
+    const datum = Data.toCBORHex(Data.constr(0n, [Data.bytearray(ownerPubKeyHash)]))
+
+    const scriptUtxo = createCoreTestUtxo({
+      transactionId: "a".repeat(64),
+      index: 0,
+      address: scriptAddress,
+      lovelace: 5_000_000n,
+      datumOption: { type: "inlineDatum", inline: datum }
+    })
+
+    // Create funding UTxO
+    const fundingUtxo = createCoreTestUtxo({
+      transactionId: "b".repeat(64),
+      index: 0,
+      address: CHANGE_ADDRESS,
+      lovelace: 10_000_000n
+    })
+
+    // Create redeemer
+    const redeemerData = Data.constr(0n, [Data.bytearray("48656c6c6f2c20576f726c6421")])
+
+    const builder = makeTxBuilder(baseConfig)
+      .collectFrom({
+        inputs: [scriptUtxo],
+        redeemer: redeemerData
+      })
+      .attachScript({ script: alwaysSucceedsScript })
+      .payToAddress({
+        address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
+        assets: CoreAssets.fromLovelace(2_000_000n)
+      })
+
+    // Build with Scalus evaluator and debug enabled
+    const signBuilder = await builder.build({
+      changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
+      availableUtxos: [fundingUtxo],
+      protocolParameters: PROTOCOL_PARAMS,
+      evaluator: createScalusEvaluator,
+      debug: true // Enable debug logging
+    })
+
+    const tx = await signBuilder.toTransaction()
+
+    // Verify transaction structure
+    expect(tx.body.inputs.length).toBe(1)
+    expect(tx.body.outputs.length).toBeGreaterThanOrEqual(2) // Payment + change
+
+    // Verify script witnesses
+    expect(tx.witnessSet.plutusV2Scripts).toBeDefined()
+    expect(tx.witnessSet.plutusV2Scripts!.length).toBe(1)
+
+    // Verify redeemers with evaluated exUnits
+    expect(tx.witnessSet.redeemers).toBeDefined()
+    expect(tx.witnessSet.redeemers!.length).toBe(1)
+
+    const redeemer = tx.witnessSet.redeemers![0]
+    expect(redeemer.tag).toBe("spend")
+    expect(redeemer.exUnits.mem).toBe(1100n)
+    expect(redeemer.exUnits.steps).toBe(160100n)
   })
   
   it("should handle collateral inputs with multiassets and return excess to user as collateral return", async () => {

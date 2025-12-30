@@ -6,6 +6,7 @@
 
 import * as Bytes from "@evolution-sdk/evolution/core/Bytes"
 import * as CBOR from "@evolution-sdk/evolution/core/CBOR"
+import * as CostModel from "@evolution-sdk/evolution/core/CostModel"
 import * as Redeemer from "@evolution-sdk/evolution/core/Redeemer"
 import * as Script from "@evolution-sdk/evolution/core/Script"
 import * as ScriptRef from "@evolution-sdk/evolution/core/ScriptRef"
@@ -154,11 +155,14 @@ export function makeEvaluator(wasmModule: WasmLoader.WasmModule): TransactionBui
 
         const { slotLength, zeroSlot, zeroTime } = context.slotConfig
 
+        // Encode cost models to CBOR bytes for WASM evaluator
+        const costModelsCBOR = CostModel.toCBOR(context.costModels)
+
         yield* Effect.logDebug(
           `[Aiken UPLC] Slot config - zeroTime: ${zeroTime}, zeroSlot: ${zeroSlot}, slotLength: ${slotLength}`
         )
-        yield* Effect.logDebug(`[Aiken UPLC] Cost models CBOR length: ${context.costModels.length} bytes`)
-        yield* Effect.logDebug(`[Aiken UPLC] Cost models hex: ${Bytes.toHex(context.costModels)}`)
+        yield* Effect.logDebug(`[Aiken UPLC] Cost models CBOR length: ${costModelsCBOR.length} bytes`)
+        yield* Effect.logDebug(`[Aiken UPLC] Cost models hex: ${Bytes.toHex(costModelsCBOR)}`)
         yield* Effect.logDebug(
           `[Aiken UPLC] Max execution - steps: ${context.maxTxExSteps}, mem: ${context.maxTxExMem}`
         )
@@ -173,7 +177,7 @@ export function makeEvaluator(wasmModule: WasmLoader.WasmModule): TransactionBui
               txBytes,
               utxosX,
               utxosY,
-              context.costModels,
+              costModelsCBOR,
               context.maxTxExSteps,
               context.maxTxExMem,
               BigInt(zeroTime),
