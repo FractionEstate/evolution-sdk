@@ -15,6 +15,8 @@ parent: Modules
 - [encoding](#encoding)
   - [toCBORBytes](#tocborbytes)
   - [toCBORHex](#tocborhex)
+- [helpers](#helpers)
+  - [single](#single)
 - [model](#model)
   - [ProposalProcedures (class)](#proposalprocedures-class)
     - [toJSON (method)](#tojson-method)
@@ -69,6 +71,27 @@ Encode ProposalProcedures to CBOR hex string.
 
 ```ts
 export declare const toCBORHex: (data: ProposalProcedures, options?: CBOR.CodecOptions) => string
+```
+
+Added in v2.0.0
+
+# helpers
+
+## single
+
+Create ProposalProcedures for a single proposal.
+
+Convenience function for the common case of submitting one governance action.
+
+**Signature**
+
+```ts
+export declare const single: (
+  deposit: Coin.Coin,
+  rewardAccount: RewardAccount.RewardAccount,
+  governanceAction: GovernanceAction.GovernanceAction,
+  anchor: Anchor.Anchor | null
+) => ProposalProcedures
 ```
 
 Added in v2.0.0

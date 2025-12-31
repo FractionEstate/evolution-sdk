@@ -1,6 +1,6 @@
 ---
 title: sdk/builders/phases/utils.ts
-nav_order: 173
+nav_order: 175
 parent: Modules
 ---
 
@@ -16,7 +16,9 @@ Added in v2.0.0
 
 - [utilities](#utilities)
   - [calculateCertificateBalance](#calculatecertificatebalance)
+  - [calculateProposalDeposits](#calculateproposaldeposits)
   - [calculateWithdrawals](#calculatewithdrawals)
+  - [voterToKey](#votertokey)
 
 ---
 
@@ -39,7 +41,7 @@ Certificates with refunds (money IN):
 
 - UnregCert: Stake deregistration refund
 - UnregDrepCert: DRep deregistration refund
-- RetirePoolCert: Pool retirement refund (PoolRetirement)
+- PoolRetirement: Pool retirement (no refund in Conway era; pool deposits are burned)
 
 **Signature**
 
@@ -52,6 +54,24 @@ export declare function calculateCertificateBalance(
 
 Added in v2.0.0
 
+## calculateProposalDeposits
+
+Calculate total proposal deposits from proposal procedures.
+
+Each proposal requires a deposit (govActionDeposit) which is tracked in the
+ProposalProcedure structure. This deposit is deducted from transaction inputs
+during balancing.
+
+**Signature**
+
+```ts
+export declare function calculateProposalDeposits(
+  proposalProcedures: { readonly procedures: ReadonlyArray<{ readonly deposit: bigint }> } | undefined
+): bigint
+```
+
+Added in v2.0.0
+
 ## calculateWithdrawals
 
 Calculate total withdrawal amount from a map of reward accounts to withdrawal amounts.
@@ -60,6 +80,44 @@ Calculate total withdrawal amount from a map of reward accounts to withdrawal am
 
 ```ts
 export declare function calculateWithdrawals(withdrawals: ReadonlyMap<unknown, bigint>): bigint
+```
+
+Added in v2.0.0
+
+## voterToKey
+
+Convert a Voter to a unique string key for redeemer tracking.
+
+Key formats:
+
+- Constitutional Committee: `cc:{credentialHex}`
+- DRep (KeyHash): `drep:{keyHashHex}`
+- DRep (ScriptHash): `drep:{scriptHashHex}`
+- DRep (Special): `drep:AlwaysAbstainDRep` or `drep:AlwaysNoConfidenceDRep`
+- Stake Pool: `pool:{poolKeyHashHex}`
+
+This is used for:
+
+1. Tracking redeemers by voter in Vote.ts
+2. Computing vote redeemer indices in TxBuilderImpl.ts (assembly)
+3. Mapping evaluation results back to voters in Evaluation.ts
+
+The key format must match the sorting order used by Cardano ledger for
+redeemer indexing (lexicographic sort of voter keys).
+
+**Signature**
+
+```ts
+export declare function voterToKey(voter: {
+  readonly _tag: "ConstitutionalCommitteeVoter" | "DRepVoter" | "StakePoolVoter"
+  readonly credential?: { readonly hash: Uint8Array }
+  readonly drep?: {
+    readonly _tag: "KeyHashDRep" | "ScriptHashDRep" | "AlwaysAbstainDRep" | "AlwaysNoConfidenceDRep"
+    readonly keyHash?: { readonly hash: Uint8Array }
+    readonly scriptHash?: { readonly hash: Uint8Array }
+  }
+  readonly poolKeyHash?: { readonly hash: Uint8Array }
+}): string
 ```
 
 Added in v2.0.0

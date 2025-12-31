@@ -19,6 +19,9 @@ parent: Modules
 - [encoding](#encoding)
   - [toCBORBytes](#tocborbytes)
   - [toCBORHex](#tocborhex)
+- [helpers](#helpers)
+  - [multiVote](#multivote)
+  - [singleVote](#singlevote)
 - [model](#model)
   - [VotingProcedures (class)](#votingprocedures-class)
     - [toJSON (method)](#tojson-method)
@@ -174,6 +177,43 @@ Encode VotingProcedures to CBOR hex string.
 
 ```ts
 export declare const toCBORHex: (data: VotingProcedures, options?: CBOR.CodecOptions) => string
+```
+
+Added in v2.0.0
+
+# helpers
+
+## multiVote
+
+Create VotingProcedures for one voter voting on multiple proposals.
+
+Convenience function for submitting multiple votes from a single voter.
+
+**Signature**
+
+```ts
+export declare const multiVote: (
+  voter: Voter,
+  votes: ReadonlyArray<readonly [GovernanceAction.GovActionId, VotingProcedure]>
+) => VotingProcedures
+```
+
+Added in v2.0.0
+
+## singleVote
+
+Create VotingProcedures for a single vote.
+
+Convenience function for the common case of one voter voting on one proposal.
+
+**Signature**
+
+```ts
+export declare const singleVote: (
+  voter: Voter,
+  govActionId: GovernanceAction.GovActionId,
+  procedure: VotingProcedure
+) => VotingProcedures
 ```
 
 Added in v2.0.0

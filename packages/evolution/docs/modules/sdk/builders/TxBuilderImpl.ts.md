@@ -1,6 +1,6 @@
 ---
 title: sdk/builders/TxBuilderImpl.ts
-nav_order: 181
+nav_order: 183
 parent: Modules
 ---
 
@@ -181,7 +181,7 @@ export declare const calculateFeeIteratively: (
   redeemers: Map<
     string,
     {
-      readonly tag: "spend" | "mint" | "cert" | "reward"
+      readonly tag: "spend" | "mint" | "cert" | "reward" | "vote"
       readonly data: PlutusData.Data
       readonly exUnits?: { readonly mem: bigint; readonly steps: bigint }
     }

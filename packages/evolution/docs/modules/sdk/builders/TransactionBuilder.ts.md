@@ -1,6 +1,6 @@
 ---
 title: sdk/builders/TransactionBuilder.ts
-nav_order: 179
+nav_order: 181
 parent: Modules
 ---
 
@@ -641,6 +641,118 @@ export interface TransactionBuilderBase {
   readonly setValidity: (params: ValidityParams) => this
 
   /**
+   * Submit votes on governance actions.
+   *
+   * Submits voting procedures to vote on governance proposals. Supports multiple
+   * voters voting on multiple proposals in a single transaction.
+   *
+   * For script-controlled voters (DRep, Constitutional Committee member, or stake pool
+   * with script credential), provide a redeemer to satisfy the vote purpose validator.
+   * The redeemer will be applied to all script voters in the voting procedures.
+   *
+   * Use VotingProcedures.singleVote() helper for simple cases or construct
+   * VotingProcedures directly for complex multi-voter scenarios.
+   *
+   * Queues a deferred operation that will be executed when build() is called.
+   * Returns the same builder for method chaining.
+   *
+   * @example
+   * ```typescript
+   * import * as VotingProcedures from "@evolution-sdk/core/VotingProcedures"
+   * import * as Vote from "@evolution-sdk/core/Vote"
+   * import * as Data from "@evolution-sdk/core/Data"
+   *
+   * // Simple single vote with helper
+   * await client.newTx()
+   *   .vote({
+   *     votingProcedures: VotingProcedures.singleVote(
+   *       new VotingProcedures.DRepVoter({ credential: myDRepCred }),
+   *       govActionId,
+   *       new VotingProcedures.VotingProcedure({
+   *         vote: Vote.yes(),
+   *         anchor: null
+   *       })
+   *     ),
+   *     redeemer: Data.to(new Constr(0, [])) // for script DRep
+   *   })
+   *   .attachScript({ script: voteScript })
+   *   .build()
+   *   .then(tx => tx.sign())
+   *   .then(tx => tx.submit())
+   *
+   * // Multiple votes from same voter
+   * await client.newTx()
+   *   .vote({
+   *     votingProcedures: VotingProcedures.multiVote(
+   *       new VotingProcedures.DRepVoter({ credential: myDRepCred }),
+   *       [
+   *         [govActionId1, new VotingProcedures.VotingProcedure({ vote: Vote.yes(), anchor: null })],
+   *         [govActionId2, new VotingProcedures.VotingProcedure({ vote: Vote.no(), anchor: null })]
+   *       ]
+   *     )
+   *   })
+   *   .build()
+   * ```
+   *
+   * @since 2.0.0
+   * @category governance-methods
+   */
+  readonly vote: (params: VoteParams) => this
+
+  /**
+   * Submit a governance action proposal.
+   *
+   * Submits a governance action proposal to the blockchain.
+   * The deposit (govActionDeposit) is automatically fetched from protocol parameters
+   * and will be refunded to the specified reward account when the proposal is finalized.
+   *
+   * Call .propose() multiple times to submit multiple proposals in one transaction.
+   * Consistent with .registerStake() and .registerDRep() - no manual deposit handling.
+   *
+   * The deposit amount is automatically deducted during transaction balancing.
+   *
+   * Queues a deferred operation that will be executed when build() is called.
+   * Returns the same builder for method chaining.
+   *
+   * @example
+   * ```typescript
+   * import * as GovernanceAction from "@evolution-sdk/core/GovernanceAction"
+   * import * as RewardAccount from "@evolution-sdk/core/RewardAccount"
+   *
+   * // Submit single proposal (deposit auto-fetched)
+   * await client.newTx()
+   *   .propose({
+   *     governanceAction: new GovernanceAction.InfoAction({}),
+   *     rewardAccount: myRewardAccount,
+   *     anchor: myAnchor // or null
+   *   })
+   *   .build()
+   *   .then(tx => tx.sign())
+   *   .then(tx => tx.submit())
+   *
+   * // Multiple proposals in one transaction
+   * await client.newTx()
+   *   .propose({
+   *     governanceAction: new GovernanceAction.InfoAction({}),
+   *     rewardAccount: myRewardAccount,
+   *     anchor: null
+   *   })
+   *   .propose({
+   *     governanceAction: new GovernanceAction.NoConfidenceAction({ govActionId: null }),
+   *     rewardAccount: myRewardAccount,
+   *     anchor: myOtherAnchor
+   *   })
+   *   .build()
+   *   .then(tx => tx.sign())
+   *   .then(tx => tx.submit())
+   * ```
+   *
+   * @since 2.0.0
+   * @category governance-methods
+   */
+  readonly propose: (params: ProposeParams) => this
+
+  /**
    * Add a required signer to the transaction.
    *
    * Adds a key hash to the transaction's requiredSigners field. This is used to
@@ -1255,7 +1367,7 @@ Contains callback that will be resolved after coin selection completes.
 
 ```ts
 export interface DeferredRedeemerData {
-  readonly tag: "spend" | "mint" | "cert" | "reward"
+  readonly tag: "spend" | "mint" | "cert" | "reward" | "vote"
   readonly deferred: DeferredRedeemer
   readonly exUnits?: {
     readonly mem: bigint
@@ -1277,7 +1389,7 @@ Index is determined later during witness assembly based on input ordering.
 
 ```ts
 export interface RedeemerData {
-  readonly tag: "spend" | "mint" | "cert" | "reward"
+  readonly tag: "spend" | "mint" | "cert" | "reward" | "vote"
   readonly data: PlutusData.Data
   readonly exUnits?: {
     // Optional: from script evaluation
@@ -1312,6 +1424,8 @@ export interface TxBuilderState {
   readonly withdrawals: Map<RewardAccount.RewardAccount, bigint> // Withdrawal amounts by reward account
   readonly poolDeposits: Map<string, bigint> // Pool deposits keyed by pool key hash
   readonly mint?: Mint.Mint // Assets being minted/burned (positive = mint, negative = burn)
+  readonly votingProcedures?: VotingProcedures.VotingProcedures // Voting procedures for governance actions (Conway)
+  readonly proposalProcedures?: ProposalProcedures.ProposalProcedures // Proposal procedures for governance actions (Conway)
   readonly collateral?: {
     // Collateral data for script transactions
     readonly inputs: ReadonlyArray<CoreUTxO.UTxO>

@@ -33,17 +33,7 @@ export interface TransactionResultBase {
    * 
    * @returns Promise resolving to the unsigned transaction
    * 
-   * @example
-   * ```typescript
-   * const result = await readOnlyClient.newTx()
-   *   .payToAddress({ address: "addr...", lovelace: 5_000_000n })
-   *   .build()
-   * 
-   * const unsignedTx = await result.toTransaction()
-   * const txCbor = Transaction.toCBORHex(unsignedTx)
-   * // Export for external signing
-   * ```
-   * 
+  *
    * @since 2.0.0
    * @category accessors
    */
@@ -71,16 +61,7 @@ export interface TransactionResultBase {
    * 
    * @returns Promise resolving to the transaction fee in lovelace
    * 
-   * @example
-   * ```typescript
-   * const result = await client.newTx()
-   *   .payToAddress({ address: "addr...", lovelace: 5_000_000n })
-   *   .build()
-   * 
-   * const fee = await result.estimateFee()
-   * console.log(`Transaction fee: ${fee} lovelace`)
-   * ```
-   * 
+  *
    * @since 2.0.0
    * @category accessors
    */

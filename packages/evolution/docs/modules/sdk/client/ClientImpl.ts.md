@@ -1,6 +1,6 @@
 ---
 title: sdk/client/ClientImpl.ts
-nav_order: 184
+nav_order: 186
 parent: Modules
 ---
 

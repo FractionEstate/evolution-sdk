@@ -840,15 +840,6 @@ export const toCBORHex = (data: VotingProcedures, options: CBOR.CodecOptions = C
  *
  * Convenience function for the common case of one voter voting on one proposal.
  *
- * @example
- * ```typescript
- * const procedures = singleVote(
- *   new DRepVoter({ credential: myDRepCred }),
- *   govActionId,
- *   new VotingProcedure({ vote: Vote.yes(), anchor: null })
- * )
- * ```
- *
  * @since 2.0.0
  * @category helpers
  */
@@ -866,17 +857,6 @@ export const singleVote = (
  * Create VotingProcedures for one voter voting on multiple proposals.
  *
  * Convenience function for submitting multiple votes from a single voter.
- *
- * @example
- * ```typescript
- * const procedures = multiVote(
- *   new DRepVoter({ credential: myDRepCred }),
- *   [
- *     [govActionId1, new VotingProcedure({ vote: Vote.yes(), anchor: null })],
- *     [govActionId2, new VotingProcedure({ vote: Vote.no(), anchor: null })]
- *   ]
- * )
- * ```
  *
  * @since 2.0.0
  * @category helpers

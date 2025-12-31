@@ -200,23 +200,6 @@ export const toCBORHex = (data: ProposalProcedures, options: CBOR.CodecOptions =
  *
  * Convenience function for the common case of submitting one governance action.
  *
- * @example
- * ```typescript
- * import * as ProposalProcedures from "@evolution-sdk/core/ProposalProcedures"
- * import * as GovernanceAction from "@evolution-sdk/core/GovernanceAction"
- *
- * const procedures = ProposalProcedures.single(
- *   2_000_000n, // deposit in lovelace
- *   myRewardAccount,
- *   new GovernanceAction.ParameterChange({
- *     govActionId: null,
- *     protocolParamUpdate: {...},
- *     policyHash: null
- *   }),
- *   myAnchor // or null
- * )
- * ```
- *
  * @since 2.0.0
  * @category helpers
  */

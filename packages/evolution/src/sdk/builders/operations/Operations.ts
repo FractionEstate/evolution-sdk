@@ -455,24 +455,6 @@ export interface AttachMetadataParams {
  * For script-controlled voters (DRep, CC member, or stake pool with script credential),
  * provide a redeemer to satisfy the vote purpose validator.
  *
- * @example
- * ```typescript
- * import * as VotingProcedures from "@evolution-sdk/core/VotingProcedures"
- * import * as Vote from "@evolution-sdk/core/Vote"
- *
- * // Simple single vote
- * await client.newTx()
- *   .vote({
- *     votingProcedures: VotingProcedures.singleVote(
- *       new DRepVoter({ credential: myDRepCred }),
- *       govActionId,
- *       new VotingProcedure({ vote: Vote.yes(), anchor: null })
- *     ),
- *     redeemer // for script-controlled voter
- *   })
- *   .attachScript({ script: voteScript })
- *   .build()
- * ```
  *
  * @since 2.0.0
  * @category governance
@@ -492,20 +474,6 @@ export interface VoteParams {
  * Submits a governance action proposal.
  * The deposit is automatically fetched from protocol parameters (like registerStake).
  * Call .propose() multiple times to submit multiple proposals in one transaction.
- *
- * @example
- * ```typescript
- * import * as GovernanceAction from "@evolution-sdk/core/GovernanceAction"
- * import * as RewardAccount from "@evolution-sdk/core/RewardAccount"
- *
- * await client.newTx()
- *   .propose({
- *     governanceAction: new GovernanceAction.InfoAction({}),
- *     rewardAccount: myRewardAccount,
- *     anchor: myAnchor // or null
- *   })
- *   .build()
- * ```
  *
  * @since 2.0.0
  * @category governance
