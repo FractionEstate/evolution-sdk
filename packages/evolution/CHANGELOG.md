@@ -1,5 +1,11 @@
 # @evolution-sdk/evolution
 
+## 0.3.11
+
+### Patch Changes
+
+- [#122](https://github.com/IntersectMBO/evolution-sdk/pull/122) [`079fd98`](https://github.com/IntersectMBO/evolution-sdk/commit/079fd98c2a1457b2d0fa2417d6e29ef996b59411) Thanks [@solidsnakedev](https://github.com/solidsnakedev)! - Add propose and vote APIs: introduce new operations for creating governance proposals and casting votes, including supporting types, procedures, and validators.
+
 ## 0.3.10
 
 ### Patch Changes
