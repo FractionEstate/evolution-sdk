@@ -523,8 +523,22 @@ const createApiWallet = (_network: WalletNew.Network, config: ApiWalletConfig): 
     if (!addrStr) {
       return yield* Effect.fail(new WalletNew.WalletError({ message: "Wallet API returned no addresses", cause: null }))
     }
-    // Convert bech32 string to Core Address
-    cachedAddress = CoreAddress.fromBech32(addrStr)
+    // Convert address string to Core Address - support both Bech32 and hex formats
+    try {
+      cachedAddress = CoreAddress.fromBech32(addrStr)
+    } catch {
+      // Fallback to hex if Bech32 fails (some wallets return hex)
+      try {
+        cachedAddress = CoreAddress.fromHex(addrStr)
+      } catch (error) {
+        return yield* Effect.fail(
+          new WalletNew.WalletError({
+            message: `Invalid address format from wallet: ${addrStr}`,
+            cause: error as Error
+          })
+        )
+      }
+    }
     return cachedAddress
   })
 
