@@ -269,7 +269,7 @@ describe("TxBuilder Script Handling", () => {
     expect(redeemer.exUnits.steps).toBe(160100n)
   })
 
-  it.fails("should build transaction with Scalus evaluator", async () => {
+  it("should build transaction with Scalus evaluator", async () => {
     const alwaysSucceedsScript = makePlutusV2Script(ALWAYS_SUCCEED_SCRIPT_CBOR)
     const scriptAddress = scriptToAddress(ALWAYS_SUCCEED_SCRIPT_CBOR)
 
