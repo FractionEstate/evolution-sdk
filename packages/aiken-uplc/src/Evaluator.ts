@@ -106,24 +106,14 @@ function evalRedeemerFromCBOR(bytes: Uint8Array): EvalRedeemer.EvalRedeemer {
   // Decode using official Redeemer module
   const redeemer = Redeemer.fromCBORBytes(bytes, CBOR.CML_DEFAULT_OPTIONS)
 
-  // Map Redeemer.RedeemerTag to EvalRedeemer tag format
-  // cert -> publish, reward -> withdraw (different naming conventions)
-  const tagMap: Record<Redeemer.RedeemerTag, EvalRedeemer.EvalRedeemer["redeemer_tag"]> = {
-    spend: "spend",
-    mint: "mint",
-    cert: "publish",
-    reward: "withdraw",
-    vote: "vote",
-    propose: "propose"
-  }
-
+  // EvalRedeemer uses core RedeemerTag values directly
   return {
-    redeemer_tag: tagMap[redeemer.tag],
+    redeemer_tag: redeemer.tag,
     redeemer_index: Number(redeemer.index),
-    ex_units: {
+    ex_units: new Redeemer.ExUnits({
       mem: BigInt(redeemer.exUnits.mem),
       steps: BigInt(redeemer.exUnits.steps)
-    }
+    })
   }
 }
 
