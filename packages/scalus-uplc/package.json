@@ -34,7 +34,6 @@
     "dev": "tsc -b tsconfig.build.json --watch",
     "type-check": "tsc --noEmit",
     "lint": "eslint \"src/**/*.{ts,mjs}\"",
-    "test": "vitest run",
     "clean": "rm -rf dist .turbo .tsbuildinfo"
   },
   "dependencies": {
@@ -45,8 +44,6 @@
     "@evolution-sdk/evolution": "workspace:*"
   },
   "devDependencies": {
-    "typescript": "^5.9.2",
-    "@effect/vitest": "^0.19.3",
-    "vitest": "^3.2.4"
+    "typescript": "^5.9.2"
   }
 }
