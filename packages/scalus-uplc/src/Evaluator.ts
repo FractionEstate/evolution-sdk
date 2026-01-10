@@ -95,8 +95,7 @@ export function makeEvaluator(): TransactionBuilder.Evaluator {
 
         yield* Effect.logDebug("[Scalus UPLC] Calling evalPlutusScripts...")
         const redeemers = yield* Effect.try({
-          try: () =>
-            Scalus.Scalus.evalPlutusScripts(Array.from(txBytes), Array.from(utxosBytes), slotConfig, costModels),
+          try: () => Scalus.Scalus.evalPlutusScripts(txBytes, utxosBytes, slotConfig, costModels),
           catch: (error) => {
             // Scalus error messages and evaluation logs, if any, are available to form an exception
             const errorObj = error as any
