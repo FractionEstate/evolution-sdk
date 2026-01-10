@@ -33,6 +33,7 @@ import * as CoreAssets from "../../Assets/index.js"
 import type * as AuxiliaryData from "../../AuxiliaryData.js"
 import type * as Certificate from "../../Certificate.js"
 import type * as Coin from "../../Coin.js"
+import type * as CostModel from "../../CostModel.js"
 import type * as PlutusData from "../../Data.js"
 import type * as KeyHash from "../../KeyHash.js"
 import type * as Mint from "../../Mint.js"
@@ -691,7 +692,7 @@ export interface ChainResult {
  */
 export interface EvaluationContext {
   /** Cost models for script evaluation */
-  readonly costModels: Uint8Array
+  readonly costModels: CostModel.CostModels
   /** Maximum execution steps allowed */
   readonly maxTxExSteps: bigint
   /** Maximum execution memory allowed */
@@ -767,7 +768,7 @@ export interface ScriptFailure {
  * @category errors
  */
 export class EvaluationError extends Data.TaggedError("EvaluationError")<{
-  readonly cause: unknown
+  readonly cause?: unknown
   readonly message?: string
   /** Parsed script failures with labels */
   readonly failures?: ReadonlyArray<ScriptFailure>

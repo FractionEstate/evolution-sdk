@@ -1314,7 +1314,7 @@ Used by custom evaluators for local UPLC script evaluation.
 ```ts
 export interface EvaluationContext {
   /** Cost models for script evaluation */
-  readonly costModels: Uint8Array
+  readonly costModels: CostModel.CostModels
   /** Maximum execution steps allowed */
   readonly maxTxExSteps: bigint
   /** Maximum execution memory allowed */
