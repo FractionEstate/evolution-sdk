@@ -28,26 +28,26 @@ PlutusData consists of five primitive types:
 Create PlutusData using TypeScript primitives:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution"
+import { Bytes, Data, Text } from "@evolution-sdk/evolution"
 
 // Integer (bigint)
-const lovelaceAmount: Core.Data.Data = 5000000n
+const lovelaceAmount: Data.Data = 5000000n
 
 // ByteArray (Uint8Array)
-const tokenName = Core.Text.toBytes("HOSKY")
-const policyId = Core.Bytes.fromHex("a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8")
+const tokenName = Text.toBytes("HOSKY")
+const policyId = Bytes.fromHex("a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8")
 
 // Constructor (variant with fields)
-const unlockAction = Core.Data.constr(0n, []) // variant 0, no fields
+const unlockAction = Data.constr(0n, []) // variant 0, no fields
 
 // Map (key-value pairs)
-const metadata = Core.Data.map([
-  [Core.Text.toBytes("name"), Core.Text.toBytes("My NFT")],
-  [Core.Text.toBytes("image"), Core.Text.toBytes("ipfs://Qm...")]
+const metadata = Data.map([
+  [Text.toBytes("name"), Text.toBytes("My NFT")],
+  [Text.toBytes("image"), Text.toBytes("ipfs://Qm...")]
 ])
 
 // List (array)
-const quantities: Core.Data.Data = [100n, 200n, 300n]
+const quantities: Data.Data = [100n, 200n, 300n]
 ```
 
 ## Integers
@@ -55,21 +55,21 @@ const quantities: Core.Data.Data = [100n, 200n, 300n]
 Use `bigint` directly—no wrapper needed:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution"
+import { Bytes, Data, Text } from "@evolution-sdk/evolution"
 
 // Lovelace amounts
-const fee: Core.Data.Data = 170000n
-const deposit: Core.Data.Data = 2000000n
+const fee: Data.Data = 170000n
+const deposit: Data.Data = 2000000n
 
 // Token quantities  
-const nftQuantity: Core.Data.Data = 1n
-const ftQuantity: Core.Data.Data = 1000000n
+const nftQuantity: Data.Data = 1n
+const ftQuantity: Data.Data = 1000000n
 
 // Negative values supported
-const delta: Core.Data.Data = -500n
+const delta: Data.Data = -500n
 
 // Large numbers
-const totalSupply: Core.Data.Data = 45000000000000000n
+const totalSupply: Data.Data = 45000000000000000n
 ```
 
 ## Byte Arrays
@@ -77,20 +77,20 @@ const totalSupply: Core.Data.Data = 45000000000000000n
 Raw bytes for hashes, addresses, and binary data:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution"
+import { Bytes, Data, Text } from "@evolution-sdk/evolution"
 
 // Transaction hash (32 bytes)
-const txHash = Core.Bytes.fromHex(
+const txHash = Bytes.fromHex(
   "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2"
 )
 
 // Policy ID (28 bytes)
-const policyId = Core.Bytes.fromHex(
+const policyId = Bytes.fromHex(
   "1234567890abcdef1234567890abcdef1234567890abcdef12345678"
 )
 
 // Asset name (readable string)
-const assetName = Core.Text.toBytes("MyToken")
+const assetName = Text.toBytes("MyToken")
 
 // Empty byte array (ada-only policyId)
 const adaPolicyId = new Uint8Array()
@@ -106,24 +106,24 @@ const adaPolicyId = new Uint8Array()
 Tagged unions representing variants or structured data:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution"
+import { Bytes, Data, Text } from "@evolution-sdk/evolution"
 
 // Simple variant (no data)
-const claimAction = Core.Data.constr(0n, [])
-const cancelAction = Core.Data.constr(1n, [])
+const claimAction = Data.constr(0n, [])
+const cancelAction = Data.constr(1n, [])
 
 // Variant with single field
-const verificationKeyCred = Core.Data.constr(0n, [
-  Core.Bytes.fromHex("abc123def456abc123def456abc123def456abc123def456abc123de")
+const verificationKeyCred = Data.constr(0n, [
+  Bytes.fromHex("abc123def456abc123def456abc123def456abc123def456abc123de")
 ])
 
-const scriptCred = Core.Data.constr(1n, [
-  Core.Bytes.fromHex("def456abc123def456abc123def456abc123def456abc123def456ab")
+const scriptCred = Data.constr(1n, [
+  Bytes.fromHex("def456abc123def456abc123def456abc123def456abc123def456ab")
 ])
 
 // Multiple fields
-const outputRef = Core.Data.constr(0n, [
-  Core.Bytes.fromHex("a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2"), // tx hash
+const outputRef = Data.constr(0n, [
+  Bytes.fromHex("a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2"), // tx hash
   2n // output index
 ])
 ```
@@ -135,23 +135,23 @@ const outputRef = Core.Data.constr(0n, [
 Key-value pairs where both keys and values are PlutusData:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution"
+import { Bytes, Data, Text } from "@evolution-sdk/evolution"
 
 // NFT metadata
-const nftMetadata = Core.Data.map([
-  [Core.Text.toBytes("name"), Core.Text.toBytes("CryptoKitty #1234")],
-  [Core.Text.toBytes("image"), Core.Text.toBytes("ipfs://QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco")],
-  [Core.Text.toBytes("description"), Core.Text.toBytes("A rare cryptokitty with rainbow fur")]
+const nftMetadata = Data.map([
+  [Text.toBytes("name"), Text.toBytes("CryptoKitty #1234")],
+  [Text.toBytes("image"), Text.toBytes("ipfs://QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco")],
+  [Text.toBytes("description"), Text.toBytes("A rare cryptokitty with rainbow fur")]
 ])
 
 // Nested maps
-const tokenMetadata = Core.Data.map([
-  [Core.Text.toBytes("name"), Core.Text.toBytes("MyToken")],
-  [Core.Text.toBytes("ticker"), Core.Text.toBytes("MTK")],
-  [Core.Text.toBytes("decimals"), 6n],
-  [Core.Text.toBytes("properties"), Core.Data.map([
-    [Core.Text.toBytes("mintable"), 1n], // boolean as 0/1
-    [Core.Text.toBytes("burnable"), 1n]
+const tokenMetadata = Data.map([
+  [Text.toBytes("name"), Text.toBytes("MyToken")],
+  [Text.toBytes("ticker"), Text.toBytes("MTK")],
+  [Text.toBytes("decimals"), 6n],
+  [Text.toBytes("properties"), Data.map([
+    [Text.toBytes("mintable"), 1n], // boolean as 0/1
+    [Text.toBytes("burnable"), 1n]
   ])]
 ])
 ```
@@ -161,23 +161,23 @@ const tokenMetadata = Core.Data.map([
 Ordered arrays of PlutusData:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution"
+import { Bytes, Data, Text } from "@evolution-sdk/evolution"
 
 // List of integers
-const prices: Core.Data.Data = [100n, 250n, 500n, 1000n]
+const prices: Data.Data = [100n, 250n, 500n, 1000n]
 
 // List of byte arrays (hashes)
-const approvedSigners: Core.Data.Data = [
-  Core.Bytes.fromHex("abc123def456abc123def456abc123def456abc123def456abc123de"),
-  Core.Bytes.fromHex("def456abc123def456abc123def456abc123def456abc123def456ab"),
-  Core.Bytes.fromHex("123456789abc123456789abc123456789abc123456789abc12345678")
+const approvedSigners: Data.Data = [
+  Bytes.fromHex("abc123def456abc123def456abc123def456abc123def456abc123de"),
+  Bytes.fromHex("def456abc123def456abc123def456abc123def456abc123def456ab"),
+  Bytes.fromHex("123456789abc123456789abc123456789abc123456789abc12345678")
 ]
 
 // List of constructors
-const actions: Core.Data.Data = [
-  Core.Data.constr(0n, []), // Claim
-  Core.Data.constr(1n, []), // Cancel
-  Core.Data.constr(2n, [5000000n]) // PartialClaim(amount)
+const actions: Data.Data = [
+  Data.constr(0n, []), // Claim
+  Data.constr(1n, []), // Cancel
+  Data.constr(2n, [5000000n]) // PartialClaim(amount)
 ]
 ```
 
@@ -186,27 +186,27 @@ const actions: Core.Data.Data = [
 Convert PlutusData to CBOR for blockchain submission:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution"
+import { Bytes, Data, Text } from "@evolution-sdk/evolution"
 
-const datum = Core.Data.constr(0n, [
-  Core.Data.map([
-    [Core.Text.toBytes("beneficiary"), Core.Text.toBytes("addr1...")],
-    [Core.Text.toBytes("deadline"), 1735689600000n]
+const datum = Data.constr(0n, [
+  Data.map([
+    [Text.toBytes("beneficiary"), Text.toBytes("addr1...")],
+    [Text.toBytes("deadline"), 1735689600000n]
   ]),
   5000000n, // amount
   1n // version
 ])
 
 // Encode to hex string
-const cborHex = Core.Data.toCBORHex(datum)
+const cborHex = Data.toCBORHex(datum)
 // "d8799fa2646265..."
 
 // Encode to bytes  
-const cborBytes = Core.Data.toCBORBytes(datum)
+const cborBytes = Data.toCBORBytes(datum)
 // Uint8Array [216, 121, 159, ...]
 
 // Decode from CBOR
-const decoded = Core.Data.fromCBORHex(cborHex)
+const decoded = Data.fromCBORHex(cborHex)
 // Returns original PlutusData structure
 ```
 
@@ -215,20 +215,20 @@ const decoded = Core.Data.fromCBORHex(cborHex)
 Check if two PlutusData structures are equal:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution"
+import { Bytes, Data, Text } from "@evolution-sdk/evolution"
 
-const map1 = Core.Data.map([
-  [Core.Text.toBytes("name"), Core.Text.toBytes("Alice")],
-  [Core.Text.toBytes("age"), 30n]
+const map1 = Data.map([
+  [Text.toBytes("name"), Text.toBytes("Alice")],
+  [Text.toBytes("age"), 30n]
 ])
 
-const map2 = Core.Data.map([
-  [Core.Text.toBytes("name"), Core.Text.toBytes("Alice")],
-  [Core.Text.toBytes("age"), 30n]
+const map2 = Data.map([
+  [Text.toBytes("name"), Text.toBytes("Alice")],
+  [Text.toBytes("age"), 30n]
 ])
 
 // Deep equality check
-const isEqual = Core.Data.equals(map1, map2)
+const isEqual = Data.equals(map1, map2)
 // true
 ```
 
@@ -237,36 +237,36 @@ const isEqual = Core.Data.equals(map1, map2)
 ### Escrow Datum
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution"
+import { Bytes, Data, Text } from "@evolution-sdk/evolution"
 
 // Escrow locked until deadline
-const escrowDatum = Core.Data.constr(0n, [
-  Core.Bytes.fromHex("abc123def456abc123def456abc123def456abc123def456abc123de"), // beneficiary
+const escrowDatum = Data.constr(0n, [
+  Bytes.fromHex("abc123def456abc123def456abc123def456abc123def456abc123de"), // beneficiary
   1735689600000n, // deadline (Unix timestamp)
   10000000n // locked lovelace amount
 ])
 
-const cborHex = Core.Data.toCBORHex(escrowDatum)
+const cborHex = Data.toCBORHex(escrowDatum)
 // Attach to UTxO as inline datum
 ```
 
 ### CIP-68 NFT Metadata
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution"
+import { Bytes, Data, Text } from "@evolution-sdk/evolution"
 
 // Reference NFT metadata (label 100)
-const metadata = Core.Data.map([
-  [Core.Text.toBytes("name"), Core.Text.toBytes("SpaceAce #4242")],
-  [Core.Text.toBytes("image"), Core.Text.toBytes("ipfs://QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco")],
-  [Core.Text.toBytes("rarity"), Core.Text.toBytes("legendary")],
-  [Core.Text.toBytes("attributes"), Core.Data.map([
-    [Core.Text.toBytes("class"), Core.Text.toBytes("explorer")],
-    [Core.Text.toBytes("power"), 9000n]
+const metadata = Data.map([
+  [Text.toBytes("name"), Text.toBytes("SpaceAce #4242")],
+  [Text.toBytes("image"), Text.toBytes("ipfs://QmXoypizjW3WknFiJnKLwHCnL72vedxjQkDDP1mXWo6uco")],
+  [Text.toBytes("rarity"), Text.toBytes("legendary")],
+  [Text.toBytes("attributes"), Data.map([
+    [Text.toBytes("class"), Text.toBytes("explorer")],
+    [Text.toBytes("power"), 9000n]
   ])]
 ])
 
-const cip68Datum = Core.Data.constr(0n, [
+const cip68Datum = Data.constr(0n, [
   metadata,
   1n, // version
   [] // extra fields
@@ -276,12 +276,12 @@ const cip68Datum = Core.Data.constr(0n, [
 ### Redeemer with Multiple Actions
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution"
+import { Bytes, Data, Text } from "@evolution-sdk/evolution"
 
 // Action variants
-const claim = Core.Data.constr(0n, [])
-const cancel = Core.Data.constr(1n, [])
-const update = Core.Data.constr(2n, [
+const claim = Data.constr(0n, [])
+const cancel = Data.constr(1n, [])
+const update = Data.constr(2n, [
   1735776000000n // new deadline
 ])
 
@@ -292,14 +292,14 @@ const redeemer = claim
 ### Multi-Sig Validator Redeemer
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution"
+import { Bytes, Data, Text } from "@evolution-sdk/evolution"
 
-const multiSigRedeemer = Core.Data.constr(0n, [
+const multiSigRedeemer = Data.constr(0n, [
   // Required signers (list of key hashes)
   [
-    Core.Bytes.fromHex("abc123def456abc123def456abc123def456abc123def456abc123de"),
-    Core.Bytes.fromHex("def456abc123def456abc123def456abc123def456abc123def456ab")
-  ] as Core.Data.Data,
+    Bytes.fromHex("abc123def456abc123def456abc123def456abc123def456abc123de"),
+    Bytes.fromHex("def456abc123def456abc123def456abc123def456abc123def456ab")
+  ] as Data.Data,
   2n // threshold (2 of N)
 ])
 ```

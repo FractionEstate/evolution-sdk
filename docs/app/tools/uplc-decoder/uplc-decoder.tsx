@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Core } from "@evolution-sdk/evolution"
+import { UPLC } from "@evolution-sdk/evolution"
 import JsonView from 'react18-json-view'
 import 'react18-json-view/src/style.css'
 
@@ -50,13 +50,13 @@ export function UplcDecoder() {
       }
       
       // Decode using fromCborHexToProgram which handles all encoding levels
-      const program = Core.UPLC.fromCborHexToProgram(cleanHex)
+      const program = UPLC.fromCborHexToProgram(cleanHex)
       
       // Get encoding level
-      const encodingLevel = Core.UPLC.getCborEncodingLevel(cleanHex)
+      const encodingLevel = UPLC.getCborEncodingLevel(cleanHex)
       
       // Get flat hex representation
-      const flatHex = Core.UPLC.toFlatHex(program)
+      const flatHex = UPLC.toFlatHex(program)
       
       // Convert to JSON object
       const jsonData = program.toJSON()

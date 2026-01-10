@@ -17,13 +17,13 @@ import { afterAll, beforeAll, describe, expect, it } from "@effect/vitest"
 import * as Cluster from "@evolution-sdk/devnet/Cluster"
 import * as Config from "@evolution-sdk/devnet/Config"
 import * as Genesis from "@evolution-sdk/devnet/Genesis"
-import { Core } from "@evolution-sdk/evolution"
-import * as CoreAddress from "@evolution-sdk/evolution/core/Address"
-import * as Bytes from "@evolution-sdk/evolution/core/Bytes"
-import * as Data from "@evolution-sdk/evolution/core/Data"
-import * as DatumOption from "@evolution-sdk/evolution/core/DatumOption"
-import * as PlutusV3 from "@evolution-sdk/evolution/core/PlutusV3"
-import * as ScriptHash from "@evolution-sdk/evolution/core/ScriptHash"
+import { Cardano } from "@evolution-sdk/evolution"
+import * as CoreAddress from "@evolution-sdk/evolution/Address"
+import * as Bytes from "@evolution-sdk/evolution/Bytes"
+import * as Data from "@evolution-sdk/evolution/Data"
+import * as DatumOption from "@evolution-sdk/evolution/DatumOption"
+import * as PlutusV3 from "@evolution-sdk/evolution/PlutusV3"
+import * as ScriptHash from "@evolution-sdk/evolution/ScriptHash"
 import { createClient } from "@evolution-sdk/evolution/sdk/client/ClientImpl"
 
 import plutusJson from "../../evolution/test/spec/plutus.json"
@@ -46,7 +46,7 @@ const { compiledCode: STAKE_MULTI_COMPILED_CODE, hash: STAKE_MULTI_SCRIPT_HASH }
 describe("TxBuilder Script Stake Operations", () => {
   let devnetCluster: Cluster.Cluster | undefined
   let genesisConfig: Config.ShelleyGenesis
-  let genesisUtxos: ReadonlyArray<Core.UTxO.UTxO> = []
+  let genesisUtxos: ReadonlyArray<Cardano.UTxO.UTxO> = []
 
   const TEST_MNEMONIC =
     "test test test test test test test test test test test test test test test test test test test test test test test sauce"
@@ -74,7 +74,7 @@ describe("TxBuilder Script Stake Operations", () => {
   const scriptStakeCredential = scriptHashValue
 
   // Script payment address (for funding UTxOs)
-  const getScriptPaymentAddress = (): Core.Address.Address => {
+  const getScriptPaymentAddress = (): Cardano.Address.Address => {
     return CoreAddress.Address.make({
       networkId: 0,
       paymentCredential: scriptHashValue
@@ -183,12 +183,12 @@ describe("TxBuilder Script Stake Operations", () => {
       .newTx()
       .payToAddress({
         address: scriptPaymentAddress,
-        assets: Core.Assets.fromLovelace(10_000_000n),
+        assets: Cardano.Assets.fromLovelace(10_000_000n),
         datum: unitDatum
       })
       .payToAddress({
         address: scriptPaymentAddress,
-        assets: Core.Assets.fromLovelace(15_000_000n),
+        assets: Cardano.Assets.fromLovelace(15_000_000n),
         datum: unitDatum
       })
       .build()
@@ -233,8 +233,8 @@ describe("TxBuilder Script Stake Operations", () => {
     const outputPerUtxo = utxosToSpend.reduce((acc, u) => acc + u.assets.lovelace, 0n) / 2n
 
     txBuilder = txBuilder
-      .payToAddress({ address: scriptPaymentAddress, assets: Core.Assets.fromLovelace(outputPerUtxo), datum: unitDatum })
-      .payToAddress({ address: scriptPaymentAddress, assets: Core.Assets.fromLovelace(outputPerUtxo), datum: unitDatum })
+      .payToAddress({ address: scriptPaymentAddress, assets: Cardano.Assets.fromLovelace(outputPerUtxo), datum: unitDatum })
+      .payToAddress({ address: scriptPaymentAddress, assets: Cardano.Assets.fromLovelace(outputPerUtxo), datum: unitDatum })
 
     const coordSignBuilder = await txBuilder.build()
     const coordSubmitBuilder = await coordSignBuilder.sign()
@@ -286,7 +286,7 @@ describe("TxBuilder Script Stake Operations", () => {
     const unitDatum = new DatumOption.InlineDatum({ data: Data.constr(0n, []) })
     const fundSignBuilder = await client
       .newTx()
-      .payToAddress({ address: scriptPaymentAddress, assets: Core.Assets.fromLovelace(10_000_000n), datum: unitDatum })
+      .payToAddress({ address: scriptPaymentAddress, assets: Cardano.Assets.fromLovelace(10_000_000n), datum: unitDatum })
       .build()
     await client.awaitTx(await (await fundSignBuilder.sign()).submit(), 1000)
     await new Promise((resolve) => setTimeout(resolve, 2000))
@@ -312,7 +312,7 @@ describe("TxBuilder Script Stake Operations", () => {
       })
       .payToAddress({
         address: scriptPaymentAddress,
-        assets: Core.Assets.fromLovelace(utxoToSpend.assets.lovelace - 1_000_000n),
+        assets: Cardano.Assets.fromLovelace(utxoToSpend.assets.lovelace - 1_000_000n),
         datum: unitDatum
       })
       .attachScript({ script: stakeScript })

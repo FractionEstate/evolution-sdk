@@ -9,8 +9,8 @@
  * @category validation
  */
 
-import * as Transaction from "../core/Transaction.js"
-import type * as TransactionWitnessSet from "../core/TransactionWitnessSet.js"
+import * as Transaction from "../Transaction.js"
+import type * as TransactionWitnessSet from "../TransactionWitnessSet.js"
 
 /**
  * Protocol parameters required for fee calculation.

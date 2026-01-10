@@ -1,14 +1,14 @@
-import { Core } from "@evolution-sdk/evolution"
-import * as CoreAddress from "@evolution-sdk/evolution/core/Address"
-import * as CoreData from "@evolution-sdk/evolution/core/Data"
-import * as CoreDatumOption from "@evolution-sdk/evolution/core/DatumOption"
-import type * as CoreScript from "@evolution-sdk/evolution/core/Script"
-import * as CoreTransactionHash from "@evolution-sdk/evolution/core/TransactionHash"
-import * as CoreUTxO from "@evolution-sdk/evolution/core/UTxO"
+import { Cardano } from "@evolution-sdk/evolution"
+import * as CoreAddress from "@evolution-sdk/evolution/Address"
+import * as CoreData from "@evolution-sdk/evolution/Data"
+import * as CoreDatumOption from "@evolution-sdk/evolution/DatumOption"
+import type * as CoreScript from "@evolution-sdk/evolution/Script"
 import type * as Datum from "@evolution-sdk/evolution/sdk/Datum"
+import * as CoreTransactionHash from "@evolution-sdk/evolution/TransactionHash"
+import * as CoreUTxO from "@evolution-sdk/evolution/UTxO"
 
-// Alias for Core.Assets
-const CoreAssets = Core.Assets
+// Alias for Cardano.Assets
+const CoreAssets = Cardano.Assets
 
 /**
  * Default test address used when no address is provided.

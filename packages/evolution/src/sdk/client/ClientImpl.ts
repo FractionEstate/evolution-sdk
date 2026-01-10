@@ -1,30 +1,30 @@
-import { Effect, Equal, ParseResult } from "effect"
+import { Effect, Equal, ParseResult, Schema } from "effect"
 
-import * as CoreAddress from "../../core/Address.js"
-import * as Bytes from "../../core/Bytes.js"
-import * as KeyHash from "../../core/KeyHash.js"
-import type * as NativeScripts from "../../core/NativeScripts.js"
-import * as PrivateKey from "../../core/PrivateKey.js"
-import type * as Time from "../../core/Time/index.js"
-import * as Transaction from "../../core/Transaction.js"
-import * as TransactionHash from "../../core/TransactionHash.js"
-import * as TransactionWitnessSet from "../../core/TransactionWitnessSet.js"
-import * as CoreUTxO from "../../core/UTxO.js"
-import * as VKey from "../../core/VKey.js"
+import * as CoreAddress from "../../Address.js"
+import * as Bytes from "../../Bytes.js"
+import * as KeyHash from "../../KeyHash.js"
+import type * as NativeScripts from "../../NativeScripts.js"
+import * as PrivateKey from "../../PrivateKey.js"
+import * as CoreRewardAccount from "../../RewardAccount.js"
+import * as CoreRewardAddress from "../../RewardAddress.js"
+import type * as Time from "../../Time/index.js"
+import * as Transaction from "../../Transaction.js"
+import * as TransactionHash from "../../TransactionHash.js"
+import * as TransactionWitnessSet from "../../TransactionWitnessSet.js"
 import { runEffectPromise } from "../../utils/effect-runtime.js"
 import { hashTransaction } from "../../utils/Hash.js"
+import * as CoreUTxO from "../../UTxO.js"
+import * as VKey from "../../VKey.js"
 import {
   makeTxBuilder,
   type ReadOnlyTransactionBuilder,
   type SigningTransactionBuilder
 } from "../builders/TransactionBuilder.js"
-import * as OutRef from "../OutRef.js"
 import * as Blockfrost from "../provider/Blockfrost.js"
 import * as Koios from "../provider/Koios.js"
 import * as Kupmios from "../provider/Kupmios.js"
 import * as Maestro from "../provider/Maestro.js"
 import * as Provider from "../provider/Provider.js"
-import * as RewardAddress from "../RewardAddress.js"
 import * as Derivation from "../wallet/Derivation.js"
 import * as WalletNew from "../wallet/WalletNew.js"
 import {
@@ -119,14 +119,15 @@ const createReadOnlyWallet = (
   rewardAddress?: string
 ): WalletNew.ReadOnlyWallet => {
   const coreAddress = CoreAddress.fromBech32(address)
+  const coreRewardAddress = rewardAddress ? Schema.decodeSync(CoreRewardAddress.RewardAddress)(rewardAddress) : null
   const walletEffect: WalletNew.ReadOnlyWalletEffect = {
     address: () => Effect.succeed(coreAddress),
-    rewardAddress: () => Effect.succeed(rewardAddress ?? null)
+    rewardAddress: () => Effect.succeed(coreRewardAddress)
   }
 
   return {
     address: () => Promise.resolve(coreAddress),
-    rewardAddress: () => Promise.resolve(rewardAddress ?? null),
+    rewardAddress: () => Promise.resolve(coreRewardAddress),
     Effect: walletEffect,
     type: "read-only"
   }
@@ -184,7 +185,8 @@ const createReadOnlyClient = (
     getWalletDelegation: async () => {
       const rewardAddr = walletConfig.rewardAddress
       if (!rewardAddr) throw new Error("No reward address configured")
-      return provider.getDelegation(rewardAddr)
+      const coreRewardAddr = Schema.decodeSync(CoreRewardAddress.RewardAddress)(rewardAddr)
+      return provider.getDelegation(coreRewardAddr)
     },
     newTx: (): ReadOnlyTransactionBuilder => {
       return makeTxBuilder({
@@ -201,7 +203,8 @@ const createReadOnlyClient = (
         const rewardAddr = walletConfig.rewardAddress
         if (!rewardAddr)
           return Effect.fail(new Provider.ProviderError({ message: "No reward address configured", cause: null }))
-        return provider.Effect.getDelegation(rewardAddr)
+        const coreRewardAddr = Schema.decodeSync(CoreRewardAddress.RewardAddress)(rewardAddr)
+        return provider.Effect.getDelegation(coreRewardAddr)
       }
     }
   }
@@ -251,7 +254,7 @@ const extractKeyHashesFromNativeScript = (script: NativeScripts.NativeScriptVari
  */
 const computeRequiredKeyHashesSync = (params: {
   paymentKhHex?: string
-  rewardAddress?: RewardAddress.RewardAddress | null
+  rewardAddress?: CoreRewardAddress.RewardAddress | null
   stakeKhHex?: string
   tx: Transaction.Transaction
   utxos: ReadonlyArray<CoreUTxO.UTxO>
@@ -295,7 +298,7 @@ const computeRequiredKeyHashesSync = (params: {
   if (params.tx.body.collateralInputs) checkInputs(params.tx.body.collateralInputs)
 
   if (params.tx.body.withdrawals && params.rewardAddress && params.stakeKhHex) {
-    const ourReward = RewardAddress.toRewardAccount(params.rewardAddress)
+    const ourReward = Schema.decodeSync(CoreRewardAccount.FromBech32)(params.rewardAddress)
     for (const [rewardAcc] of params.tx.body.withdrawals.withdrawals.entries()) {
       if (Equal.equals(ourReward, rewardAcc)) {
         required.add(params.stakeKhHex)
@@ -390,7 +393,7 @@ const createSigningWallet = (network: WalletNew.Network, config: SeedWalletConfi
 
         return witnesses.length > 0 ? TransactionWitnessSet.fromVKeyWitnesses(witnesses) : TransactionWitnessSet.empty()
       }),
-    signMessage: (_address: CoreAddress.Address | RewardAddress.RewardAddress, payload: WalletNew.Payload) =>
+    signMessage: (_address: CoreAddress.Address | CoreRewardAddress.RewardAddress, payload: WalletNew.Payload) =>
       Effect.map(derivationEffect, (derivation) => {
         // For now, always use payment key for message signing
         const paymentSk = PrivateKey.fromBech32(derivation.paymentKey)
@@ -474,7 +477,7 @@ const createPrivateKeyWallet = (
 
         return witnesses.length > 0 ? TransactionWitnessSet.fromVKeyWitnesses(witnesses) : TransactionWitnessSet.empty()
       }),
-    signMessage: (_address: CoreAddress.Address | RewardAddress.RewardAddress, payload: WalletNew.Payload) =>
+    signMessage: (_address: CoreAddress.Address | CoreRewardAddress.RewardAddress, payload: WalletNew.Payload) =>
       Effect.map(derivationEffect, (derivation) => {
         const paymentSk = PrivateKey.fromBech32(derivation.paymentKey)
         const vk = VKey.fromPrivateKey(paymentSk)
@@ -504,7 +507,7 @@ const createPrivateKeyWallet = (
 const createApiWallet = (_network: WalletNew.Network, config: ApiWalletConfig): WalletNew.ApiWallet => {
   const api = config.api
   let cachedAddress: CoreAddress.Address | null = null
-  let cachedReward: RewardAddress.RewardAddress | null = null
+  let cachedReward: CoreRewardAddress.RewardAddress | null = null
 
   const getPrimaryAddress = Effect.gen(function* () {
     if (cachedAddress) return cachedAddress
@@ -531,7 +534,7 @@ const createApiWallet = (_network: WalletNew.Network, config: ApiWalletConfig): 
       try: () => api.getRewardAddresses(),
       catch: (cause) => new WalletNew.WalletError({ message: (cause as Error).message, cause: cause as Error })
     })
-    cachedReward = rewards[0] ?? null
+    cachedReward = rewards[0] ? Schema.decodeSync(CoreRewardAddress.RewardAddress)(rewards[0]) : null
     return cachedReward
   })
 
@@ -552,7 +555,7 @@ const createApiWallet = (_network: WalletNew.Network, config: ApiWalletConfig): 
           )
         )
       }),
-    signMessage: (address: CoreAddress.Address | RewardAddress.RewardAddress, payload: WalletNew.Payload) =>
+    signMessage: (address: CoreAddress.Address | CoreRewardAddress.RewardAddress, payload: WalletNew.Payload) =>
       Effect.gen(function* () {
         // Convert Core Address to bech32 string for the CIP-30 API
         const addressStr = address instanceof CoreAddress.Address ? CoreAddress.toBech32(address) : address
@@ -565,10 +568,12 @@ const createApiWallet = (_network: WalletNew.Network, config: ApiWalletConfig): 
     submitTx: (txOrHex: Transaction.Transaction | string) =>
       Effect.gen(function* () {
         const cbor = typeof txOrHex === "string" ? txOrHex : Transaction.toCBORHex(txOrHex)
-        return yield* Effect.tryPromise({
+        const txHashHex = yield* Effect.tryPromise({
           try: () => api.submitTx(cbor),
           catch: (cause) => new WalletNew.WalletError({ message: (cause as Error).message, cause: cause as Error })
         })
+        // Parse the string hash to TransactionHash
+        return Schema.decodeSync(TransactionHash.FromHex)(txHashHex)
       })
   }
 
@@ -674,11 +679,8 @@ const createSigningClient = (
       // Auto-fetch reference UTxOs from the network if the transaction has reference inputs
       let referenceUtxos: ReadonlyArray<CoreUTxO.UTxO> = []
       if (tx.body.referenceInputs && tx.body.referenceInputs.length > 0) {
-        const outRefs = tx.body.referenceInputs.map((input) =>
-          OutRef.make(TransactionHash.toHex(input.transactionId), Number(input.index))
-        )
         // Fetch reference UTxOs from the provider
-        referenceUtxos = yield* provider.Effect.getUtxosByOutRef(outRefs).pipe(
+        referenceUtxos = yield* provider.Effect.getUtxosByOutRef(tx.body.referenceInputs).pipe(
           Effect.mapError((e) => new WalletNew.WalletError({ message: `Failed to fetch reference UTxOs: ${e.message}`, cause: e }))
         )
       }
@@ -693,10 +695,10 @@ const createSigningClient = (
     signTx: signTxWithAutoFetch,
     getWalletUtxos: () => Effect.flatMap(wallet.Effect.address(), (addr) => provider.Effect.getUtxos(addr)),
     getWalletDelegation: () =>
-      Effect.flatMap(wallet.Effect.rewardAddress(), (rewardAddr) => {
-        if (!rewardAddr)
+      Effect.flatMap(wallet.Effect.rewardAddress(), (rewardAddr) => {        if (!rewardAddr)
           return Effect.fail(new Provider.ProviderError({ message: "No reward address configured", cause: null }))
-        return provider.Effect.getDelegation(rewardAddr)
+        const coreRewardAddr = Schema.decodeSync(CoreRewardAddress.RewardAddress)(rewardAddr)
+        return provider.Effect.getDelegation(coreRewardAddr)
       })
   }
 

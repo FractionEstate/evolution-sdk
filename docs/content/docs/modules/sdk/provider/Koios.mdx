@@ -1,6 +1,6 @@
 ---
 title: sdk/provider/Koios.ts
-nav_order: 195
+nav_order: 156
 parent: Modules
 ---
 
@@ -108,7 +108,7 @@ getDelegation: (rewardAddress: Parameters<Provider["getDelegation"]>[0]) => Prom
 **Signature**
 
 ```ts
-getDatum: (datumHash: Parameters<Provider["getDatum"]>[0]) => Promise<string>
+getDatum: (datumHash: Parameters<Provider["getDatum"]>[0]) => Promise<Data>
 ```
 
 ### awaitTx (property)
@@ -125,7 +125,7 @@ awaitTx: (txHash: Parameters<Provider["awaitTx"]>[0], checkInterval?: Parameters
 **Signature**
 
 ```ts
-submitTx: (tx: Parameters<Provider["submitTx"]>[0]) => Promise<string>
+submitTx: (tx: Parameters<Provider["submitTx"]>[0]) => Promise<TransactionHash>
 ```
 
 ### evaluateTx (property)

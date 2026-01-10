@@ -5,12 +5,16 @@
 
 import { Effect, Schema } from "effect"
 
-import * as CoreAddress from "../../../core/Address.js"
-import * as Bytes from "../../../core/Bytes.js"
-import type * as CoreUTxO from "../../../core/UTxO.js"
-import type * as Credential from "../../Credential.js"
+import * as CoreAddress from "../../../Address.js"
+import * as Bytes from "../../../Bytes.js"
+import type * as Credential from "../../../Credential.js"
+import * as PlutusData from "../../../Data.js"
+import type * as DatumOption from "../../../DatumOption.js"
+import * as Transaction from "../../../Transaction.js"
+import * as TransactionHash from "../../../TransactionHash.js"
+import type * as TransactionInput from "../../../TransactionInput.js"
+import type * as CoreUTxO from "../../../UTxO.js"
 import type { EvalRedeemer } from "../../EvalRedeemer.js"
-import type * as OutRef from "../../OutRef.js"
 import { ProviderError } from "../Provider.js"
 import * as HttpUtils from "./HttpUtils.js"
 import * as Maestro from "./Maestro.js"
@@ -122,10 +126,12 @@ export const getUtxosWithUnit = (baseUrl: string, apiKey: string) => (addressOrC
 /**
  * Get UTxOs by output references
  */
-export const getUtxosByOutRef = (baseUrl: string, apiKey: string) => (outRefs: ReadonlyArray<OutRef.OutRef>) =>
+export const getUtxosByOutRef = (baseUrl: string, apiKey: string) => (inputs: ReadonlyArray<TransactionInput.TransactionInput>) =>
   Effect.gen(function* () {
     // Maestro supports batch UTxO resolution via POST with output references
-    const outputReferences = Array.from(outRefs).map(({ outputIndex, txHash }) => `${txHash}#${outputIndex}`)
+    const outputReferences = Array.from(inputs).map((input) => 
+      `${TransactionHash.toHex(input.transactionId)}#${Number(input.index)}`
+    )
     
     const response = yield* HttpUtils.postJson(
       `${baseUrl}/utxos/batch`,
@@ -165,12 +171,12 @@ export const getDelegation = (baseUrl: string, apiKey: string) => (rewardAddress
 /**
  * Submit transaction to Maestro
  */
-export const submitTx = (baseUrl: string, apiKey: string, turboSubmit?: boolean) => (cbor: string) =>
+export const submitTx = (baseUrl: string, apiKey: string, turboSubmit?: boolean) => (tx: Transaction.Transaction) =>
   Effect.gen(function* () {
     const endpoint = turboSubmit ? "/turbo/submit" : "/submit"
     
-    // Convert hex string to Uint8Array for submission
-    const txBytes = Bytes.fromHex(cbor)
+    // Convert Transaction to CBOR bytes for submission
+    const txBytes = Transaction.toCBORBytes(tx)
     
     const response = yield* HttpUtils.postUint8Array(
       `${baseUrl}${endpoint}`,
@@ -182,7 +188,7 @@ export const submitTx = (baseUrl: string, apiKey: string, turboSubmit?: boolean)
       Effect.catchAll(wrapError("submit transaction"))
     )
     
-    return response
+    return Schema.decodeSync(TransactionHash.FromHex)(response)
   })
 
 // ============================================================================
@@ -192,13 +198,14 @@ export const submitTx = (baseUrl: string, apiKey: string, turboSubmit?: boolean)
 /**
  * Evaluate transaction with Maestro
  */
-export const evaluateTx = (baseUrl: string, apiKey: string) => (tx: string, additionalUTxOs?: Array<CoreUTxO.UTxO>) =>
+export const evaluateTx = (baseUrl: string, apiKey: string) => (tx: Transaction.Transaction, additionalUTxOs?: Array<CoreUTxO.UTxO>) =>
   Effect.gen(function* () {
+    const txCborHex = Transaction.toCBORHex(tx)
     // Use Ogmios format for additional UTxOs
     const ogmiosUtxos = additionalUTxOs ? Ogmios.toOgmiosUTxOs(additionalUTxOs) : undefined
     
     const requestBody = {
-      transaction: tx,
+      transaction: txCborHex,
       ...(ogmiosUtxos && { 
         additional_utxo_set: ogmiosUtxos.map(utxo => ({
           txHash: utxo.transaction.id,
@@ -251,10 +258,11 @@ export const getUtxoByUnit = (baseUrl: string, apiKey: string) => (unit: string)
 /**
  * Get datum by datum hash
  */
-export const getDatum = (baseUrl: string, apiKey: string) => (datumHash: string) =>
+export const getDatum = (baseUrl: string, apiKey: string) => (datumHash: DatumOption.DatumHash) =>
   Effect.gen(function* () {
+    const datumHashHex = Bytes.toHex(datumHash.hash)
     const response = yield* HttpUtils.get(
-      `${baseUrl}/datums/${datumHash}`,
+      `${baseUrl}/datums/${datumHashHex}`,
       Schema.Struct({
         bytes: Schema.String
       }),
@@ -267,20 +275,21 @@ export const getDatum = (baseUrl: string, apiKey: string) => (datumHash: string)
       Effect.catchAll(wrapError("get datum"))
     )
     
-    return response.bytes
+    return Schema.decodeSync(PlutusData.FromCBORHex())(response.bytes)
   })
 
 /**
  * Wait for transaction confirmation
  */
-export const awaitTx = (baseUrl: string, apiKey: string) => (txHash: string, checkInterval?: number) =>
-  Effect.gen(function* () {
+export const awaitTx = (baseUrl: string, apiKey: string) => (txHash: TransactionHash.TransactionHash, checkInterval?: number) => {
+  const txHashHex = TransactionHash.toHex(txHash)
+  return Effect.gen(function* () {
     const interval = checkInterval || 5000 // Default 5 seconds
     
     while (true) {
       // Check if transaction exists and is confirmed
       const result = yield* HttpUtils.get(
-        `${baseUrl}/transactions/${txHash}`,
+        `${baseUrl}/transactions/${txHashHex}`,
         Schema.Struct({
           hash: Schema.String,
           block: Schema.optional(Schema.Struct({
@@ -304,6 +313,7 @@ export const awaitTx = (baseUrl: string, apiKey: string) => (txHash: string, che
       yield* Effect.sleep(`${interval} millis`)
     }
   })
+}
 
 // ============================================================================
 // Pagination Helpers

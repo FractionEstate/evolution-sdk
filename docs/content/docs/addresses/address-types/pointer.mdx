@@ -41,15 +41,15 @@ Pointer Address = Payment Credential + Pointer (slot, txIndex, certIndex)
 
 ## Parsing Pointer Addresses (Legacy)
 
-> **Note**: `Core.Address` does not support pointer addresses as they are deprecated. Use `Core.AddressEras` for historical parsing.
+> **Note**: `Address` does not support pointer addresses as they are deprecated. Use `AddressEras` for historical parsing.
 
 If you encounter a pointer address in historical data, you can parse it using `AddressEras`:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution";
+import { AddressEras, KeyHash, Pointer, PointerAddress } from "@evolution-sdk/evolution";
 
 // Parse a pointer address from Bech32 using AddressEras (legacy support)
-const address = Core.AddressEras.fromBech32("addr_test1gz2n8fvzgmyhnqlpnv2340v09943nr7pz5af2rwqrra8ncsm0tdz8");
+const address = AddressEras.fromBech32("addr_test1gz2n8fvzgmyhnqlpnv2340v09943nr7pz5af2rwqrra8ncsm0tdz8");
 
 if (address._tag === "PointerAddress") {
   // Type narrowed to PointerAddress - access pointer-specific properties
@@ -87,16 +87,16 @@ If any of these fail, the address is invalid.
 This example shows the structure for completeness. **Do not use in production**:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution";
+import { AddressEras, KeyHash, Pointer, PointerAddress } from "@evolution-sdk/evolution";
 
 // Create payment credential (key hash)
-const paymentCred = new Core.KeyHash.KeyHash({
+const paymentCred = new KeyHash.KeyHash({
   hash: new Uint8Array(28).fill(0)
 });
 
 // Create pointer to stake registration certificate
 // Note: Pointer uses numbers, not bigint
-const pointer = new Core.Pointer.Pointer({
+const pointer = new Pointer.Pointer({
   slot: 12345,
   txIndex: 2,
   certIndex: 0
@@ -104,7 +104,7 @@ const pointer = new Core.Pointer.Pointer({
 
 // Construct pointer address (rarely used in practice)
 // PointerAddress is a separate class from regular Address
-const pointerAddr = new Core.PointerAddress.PointerAddress({
+const pointerAddr = new PointerAddress.PointerAddress({
   networkId: 0,
   paymentCredential: paymentCred,
   pointer: pointer

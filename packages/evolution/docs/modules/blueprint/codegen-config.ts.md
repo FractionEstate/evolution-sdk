@@ -1,6 +1,6 @@
 ---
 title: blueprint/codegen-config.ts
-nav_order: 1
+nav_order: 18
 parent: Modules
 ---
 
@@ -107,7 +107,7 @@ export interface CodegenConfig {
 
   /**
    * Explicit import lines for Data, TSchema, and effect modules
-   * e.g. data: 'import { Data } from "@evolution-sdk/evolution/core/Data"'
+   * e.g. data: 'import { Data } from "@evolution-sdk/evolution/Data"'
    */
   imports: {
     data: string

@@ -7,9 +7,9 @@
 
 import { Effect, Ref } from "effect"
 
-import * as CoreAssets from "../../../core/Assets/index.js"
-import * as ScriptHash from "../../../core/ScriptHash.js"
-import * as UTxO from "../../../core/UTxO.js"
+import * as CoreAssets from "../../../Assets/index.js"
+import * as ScriptHash from "../../../ScriptHash.js"
+import * as UTxO from "../../../UTxO.js"
 import * as RedeemerBuilder from "../RedeemerBuilder.js"
 import { TransactionBuilderError, TxContext } from "../TransactionBuilder.js"
 import { calculateTotalAssets, filterScriptUtxos } from "../TxBuilderImpl.js"

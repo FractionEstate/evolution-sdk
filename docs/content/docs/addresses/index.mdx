@@ -5,11 +5,11 @@ description: Working with Cardano addresses in Evolution SDK
 
 # Address Overview
 
-Cardano addresses identify where funds can be sent and who controls them. The Evolution SDK provides `Core.Address` for working with payment credentials and optional staking credentials, handling the complexity of different address formats.
+Cardano addresses identify where funds can be sent and who controls them. The Evolution SDK provides `Address` for working with payment credentials and optional staking credentials, handling the complexity of different address formats.
 
 ## The Core Address Model
 
-Instead of dealing with multiple address types (BaseAddress, EnterpriseAddress, etc.), Evolution SDK uses a unified `Core.Address` structure:
+Instead of dealing with multiple address types (BaseAddress, EnterpriseAddress, etc.), Evolution SDK uses a unified `Address` structure:
 
 ```typescript
 Address = Payment Credential + Optional Staking Credential
@@ -26,22 +26,22 @@ You can import address functionality in two ways:
 ### Option 1: From the Main Package (Recommended)
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution";
+import { Address, KeyHash } from "@evolution-sdk/evolution";
 
 // Example: Create an address with both payment and stake credentials
-const paymentCred = new Core.KeyHash.KeyHash({ hash: new Uint8Array(28) });
-const address = new Core.Address.Address({
+const paymentCred = new KeyHash.KeyHash({ hash: new Uint8Array(28) });
+const address = new Address.Address({
   networkId: 1,
   paymentCredential: paymentCred
 });
 ```
-**Note:** The double naming (e.g., `Core.Address.Address`) is intentional - the first is the module namespace, the second is the class constructor.
+**Note:** The double naming (e.g., `Address.Address`) is intentional - the first is the module namespace, the second is the class constructor.
 
 ### Option 2: Direct Module Imports
 
 ```typescript twoslash
-import { Address } from "@evolution-sdk/evolution/core/Address";
-import { KeyHash } from "@evolution-sdk/evolution/core/KeyHash";
+import { Address } from "@evolution-sdk/evolution/Address";
+import { KeyHash } from "@evolution-sdk/evolution/KeyHash";
 
 // Same functionality, imported directly from modules
 const paymentCred = new KeyHash({ hash: new Uint8Array(28) });
@@ -56,12 +56,12 @@ const address = new Address({
 ### Parse and Inspect Addresses
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution"
+import { Address, KeyHash } from "@evolution-sdk/evolution"
 
 const bech32 = "addr1qx2kd28nq8ac5prwg32hhvudlwggpgfp8utlyqxu6wqgz62f79qsdmm5dsknt9ecr5w468r9ey0fxwkdrwh08ly3tu9sy0f4qd"
 
 // Parse from Bech32
-const address = Core.Address.fromBech32(bech32)
+const address = Address.fromBech32(bech32)
 
 // Inspect properties
 console.log("Network:", address.networkId === 1 ? "mainnet" : "testnet")
@@ -76,35 +76,35 @@ console.log("Supports staking:", hasStaking)
 ### Create New Addresses
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution"
+import { Address, KeyHash } from "@evolution-sdk/evolution"
 
 // Example credentials (in real code, derive from keys)
-const paymentCred = new Core.KeyHash.KeyHash({ 
+const paymentCred = new KeyHash.KeyHash({ 
   hash: new Uint8Array(28) // Your payment key hash
 })
-const stakeCred = new Core.KeyHash.KeyHash({ 
+const stakeCred = new KeyHash.KeyHash({ 
   hash: new Uint8Array(28) // Your stake key hash
 })
 
 // Address with staking (like Base Address)
-const stakingAddress = new Core.Address.Address({
+const stakingAddress = new Address.Address({
   networkId: 1, // mainnet
   paymentCredential: paymentCred,
   stakingCredential: stakeCred
 })
 
 // Address without staking (like Enterprise Address)
-const paymentOnlyAddress = new Core.Address.Address({
+const paymentOnlyAddress = new Address.Address({
   networkId: 1,
   paymentCredential: paymentCred
   // No stakingCredential = enterprise-like behavior
 })
 
 // Convert to Bech32 string
-const bech32String = Core.Address.toBech32(stakingAddress)
+const bech32String = Address.toBech32(stakingAddress)
 ```
 
-[Learn about the Core.Address module →](/docs/addresses/address)
+[Learn about the Address module →](/docs/addresses/address)
 
 ## When to Use Each Pattern
 
@@ -119,12 +119,12 @@ const bech32String = Core.Address.toBech32(stakingAddress)
 **Equivalent to:** Base Address in Cardano specification
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution";
+import { Address, KeyHash } from "@evolution-sdk/evolution";
 
-const paymentCred = new Core.KeyHash.KeyHash({ hash: new Uint8Array(28) });
-const stakeCred = new Core.KeyHash.KeyHash({ hash: new Uint8Array(28) });
+const paymentCred = new KeyHash.KeyHash({ hash: new Uint8Array(28) });
+const stakeCred = new KeyHash.KeyHash({ hash: new Uint8Array(28) });
 
-const address = new Core.Address.Address({
+const address = new Address.Address({
   networkId: 1,
   paymentCredential: paymentCred,
   stakingCredential: stakeCred // ← Enables staking
@@ -142,11 +142,11 @@ const address = new Core.Address.Address({
 **Equivalent to:** Enterprise Address in Cardano specification
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution";
+import { Address, KeyHash } from "@evolution-sdk/evolution";
 
-const paymentCred = new Core.KeyHash.KeyHash({ hash: new Uint8Array(28) });
+const paymentCred = new KeyHash.KeyHash({ hash: new Uint8Array(28) });
 
-const address = new Core.Address.Address({
+const address = new Address.Address({
   networkId: 1,
   paymentCredential: paymentCred
   // No stakingCredential = payment only
@@ -197,9 +197,9 @@ Addresses use different Bech32 prefixes based on network:
 
 ## Understanding Address Eras
 
-While `Core.Address` covers most use cases, Cardano's ledger specification defines several specific address types. These are called **Address Eras**:
+While `Address` covers most use cases, Cardano's ledger specification defines several specific address types. These are called **Address Eras**:
 
-| Era Type | Core.Address Equivalent | When to Learn More |
+| Era Type | Address Equivalent | When to Learn More |
 |----------|----------------------|-------------------|
 | **Base** | Address with staking credential | Standard addresses |
 | **Enterprise** | Address without staking credential | Exchange/contract addresses |
@@ -253,7 +253,7 @@ Verify address format and network:
 ## Next Steps
 
 **Core Concepts:**
-- [Core.Address](/docs/addresses/address) - How to parse, validate, and convert addresses
+- [Address](/docs/addresses/address) - How to parse, validate, and convert addresses
 - [Address Types](/docs/addresses/address-types) - Comprehensive coverage of all address types
 
 **Advanced Patterns:**

@@ -7,26 +7,25 @@ import { afterAll, beforeAll, describe, expect, it } from "@effect/vitest"
 import * as Cluster from "@evolution-sdk/devnet/Cluster"
 import * as Config from "@evolution-sdk/devnet/Config"
 import * as Genesis from "@evolution-sdk/devnet/Genesis"
-import type { Core } from "@evolution-sdk/evolution"
-import * as Address from "@evolution-sdk/evolution/core/Address"
-import * as Bytes32 from "@evolution-sdk/evolution/core/Bytes32"
-import type * as EpochNo from "@evolution-sdk/evolution/core/EpochNo"
-import * as IPv4 from "@evolution-sdk/evolution/core/IPv4"
-import * as KeyHash from "@evolution-sdk/evolution/core/KeyHash"
-import * as PoolKeyHash from "@evolution-sdk/evolution/core/PoolKeyHash"
-import * as PoolMetadata from "@evolution-sdk/evolution/core/PoolMetadata"
-import * as PoolParams from "@evolution-sdk/evolution/core/PoolParams"
-import * as RewardAccount from "@evolution-sdk/evolution/core/RewardAccount"
-import * as SingleHostAddr from "@evolution-sdk/evolution/core/SingleHostAddr"
-import * as UnitInterval from "@evolution-sdk/evolution/core/UnitInterval"
-import * as Url from "@evolution-sdk/evolution/core/Url"
-import * as VrfKeyHash from "@evolution-sdk/evolution/core/VrfKeyHash"
+import * as Address from "@evolution-sdk/evolution/Address"
+import * as Bytes32 from "@evolution-sdk/evolution/Bytes32"
+import type * as EpochNo from "@evolution-sdk/evolution/EpochNo"
+import * as IPv4 from "@evolution-sdk/evolution/IPv4"
+import * as KeyHash from "@evolution-sdk/evolution/KeyHash"
+import * as PoolKeyHash from "@evolution-sdk/evolution/PoolKeyHash"
+import * as PoolMetadata from "@evolution-sdk/evolution/PoolMetadata"
+import * as PoolParams from "@evolution-sdk/evolution/PoolParams"
+import * as RewardAccount from "@evolution-sdk/evolution/RewardAccount"
 import { createClient } from "@evolution-sdk/evolution/sdk/client/ClientImpl"
+import * as SingleHostAddr from "@evolution-sdk/evolution/SingleHostAddr"
+import * as UnitInterval from "@evolution-sdk/evolution/UnitInterval"
+import * as Url from "@evolution-sdk/evolution/Url"
+import * as VrfKeyHash from "@evolution-sdk/evolution/VrfKeyHash"
 
 describe("TxBuilder Pool Operations", () => {
   let devnetCluster: Cluster.Cluster | undefined
   let genesisConfig: Config.ShelleyGenesis
-  const genesisUtxosByAccount: Map<number, Core.UTxO.UTxO> = new Map()
+  const genesisUtxosByAccount: Map<number, Cardano.UTxO.UTxO> = new Map()
 
   const TEST_MNEMONIC =
     "test test test test test test test test test test test test test test test test test test test test test test test sauce"

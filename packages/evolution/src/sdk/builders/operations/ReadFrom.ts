@@ -13,7 +13,7 @@
 
 import { Effect, Ref } from "effect"
 
-import * as CoreUTxO from "../../../core/UTxO.js"
+import * as CoreUTxO from "../../../UTxO.js"
 import { TransactionBuilderError, TxContext } from "../TransactionBuilder.js"
 import type { ReadFromParams } from "./Operations.js"
 
@@ -33,6 +33,8 @@ import type { ReadFromParams } from "./Operations.js"
 export const createReadFromProgram = (params: ReadFromParams): Effect.Effect<void, TransactionBuilderError, TxContext> =>
   Effect.gen(function* () {
     const ctx = yield* TxContext
+
+    yield* Effect.logDebug(`[ReadFrom] Adding ${params.referenceInputs.length} reference input(s)`)
 
     // 1. Validate reference inputs exist
     if (params.referenceInputs.length === 0) {
@@ -68,4 +70,6 @@ export const createReadFromProgram = (params: ReadFromParams): Effect.Effect<voi
       ...state,
       referenceInputs: [...state.referenceInputs, ...params.referenceInputs]
     }))
+    
+    yield* Effect.logDebug(`[ReadFrom] State now has ${state.referenceInputs.length + params.referenceInputs.length} reference input(s)`)
   })

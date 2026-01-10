@@ -23,20 +23,20 @@ Both credentials are typically derived from the same wallet, but can come from d
 Create base addresses by instantiating the `BaseAddress` class:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution";
+import { AddressEras, BaseAddress, KeyHash, ScriptHash } from "@evolution-sdk/evolution";
 
-const address = new Core.BaseAddress.BaseAddress({
+const address = new BaseAddress.BaseAddress({
   networkId: 1, // mainnet
-  paymentCredential: new Core.KeyHash.KeyHash({
+  paymentCredential: new KeyHash.KeyHash({
     hash: new Uint8Array(28)
   }),
-  stakeCredential: new Core.KeyHash.KeyHash({
+  stakeCredential: new KeyHash.KeyHash({
     hash: new Uint8Array(28)
   })
 });
 
 // Convert to Bech32 string
-const bech32 = Core.AddressEras.toBech32(address);
+const bech32 = AddressEras.toBech32(address);
 console.log(bech32); // "addr1..."
 ```
 
@@ -45,11 +45,11 @@ console.log(bech32); // "addr1..."
 Parse a Bech32 address string into a `BaseAddress` instance:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution";
+import { AddressEras, BaseAddress, KeyHash, ScriptHash } from "@evolution-sdk/evolution";
 
 const bech32 = "addr1qx2kd28nq8ac5prwg32hhvudlwggpgfp8utlyqxu6wqgz62f79qsdmm5dsknt9ecr5w468r9ey0fxwkdrwh08ly3tu9sy0f4qd";
 
-const address = Core.AddressEras.fromBech32(bech32) as Core.BaseAddress.BaseAddress;
+const address = AddressEras.fromBech32(bech32) as BaseAddress.BaseAddress;
 
 console.log("Network ID:", address.networkId);
 console.log("Payment:", address.paymentCredential);
@@ -61,20 +61,20 @@ console.log("Stake:", address.stakeCredential);
 Base addresses can use script hashes for payment and/or staking credentials:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution";
+import { AddressEras, BaseAddress, KeyHash, ScriptHash } from "@evolution-sdk/evolution";
 
 // Address with script credentials
-const scriptAddress = new Core.BaseAddress.BaseAddress({
+const scriptAddress = new BaseAddress.BaseAddress({
   networkId: 1, // mainnet
-  paymentCredential: new Core.ScriptHash.ScriptHash({
+  paymentCredential: new ScriptHash.ScriptHash({
     hash: new Uint8Array(28) // 28-byte payment script hash
   }),
-  stakeCredential: new Core.ScriptHash.ScriptHash({
+  stakeCredential: new ScriptHash.ScriptHash({
     hash: new Uint8Array(28) // 28-byte stake script hash
   })
 });
 
-const bech32 = Core.AddressEras.toBech32(scriptAddress);
+const bech32 = AddressEras.toBech32(scriptAddress);
 console.log("Script-based address:", bech32);
 ```
 

@@ -1,6 +1,8 @@
-import { Core } from "@evolution-sdk/evolution"
-import * as AddressEras from "@evolution-sdk/evolution/core/AddressEras"
-import * as TransactionHash from "@evolution-sdk/evolution/core/TransactionHash"
+import * as Address from "@evolution-sdk/evolution/Address"
+import * as AddressEras from "@evolution-sdk/evolution/AddressEras"
+import * as Assets from "@evolution-sdk/evolution/Assets"
+import * as TransactionHash from "@evolution-sdk/evolution/TransactionHash"
+import * as UTxO from "@evolution-sdk/evolution/UTxO"
 import { blake2b } from "@noble/hashes/blake2"
 import { Data, Effect } from "effect"
 
@@ -59,15 +61,15 @@ export interface Cluster {
  */
 export const calculateUtxosFromConfigEffect = (
   genesisConfig: Config.ShelleyGenesis
-): Effect.Effect<ReadonlyArray<Core.UTxO.UTxO>, GenesisError> =>
+): Effect.Effect<ReadonlyArray<UTxO.UTxO>, GenesisError> =>
   Effect.gen(function* () {
-    const utxos: Array<Core.UTxO.UTxO> = []
+    const utxos: Array<UTxO.UTxO> = []
     const fundEntries = Object.entries(genesisConfig.initialFunds)
 
     for (const [addressHex, lovelace] of fundEntries) {
-      // Convert hex address to Core Address
+      // Convert hex address to Address
       const address = yield* Effect.try({
-        try: () => Core.Address.fromHex(addressHex),
+        try: () => Address.fromHex(addressHex),
         catch: (e) =>
           new GenesisError({
             reason: "address_conversion_failed",
@@ -84,11 +86,11 @@ export const calculateUtxosFromConfigEffect = (
       const transactionId = new TransactionHash.TransactionHash({ hash: txHashBytes })
 
       utxos.push(
-        new Core.UTxO.UTxO({
+        new UTxO.UTxO({
           transactionId,
           index: 0n, // Genesis UTxOs always use index 0 (minBound in Haskell)
           address,
-          assets: Core.Assets.fromLovelace(BigInt(lovelace))
+          assets: Assets.fromLovelace(BigInt(lovelace))
         })
       )
     }
@@ -112,7 +114,7 @@ export const calculateUtxosFromConfig = (genesisConfig: Config.ShelleyGenesis) =
  * @since 2.0.0
  * @category genesis
  */
-export const queryUtxosEffect = (cluster: Cluster): Effect.Effect<ReadonlyArray<Core.UTxO.UTxO>, GenesisError> =>
+export const queryUtxosEffect = (cluster: Cluster): Effect.Effect<ReadonlyArray<UTxO.UTxO>, GenesisError> =>
   Effect.gen(function* () {
     // Need to import Container functions dynamically to avoid circular dependency
     const ContainerModule = yield* Effect.promise(() => import("./Container.js"))
@@ -153,12 +155,12 @@ export const queryUtxosEffect = (cluster: Cluster): Effect.Effect<ReadonlyArray<
     return Object.entries(parsed).map(([key, data]) => {
       const [txHashHex, outputIndex] = key.split("#")
       const transactionId = TransactionHash.fromHex(txHashHex)
-      const address = Core.Address.fromBech32(data.address)
-      return new Core.UTxO.UTxO({
+      const address = Address.fromBech32(data.address)
+      return new UTxO.UTxO({
         transactionId,
         index: BigInt(parseInt(outputIndex)),
         address,
-        assets: Core.Assets.fromLovelace(BigInt(data.value.lovelace))
+        assets: Assets.fromLovelace(BigInt(data.value.lovelace))
       })
     })
   })

@@ -7,21 +7,20 @@ import { afterAll, beforeAll, describe, expect, it } from "@effect/vitest"
 import * as Cluster from "@evolution-sdk/devnet/Cluster"
 import * as Config from "@evolution-sdk/devnet/Config"
 import * as Genesis from "@evolution-sdk/devnet/Genesis"
-import type { Core } from "@evolution-sdk/evolution"
-import * as Address from "@evolution-sdk/evolution/core/Address"
-import * as Anchor from "@evolution-sdk/evolution/core/Anchor"
-import * as Bytes from "@evolution-sdk/evolution/core/Bytes"
-import * as Bytes32 from "@evolution-sdk/evolution/core/Bytes32"
-import * as Credential from "@evolution-sdk/evolution/core/Credential"
-import * as KeyHash from "@evolution-sdk/evolution/core/KeyHash"
-import * as Url from "@evolution-sdk/evolution/core/Url"
+import * as Address from "@evolution-sdk/evolution/Address"
+import * as Anchor from "@evolution-sdk/evolution/Anchor"
+import * as Bytes from "@evolution-sdk/evolution/Bytes"
+import * as Bytes32 from "@evolution-sdk/evolution/Bytes32"
+import * as Credential from "@evolution-sdk/evolution/Credential"
+import * as KeyHash from "@evolution-sdk/evolution/KeyHash"
 import { createClient } from "@evolution-sdk/evolution/sdk/client/ClientImpl"
+import * as Url from "@evolution-sdk/evolution/Url"
 
 describe("TxBuilder Governance Operations", () => {
   let devnetCluster: Cluster.Cluster | undefined
   let genesisConfig: Config.ShelleyGenesis
   let conwayGenesis: Config.ConwayGenesis
-  const genesisUtxosByAccount: Map<number, Core.UTxO.UTxO> = new Map()
+  const genesisUtxosByAccount: Map<number, Cardano.UTxO.UTxO> = new Map()
 
   const TEST_MNEMONIC =
     "test test test test test test test test test test test test test test test test test test test test test test test sauce"

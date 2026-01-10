@@ -2,9 +2,9 @@ import * as CML from "@dcspark/cardano-multiplatform-lib-nodejs"
 import { mnemonicToEntropy } from "bip39"
 import { beforeEach, describe, expect, it } from "vitest"
 
-import * as Bip32PrivateKey from "../src/core/Bip32PrivateKey.js"
-import * as Bip32PublicKey from "../src/core/Bip32PublicKey.js"
-import * as PrivateKey from "../src/core/PrivateKey.js"
+import * as Bip32PrivateKey from "../src/Bip32PrivateKey.js"
+import * as Bip32PublicKey from "../src/Bip32PublicKey.js"
+import * as PrivateKey from "../src/PrivateKey.js"
 
 /**
  * Comprehensive CML compatibility tests for Bip32PrivateKey module.

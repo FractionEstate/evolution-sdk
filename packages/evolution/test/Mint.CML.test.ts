@@ -1,7 +1,7 @@
 import { Equal, FastCheck } from "effect"
 import { describe, expect, it } from "vitest"
 
-import * as Mint from "../src/core/Mint.js"
+import * as Mint from "../src/Mint.js"
 
 describe("Mint CML Compatibility", () => {
   it("property: Mint round-trips through CBOR with Equal.equals", () => {

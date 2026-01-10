@@ -5,13 +5,14 @@
 
 import { Schema } from "effect"
 
-import * as CoreAddress from "../../../core/Address.js"
-import * as CoreAssets from "../../../core/Assets/index.js"
-import * as TransactionHash from "../../../core/TransactionHash.js"
-import * as CoreUTxO from "../../../core/UTxO.js"
-import * as Delegation from "../../Delegation.js"
+import * as CoreAddress from "../../../Address.js"
+import * as CoreAssets from "../../../Assets/index.js"
+import * as PoolKeyHash from "../../../PoolKeyHash.js"
+import * as Redeemer from "../../../Redeemer.js"
+import * as TransactionHash from "../../../TransactionHash.js"
+import * as CoreUTxO from "../../../UTxO.js"
 import type { EvalRedeemer } from "../../EvalRedeemer.js"
-import type * as ProtocolParameters from "../../ProtocolParameters.js"
+import type * as Provider from "../Provider.js"
 
 // ============================================================================
 // Blockfrost API Response Schemas
@@ -156,7 +157,7 @@ export type JsonwspOgmiosEvaluationResponse = Schema.Schema.Type<typeof JsonwspO
  */
 export const transformProtocolParameters = (
   blockfrostParams: BlockfrostProtocolParameters
-): ProtocolParameters.ProtocolParameters => {
+): Provider.ProtocolParameters => {
   return {
     minFeeA: blockfrostParams.min_fee_a,
     minFeeB: blockfrostParams.min_fee_b,
@@ -236,14 +237,15 @@ export const transformUTxO = (blockfrostUtxo: BlockfrostUTxO, addressStr: string
 }
 
 /**
- * Transform Blockfrost delegation to Evolution SDK delegation
+ * Transform Blockfrost delegation to delegation info
  */
-export const transformDelegation = (blockfrostDelegation: BlockfrostDelegation): Delegation.Delegation => {
+export const transformDelegation = (blockfrostDelegation: BlockfrostDelegation): Provider.Delegation => {
   if (!blockfrostDelegation.active || !blockfrostDelegation.pool_id) {
-    return Delegation.empty()
+    return { poolId: null, rewards: 0n }
   }
 
-  return Delegation.make(blockfrostDelegation.pool_id, BigInt(blockfrostDelegation.active_stake))
+  const poolId = Schema.decodeSync(PoolKeyHash.FromHex)(blockfrostDelegation.pool_id)
+  return { poolId, rewards: BigInt(blockfrostDelegation.active_stake) }
 }
 
 /**
@@ -252,14 +254,19 @@ export const transformDelegation = (blockfrostDelegation: BlockfrostDelegation):
 export const transformEvaluationResult = (
   blockfrostResponse: BlockfrostEvaluationResponse
 ): Array<EvalRedeemer> => {
-  return blockfrostResponse.result.EvaluationResult.map((redeemer: Schema.Schema.Type<typeof BlockfrostRedeemer>) => ({
-    ex_units: {
-      mem: Number(redeemer.unit_mem),
-      steps: Number(redeemer.unit_steps)
-    },
-    redeemer_index: redeemer.tx_index,
-    redeemer_tag: redeemer.purpose === "cert" ? "publish" : redeemer.purpose === "reward" ? "withdraw" : redeemer.purpose
-  }))
+  return blockfrostResponse.result.EvaluationResult.map((redeemer: Schema.Schema.Type<typeof BlockfrostRedeemer>) => {
+    // Blockfrost uses "cert" and "reward" which match Core terminology
+    const tag: Redeemer.RedeemerTag = redeemer.purpose as Redeemer.RedeemerTag
+    
+    return {
+      ex_units: new Redeemer.ExUnits({
+        mem: BigInt(redeemer.unit_mem),
+        steps: BigInt(redeemer.unit_steps)
+      }),
+      redeemer_index: redeemer.tx_index,
+      redeemer_tag: tag
+    }
+  })
 }
 
 /**
@@ -279,10 +286,10 @@ export const transformJsonwspOgmiosEvaluationResult = (
     const index = parseInt(indexStr, 10)
     
     result.push({
-      ex_units: {
-        mem: budget.memory,
-        steps: budget.steps
-      },
+      ex_units: new Redeemer.ExUnits({
+        mem: BigInt(budget.memory),
+        steps: BigInt(budget.steps)
+      }),
       redeemer_index: index,
       redeemer_tag: tag as any
     })

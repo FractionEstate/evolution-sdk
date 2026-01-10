@@ -2,7 +2,7 @@ import * as CML from "@dcspark/cardano-multiplatform-lib-nodejs"
 import { Equal, FastCheck } from "effect"
 import { describe, expect, it } from "vitest"
 
-import * as NativeScripts from "../src/core/NativeScripts.js"
+import * as NativeScripts from "../src/NativeScripts.js"
 
 describe("NativeScripts CML Compatibility (property)", () => {
   it("Evolution NativeScript CBOR is parseable by CML and roundtrips CBOR", () => {

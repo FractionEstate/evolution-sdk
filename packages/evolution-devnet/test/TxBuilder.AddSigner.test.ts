@@ -9,15 +9,16 @@ import { afterAll, beforeAll, describe, expect, it } from "@effect/vitest"
 import * as Cluster from "@evolution-sdk/devnet/Cluster"
 import * as Config from "@evolution-sdk/devnet/Config"
 import * as Genesis from "@evolution-sdk/devnet/Genesis"
-import { Core } from "@evolution-sdk/evolution"
-import * as Address from "@evolution-sdk/evolution/core/Address"
-import * as KeyHash from "@evolution-sdk/evolution/core/KeyHash"
+import { Cardano } from "@evolution-sdk/evolution"
+import * as Address from "@evolution-sdk/evolution/Address"
+import * as KeyHash from "@evolution-sdk/evolution/KeyHash"
 import { createClient } from "@evolution-sdk/evolution/sdk/client/ClientImpl"
+import * as TransactionHash from "@evolution-sdk/evolution/TransactionHash"
 
 describe("TxBuilder addSigner (Devnet Submit)", () => {
   let devnetCluster: Cluster.Cluster | undefined
   let genesisConfig: Config.ShelleyGenesis
-  let genesisUtxos: ReadonlyArray<Core.UTxO.UTxO> = []
+  let genesisUtxos: ReadonlyArray<Cardano.UTxO.UTxO> = []
 
   const TEST_MNEMONIC =
     "test test test test test test test test test test test test test test test test test test test test test test test sauce"
@@ -95,7 +96,7 @@ describe("TxBuilder addSigner (Devnet Submit)", () => {
       .addSigner({ keyHash: paymentCredential })
       .payToAddress({
         address: myAddress,
-        assets: Core.Assets.fromLovelace(5_000_000n)
+        assets: Cardano.Assets.fromLovelace(5_000_000n)
       })
       .build({ availableUtxos: [...genesisUtxos] })
 
@@ -111,7 +112,7 @@ describe("TxBuilder addSigner (Devnet Submit)", () => {
     const submitBuilder = await signBuilder.sign()
     const txHash = await submitBuilder.submit()
 
-    expect(txHash.length).toBe(64)
+    expect(TransactionHash.toHex(txHash).length).toBe(64)
 
     const confirmed = await client.awaitTx(txHash, 1000)
     expect(confirmed).toBe(true)
@@ -144,7 +145,7 @@ describe("TxBuilder addSigner (Devnet Submit)", () => {
       .addSigner({ keyHash: credential2 })
       .payToAddress({
         address: address1,
-        assets: Core.Assets.fromLovelace(5_000_000n)
+        assets: Cardano.Assets.fromLovelace(5_000_000n)
       })
       .build({ availableUtxos: [...freshUtxos] })
 
@@ -172,7 +173,7 @@ describe("TxBuilder addSigner (Devnet Submit)", () => {
 
     // Submit and verify confirmation
     const txHash = await submitBuilder.submit()
-    expect(txHash.length).toBe(64)
+    expect(TransactionHash.toHex(txHash).length).toBe(64)
 
     const confirmed = await client1.awaitTx(txHash, 1000)
     expect(confirmed).toBe(true)

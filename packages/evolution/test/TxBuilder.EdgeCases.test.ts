@@ -1,10 +1,10 @@
 import { describe, expect, it } from "@effect/vitest"
 
-import * as Address from "../src/core/Address.js"
-import * as CoreAssets from "../src/core/Assets/index.js"
-import type * as CoreUTxO from "../src/core/UTxO.js"
+import * as Address from "../src/Address.js"
+import * as CoreAssets from "../src/Assets/index.js"
 import type { TxBuilderConfig } from "../src/sdk/builders/TransactionBuilder.js"
 import { makeTxBuilder } from "../src/sdk/builders/TransactionBuilder.js"
+import type * as CoreUTxO from "../src/UTxO.js"
 import { createCoreTestUtxo } from "./utils/utxo-helpers.js"
 
 const PROTOCOL_PARAMS = {

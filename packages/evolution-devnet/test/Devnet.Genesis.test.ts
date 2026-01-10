@@ -2,8 +2,8 @@ import { describe, expect, it } from "@effect/vitest"
 import * as Cluster from "@evolution-sdk/devnet/Cluster"
 import * as Config from "@evolution-sdk/devnet/Config"
 import * as Genesis from "@evolution-sdk/devnet/Genesis"
-import { Core } from "@evolution-sdk/evolution"
-import * as CoreAddress from "@evolution-sdk/evolution/core/Address"
+import { Cardano } from "@evolution-sdk/evolution"
+import * as CoreAddress from "@evolution-sdk/evolution/Address"
 import { afterAll, beforeAll } from "vitest"
 
 /**
@@ -53,7 +53,7 @@ describe("Devnet.Genesis", () => {
     
     const utxo = utxos[0]
     expect(utxo.transactionId).toBeDefined()
-    expect(Core.TransactionHash.toHex(utxo.transactionId).length).toBe(64)
+    expect(Cardano.TransactionHash.toHex(utxo.transactionId).length).toBe(64)
     expect(utxo.index).toBe(0n)
     expect(CoreAddress.toBech32(utxo.address)).toMatch(/^addr_test/)
     expect(utxo.assets).toBeDefined()
@@ -69,7 +69,7 @@ describe("Devnet.Genesis", () => {
     
     const utxo = utxos[0]
     expect(utxo.transactionId).toBeDefined()
-    expect(Core.TransactionHash.toHex(utxo.transactionId).length).toBe(64)
+    expect(Cardano.TransactionHash.toHex(utxo.transactionId).length).toBe(64)
     expect(utxo.index).toBe(0n)
     expect(CoreAddress.toBech32(utxo.address)).toMatch(/^addr_test/)
     expect(utxo.assets).toBeDefined()
@@ -84,7 +84,7 @@ describe("Devnet.Genesis", () => {
     expect(calculated.length).toBe(queried.length)
 
     for (let i = 0; i < calculated.length; i++) {
-      expect(Core.TransactionHash.toHex(calculated[i].transactionId)).toBe(Core.TransactionHash.toHex(queried[i].transactionId))
+      expect(Cardano.TransactionHash.toHex(calculated[i].transactionId)).toBe(Cardano.TransactionHash.toHex(queried[i].transactionId))
       expect(calculated[i].index).toBe(queried[i].index)
       expect(CoreAddress.toBech32(calculated[i].address)).toBe(CoreAddress.toBech32(queried[i].address))
       expect(calculated[i].assets.lovelace).toEqual(queried[i].assets.lovelace)
@@ -120,9 +120,9 @@ describe("Devnet.Genesis", () => {
     expect(utxos[2].index).toBe(0n)
 
     // Each address gets unique pseudo-TxId
-    const txHash0 = Core.TransactionHash.toHex(utxos[0].transactionId)
-    const txHash1 = Core.TransactionHash.toHex(utxos[1].transactionId)
-    const txHash2 = Core.TransactionHash.toHex(utxos[2].transactionId)
+    const txHash0 = Cardano.TransactionHash.toHex(utxos[0].transactionId)
+    const txHash1 = Cardano.TransactionHash.toHex(utxos[1].transactionId)
+    const txHash2 = Cardano.TransactionHash.toHex(utxos[2].transactionId)
     expect(txHash0).not.toBe(txHash1)
     expect(txHash1).not.toBe(txHash2)
     expect(txHash0).not.toBe(txHash2)

@@ -1,6 +1,6 @@
 ---
 title: sdk/builders/operations/AttachMetadata.ts
-nav_order: 155
+nav_order: 122
 parent: Modules
 ---
 

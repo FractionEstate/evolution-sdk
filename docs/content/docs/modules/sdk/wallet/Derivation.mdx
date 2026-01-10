@@ -1,6 +1,6 @@
 ---
 title: sdk/wallet/Derivation.ts
-nav_order: 205
+nav_order: 161
 parent: Modules
 ---
 
@@ -46,7 +46,7 @@ Result of deriving keys and addresses from a seed or Bip32 root
 ```ts
 export type SeedDerivationResult = {
   address: CoreAddress.Address
-  rewardAddress: SdkRewardAddress.RewardAddress | undefined
+  rewardAddress: CoreRewardAddress.RewardAddress | undefined
   paymentKey: string
   stakeKey: string | undefined
   keyStore: Map<string, PrivateKey.PrivateKey>
@@ -70,7 +70,7 @@ export declare function addressFromSeed(
     accountIndex?: number
     network?: "Mainnet" | "Testnet" | "Custom"
   } = {}
-): { address: CoreAddress.Address; rewardAddress: SdkRewardAddress.RewardAddress | undefined }
+): { address: CoreAddress.Address; rewardAddress: CoreRewardAddress.RewardAddress | undefined }
 ```
 
 ## keysFromSeed

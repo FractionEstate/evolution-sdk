@@ -1,6 +1,6 @@
 ---
 title: sdk/provider/Provider.ts
-nav_order: 198
+nav_order: 159
 parent: Modules
 ---
 
@@ -13,6 +13,8 @@ parent: Modules
 - [errors](#errors)
   - [ProviderError (class)](#providererror-class)
 - [model](#model)
+  - [Delegation (interface)](#delegation-interface)
+  - [ProtocolParameters (type alias)](#protocolparameters-type-alias)
   - [Provider (interface)](#provider-interface)
   - [ProviderEffect](#providereffect)
   - [ProviderEffect (interface)](#providereffect-interface)
@@ -35,6 +37,56 @@ export declare class ProviderError
 Added in v2.0.0
 
 # model
+
+## Delegation (interface)
+
+Delegation information including pool ID and rewards.
+
+**Signature**
+
+```ts
+export interface Delegation {
+  readonly poolId: PoolKeyHash.PoolKeyHash | null
+  readonly rewards: bigint
+}
+```
+
+Added in v2.0.0
+
+## ProtocolParameters (type alias)
+
+Protocol Parameters for the Cardano network.
+Defines operational rules and limits used by providers.
+
+**Signature**
+
+```ts
+export type ProtocolParameters = {
+  readonly minFeeA: number
+  readonly minFeeB: number
+  readonly maxTxSize: number
+  readonly maxValSize: number
+  readonly keyDeposit: bigint
+  readonly poolDeposit: bigint
+  readonly drepDeposit: bigint
+  readonly govActionDeposit: bigint
+  readonly priceMem: number
+  readonly priceStep: number
+  readonly maxTxExMem: bigint
+  readonly maxTxExSteps: bigint
+  readonly coinsPerUtxoByte: bigint
+  readonly collateralPercentage: number
+  readonly maxCollateralInputs: number
+  readonly minFeeRefScriptCostPerByte: number
+  readonly costModels: {
+    readonly PlutusV1: Record<string, number>
+    readonly PlutusV2: Record<string, number>
+    readonly PlutusV3: Record<string, number>
+  }
+}
+```
+
+Added in v2.0.0
 
 ## Provider (interface)
 
@@ -76,7 +128,7 @@ export interface ProviderEffect {
   /**
    * Retrieve current protocol parameters from the blockchain.
    */
-  readonly getProtocolParameters: () => Effect.Effect<ProtocolParameters.ProtocolParameters, ProviderError>
+  readonly getProtocolParameters: () => Effect.Effect<ProtocolParameters, ProviderError>
   /**
    * Query UTxOs at a given address or by credential.
    */
@@ -92,37 +144,44 @@ export interface ProviderEffect {
   ) => Effect.Effect<Array<CoreUTxO.UTxO>, ProviderError>
   /**
    * Query a single UTxO by its unit identifier.
+   * Unit format: policyId (56 hex chars) + assetName (0-64 hex chars)
    */
   readonly getUtxoByUnit: (unit: string) => Effect.Effect<CoreUTxO.UTxO, ProviderError>
   /**
-   * Query UTxOs by their output references.
+   * Query UTxOs by their transaction inputs (output references).
    */
   readonly getUtxosByOutRef: (
-    outRefs: ReadonlyArray<OutRef.OutRef>
+    inputs: ReadonlyArray<TransactionInput.TransactionInput>
   ) => Effect.Effect<Array<CoreUTxO.UTxO>, ProviderError>
   /**
    * Query delegation info for a reward address.
    */
-  readonly getDelegation: (
-    rewardAddress: RewardAddress.RewardAddress
-  ) => Effect.Effect<Delegation.Delegation, ProviderError>
+  readonly getDelegation: (rewardAddress: RewardAddress.RewardAddress) => Effect.Effect<Delegation, ProviderError>
   /**
    * Query a datum by its hash.
+   * Returns the parsed PlutusData structure.
    */
-  readonly getDatum: (datumHash: string) => Effect.Effect<string, ProviderError>
+  readonly getDatum: (datumHash: DatumOption.DatumHash) => Effect.Effect<PlutusData.Data, ProviderError>
   /**
    * Wait for a transaction to be confirmed on the blockchain.
    */
-  readonly awaitTx: (txHash: string, checkInterval?: number) => Effect.Effect<boolean, ProviderError>
+  readonly awaitTx: (
+    txHash: TransactionHash.TransactionHash,
+    checkInterval?: number
+  ) => Effect.Effect<boolean, ProviderError>
   /**
    * Submit a signed transaction to the blockchain.
+   * @param tx - Signed transaction to submit
+   * @returns Transaction hash of the submitted transaction
    */
-  readonly submitTx: (cbor: string) => Effect.Effect<string, ProviderError>
+  readonly submitTx: (tx: Transaction.Transaction) => Effect.Effect<TransactionHash.TransactionHash, ProviderError>
   /**
    * Evaluate a transaction to determine script execution costs.
+   * @param tx - Transaction to evaluate
+   * @param additionalUTxOs - Additional UTxOs to include in evaluation context
    */
   readonly evaluateTx: (
-    tx: string,
+    tx: Transaction.Transaction,
     additionalUTxOs?: Array<CoreUTxO.UTxO>
   ) => Effect.Effect<Array<EvalRedeemer>, ProviderError>
 }

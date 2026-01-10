@@ -15,17 +15,17 @@ import { afterAll, beforeAll, describe, expect, it } from "@effect/vitest"
 import * as Cluster from "@evolution-sdk/devnet/Cluster"
 import * as Config from "@evolution-sdk/devnet/Config"
 import * as Genesis from "@evolution-sdk/devnet/Genesis"
-import { Core } from "@evolution-sdk/evolution"
-import * as Address from "@evolution-sdk/evolution/core/Address"
+import { Cardano } from "@evolution-sdk/evolution"
+import * as Address from "@evolution-sdk/evolution/Address"
 import { createClient } from "@evolution-sdk/evolution/sdk/client/ClientImpl"
 
 // Alias for readability
-const Time = Core.Time
+const Time = Cardano.Time
 
 describe("TxBuilder Validity Interval", () => {
   let devnetCluster: Cluster.Cluster | undefined
   let genesisConfig: Config.ShelleyGenesis
-  let genesisUtxos: ReadonlyArray<Core.UTxO.UTxO> = []
+  let genesisUtxos: ReadonlyArray<Cardano.UTxO.UTxO> = []
 
   const TEST_MNEMONIC =
     "test test test test test test test test test test test test test test test test test test test test test test test sauce"
@@ -102,7 +102,7 @@ describe("TxBuilder Validity Interval", () => {
       .setValidity({ to: ttl })
       .payToAddress({
         address: myAddress,
-        assets: Core.Assets.fromLovelace(5_000_000n)
+        assets: Cardano.Assets.fromLovelace(5_000_000n)
       })
       .build({ availableUtxos: [...genesisUtxos] })
 
@@ -117,7 +117,7 @@ describe("TxBuilder Validity Interval", () => {
     // Submit and confirm
     const submitBuilder = await signBuilder.sign()
     const txHash = await submitBuilder.submit()
-    expect(txHash.length).toBe(64)
+    expect(Cardano.TransactionHash.toHex(txHash).length).toBe(64)
 
     const confirmed = await client.awaitTx(txHash, 1000)
     expect(confirmed).toBe(true)
@@ -136,7 +136,7 @@ describe("TxBuilder Validity Interval", () => {
       .setValidity({ from, to })
       .payToAddress({
         address: myAddress,
-        assets: Core.Assets.fromLovelace(5_000_000n)
+        assets: Cardano.Assets.fromLovelace(5_000_000n)
       })
       .build()
 
@@ -157,7 +157,7 @@ describe("TxBuilder Validity Interval", () => {
     // Submit and confirm
     const submitBuilder = await signBuilder.sign()
     const txHash = await submitBuilder.submit()
-    expect(txHash.length).toBe(64)
+    expect(Cardano.TransactionHash.toHex(txHash).length).toBe(64)
 
     const confirmed = await client.awaitTx(txHash, 1000)
     expect(confirmed).toBe(true)
@@ -175,7 +175,7 @@ describe("TxBuilder Validity Interval", () => {
       .setValidity({ to: expiredTtl })
       .payToAddress({
         address: myAddress,
-        assets: Core.Assets.fromLovelace(5_000_000n)
+        assets: Cardano.Assets.fromLovelace(5_000_000n)
       })
       .build({ availableUtxos: [...genesisUtxos] })
 
@@ -198,7 +198,7 @@ describe("TxBuilder Validity Interval", () => {
       .setValidity({ from, to })
       .payToAddress({
         address: myAddress,
-        assets: Core.Assets.fromLovelace(5_000_000n)
+        assets: Cardano.Assets.fromLovelace(5_000_000n)
       })
       .build({ availableUtxos: [...genesisUtxos] })
 

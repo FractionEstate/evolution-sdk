@@ -10,7 +10,7 @@
 
 import { Effect, Ref } from "effect"
 
-import * as CoreAssets from "../../../core/Assets/index.js"
+import * as CoreAssets from "../../../Assets/index.js"
 import * as EvaluationStateManager from "../EvaluationStateManager.js"
 import { mintToAssets } from "../operations/Mint.js"
 import {
@@ -20,7 +20,7 @@ import {
   TxContext
 } from "../TransactionBuilder.js"
 import type { PhaseResult } from "./Phases.js"
-import { calculateCertificateBalance, calculateWithdrawals } from "./utils.js"
+import { calculateCertificateBalance, calculateProposalDeposits, calculateWithdrawals } from "./utils.js"
 
 /**
  * Helper: Format assets for logging (BigInt-safe, truncates long unit names)
@@ -90,6 +90,9 @@ export const executeBalance = (): Effect.Effect<
       state.poolDeposits
     )
 
+    // Calculate proposal deposits (governance actions require deposits)
+    const proposalDeposits = calculateProposalDeposits(state.proposalProcedures)
+
     // Calculate total withdrawals
     const totalWithdrawals = calculateWithdrawals(state.withdrawals)
 
@@ -110,6 +113,7 @@ export const executeBalance = (): Effect.Effect<
     delta = CoreAssets.subtract(delta, changeAssets)
     delta = CoreAssets.subtractLovelace(delta, buildCtx.calculatedFee)
     delta = CoreAssets.subtractLovelace(delta, certificateDeposits)
+    delta = CoreAssets.subtractLovelace(delta, proposalDeposits)
 
     // Check if balanced: lovelace must be exactly 0 and all native assets must be 0
     const deltaLovelace = CoreAssets.lovelaceOf(delta)

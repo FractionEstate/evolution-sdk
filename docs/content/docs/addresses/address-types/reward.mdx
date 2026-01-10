@@ -21,17 +21,17 @@ Reward Address = Staking Credential Only
 Create reward addresses by instantiating the `RewardAccount` class:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution";
+import { KeyHash, RewardAccount, ScriptHash } from "@evolution-sdk/evolution";
 
-const rewardAccount = new Core.RewardAccount.RewardAccount({
+const rewardAccount = new RewardAccount.RewardAccount({
   networkId: 1, // mainnet
-  stakeCredential: new Core.KeyHash.KeyHash({
+  stakeCredential: new KeyHash.KeyHash({
     hash: new Uint8Array(28)
   })
 });
 
 // Convert to Bech32 string
-const bech32 = Core.RewardAccount.toBech32(rewardAccount);
+const bech32 = RewardAccount.toBech32(rewardAccount);
 console.log(bech32); // "stake1..."
 ```
 
@@ -40,11 +40,11 @@ console.log(bech32); // "stake1..."
 Parse a Bech32 stake address string into a `RewardAccount` instance:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution";
+import { KeyHash, RewardAccount, ScriptHash } from "@evolution-sdk/evolution";
 
 const bech32 = "stake1uyehkck0lajq8gr28t9uxnuvgcqrc6070x3k9r8048z8y5gh6ffgw";
 
-const address = Core.RewardAccount.fromBech32(bech32);
+const address = RewardAccount.fromBech32(bech32);
 
 console.log("Network ID:", address.networkId);
 console.log("Stake credential:", address.stakeCredential);
@@ -55,17 +55,17 @@ console.log("Stake credential:", address.stakeCredential);
 Reward addresses can use script hashes for the staking credential:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution";
+import { KeyHash, RewardAccount, ScriptHash } from "@evolution-sdk/evolution";
 
 // Reward address with script credential
-const scriptRewardAccount = new Core.RewardAccount.RewardAccount({
+const scriptRewardAccount = new RewardAccount.RewardAccount({
   networkId: 1, // mainnet
-  stakeCredential: new Core.ScriptHash.ScriptHash({
+  stakeCredential: new ScriptHash.ScriptHash({
     hash: new Uint8Array(28) // 28-byte stake script hash
   })
 });
 
-const bech32 = Core.RewardAccount.toBech32(scriptRewardAccount);
+const bech32 = RewardAccount.toBech32(scriptRewardAccount);
 console.log("Script-based reward address:", bech32);
 ```
 

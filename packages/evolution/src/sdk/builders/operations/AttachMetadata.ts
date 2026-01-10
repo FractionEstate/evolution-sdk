@@ -12,8 +12,8 @@
 
 import { Effect, Ref } from "effect"
 
-import * as AuxiliaryData from "../../../core/AuxiliaryData.js"
-import type * as TransactionMetadatum from "../../../core/TransactionMetadatum.js"
+import * as AuxiliaryData from "../../../AuxiliaryData.js"
+import type * as TransactionMetadatum from "../../../TransactionMetadatum.js"
 import { TransactionBuilderError, TxContext } from "../TransactionBuilder.js"
 import type { AttachMetadataParams } from "./Operations.js"
 

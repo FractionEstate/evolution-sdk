@@ -29,7 +29,7 @@ Provider-only clients are ideal when you need blockchain data but not wallet-spe
 Create a client with only provider configuration:
 
 ```typescript twoslash
-import { Core, createClient } from "@evolution-sdk/evolution";
+import { Address, Assets, Bytes, DatumOption, RewardAddress, Transaction, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -42,7 +42,7 @@ const client = createClient({
 
 // Query any address
 const utxos = await client.getUtxos(
-  Core.Address.fromBech32("addr1qxy8sclc58rsck0pzsc0v4skmqjwuqsqpwfcvrdldl5sjvvhyltp7fk0fmtmrlnykgmhnzcns2msa2cmpvllzgqd2azqhpv8e4")
+  Address.fromBech32("addr1qxy8sclc58rsck0pzsc0v4skmqjwuqsqpwfcvrdldl5sjvvhyltp7fk0fmtmrlnykgmhnzcns2msa2cmpvllzgqd2azqhpv8e4")
 );
 console.log("Found UTxOs:", utxos.length);
 
@@ -56,7 +56,7 @@ console.log("Min fee A:", params.minFeeA);
 Provider-only clients expose all provider methods directly:
 
 ```typescript twoslash
-import { Core, createClient } from "@evolution-sdk/evolution";
+import { Address, Assets, Bytes, DatumOption, RewardAddress, Transaction, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -70,27 +70,32 @@ const client = createClient({
 // Protocol parameters
 const params = await client.getProtocolParameters();
 
-// UTxO queries - use Core.Address.fromBech32 for addresses
-const address = Core.Address.fromBech32("addr1qxy8sclc58rsck0pzsc0v4skmqjwuqsqpwfcvrdldl5sjvvhyltp7fk0fmtmrlnykgmhnzcns2msa2cmpvllzgqd2azqhpv8e4");
+// UTxO queries - use Address.fromBech32 for addresses
+const address = Address.fromBech32("addr1qxy8sclc58rsck0pzsc0v4skmqjwuqsqpwfcvrdldl5sjvvhyltp7fk0fmtmrlnykgmhnzcns2msa2cmpvllzgqd2azqhpv8e4");
 const utxos = await client.getUtxos(address);
 const utxosWithAda = await client.getUtxosWithUnit(address, "lovelace");
 const utxosByRefs = await client.getUtxosByOutRef([
-  { txHash: "abc123def456...", outputIndex: 0 }
+  new TransactionInput.TransactionInput({ 
+    transactionId: TransactionHash.fromHex("abc123def456..."), 
+    index: 0n 
+  })
 ]);
 
 // Delegation
-const delegation = await client.getDelegation("stake1...");
+const delegation = await client.getDelegation(RewardAddress.RewardAddress.make("stake1uxy..."));
 
 // Datum resolution
-const datum = await client.getDatum("datum-hash-here");
+const datum = await client.getDatum(new DatumOption.DatumHash({ hash: Bytes.fromHex("datum-hash-here") }));
 
 // Transaction operations
 const signedTxCbor = "84a300...";
-const txHash = await client.submitTx(signedTxCbor);
+const signedTx = Transaction.fromCBORHex(signedTxCbor);
+const txHash = await client.submitTx(signedTx);
 const confirmed = await client.awaitTx(txHash);
 
 const unsignedTxCbor = "84a300...";
-const evaluated = await client.evaluateTx(unsignedTxCbor);
+const unsignedTx = Transaction.fromCBORHex(unsignedTxCbor);
+const evaluated = await client.evaluateTx(unsignedTx);
 ```
 
 ## Querying Multiple Addresses
@@ -98,7 +103,7 @@ const evaluated = await client.evaluateTx(unsignedTxCbor);
 Portfolio tracker for multiple addresses:
 
 ```typescript twoslash
-import { Core, createClient } from "@evolution-sdk/evolution";
+import { Address, Assets, Bytes, DatumOption, RewardAddress, Transaction, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -114,7 +119,7 @@ async function getPortfolioBalance(addressesBech32: string[]) {
   const results = await Promise.all(
     addressesBech32.map(async (addressBech32) => {
       const utxos = await client.getUtxos(
-        Core.Address.fromBech32(addressBech32)
+        Address.fromBech32(addressBech32)
       );
       const lovelace = utxos.reduce(
         (sum, utxo) => sum + utxo.assets.lovelace,
@@ -138,7 +143,7 @@ const portfolio = await getPortfolioBalance([
 Accept signed transactions and submit to blockchain:
 
 ```typescript twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { Address, Assets, Bytes, DatumOption, RewardAddress, Transaction, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -152,7 +157,8 @@ const client = createClient({
 // API endpoint
 export async function submitTransaction(signedTxCbor: string) {
   try {
-    const txHash = await client.submitTx(signedTxCbor);
+    const signedTx = Transaction.fromCBORHex(signedTxCbor);
+    const txHash = await client.submitTx(signedTx);
     
     // Wait for confirmation
     const confirmed = await client.awaitTx(txHash, 5000);
@@ -176,7 +182,7 @@ export async function submitTransaction(signedTxCbor: string) {
 Track network parameters for fee estimation or protocol changes:
 
 ```typescript twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { Address, Assets, Bytes, DatumOption, RewardAddress, Transaction, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -215,7 +221,7 @@ Provider-only clients cannot perform wallet-specific operations:
 
 ```typescript twoslash
 // @errors: 2339
-import { Core, createClient } from "@evolution-sdk/evolution";
+import { Address, Assets, Bytes, DatumOption, RewardAddress, Transaction, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -239,12 +245,13 @@ client.signTx();
 client.address();
 
 // CAN query any address
-const address = Core.Address.fromBech32("addr1qxy8sclc58rsck0pzsc0v4skmqjwuqsqpwfcvrdldl5sjvvhyltp7fk0fmtmrlnykgmhnzcns2msa2cmpvllzgqd2azqhpv8e4");
+const address = Address.fromBech32("addr1qxy8sclc58rsck0pzsc0v4skmqjwuqsqpwfcvrdldl5sjvvhyltp7fk0fmtmrlnykgmhnzcns2msa2cmpvllzgqd2azqhpv8e4");
 const utxos = await client.getUtxos(address);
 
 // CAN submit pre-signed transactions
 const signedCbor = "84a400..."; // Example signed transaction CBOR
-const txHash = await client.submitTx(signedCbor);
+const signedTx = Transaction.fromCBORHex(signedCbor);
+const txHash = await client.submitTx(signedTx);
 ```
 
 ## Upgrading to Full Client
@@ -252,7 +259,7 @@ const txHash = await client.submitTx(signedCbor);
 Add wallet to provider-only client using `attachWallet()`:
 
 ```typescript twoslash
-import { createClient, Core } from "@evolution-sdk/evolution";
+import { Address, Assets, Bytes, DatumOption, RewardAddress, Transaction, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 // Start with provider only
 const providerClient = createClient({
@@ -273,8 +280,8 @@ const readOnlyClient = providerClient.attachWallet({
 // Now can build transactions for this address
 const builder = readOnlyClient.newTx();
 builder.payToAddress({
-  address: Core.Address.fromBech32("addr1qxh7f8gxv43dxz7k2vf6x5cxj5f5mk5mmqfk5u7qp7t2nvw9pqp0aw50nln8nyzfh6fjp6sxgajx5q0c6p73xqf2qhvqwlx8f7"),
-  assets: Core.Assets.fromLovelace(5000000n)
+  address: Address.fromBech32("addr1qxh7f8gxv43dxz7k2vf6x5cxj5f5mk5mmqfk5u7qp7t2nvw9pqp0aw50nln8nyzfh6fjp6sxgajx5q0c6p73xqf2qhvqwlx8f7"),
+  assets: Assets.fromLovelace(5000000n)
 });
 
 const result = await builder.build();
@@ -285,7 +292,7 @@ const result = await builder.build();
 Switch between environments:
 
 ```typescript twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { Address, Assets, Bytes, DatumOption, RewardAddress, Transaction, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 const env = (process.env.NODE_ENV || "development") as "development" | "production";
 

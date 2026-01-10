@@ -21,17 +21,17 @@ Enterprise Address = Payment Credential Only
 Create enterprise addresses by instantiating the `EnterpriseAddress` class:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution";
+import { AddressEras, EnterpriseAddress, KeyHash, ScriptHash } from "@evolution-sdk/evolution";
 
-const address = new Core.EnterpriseAddress.EnterpriseAddress({
+const address = new EnterpriseAddress.EnterpriseAddress({
   networkId: 1, // mainnet
-  paymentCredential: new Core.KeyHash.KeyHash({
+  paymentCredential: new KeyHash.KeyHash({
     hash: new Uint8Array(28)
   })
 });
 
 // Convert to Bech32 string
-const bech32 = Core.AddressEras.toBech32(address);
+const bech32 = AddressEras.toBech32(address);
 console.log(bech32); // "addr1..."
 ```
 
@@ -40,11 +40,11 @@ console.log(bech32); // "addr1..."
 Parse a Bech32 address string into an `EnterpriseAddress` instance:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution";
+import { AddressEras, EnterpriseAddress, KeyHash, ScriptHash } from "@evolution-sdk/evolution";
 
 const bech32 = "addr1vx2kd28nq8ac5prwg32hhvudlwggpgfp8utlyqxu6wqgz6cevnrgl";
 
-const address = Core.AddressEras.fromBech32(bech32) as Core.EnterpriseAddress.EnterpriseAddress;
+const address = AddressEras.fromBech32(bech32) as EnterpriseAddress.EnterpriseAddress;
 
 console.log("Network ID:", address.networkId);
 console.log("Payment:", address.paymentCredential);
@@ -55,18 +55,18 @@ console.log("Payment:", address.paymentCredential);
 Enterprise addresses can use script hashes as payment credentials:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution";
+import { AddressEras, EnterpriseAddress, KeyHash, ScriptHash } from "@evolution-sdk/evolution";
 
 // Script address example
-const scriptAddr = new Core.EnterpriseAddress.EnterpriseAddress({
+const scriptAddr = new EnterpriseAddress.EnterpriseAddress({
   networkId: 1, // mainnet
-  paymentCredential: new Core.ScriptHash.ScriptHash({
+  paymentCredential: new ScriptHash.ScriptHash({
     hash: new Uint8Array(28) // 28-byte script hash
   })
 });
 
 // Convert to Bech32 string
-const bech32 = Core.AddressEras.toBech32(scriptAddr);
+const bech32 = AddressEras.toBech32(scriptAddr);
 console.log("Script enterprise address:", bech32);
 ```
 

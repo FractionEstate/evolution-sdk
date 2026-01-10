@@ -1,6 +1,6 @@
 ---
 title: sdk/builders/TxBuilderImpl.ts
-nav_order: 181
+nav_order: 150
 parent: Modules
 ---
 
@@ -30,7 +30,6 @@ parent: Modules
   - [filterScriptUtxos](#filterscriptutxos)
   - [isScriptAddress](#isscriptaddress)
   - [isScriptAddressCore](#isscriptaddresscore)
-  - [makeDatumOption](#makedatumoption)
   - [makeTxOutput](#maketxoutput)
   - [mergeAssetsIntoOutput](#mergeassetsintooutput)
   - [mergeAssetsIntoUTxO](#mergeassetsintoutxo)
@@ -181,7 +180,7 @@ export declare const calculateFeeIteratively: (
   redeemers: Map<
     string,
     {
-      readonly tag: "spend" | "mint" | "cert" | "reward"
+      readonly tag: "spend" | "mint" | "cert" | "reward" | "vote"
       readonly data: PlutusData.Data
       readonly exUnits?: { readonly mem: bigint; readonly steps: bigint }
     }
@@ -316,21 +315,6 @@ Works with Core Address type.
 
 ```ts
 export declare const isScriptAddressCore: (address: CoreAddress.Address) => boolean
-```
-
-Added in v2.0.0
-
-## makeDatumOption
-
-Convert SDK Datum to core DatumOption.
-Parses CBOR hex strings for inline datums and hashes for datum references.
-
-**Signature**
-
-```ts
-export declare const makeDatumOption: (
-  datum: Datum.Datum
-) => Effect.Effect<DatumOption.DatumOption, TransactionBuilderError>
 ```
 
 Added in v2.0.0

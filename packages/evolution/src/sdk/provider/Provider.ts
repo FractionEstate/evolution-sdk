@@ -1,15 +1,60 @@
 import type { Effect } from "effect"
 import { Context, Data } from "effect"
 
-import type * as CoreAddress from "../../core/Address.js"
-import type * as CoreUTxO from "../../core/UTxO.js"
-import type * as Credential from "../Credential.js"
-import type * as Delegation from "../Delegation.js"
+import type * as CoreAddress from "../../Address.js"
+import type * as Credential from "../../Credential.js"
+import type * as PlutusData from "../../Data.js"
+import type * as DatumOption from "../../DatumOption.js"
+import type * as PoolKeyHash from "../../PoolKeyHash.js"
+import type * as RewardAddress from "../../RewardAddress.js"
+import type * as Transaction from "../../Transaction.js"
+import type * as TransactionHash from "../../TransactionHash.js"
+import type * as TransactionInput from "../../TransactionInput.js"
+import type * as CoreUTxO from "../../UTxO.js"
 import type { EvalRedeemer } from "../EvalRedeemer.js"
-import type * as OutRef from "../OutRef.js"
-import type * as ProtocolParameters from "../ProtocolParameters.js"
-import type * as RewardAddress from "../RewardAddress.js"
 import type { EffectToPromiseAPI } from "../Type.js"
+
+/**
+ * Protocol Parameters for the Cardano network.
+ * Defines operational rules and limits used by providers.
+ *
+ * @since 2.0.0
+ * @category model
+ */
+export type ProtocolParameters = {
+  readonly minFeeA: number
+  readonly minFeeB: number
+  readonly maxTxSize: number
+  readonly maxValSize: number
+  readonly keyDeposit: bigint
+  readonly poolDeposit: bigint
+  readonly drepDeposit: bigint
+  readonly govActionDeposit: bigint
+  readonly priceMem: number
+  readonly priceStep: number
+  readonly maxTxExMem: bigint
+  readonly maxTxExSteps: bigint
+  readonly coinsPerUtxoByte: bigint
+  readonly collateralPercentage: number
+  readonly maxCollateralInputs: number
+  readonly minFeeRefScriptCostPerByte: number
+  readonly costModels: {
+    readonly PlutusV1: Record<string, number>
+    readonly PlutusV2: Record<string, number>
+    readonly PlutusV3: Record<string, number>
+  }
+}
+
+/**
+ * Delegation information including pool ID and rewards.
+ *
+ * @since 2.0.0
+ * @category model
+ */
+export interface Delegation {
+  readonly poolId: PoolKeyHash.PoolKeyHash | null
+  readonly rewards: bigint
+}
 
 /**
  * Error class for provider-related operations.
@@ -34,7 +79,7 @@ export interface ProviderEffect {
   /**
    * Retrieve current protocol parameters from the blockchain.
    */
-  readonly getProtocolParameters: () => Effect.Effect<ProtocolParameters.ProtocolParameters, ProviderError>
+  readonly getProtocolParameters: () => Effect.Effect<ProtocolParameters, ProviderError>
   /**
    * Query UTxOs at a given address or by credential.
    */
@@ -48,34 +93,40 @@ export interface ProviderEffect {
   ) => Effect.Effect<Array<CoreUTxO.UTxO>, ProviderError>
   /**
    * Query a single UTxO by its unit identifier.
+   * Unit format: policyId (56 hex chars) + assetName (0-64 hex chars)
    */
   readonly getUtxoByUnit: (unit: string) => Effect.Effect<CoreUTxO.UTxO, ProviderError>
   /**
-   * Query UTxOs by their output references.
+   * Query UTxOs by their transaction inputs (output references).
    */
-  readonly getUtxosByOutRef: (outRefs: ReadonlyArray<OutRef.OutRef>) => Effect.Effect<Array<CoreUTxO.UTxO>, ProviderError>
+  readonly getUtxosByOutRef: (inputs: ReadonlyArray<TransactionInput.TransactionInput>) => Effect.Effect<Array<CoreUTxO.UTxO>, ProviderError>
   /**
    * Query delegation info for a reward address.
    */
   readonly getDelegation: (
     rewardAddress: RewardAddress.RewardAddress
-  ) => Effect.Effect<Delegation.Delegation, ProviderError>
+  ) => Effect.Effect<Delegation, ProviderError>
   /**
    * Query a datum by its hash.
+   * Returns the parsed PlutusData structure.
    */
-  readonly getDatum: (datumHash: string) => Effect.Effect<string, ProviderError>
+  readonly getDatum: (datumHash: DatumOption.DatumHash) => Effect.Effect<PlutusData.Data, ProviderError>
   /**
    * Wait for a transaction to be confirmed on the blockchain.
    */
-  readonly awaitTx: (txHash: string, checkInterval?: number) => Effect.Effect<boolean, ProviderError>
+  readonly awaitTx: (txHash: TransactionHash.TransactionHash, checkInterval?: number) => Effect.Effect<boolean, ProviderError>
   /**
    * Submit a signed transaction to the blockchain.
+   * @param tx - Signed transaction to submit
+   * @returns Transaction hash of the submitted transaction
    */
-  readonly submitTx: (cbor: string) => Effect.Effect<string, ProviderError>
+  readonly submitTx: (tx: Transaction.Transaction) => Effect.Effect<TransactionHash.TransactionHash, ProviderError>
   /**
    * Evaluate a transaction to determine script execution costs.
+   * @param tx - Transaction to evaluate
+   * @param additionalUTxOs - Additional UTxOs to include in evaluation context
    */
-  readonly evaluateTx: (tx: string, additionalUTxOs?: Array<CoreUTxO.UTxO>) => Effect.Effect<Array<EvalRedeemer>, ProviderError>
+  readonly evaluateTx: (tx: Transaction.Transaction, additionalUTxOs?: Array<CoreUTxO.UTxO>) => Effect.Effect<Array<EvalRedeemer>, ProviderError>
 }
 
 /**

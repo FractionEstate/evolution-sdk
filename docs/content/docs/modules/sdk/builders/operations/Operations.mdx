@@ -1,6 +1,6 @@
 ---
 title: sdk/builders/operations/Operations.ts
-nav_order: 159
+nav_order: 126
 parent: Modules
 ---
 
@@ -13,9 +13,11 @@ parent: Modules
 - [governance](#governance)
   - [AuthCommitteeHotParams (interface)](#authcommitteehotparams-interface)
   - [DeregisterDRepParams (interface)](#deregisterdrepparams-interface)
+  - [ProposeParams (interface)](#proposeparams-interface)
   - [RegisterDRepParams (interface)](#registerdrepparams-interface)
   - [ResignCommitteeColdParams (interface)](#resigncommitteecoldparams-interface)
   - [UpdateDRepParams (interface)](#updatedrepparams-interface)
+  - [VoteParams (interface)](#voteparams-interface)
 - [metadata](#metadata)
   - [AttachMetadataParams (interface)](#attachmetadataparams-interface)
 - [pool](#pool)
@@ -90,6 +92,29 @@ export interface DeregisterDRepParams {
 
 Added in v2.0.0
 
+## ProposeParams (interface)
+
+Parameters for proposing governance actions.
+
+Submits a governance action proposal.
+The deposit is automatically fetched from protocol parameters (like registerStake).
+Call .propose() multiple times to submit multiple proposals in one transaction.
+
+**Signature**
+
+```ts
+export interface ProposeParams {
+  /** The governance action to propose */
+  readonly governanceAction: GovernanceAction.GovernanceAction
+  /** Reward account for deposit refund when proposal is finalized */
+  readonly rewardAccount: RewardAccount.RewardAccount
+  /** Optional anchor with metadata URL and hash */
+  readonly anchor: Anchor.Anchor | null
+}
+```
+
+Added in v2.0.0
+
 ## RegisterDRepParams (interface)
 
 Parameters for registering as a DRep.
@@ -105,6 +130,10 @@ export interface RegisterDRepParams {
   readonly drepCredential: Credential.Credential
   /** Optional metadata anchor (URL + hash) */
   readonly anchor?: Anchor.Anchor
+  /** Redeemer for script-controlled DRep credentials */
+  readonly redeemer?: RedeemerBuilder.RedeemerArg
+  /** Optional label for debugging script failures - identifies this operation in error messages */
+  readonly label?: string
 }
 ```
 
@@ -148,6 +177,31 @@ export interface UpdateDRepParams {
   /** New metadata anchor (URL + hash) */
   readonly anchor?: Anchor.Anchor
   /** Redeemer for script-controlled DRep credentials */
+  readonly redeemer?: RedeemerBuilder.RedeemerArg
+  /** Optional label for debugging script failures - identifies this operation in error messages */
+  readonly label?: string
+}
+```
+
+Added in v2.0.0
+
+## VoteParams (interface)
+
+Parameters for submitting votes on governance actions.
+
+Submits voting procedures to vote on governance proposals.
+Supports multiple voters voting on multiple proposals in a single transaction.
+
+For script-controlled voters (DRep, CC member, or stake pool with script credential),
+provide a redeemer to satisfy the vote purpose validator.
+
+**Signature**
+
+```ts
+export interface VoteParams {
+  /** Voting procedures to submit - see VotingProcedures.singleVote() for simple cases */
+  readonly votingProcedures: VotingProcedures.VotingProcedures
+  /** Redeemer for script-controlled voters (vote purpose) */
   readonly redeemer?: RedeemerBuilder.RedeemerArg
   /** Optional label for debugging script failures - identifies this operation in error messages */
   readonly label?: string

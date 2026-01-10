@@ -12,11 +12,11 @@ Validating addresses is critical before using them in transactions. The SDK prov
 Create a helper function for safe address validation:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution";
+import { Address } from "@evolution-sdk/evolution";
 
 function validateAddress(addressString: string) {
   try {
-    const address = Core.Address.fromBech32(addressString);
+    const address = Address.fromBech32(addressString);
     return { success: true, address } as const;
   } catch (error) {
     return { success: false, error } as const;
@@ -37,14 +37,14 @@ if (result.success) {
 Verify an address belongs to the expected network:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution";
+import { Address } from "@evolution-sdk/evolution";
 
 function validateNetwork(
   addressString: string,
   expectedNetwork: "mainnet" | "testnet"
 ): boolean {
   try {
-    const address = Core.Address.fromBech32(addressString);
+    const address = Address.fromBech32(addressString);
     const expectedNetworkId = expectedNetwork === "mainnet" ? 1 : 0;
     
     if (address.networkId !== expectedNetworkId) {
@@ -71,12 +71,12 @@ const isInvalid = validateNetwork("addr_test1qz...", "mainnet"); // false
 Check if an address has staking credentials:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution";
+import { Address } from "@evolution-sdk/evolution";
 
 function hasStakingCredential(addressString: string): boolean {
   try {
-    const address = Core.Address.fromBech32(addressString);
-    return Core.Address.hasStakingCredential(address);
+    const address = Address.fromBech32(addressString);
+    return Address.hasStakingCredential(address);
   } catch {
     return false;
   }
@@ -84,8 +84,8 @@ function hasStakingCredential(addressString: string): boolean {
 
 function isEnterpriseAddress(addressString: string): boolean {
   try {
-    const address = Core.Address.fromBech32(addressString);
-    return Core.Address.isEnterprise(address);
+    const address = Address.fromBech32(addressString);
+    return Address.isEnterprise(address);
   } catch {
     return false;
   }
@@ -101,13 +101,13 @@ console.log(isEnterpriseAddress("addr1vx...")); // true for enterprise addresses
 ### User Input Validation
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution";
+import { Address } from "@evolution-sdk/evolution";
 
 function validateUserInput(input: string): string | null {
   const trimmed = input.trim();
   
   try {
-    Core.Address.fromBech32(trimmed);
+    Address.fromBech32(trimmed);
     return trimmed;
   } catch (error) {
     alert("Invalid address format. Please check and try again.");
@@ -119,7 +119,7 @@ function validateUserInput(input: string): string | null {
 ### Bulk Validation
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution";
+import { Address } from "@evolution-sdk/evolution";
 
 function validateMany(addresses: string[]): {
   valid: string[];
@@ -130,7 +130,7 @@ function validateMany(addresses: string[]): {
   
   for (const addr of addresses) {
     try {
-      Core.Address.fromBech32(addr);
+      Address.fromBech32(addr);
       valid.push(addr);
     } catch (error) {
       invalid.push({ address: addr, error: String(error) });
@@ -145,4 +145,4 @@ function validateMany(addresses: string[]): {
 
 - **[Address Conversion](/docs/addresses/conversion)** - Transform between Bech32, hex, and byte formats
 - **[Address Types](/docs/addresses/address-types)** - Overview of all Cardano address types
-- **[Core.Address](/docs/addresses/address)** - Parse, validate, and convert addresses
+- **[Address](/docs/addresses/address)** - Parse, validate, and convert addresses

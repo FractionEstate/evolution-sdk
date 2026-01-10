@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@effect/vitest"
 import { Equal, FastCheck } from "effect"
 
-import * as Address from "../src/core/AddressEras.js"
+import * as Address from "../src/AddressEras.js"
 
 // Sample addresses for testing - organized by network and type as arrays with comments
 // MAINNET ADDRESSES

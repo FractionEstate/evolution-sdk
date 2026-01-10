@@ -1,6 +1,5 @@
 import { Effect } from "effect"
 
-import type * as Unit from "../Unit.js"
 import * as KupmiosEffects from "./internal/KupmiosEffects.js"
 import type { Provider, ProviderEffect } from "./Provider.js"
 
@@ -56,10 +55,10 @@ export class KupmiosProvider implements Provider {
   getUtxosWithUnit = (
     addressOrCredential: Parameters<Provider["getUtxosWithUnit"]>[0],
     unit: Parameters<Provider["getUtxosWithUnit"]>[1]
-  ) => Effect.runPromise(this.Effect.getUtxosWithUnit(addressOrCredential, unit as Unit.Unit))
+  ) => Effect.runPromise(this.Effect.getUtxosWithUnit(addressOrCredential, unit))
 
   getUtxoByUnit = (unit: Parameters<Provider["getUtxoByUnit"]>[0]) =>
-    Effect.runPromise(this.Effect.getUtxoByUnit(unit as Unit.Unit))
+    Effect.runPromise(this.Effect.getUtxoByUnit(unit))
 
   getUtxosByOutRef = (outRefs: Parameters<Provider["getUtxosByOutRef"]>[0]) =>
     Effect.runPromise(this.Effect.getUtxosByOutRef(outRefs))

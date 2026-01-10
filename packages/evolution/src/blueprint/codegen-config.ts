@@ -126,7 +126,7 @@ export interface CodegenConfig {
 
   /**
    * Explicit import lines for Data, TSchema, and effect modules
-   * e.g. data: 'import { Data } from "@evolution-sdk/evolution/core/Data"'
+   * e.g. data: 'import { Data } from "@evolution-sdk/evolution/Data"'
    */
   imports: {
     data: string
@@ -158,8 +158,8 @@ export const DEFAULT_CODEGEN_CONFIG: CodegenConfig = {
   moduleStrategy: "flat",
   useRelativeRefs: true,
   imports: {
-    data: 'import { Data } from "@evolution-sdk/evolution/core/Data"',
-    tschema: 'import { TSchema } from "@evolution-sdk/evolution/core/TSchema"'
+    data: 'import { Data } from "@evolution-sdk/evolution/Data"',
+    tschema: 'import { TSchema } from "@evolution-sdk/evolution/TSchema"'
   },
   indent: "  "
 }

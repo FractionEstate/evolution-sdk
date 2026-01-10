@@ -4,18 +4,18 @@
  * @packageDocumentation
  */
 
-import * as Bytes from "@evolution-sdk/evolution/core/Bytes"
-import * as CBOR from "@evolution-sdk/evolution/core/CBOR"
-import * as CostModel from "@evolution-sdk/evolution/core/CostModel"
-import * as Redeemer from "@evolution-sdk/evolution/core/Redeemer"
-import * as Script from "@evolution-sdk/evolution/core/Script"
-import * as ScriptRef from "@evolution-sdk/evolution/core/ScriptRef"
-import * as Transaction from "@evolution-sdk/evolution/core/Transaction"
-import * as TransactionInput from "@evolution-sdk/evolution/core/TransactionInput"
-import * as TxOut from "@evolution-sdk/evolution/core/TxOut"
-import type * as UTxO from "@evolution-sdk/evolution/core/UTxO"
+import * as Bytes from "@evolution-sdk/evolution/Bytes"
+import * as CBOR from "@evolution-sdk/evolution/CBOR"
+import * as CostModel from "@evolution-sdk/evolution/CostModel"
+import * as Redeemer from "@evolution-sdk/evolution/Redeemer"
+import * as Script from "@evolution-sdk/evolution/Script"
+import * as ScriptRef from "@evolution-sdk/evolution/ScriptRef"
+import * as Transaction from "@evolution-sdk/evolution/Transaction"
 import * as TransactionBuilder from "@evolution-sdk/evolution/sdk/builders/TransactionBuilder"
 import type * as EvalRedeemer from "@evolution-sdk/evolution/sdk/EvalRedeemer"
+import * as TransactionInput from "@evolution-sdk/evolution/TransactionInput"
+import * as TxOut from "@evolution-sdk/evolution/TxOut"
+import type * as UTxO from "@evolution-sdk/evolution/UTxO"
 import { Effect } from "effect"
 
 import type * as WasmLoader from "./WasmLoader.js"
@@ -107,24 +107,14 @@ function evalRedeemerFromCBOR(bytes: Uint8Array): EvalRedeemer.EvalRedeemer {
   // Decode using official Redeemer module
   const redeemer = Redeemer.fromCBORBytes(bytes, CBOR.CML_DEFAULT_OPTIONS)
 
-  // Map Redeemer.RedeemerTag to EvalRedeemer tag format
-  // cert -> publish, reward -> withdraw (different naming conventions)
-  const tagMap: Record<Redeemer.RedeemerTag, EvalRedeemer.EvalRedeemer["redeemer_tag"]> = {
-    spend: "spend",
-    mint: "mint",
-    cert: "publish",
-    reward: "withdraw",
-    vote: "vote",
-    propose: "propose"
-  }
-
+  // EvalRedeemer uses core RedeemerTag values directly
   return {
-    redeemer_tag: tagMap[redeemer.tag],
+    redeemer_tag: redeemer.tag,
     redeemer_index: Number(redeemer.index),
-    ex_units: {
-      mem: Number(redeemer.exUnits.mem),
-      steps: Number(redeemer.exUnits.steps)
-    }
+    ex_units: new Redeemer.ExUnits({
+      mem: BigInt(redeemer.exUnits.mem),
+      steps: BigInt(redeemer.exUnits.steps)
+    })
   }
 }
 

@@ -1,7 +1,7 @@
 import { Equal, FastCheck } from "effect"
 import { describe, expect, it } from "vitest"
 
-import * as Withdrawals from "../src/core/Withdrawals.js"
+import * as Withdrawals from "../src/Withdrawals.js"
 
 describe("Withdrawals CML Compatibility", () => {
   it("property: Withdrawals round-trips through CBOR with Equal.equals", () => {

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@effect/vitest"
 
-import * as Bytes from "../../src/core/Bytes.js"
-import * as OutputReference from "../../src/core/plutus/OutputReference.js"
+import * as Bytes from "../../src/Bytes.js"
+import * as OutputReference from "../../src/plutus/OutputReference.js"
 
 describe("Plutus OutputReference", () => {
   describe("TransactionId", () => {

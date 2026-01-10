@@ -1,18 +1,21 @@
-import type * as CoreAddress from "../../../core/Address.js"
-import type * as Anchor from "../../../core/Anchor.js"
-import type * as CoreAssets from "../../../core/Assets/index.js"
-import type * as Credential from "../../../core/Credential.js"
-import type * as CoreDatumOption from "../../../core/DatumOption.js"
-import type * as DRep from "../../../core/DRep.js"
-import type * as EpochNo from "../../../core/EpochNo.js"
-import type * as KeyHash from "../../../core/KeyHash.js"
-import type * as Metadata from "../../../core/Metadata.js"
-import type * as PoolKeyHash from "../../../core/PoolKeyHash.js"
-import type * as PoolParams from "../../../core/PoolParams.js"
-import type * as CoreScript from "../../../core/Script.js"
-import type * as Time from "../../../core/Time/index.js"
-import type * as TransactionMetadatum from "../../../core/TransactionMetadatum.js"
-import type * as UTxO from "../../../core/UTxO.js"
+import type * as CoreAddress from "../../../Address.js"
+import type * as Anchor from "../../../Anchor.js"
+import type * as CoreAssets from "../../../Assets/index.js"
+import type * as Credential from "../../../Credential.js"
+import type * as CoreDatumOption from "../../../DatumOption.js"
+import type * as DRep from "../../../DRep.js"
+import type * as EpochNo from "../../../EpochNo.js"
+import type * as GovernanceAction from "../../../GovernanceAction.js"
+import type * as KeyHash from "../../../KeyHash.js"
+import type * as Metadata from "../../../Metadata.js"
+import type * as PoolKeyHash from "../../../PoolKeyHash.js"
+import type * as PoolParams from "../../../PoolParams.js"
+import type * as RewardAccount from "../../../RewardAccount.js"
+import type * as CoreScript from "../../../Script.js"
+import type * as Time from "../../../Time/index.js"
+import type * as TransactionMetadatum from "../../../TransactionMetadatum.js"
+import type * as UTxO from "../../../UTxO.js"
+import type * as VotingProcedures from "../../../VotingProcedures.js"
 import type * as RedeemerBuilder from "../RedeemerBuilder.js"
 
 // ============================================================================
@@ -277,6 +280,10 @@ export interface RegisterDRepParams {
   readonly drepCredential: Credential.Credential
   /** Optional metadata anchor (URL + hash) */
   readonly anchor?: Anchor.Anchor
+  /** Redeemer for script-controlled DRep credentials */
+  readonly redeemer?: RedeemerBuilder.RedeemerArg
+  /** Optional label for debugging script failures - identifies this operation in error messages */
+  readonly label?: string
 }
 
 /**
@@ -433,4 +440,49 @@ export interface AttachMetadataParams {
   readonly label: Metadata.MetadataLabel
   /** Metadata content as TransactionMetadatum */
   readonly metadata: TransactionMetadatum.TransactionMetadatum
+}
+
+// ============================================================================
+// Governance Voting and Proposals (Conway)
+// ============================================================================
+
+/**
+ * Parameters for submitting votes on governance actions.
+ *
+ * Submits voting procedures to vote on governance proposals.
+ * Supports multiple voters voting on multiple proposals in a single transaction.
+ *
+ * For script-controlled voters (DRep, CC member, or stake pool with script credential),
+ * provide a redeemer to satisfy the vote purpose validator.
+ *
+ *
+ * @since 2.0.0
+ * @category governance
+ */
+export interface VoteParams {
+  /** Voting procedures to submit - see VotingProcedures.singleVote() for simple cases */
+  readonly votingProcedures: VotingProcedures.VotingProcedures
+  /** Redeemer for script-controlled voters (vote purpose) */
+  readonly redeemer?: RedeemerBuilder.RedeemerArg
+  /** Optional label for debugging script failures - identifies this operation in error messages */
+  readonly label?: string
+}
+
+/**
+ * Parameters for proposing governance actions.
+ *
+ * Submits a governance action proposal.
+ * The deposit is automatically fetched from protocol parameters (like registerStake).
+ * Call .propose() multiple times to submit multiple proposals in one transaction.
+ *
+ * @since 2.0.0
+ * @category governance
+ */
+export interface ProposeParams {
+  /** The governance action to propose */
+  readonly governanceAction: GovernanceAction.GovernanceAction
+  /** Reward account for deposit refund when proposal is finalized */
+  readonly rewardAccount: RewardAccount.RewardAccount
+  /** Optional anchor with metadata URL and hash */
+  readonly anchor: Anchor.Anchor | null
 }

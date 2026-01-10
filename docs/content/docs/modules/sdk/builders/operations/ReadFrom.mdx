@@ -1,6 +1,6 @@
 ---
 title: sdk/builders/operations/ReadFrom.ts
-nav_order: 162
+nav_order: 130
 parent: Modules
 ---
 

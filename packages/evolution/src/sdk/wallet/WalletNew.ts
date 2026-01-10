@@ -1,10 +1,11 @@
 import { Data, type Effect } from "effect"
 
-import type * as CoreAddress from "../../core/Address.js"
-import type * as Transaction from "../../core/Transaction.js"
-import type * as TransactionWitnessSet from "../../core/TransactionWitnessSet.js"
-import type * as CoreUTxO from "../../core/UTxO.js"
-import type * as RewardAddress from "../RewardAddress.js"
+import type * as CoreAddress from "../../Address.js"
+import type * as RewardAddress from "../../RewardAddress.js"
+import type * as Transaction from "../../Transaction.js"
+import type * as TransactionHash from "../../TransactionHash.js"
+import type * as TransactionWitnessSet from "../../TransactionWitnessSet.js"
+import type * as CoreUTxO from "../../UTxO.js"
 import type { EffectToPromiseAPI } from "../Type.js"
 
 /**
@@ -145,7 +146,7 @@ export interface ApiWalletEffect extends ReadOnlyWalletEffect {
    * Submit transaction directly through the wallet API.
    * API wallets can submit without requiring a separate provider.
    */
-  readonly submitTx: (tx: Transaction.Transaction | string) => Effect.Effect<string, WalletError>
+  readonly submitTx: (tx: Transaction.Transaction | string) => Effect.Effect<TransactionHash.TransactionHash, WalletError>
 }
 
 /**

@@ -9,17 +9,17 @@ import { afterAll, beforeAll, describe, expect, it } from "@effect/vitest"
 import * as Cluster from "@evolution-sdk/devnet/Cluster"
 import * as Config from "@evolution-sdk/devnet/Config"
 import * as Genesis from "@evolution-sdk/devnet/Genesis"
-import { Core } from "@evolution-sdk/evolution"
-import * as Address from "@evolution-sdk/evolution/core/Address"
+import { Cardano } from "@evolution-sdk/evolution"
+import * as Address from "@evolution-sdk/evolution/Address"
 import { createClient } from "@evolution-sdk/evolution/sdk/client/ClientImpl"
 
 // Alias for readability
-const Time = Core.Time
+const Time = Cardano.Time
 
 describe("TxBuilder compose (Devnet Submit)", () => {
   let devnetCluster: Cluster.Cluster | undefined
   let genesisConfig: Config.ShelleyGenesis
-  let genesisUtxos: ReadonlyArray<Core.UTxO.UTxO> = []
+  let genesisUtxos: ReadonlyArray<Cardano.UTxO.UTxO> = []
 
   const TEST_MNEMONIC =
     "test test test test test test test test test test test test test test test test test test test test test test test sauce"
@@ -89,7 +89,7 @@ describe("TxBuilder compose (Devnet Submit)", () => {
     // Create a payment builder
     const paymentBuilder = client.newTx().payToAddress({
       address: myAddress,
-      assets: Core.Assets.fromLovelace(5_000_000n)
+      assets: Cardano.Assets.fromLovelace(5_000_000n)
     })
 
     // Create a validity builder
@@ -113,7 +113,7 @@ describe("TxBuilder compose (Devnet Submit)", () => {
     // Submit and confirm
     const submitBuilder = await signBuilder.sign()
     const txHash = await submitBuilder.submit()
-    expect(txHash.length).toBe(64)
+    expect(Cardano.TransactionHash.toHex(txHash).length).toBe(64)
 
     const confirmed = await client.awaitTx(txHash, 1000)
     expect(confirmed).toBe(true)
@@ -129,17 +129,17 @@ describe("TxBuilder compose (Devnet Submit)", () => {
     // Create separate payment builders for different addresses
     const payment1 = client1.newTx().payToAddress({
       address: address1,
-      assets: Core.Assets.fromLovelace(3_000_000n)
+      assets: Cardano.Assets.fromLovelace(3_000_000n)
     })
 
     const payment2 = client1.newTx().payToAddress({
       address: address2,
-      assets: Core.Assets.fromLovelace(2_000_000n)
+      assets: Cardano.Assets.fromLovelace(2_000_000n)
     })
 
     const payment3 = client1.newTx().payToAddress({
       address: address1,
-      assets: Core.Assets.fromLovelace(4_000_000n)
+      assets: Cardano.Assets.fromLovelace(4_000_000n)
     })
 
     // Compose all payments into single transaction
@@ -158,7 +158,7 @@ describe("TxBuilder compose (Devnet Submit)", () => {
     // Submit and confirm
     const submitBuilder = await signBuilder.sign()
     const txHash = await submitBuilder.submit()
-    expect(txHash.length).toBe(64)
+    expect(Cardano.TransactionHash.toHex(txHash).length).toBe(64)
 
     const confirmed = await client1.awaitTx(txHash, 1000)
     expect(confirmed).toBe(true)
@@ -184,7 +184,7 @@ describe("TxBuilder compose (Devnet Submit)", () => {
     
     const paymentBuilder = client.newTx().payToAddress({
       address: myAddress,
-      assets: Core.Assets.fromLovelace(6_000_000n)
+      assets: Cardano.Assets.fromLovelace(6_000_000n)
     })
 
     // Compose all together
@@ -205,7 +205,7 @@ describe("TxBuilder compose (Devnet Submit)", () => {
     // Submit and confirm
     const submitBuilder = await signBuilder.sign()
     const txHash = await submitBuilder.submit()
-    expect(txHash.length).toBe(64)
+    expect(Cardano.TransactionHash.toHex(txHash).length).toBe(64)
 
     const confirmed = await client.awaitTx(txHash, 1000)
     expect(confirmed).toBe(true)
@@ -227,7 +227,7 @@ describe("TxBuilder compose (Devnet Submit)", () => {
     
     const paymentBuilder = client.newTx().payToAddress({
       address: myAddress,
-      assets: Core.Assets.fromLovelace(10_000_000n)
+      assets: Cardano.Assets.fromLovelace(10_000_000n)
     })
     
     const metadataBuilder = client.newTx().attachMetadata({
@@ -254,7 +254,7 @@ describe("TxBuilder compose (Devnet Submit)", () => {
     // Submit and confirm
     const submitBuilder = await signBuilder.sign()
     const txHash = await submitBuilder.submit()
-    expect(txHash.length).toBe(64)
+    expect(Cardano.TransactionHash.toHex(txHash).length).toBe(64)
 
     const confirmed = await client.awaitTx(txHash, 1000)
     expect(confirmed).toBe(true)
@@ -269,7 +269,7 @@ describe("TxBuilder compose (Devnet Submit)", () => {
       .newTx()
       .payToAddress({
         address: myAddress,
-        assets: Core.Assets.fromLovelace(1_000_000n)
+        assets: Cardano.Assets.fromLovelace(1_000_000n)
       })
       .attachMetadata({
         label: 1n,
@@ -286,7 +286,7 @@ describe("TxBuilder compose (Devnet Submit)", () => {
     // Add another operation
     builder.payToAddress({
       address: myAddress,
-      assets: Core.Assets.fromLovelace(2_000_000n)
+      assets: Cardano.Assets.fromLovelace(2_000_000n)
     })
 
     // Get programs again - should have 3 now
@@ -307,7 +307,7 @@ describe("TxBuilder compose (Devnet Submit)", () => {
     // Create builders from different clients
     const builder1 = client1.newTx().payToAddress({
       address: address1,
-      assets: Core.Assets.fromLovelace(5_000_000n)
+      assets: Cardano.Assets.fromLovelace(5_000_000n)
     })
 
     const builder2 = client2.newTx().attachMetadata({
@@ -322,7 +322,7 @@ describe("TxBuilder compose (Devnet Submit)", () => {
       .compose(builder2)
       .payToAddress({
         address: address2,
-        assets: Core.Assets.fromLovelace(3_000_000n)
+        assets: Cardano.Assets.fromLovelace(3_000_000n)
       })
       .build()
 
@@ -335,7 +335,7 @@ describe("TxBuilder compose (Devnet Submit)", () => {
     // Submit and confirm
     const submitBuilder = await signBuilder.sign()
     const txHash = await submitBuilder.submit()
-    expect(txHash.length).toBe(64)
+    expect(Cardano.TransactionHash.toHex(txHash).length).toBe(64)
 
     const confirmed = await client1.awaitTx(txHash, 1000)
     expect(confirmed).toBe(true)

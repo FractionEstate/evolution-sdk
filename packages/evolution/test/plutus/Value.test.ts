@@ -1,8 +1,8 @@
 import { describe, expect, it } from "@effect/vitest"
 
-import * as Bytes from "../../src/core/Bytes.js"
-import * as Value from "../../src/core/plutus/Value.js"
-import * as Text from "../../src/core/Text.js"
+import * as Bytes from "../../src/Bytes.js"
+import * as Value from "../../src/plutus/Value.js"
+import * as Text from "../../src/Text.js"
 
 describe("Plutus Value", () => {
   describe("PolicyId", () => {

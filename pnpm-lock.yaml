@@ -292,8 +292,8 @@ importers:
         specifier: ^3.19.3
         version: 3.19.3
       scalus:
-        specifier: ^0.14.0
-        version: 0.14.0
+        specifier: ^0.14.2
+        version: 0.14.2
     devDependencies:
       '@effect/vitest':
         specifier: ^0.19.3
@@ -5374,8 +5374,8 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  scalus@0.14.0:
-    resolution: {integrity: sha512-Gv+t24uJo8rt08zUYO7g6EzXByht0wuAmUwhd2gLhzbopalmFm0EnOsfa363ta84YKO9+V1ouTVD5Y6NNRV8jQ==}
+  scalus@0.14.2:
+    resolution: {integrity: sha512-dobDMIUDUVhtxoX3ceGlaykKQGkph4HOE9hjkLsmwVgYf24fIik6YrZzVFrZSNCTvI2WN7hjEknehIrEJo1CMQ==}
 
   scheduler@0.27.0:
     resolution: {integrity: sha512-eNv+WrVbKu1f3vbYJT/xtiF5syA5HPIMtf9IgY/nKg0sWqzAUEvqY/xm7OcZc/qafLx/iO9FgOmeSAp4v5ti/Q==}
@@ -12096,7 +12096,7 @@ snapshots:
       commander: 12.1.0
       enhanced-resolve: 5.18.3
 
-  scalus@0.14.0: {}
+  scalus@0.14.2: {}
 
   scheduler@0.27.0: {}
 

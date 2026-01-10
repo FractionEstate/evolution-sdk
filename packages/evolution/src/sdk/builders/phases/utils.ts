@@ -5,8 +5,9 @@
  * @since 2.0.0
  */
 
-import type * as Certificate from "../../../core/Certificate.js"
-import * as PoolKeyHash from "../../../core/PoolKeyHash.js"
+import * as Bytes from "../../../Bytes.js"
+import type * as Certificate from "../../../Certificate.js"
+import * as PoolKeyHash from "../../../PoolKeyHash.js"
 
 /**
  * Calculate certificate deposits and refunds from a list of certificates.
@@ -102,4 +103,84 @@ export function calculateWithdrawals(withdrawals: ReadonlyMap<unknown, bigint>):
     total += amount
   }
   return total
+}
+
+/**
+ * Calculate total proposal deposits from proposal procedures.
+ *
+ * Each proposal requires a deposit (govActionDeposit) which is tracked in the
+ * ProposalProcedure structure. This deposit is deducted from transaction inputs
+ * during balancing.
+ *
+ * @param proposalProcedures - ProposalProcedures containing one or more proposals (or undefined)
+ * @returns Total proposal deposit amount in lovelace
+ *
+ * @since 2.0.0
+ * @category utilities
+ */
+export function calculateProposalDeposits(
+  proposalProcedures: { readonly procedures: ReadonlyArray<{ readonly deposit: bigint }> } | undefined
+): bigint {
+  if (!proposalProcedures || proposalProcedures.procedures.length === 0) {
+    return 0n
+  }
+
+  return proposalProcedures.procedures.reduce(
+    (total, procedure) => total + procedure.deposit,
+    0n
+  )
+}
+
+/**
+ * Convert a Voter to a unique string key for redeemer tracking.
+ *
+ * Key formats:
+ * - Constitutional Committee: `cc:{credentialHex}`
+ * - DRep (KeyHash): `drep:{keyHashHex}`
+ * - DRep (ScriptHash): `drep:{scriptHashHex}`
+ * - DRep (Special): `drep:AlwaysAbstainDRep` or `drep:AlwaysNoConfidenceDRep`
+ * - Stake Pool: `pool:{poolKeyHashHex}`
+ *
+ * This is used for:
+ * 1. Tracking redeemers by voter in Vote.ts
+ * 2. Computing vote redeemer indices in TxBuilderImpl.ts (assembly)
+ * 3. Mapping evaluation results back to voters in Evaluation.ts
+ *
+ * The key format must match the sorting order used by Cardano ledger for
+ * redeemer indexing (lexicographic sort of voter keys).
+ *
+ * @param voter - The voter to convert to a key
+ * @returns Unique string key for the voter
+ *
+ * @since 2.0.0
+ * @category utilities
+ */
+export function voterToKey(
+  voter: {
+    readonly _tag: "ConstitutionalCommitteeVoter" | "DRepVoter" | "StakePoolVoter"
+    readonly credential?: { readonly hash: Uint8Array }
+    readonly drep?: {
+      readonly _tag: "KeyHashDRep" | "ScriptHashDRep" | "AlwaysAbstainDRep" | "AlwaysNoConfidenceDRep"
+      readonly keyHash?: { readonly hash: Uint8Array }
+      readonly scriptHash?: { readonly hash: Uint8Array }
+    }
+    readonly poolKeyHash?: { readonly hash: Uint8Array }
+  }
+): string {
+  switch (voter._tag) {
+    case "ConstitutionalCommitteeVoter":
+      return `cc:${Bytes.toHex(voter.credential!.hash)}`
+    case "DRepVoter":
+      switch (voter.drep!._tag) {
+        case "KeyHashDRep":
+          return `drep:${Bytes.toHex(voter.drep!.keyHash!.hash)}`
+        case "ScriptHashDRep":
+          return `drep:${Bytes.toHex(voter.drep!.scriptHash!.hash)}`
+        default:
+          // AlwaysAbstain or AlwaysNoConfidence - shouldn't need redeemers
+          return `drep:${voter.drep!._tag}`
+      }
+    case "StakePoolVoter":
+      return `pool:${Bytes.toHex(voter.poolKeyHash!.hash)}`
+  }
 }

@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@effect/vitest"
 
-import * as Bytes from "../../src/core/Bytes.js"
-import * as Credential from "../../src/core/plutus/Credential.js"
+import * as Bytes from "../../src/Bytes.js"
+import * as Credential from "../../src/plutus/Credential.js"
 
 describe("Plutus Credential", () => {
   describe("VerificationKeyHash", () => {

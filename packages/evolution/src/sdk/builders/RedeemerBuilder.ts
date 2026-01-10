@@ -15,8 +15,8 @@
  * @since 2.0.0
  */
 
-import type * as Data from "../../core/Data.js"
-import type * as UTxO from "../../core/UTxO.js"
+import type * as Data from "../../Data.js"
+import type * as UTxO from "../../UTxO.js"
 
 /**
  * An input with its resolved transaction index.

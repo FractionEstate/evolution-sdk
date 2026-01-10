@@ -1,6 +1,6 @@
 ---
 title: sdk/wallet/WalletNew.ts
-nav_order: 206
+nav_order: 162
 parent: Modules
 ---
 
@@ -149,7 +149,9 @@ export interface ApiWalletEffect extends ReadOnlyWalletEffect {
    * Submit transaction directly through the wallet API.
    * API wallets can submit without requiring a separate provider.
    */
-  readonly submitTx: (tx: Transaction.Transaction | string) => Effect.Effect<string, WalletError>
+  readonly submitTx: (
+    tx: Transaction.Transaction | string
+  ) => Effect.Effect<TransactionHash.TransactionHash, WalletError>
 }
 ```
 

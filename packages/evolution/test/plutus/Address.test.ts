@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@effect/vitest"
 
-import * as Bytes from "../../src/core/Bytes.js"
-import * as Address from "../../src/core/plutus/Address.js"
+import * as Bytes from "../../src/Bytes.js"
+import * as Address from "../../src/plutus/Address.js"
 
 describe("Plutus Address", () => {
   describe("Address with payment credential only", () => {

@@ -32,7 +32,7 @@ interface ReadOnlyWalletConfig {
 ### Backend Transaction Building
 
 ```typescript twoslash
-import { createClient, Core } from "@evolution-sdk/evolution";
+import { Address, Assets, Transaction, createClient } from "@evolution-sdk/evolution";
 
 // Backend: Create provider client, then attach read-only wallet
 const providerClient = createClient({
@@ -53,14 +53,14 @@ const backendClient = providerClient.attachWallet({
 // Build unsigned transaction
 const builder = backendClient.newTx();
 builder.payToAddress({
-  address: Core.Address.fromBech32("addr1qz8eg0aknl96hd3v6x3qfmmz5zhtrq5hn8hmq0x4qd6m2qdppx88rnw3eumv9zv2ctjns05c8jhsqwg98qaxcz2qh45qhjv39c"),
-  assets: Core.Assets.fromLovelace(5_000_000n)
+  address: Address.fromBech32("addr1qz8eg0aknl96hd3v6x3qfmmz5zhtrq5hn8hmq0x4qd6m2qdppx88rnw3eumv9zv2ctjns05c8jhsqwg98qaxcz2qh45qhjv39c"),
+  assets: Assets.fromLovelace(5_000_000n)
 });
 
 // Build returns result, get transaction and serialize
 const result = await builder.build();
 const unsignedTx = await result.toTransaction();
-const txCbor = Core.Transaction.toCBORHex(unsignedTx);
+const txCbor = Transaction.toCBORHex(unsignedTx);
 
 // Return to frontend for signing
 // Frontend: wallet.signTx(txCbor) → wallet.submitTx(signedTxCbor)
@@ -87,7 +87,7 @@ Frontend applications connect to user wallets through CIP-30 but never have prov
 ### Implementation
 
 ```typescript
-import { createClient } from "@evolution-sdk/evolution";
+import { Address, Assets, Transaction, createClient } from "@evolution-sdk/evolution";
 
 // 1. Connect wallet
 declare const cardano: any;
@@ -138,7 +138,7 @@ Backend services use read-only wallets configured with user addresses to build u
 ### Implementation
 
 ```typescript
-import { createClient } from "@evolution-sdk/evolution";
+import { Address, Assets, Transaction, createClient } from "@evolution-sdk/evolution";
 
 // Backend endpoint
 export async function buildTransaction(userAddress: string) {
@@ -159,8 +159,8 @@ export async function buildTransaction(userAddress: string) {
   // Build unsigned transaction
   const builder = client.newTx();
   builder.payToAddress({
-    address: Core.Address.fromBech32("addr1qz8eg0aknl96hd3v6x3qfmmz5zhtrq5hn8hmq0x4qd6m2qdppx88rnw3eumv9zv2ctjns05c8jhsqwg98qaxcz2qh45qhjv39c"),
-    assets: Core.Assets.fromLovelace(5_000_000n)
+    address: Address.fromBech32("addr1qz8eg0aknl96hd3v6x3qfmmz5zhtrq5hn8hmq0x4qd6m2qdppx88rnw3eumv9zv2ctjns05c8jhsqwg98qaxcz2qh45qhjv39c"),
+    assets: Assets.fromLovelace(5_000_000n)
   });
 
   // Returns unsigned transaction
@@ -193,7 +193,7 @@ export type BuildPaymentResponse = { txCbor: string };
 
 // @filename: frontend.ts
 // ===== Frontend (Browser) =====
-import { Core, createClient } from "@evolution-sdk/evolution";
+import { Address, Assets, Transaction, createClient } from "@evolution-sdk/evolution";
 import type { BuildPaymentResponse } from "./shared";
 
 declare const cardano: any;
@@ -207,7 +207,7 @@ async function sendPayment(recipientAddress: string, lovelace: bigint) {
   });
 
   // 2. Get user address (returns Core Address, convert to bech32 for backend)
-  const userAddress = Core.Address.toBech32(await walletClient.address());
+  const userAddress = Address.toBech32(await walletClient.address());
 
   // 3. Request backend to build transaction
   const response = await fetch("/api/build-payment", {
@@ -232,7 +232,7 @@ async function sendPayment(recipientAddress: string, lovelace: bigint) {
 
 // @filename: backend.ts
 // ===== Backend (Server) =====
-import { createClient, Core } from "@evolution-sdk/evolution";
+import { Address, Assets, Transaction, createClient } from "@evolution-sdk/evolution";
 
 export async function buildPayment(
   userAddressBech32: string,
@@ -240,7 +240,7 @@ export async function buildPayment(
   lovelace: bigint
 ) {
   // Convert bech32 addresses from frontend to Core Address
-  const recipientAddress = Core.Address.fromBech32(recipientAddressBech32);
+  const recipientAddress = Address.fromBech32(recipientAddressBech32);
 
   // Create provider client first, then attach read-only wallet
   const providerClient = createClient({
@@ -262,13 +262,13 @@ export async function buildPayment(
   const builder = client.newTx();
   builder.payToAddress({
     address: recipientAddress,
-    assets: Core.Assets.fromLovelace(lovelace)
+    assets: Assets.fromLovelace(lovelace)
   });
 
   // Return unsigned CBOR for frontend to sign
   const result = await builder.build();
   const unsignedTx = await result.toTransaction();
-  const txCbor = Core.Transaction.toCBORHex(unsignedTx);
+  const txCbor = Transaction.toCBORHex(unsignedTx);
 
   return { txCbor };
 }

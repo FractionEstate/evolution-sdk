@@ -1,6 +1,6 @@
 ---
 title: sdk/EvalRedeemer.ts
-nav_order: 188
+nav_order: 154
 parent: Modules
 ---
 
@@ -12,21 +12,28 @@ parent: Modules
 
 <h2 className="text-delta">Table of contents</h2>
 
-- [utils](#utils)
+- [model](#model)
   - [EvalRedeemer (type alias)](#evalredeemer-type-alias)
 
 ---
 
-# utils
+# model
 
 ## EvalRedeemer (type alias)
+
+Evaluation result for a single redeemer from transaction evaluation.
+
+Uses Core CDDL terminology ("cert"/"reward") for consistency.
+Provider implementations map from their API formats (e.g., Ogmios "publish"/"withdraw").
 
 **Signature**
 
 ```ts
 export type EvalRedeemer = {
-  readonly ex_units: { readonly mem: number; readonly steps: number }
+  readonly ex_units: Redeemer.ExUnits
   readonly redeemer_index: number
-  readonly redeemer_tag: "spend" | "mint" | "publish" | "withdraw" | "vote" | "propose"
+  readonly redeemer_tag: Redeemer.RedeemerTag
 }
 ```
+
+Added in v2.0.0

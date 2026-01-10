@@ -2,15 +2,16 @@ import { afterAll, beforeAll, describe, expect, it } from "@effect/vitest"
 import * as Cluster from "@evolution-sdk/devnet/Cluster"
 import * as Config from "@evolution-sdk/devnet/Config"
 import * as Genesis from "@evolution-sdk/devnet/Genesis"
-import { Core } from "@evolution-sdk/evolution"
-import * as Address from "@evolution-sdk/evolution/core/Address"
+import { Cardano } from "@evolution-sdk/evolution"
+import * as Address from "@evolution-sdk/evolution/Address"
 import type { SignBuilder } from "@evolution-sdk/evolution/sdk/builders/SignBuilder"
 import { createClient } from "@evolution-sdk/evolution/sdk/client/ClientImpl"
+import * as TransactionHash from "@evolution-sdk/evolution/TransactionHash"
 
 describe("TxBuilder.chainResult", () => {
   let devnetCluster: Cluster.Cluster | undefined
   let genesisConfig: Config.ShelleyGenesis
-  let genesisUtxos: ReadonlyArray<Core.UTxO.UTxO> = []
+  let genesisUtxos: ReadonlyArray<Cardano.UTxO.UTxO> = []
 
   const TEST_MNEMONIC =
     "test test test test test test test test test test test test test test test test test test test test test test test sauce"
@@ -85,7 +86,7 @@ describe("TxBuilder.chainResult", () => {
     for (let i = 0; i < TX_COUNT; i++) {
       const tx = await client
         .newTx()
-        .payToAddress({ address, assets: Core.Assets.fromLovelace(10_000_000n) })
+        .payToAddress({ address, assets: Cardano.Assets.fromLovelace(10_000_000n) })
         .build({ availableUtxos: available })
       txs.push(tx)
       available = [...tx.chainResult().available]
@@ -96,7 +97,7 @@ describe("TxBuilder.chainResult", () => {
     expect(new Set(txHashes).size).toBe(TX_COUNT)
 
     // Submit all transactions
-    const submittedHashes: Array<string> = []
+    const submittedHashes: Array<TransactionHash.TransactionHash> = []
     for (const tx of txs) {
       const hash = await tx.signAndSubmit()
       submittedHashes.push(hash)
@@ -104,7 +105,7 @@ describe("TxBuilder.chainResult", () => {
 
     // Verify computed hashes match submitted hashes
     for (let i = 0; i < TX_COUNT; i++) {
-      expect(submittedHashes[i]).toBe(txs[i].chainResult().txHash)
+      expect(TransactionHash.toHex(submittedHashes[i])).toBe(txs[i].chainResult().txHash)
     }
 
     // Wait for all to confirm

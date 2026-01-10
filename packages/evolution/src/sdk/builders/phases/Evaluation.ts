@@ -10,12 +10,12 @@
 
 import { Effect, Ref } from "effect"
 
-import * as Bytes from "../../../core/Bytes.js"
-import * as CostModel from "../../../core/CostModel.js"
-import { INT64_MAX } from "../../../core/Numeric.js"
-import * as PolicyId from "../../../core/PolicyId.js"
-import * as CoreUTxO from "../../../core/UTxO.js"
-import type * as ProtocolParametersModule from "../../ProtocolParameters.js"
+import * as Bytes from "../../../Bytes.js"
+import * as CostModel from "../../../CostModel.js"
+import { INT64_MAX } from "../../../Numeric.js"
+import * as PolicyId from "../../../PolicyId.js"
+import * as CoreUTxO from "../../../UTxO.js"
+import type * as Provider from "../../provider/Provider.js"
 import * as EvaluationStateManager from "../EvaluationStateManager.js"
 import type { IndexedInput } from "../RedeemerBuilder.js"
 import {
@@ -32,6 +32,7 @@ import {
 } from "../TransactionBuilder.js"
 import { assembleTransaction, buildTransactionInputs } from "../TxBuilderImpl.js"
 import type { PhaseResult } from "./Phases.js"
+import { voterToKey } from "./utils.js"
 
 /**
  * Convert ProtocolParameters cost models to CostModels core type for evaluation.
@@ -40,7 +41,7 @@ import type { PhaseResult } from "./Phases.js"
  * and converts them to the CostModels core type.
  */
 const buildCostModels = (
-  protocolParams: ProtocolParametersModule.ProtocolParameters
+  protocolParams: Provider.ProtocolParameters
 ): Effect.Effect<CostModel.CostModels, TransactionBuilderError> =>
   Effect.gen(function* () {
     // Convert Record<string, number> format to bigint arrays
@@ -71,7 +72,8 @@ const enrichFailuresWithLabels = (
   inputIndexMapping: Map<number, string>,
   withdrawalIndexMapping: Map<number, string>,
   mintIndexMapping: Map<number, string>,
-  certIndexMapping: Map<number, string>
+  certIndexMapping: Map<number, string>,
+  voteIndexMapping: Map<number, string>
 ): Array<ScriptFailure> => {
   return failures.map((failure) => {
     const { index, purpose } = failure
@@ -95,6 +97,8 @@ const enrichFailuresWithLabels = (
     } else if (purpose === "publish" || purpose === "cert") {
       redeemerKey = certIndexMapping.get(index)
       credential = redeemerKey?.replace("cert:", "")
+    } else if (purpose === "vote") {
+      redeemerKey = voteIndexMapping.get(index)
     }
 
     // Look up label from redeemer state
@@ -402,11 +406,19 @@ export const executeEvaluation = (): Effect.Effect<
     const certIndexMapping = new Map<number, string>()
     for (let i = 0; i < updatedState.certificates.length; i++) {
       const cert = updatedState.certificates[i]!
+      // Handle stake-related certificates (stakeCredential)
       if ("stakeCredential" in cert && cert.stakeCredential) {
         const credHex = Bytes.toHex(cert.stakeCredential.hash)
         const key = `cert:${credHex}`
         certIndexMapping.set(i, key)
-        yield* Effect.logDebug(`[Evaluation] Cert ${i} maps to credential: ${key}`)
+        yield* Effect.logDebug(`[Evaluation] Cert ${i} maps to stake credential: ${key}`)
+      }
+      // Handle DRep-related certificates (drepCredential): RegDrepCert, UnregDrepCert, UpdateDrepCert
+      else if ("drepCredential" in cert && cert.drepCredential) {
+        const credHex = Bytes.toHex(cert.drepCredential.hash)
+        const key = `cert:${credHex}`
+        certIndexMapping.set(i, key)
+        yield* Effect.logDebug(`[Evaluation] Cert ${i} maps to drep credential: ${key}`)
       }
     }
 
@@ -429,6 +441,25 @@ export const executeEvaluation = (): Effect.Effect<
         yield* Effect.logDebug(`[Evaluation] Withdrawal ${i} maps to credential: ${key}`)
       }
     }
+
+    // Build vote index mapping: index → "drep:{credentialHex}" | "cc:{credentialHex}" | "pool:{poolKeyHashHex}"
+    // Votes are sorted by voter key lexicographically (matching CBOR sorting)
+    const voteIndexMapping = new Map<number, string>()
+    if (updatedState.votingProcedures) {
+      const voters = Array.from(updatedState.votingProcedures.procedures.keys())
+      const sortedVoterKeys: Array<string> = []
+      
+      for (const voter of voters) {
+        sortedVoterKeys.push(voterToKey(voter))
+      }
+      
+      sortedVoterKeys.sort()
+      
+      for (let i = 0; i < sortedVoterKeys.length; i++) {
+        voteIndexMapping.set(i, sortedVoterKeys[i]!)
+        yield* Effect.logDebug(`[Evaluation] Vote ${i} maps to voter: ${sortedVoterKeys[i]}`)
+      }
+    }
     
     const inputs = yield* buildTransactionInputs(sortedUtxos)
     const allOutputs = [...updatedState.outputs, ...buildCtx.changeOutputs]
@@ -436,6 +467,7 @@ export const executeEvaluation = (): Effect.Effect<
 
     // Debug: Log transaction details
     yield* Effect.logDebug(`[Evaluation] Transaction has ${transaction.body.inputs.length} inputs, ${transaction.body.outputs.length} outputs`)
+    yield* Effect.logDebug(`[Evaluation] Transaction has ${transaction.body.referenceInputs?.length ?? 0} reference inputs`)
     yield* Effect.logDebug(`[Evaluation] Has collateral return: ${!!transaction.body.collateralReturn}`)
     if (transaction.body.collateralReturn) {
       const assets = transaction.body.collateralReturn.assets
@@ -487,7 +519,8 @@ export const executeEvaluation = (): Effect.Effect<
             inputIndexMapping,
             withdrawalIndexMapping,
             mintIndexMapping,
-            certIndexMapping
+            certIndexMapping,
+            voteIndexMapping
           )
 
           // Create enhanced evaluation error with enriched failures
@@ -545,10 +578,7 @@ export const executeEvaluation = (): Effect.Effect<
           // Update redeemer with ExUnits from evaluation
           evaluatedRedeemers.set(utxoRef, {
             ...redeemer,
-            exUnits: {
-              mem: BigInt(evalRedeemer.ex_units.mem),
-              steps: BigInt(evalRedeemer.ex_units.steps)
-            }
+            exUnits: evalRedeemer.ex_units
           })
 
           yield* Effect.logDebug(
@@ -575,10 +605,7 @@ export const executeEvaluation = (): Effect.Effect<
           // Update redeemer with ExUnits from evaluation
           evaluatedRedeemers.set(policyIdHex, {
             ...redeemer,
-            exUnits: {
-              mem: BigInt(evalRedeemer.ex_units.mem),
-              steps: BigInt(evalRedeemer.ex_units.steps)
-            }
+            exUnits: evalRedeemer.ex_units
           })
 
           yield* Effect.logDebug(
@@ -590,8 +617,8 @@ export const executeEvaluation = (): Effect.Effect<
             `[Evaluation] No redeemer found in state for policy ${policyIdHex}`
           )
         }
-      } else if (evalRedeemer.redeemer_tag === "publish") {
-        // For certificate redeemers (Conway calls them "publish"), map index to credential key
+      } else if (evalRedeemer.redeemer_tag === "cert") {
+        // For certificate redeemers, map index to credential key
         const certKey = certIndexMapping.get(evalRedeemer.redeemer_index)
         if (!certKey) {
           yield* Effect.logWarning(
@@ -605,10 +632,7 @@ export const executeEvaluation = (): Effect.Effect<
           // Update redeemer with ExUnits from evaluation
           evaluatedRedeemers.set(certKey, {
             ...redeemer,
-            exUnits: {
-              mem: BigInt(evalRedeemer.ex_units.mem),
-              steps: BigInt(evalRedeemer.ex_units.steps)
-            }
+            exUnits: evalRedeemer.ex_units
           })
 
           yield* Effect.logDebug(
@@ -620,7 +644,7 @@ export const executeEvaluation = (): Effect.Effect<
             `[Evaluation] No redeemer found in state for cert ${certKey}`
           )
         }
-      } else if (evalRedeemer.redeemer_tag === "withdraw") {
+      } else if (evalRedeemer.redeemer_tag === "reward") {
         // For withdrawal redeemers, map index to credential key
         const rewardKey = withdrawalIndexMapping.get(evalRedeemer.redeemer_index)
         if (!rewardKey) {
@@ -635,10 +659,7 @@ export const executeEvaluation = (): Effect.Effect<
           // Update redeemer with ExUnits from evaluation
           evaluatedRedeemers.set(rewardKey, {
             ...redeemer,
-            exUnits: {
-              mem: BigInt(evalRedeemer.ex_units.mem),
-              steps: BigInt(evalRedeemer.ex_units.steps)
-            }
+            exUnits: evalRedeemer.ex_units
           })
 
           yield* Effect.logDebug(
@@ -648,6 +669,36 @@ export const executeEvaluation = (): Effect.Effect<
         } else {
           yield* Effect.logWarning(
             `[Evaluation] No redeemer found in state for withdrawal ${rewardKey}`
+          )
+        }
+      } else if (evalRedeemer.redeemer_tag === "vote") {
+        // For vote redeemers, map index to voter key
+        const voterKey = voteIndexMapping.get(evalRedeemer.redeemer_index)
+        if (!voterKey) {
+          yield* Effect.logWarning(
+            `[Evaluation] Could not map vote index ${evalRedeemer.redeemer_index} to voter`
+          )
+          continue
+        }
+
+        const redeemer = evaluatedRedeemers.get(voterKey)
+        if (redeemer) {
+          // Update redeemer with ExUnits from evaluation
+          evaluatedRedeemers.set(voterKey, {
+            ...redeemer,
+            exUnits: {
+              mem: BigInt(evalRedeemer.ex_units.mem),
+              steps: BigInt(evalRedeemer.ex_units.steps)
+            }
+          })
+
+          yield* Effect.logDebug(
+            `[Evaluation] Updated redeemer for vote ${voterKey} (vote:${evalRedeemer.redeemer_index}): ` +
+              `mem=${evalRedeemer.ex_units.mem}, steps=${evalRedeemer.ex_units.steps}`
+          )
+        } else {
+          yield* Effect.logWarning(
+            `[Evaluation] No redeemer found in state for vote ${voterKey}`
           )
         }
       } else {

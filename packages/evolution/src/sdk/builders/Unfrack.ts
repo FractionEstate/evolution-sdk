@@ -12,9 +12,9 @@
 
 import * as Effect from "effect/Effect"
 
-import type * as CoreAddress from "../../core/Address.js"
-import * as CoreAssets from "../../core/Assets/index.js"
-import type * as TxOut from "../../core/TxOut.js"
+import type * as CoreAddress from "../../Address.js"
+import * as CoreAssets from "../../Assets/index.js"
+import type * as TxOut from "../../TxOut.js"
 import type { UnfrackOptions } from "./TransactionBuilder.js"
 import { calculateMinimumUtxoLovelace, txOutputToTransactionOutput } from "./TxBuilderImpl.js"
 

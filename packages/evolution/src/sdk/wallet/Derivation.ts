@@ -4,13 +4,13 @@ import * as Data from "effect/Data"
 import * as Effect from "effect/Effect"
 import * as Schema from "effect/Schema"
 
-import * as CoreAddress from "../../core/Address.js"
-import * as AddressEras from "../../core/AddressEras.js"
-import * as Bip32PrivateKey from "../../core/Bip32PrivateKey.js"
-import * as KeyHash from "../../core/KeyHash.js"
-import * as PrivateKey from "../../core/PrivateKey.js"
-import * as RewardAccount from "../../core/RewardAccount.js"
-import type * as SdkRewardAddress from "../RewardAddress.js"
+import * as CoreAddress from "../../Address.js"
+import * as AddressEras from "../../AddressEras.js"
+import * as Bip32PrivateKey from "../../Bip32PrivateKey.js"
+import * as KeyHash from "../../KeyHash.js"
+import * as PrivateKey from "../../PrivateKey.js"
+import * as RewardAccount from "../../RewardAccount.js"
+import * as CoreRewardAddress from "../../RewardAddress.js"
 
 export class DerivationError extends Data.TaggedError("DerivationError")<{
   readonly message: string
@@ -27,7 +27,7 @@ export class DerivationError extends Data.TaggedError("DerivationError")<{
  */
 export type SeedDerivationResult = {
   address: CoreAddress.Address
-  rewardAddress: SdkRewardAddress.RewardAddress | undefined
+  rewardAddress: CoreRewardAddress.RewardAddress | undefined
   paymentKey: string
   stakeKey: string | undefined
   keyStore: Map<string, PrivateKey.PrivateKey>
@@ -82,13 +82,13 @@ export const walletFromSeed = (
       addressType === "Base"
         ? yield* Effect.try({
             try: () => {
-              const result = AddressEras.toBech32(
+              const bech32Str = AddressEras.toBech32(
                 new RewardAccount.RewardAccount({
                   networkId,
                   stakeCredential: stakeKeyHash
                 })
               )
-              return result
+              return Schema.decodeSync(CoreRewardAddress.RewardAddress)(bech32Str)
             },
             catch: (cause) => new DerivationError({ message: (cause as Error).message, cause: cause as Error })
           })
@@ -147,7 +147,7 @@ export function addressFromSeed(
     accountIndex?: number
     network?: "Mainnet" | "Testnet" | "Custom"
   } = {}
-): { address: CoreAddress.Address; rewardAddress: SdkRewardAddress.RewardAddress | undefined } {
+): { address: CoreAddress.Address; rewardAddress: CoreRewardAddress.RewardAddress | undefined } {
   const { accountIndex = 0, addressType = "Base", network = "Mainnet" } = options
   const entropy = mnemonicToEntropy(seed, English)
   const rootXPrv = Bip32PrivateKey.fromBip39Entropy(entropy, options?.password ?? "")
@@ -174,11 +174,13 @@ export function addressFromSeed(
 
   const rewardAddress =
     addressType === "Base"
-      ? AddressEras.toBech32(
-          new RewardAccount.RewardAccount({
-            networkId,
-            stakeCredential: stakeKeyHash
-          })
+      ? Schema.decodeSync(CoreRewardAddress.RewardAddress)(
+          AddressEras.toBech32(
+            new RewardAccount.RewardAccount({
+              networkId,
+              stakeCredential: stakeKeyHash
+            })
+          )
         )
       : undefined
 
@@ -220,11 +222,13 @@ export function walletFromBip32(
 
   const rewardAddress =
     addressType === "Base"
-      ? AddressEras.toBech32(
-          new RewardAccount.RewardAccount({
-            networkId,
-            stakeCredential: stakeKeyHash
-          })
+      ? Schema.decodeSync(CoreRewardAddress.RewardAddress)(
+          AddressEras.toBech32(
+            new RewardAccount.RewardAccount({
+              networkId,
+              stakeCredential: stakeKeyHash
+            })
+          )
         )
       : undefined
 
@@ -302,7 +306,9 @@ export function walletFromPrivateKey(
 
     const rewardAddress =
       addressType === "Base" && stakeKeyHash
-        ? AddressEras.toBech32(new RewardAccount.RewardAccount({ networkId, stakeCredential: stakeKeyHash }))
+        ? Schema.decodeSync(CoreRewardAddress.RewardAddress)(
+            AddressEras.toBech32(new RewardAccount.RewardAccount({ networkId, stakeCredential: stakeKeyHash }))
+          )
         : undefined
 
     // Build keyStore

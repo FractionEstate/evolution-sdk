@@ -10,8 +10,8 @@
 
 import { Effect, Ref } from "effect"
 
-import * as CoreAssets from "../../../core/Assets/index.js"
-import * as CoreUTxO from "../../../core/UTxO.js"
+import * as CoreAssets from "../../../Assets/index.js"
+import * as CoreUTxO from "../../../UTxO.js"
 import type { CoinSelectionAlgorithm, CoinSelectionFunction } from "../CoinSelection.js"
 import { largestFirstSelection } from "../CoinSelection.js"
 import * as EvaluationStateManager from "../EvaluationStateManager.js"
@@ -39,15 +39,20 @@ const formatAssetsForLog = (assets: CoreAssets.Assets): string => {
 }
 
 /**
- * Get UTxOs that haven't been selected yet.
+ * Get UTxOs that haven't been selected yet and are not reference inputs.
  * Uses Set for O(1) lookup instead of O(n) for better performance.
  */
 const getAvailableUtxos = (
   allUtxos: ReadonlyArray<CoreUTxO.UTxO>,
-  selectedUtxos: ReadonlyArray<CoreUTxO.UTxO>
+  selectedUtxos: ReadonlyArray<CoreUTxO.UTxO>,
+  referenceInputs: ReadonlyArray<CoreUTxO.UTxO> = []
 ): ReadonlyArray<CoreUTxO.UTxO> => {
   const selectedKeys = new Set(selectedUtxos.map((u) => CoreUTxO.toOutRefString(u)))
-  return allUtxos.filter((utxo) => !selectedKeys.has(CoreUTxO.toOutRefString(utxo)))
+  const referenceKeys = new Set(referenceInputs.map((u) => CoreUTxO.toOutRefString(u)))
+  return allUtxos.filter((utxo) => {
+    const key = CoreUTxO.toOutRefString(utxo)
+    return !selectedKeys.has(key) && !referenceKeys.has(key)
+  })
 }
 
 /**
@@ -142,7 +147,7 @@ const performCoinSelectionUpdateState = (assetShortfalls: CoreAssets.Assets) =>
     // Get resolved availableUtxos from context tag
     const allAvailableUtxos = yield* AvailableUtxosTag
     const buildOptions = yield* BuildOptionsTag
-    const availableUtxos = getAvailableUtxos(allAvailableUtxos, alreadySelected)
+    const availableUtxos = getAvailableUtxos(allAvailableUtxos, alreadySelected, state.referenceInputs)
     const coinSelectionFn = resolveCoinSelectionFn(buildOptions.coinSelection)
 
     const { selectedUtxos } = yield* Effect.try({
@@ -264,8 +269,12 @@ export const executeSelection = (): Effect.Effect<PhaseResult, TransactionBuilde
     if (stateAfterSelection.selectedUtxos.length === 0) {
       //TODO: double check if this is a good approach, it seems that this condition is only needed when refunds/withdrawals cover all costs
       const allAvailableUtxos = yield* AvailableUtxosTag
+      const state = yield* Ref.get(ctx)
       
-      if (allAvailableUtxos.length === 0) {
+      // Filter out reference inputs - they can't be used as transaction inputs
+      const selectableUtxos = getAvailableUtxos(allAvailableUtxos, state.selectedUtxos, state.referenceInputs)
+      
+      if (selectableUtxos.length === 0) {
         return yield* Effect.fail(
           new TransactionBuilderError({
             message: 
@@ -276,7 +285,7 @@ export const executeSelection = (): Effect.Effect<PhaseResult, TransactionBuilde
       }
 
       // Select smallest UTxO to minimize excess
-      const smallestUtxo = allAvailableUtxos.reduce((min, utxo) =>
+      const smallestUtxo = selectableUtxos.reduce((min, utxo) =>
         CoreAssets.lovelaceOf(utxo.assets) < CoreAssets.lovelaceOf(min.assets) ? utxo : min
       )
 

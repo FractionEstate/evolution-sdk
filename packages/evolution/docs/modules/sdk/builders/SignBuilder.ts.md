@@ -1,6 +1,6 @@
 ---
 title: sdk/builders/SignBuilder.ts
-nav_order: 175
+nav_order: 144
 parent: Modules
 ---
 
@@ -62,7 +62,7 @@ export interface SignBuilderEffect {
 
   // Signing methods
   readonly sign: () => Effect.Effect<SubmitBuilder, TransactionBuilderError>
-  readonly signAndSubmit: () => Effect.Effect<string, TransactionBuilderError>
+  readonly signAndSubmit: () => Effect.Effect<TransactionHash.TransactionHash, TransactionBuilderError>
   readonly signWithWitness: (
     witnessSet: TransactionWitnessSet.TransactionWitnessSet
   ) => Effect.Effect<SubmitBuilder, TransactionBuilderError>

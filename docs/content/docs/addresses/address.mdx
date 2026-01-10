@@ -1,11 +1,11 @@
 ---
 title: Address
-description: Working with Cardano addresses using Core.Address
+description: Working with Cardano addresses using Address
 ---
 
 # Address
 
-The Evolution SDK provides `Core.Address` for working with modern Cardano addresses. This module handles parsing, validation, inspection, and conversion between formats.
+The Evolution SDK provides `Address` for working with modern Cardano addresses. This module handles parsing, validation, inspection, and conversion between formats.
 
 ## Modern Address Types
 
@@ -21,15 +21,15 @@ Legacy formats (Byron, Pointer) exist for historical compatibility but are no lo
 ### Parsing Addresses
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution";
+import { Address, KeyHash } from "@evolution-sdk/evolution";
 
 // Parse from Bech32 (most common format)
-const address = Core.Address.fromBech32(
+const address = Address.fromBech32(
   "addr1qx2kd28nq8ac5prwg32hhvudlwggpgfp8utlyqxu6wqgz62f79qsdmm5dsknt9ecr5w468r9ey0fxwkdrwh08ly3tu9sy0f4qd"
 );
 
 // Parse from hex
-const address2 = Core.Address.fromHex(
+const address2 = Address.fromHex(
   "01195a6a8c607b8a0237109aab5e31b7c8828509fb17e4019cd381021a4f8a081b7bd1b0d35972c0e8eaba8e5c923c99d66a3bbe78ff23c5855"
 );
 ```
@@ -37,26 +37,26 @@ const address2 = Core.Address.fromHex(
 ### Converting Formats
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution";
+import { Address, KeyHash } from "@evolution-sdk/evolution";
 
-const address = Core.Address.fromBech32(
+const address = Address.fromBech32(
   "addr1qx2kd28nq8ac5prwg32hhvudlwggpgfp8utlyqxu6wqgz62f79qsdmm5dsknt9ecr5w468r9ey0fxwkdrwh08ly3tu9sy0f4qd"
 );
 
 // Convert to different formats
-const bech32 = Core.Address.toBech32(address);  // "addr1qx2k..."
-const hex = Core.Address.toHex(address);        // "01195a6a..."
-const bytes = Core.Address.toBytes(address);    // Uint8Array
+const bech32 = Address.toBech32(address);  // "addr1qx2k..."
+const hex = Address.toHex(address);        // "01195a6a..."
+const bytes = Address.toBytes(address);    // Uint8Array
 ```
 
 ### Validating User Input
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution";
+import { Address, KeyHash } from "@evolution-sdk/evolution";
 
-function validateAddress(input: string): Core.Address.Address | null {
+function validateAddress(input: string): Address.Address | null {
   try {
-    const address = Core.Address.fromBech32(input);
+    const address = Address.fromBech32(input);
     
     // Check network (0 = testnet, 1 = mainnet)
     if (address.networkId !== 1) {
@@ -76,16 +76,16 @@ function validateAddress(input: string): Core.Address.Address | null {
 ### Type Checking
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution";
+import { Address, KeyHash } from "@evolution-sdk/evolution";
 
-const address = Core.Address.fromBech32(
+const address = Address.fromBech32(
   "addr1qx2kd28nq8ac5prwg32hhvudlwggpgfp8utlyqxu6wqgz62f79qsdmm5dsknt9ecr5w468r9ey0fxwkdrwh08ly3tu9sy0f4qd"
 );
 
 // Check address type
-const details = Core.Address.getAddressDetails(Core.Address.toBech32(address));
-const isEnterprise = Core.Address.isEnterprise(address); // false
-const hasStaking = Core.Address.hasStakingCredential(address); // true
+const details = Address.getAddressDetails(Address.toBech32(address));
+const isEnterprise = Address.isEnterprise(address); // false
+const hasStaking = Address.hasStakingCredential(address); // true
 
 if (details?.type === "Base") {
   console.log("Base address with staking capability");
@@ -99,9 +99,9 @@ if (details?.type === "Base") {
 For comprehensive information about an address:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution";
+import { Address, KeyHash } from "@evolution-sdk/evolution";
 
-const details = Core.Address.getAddressDetails(
+const details = Address.getAddressDetails(
   "addr1qx2kd28nq8ac5prwg32hhvudlwggpgfp8utlyqxu6wqgz62f79qsdmm5dsknt9ecr5w468r9ey0fxwkdrwh08ly3tu9sy0f4qd"
 );
 
@@ -118,31 +118,31 @@ if (details) {
 For advanced use cases, you can construct addresses from credentials:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution";
+import { Address, KeyHash } from "@evolution-sdk/evolution";
 
 // Create payment credential from key hash
-const paymentCred = new Core.KeyHash.KeyHash({
+const paymentCred = new KeyHash.KeyHash({
   hash: new Uint8Array(28) // 28-byte key hash
 });
 
 // Create staking credential  
-const stakeCred = new Core.KeyHash.KeyHash({
+const stakeCred = new KeyHash.KeyHash({
   hash: new Uint8Array(28) // 28-byte key hash
 });
 
 // Construct base address directly
-const address = new Core.Address.Address({
+const address = new Address.Address({
   networkId: 1, // mainnet
   paymentCredential: paymentCred,
   stakingCredential: stakeCred
 });
 
-const bech32 = Core.Address.toBech32(address);
+const bech32 = Address.toBech32(address);
 ```
 
 ## Legacy Address Types
 
-For historical compatibility, Evolution SDK supports legacy address formats via `Core.AddressEras`:
+For historical compatibility, Evolution SDK supports legacy address formats via `AddressEras`:
 
 - **Byron addresses** - Legacy Byron-era format (no longer used)
 - **Pointer addresses** - Reference stake credentials via on-chain pointers (deprecated)

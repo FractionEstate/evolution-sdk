@@ -1,12 +1,13 @@
-import * as Bytes from "@evolution-sdk/evolution/core/Bytes"
-import * as CBOR from "@evolution-sdk/evolution/core/CBOR"
-import type * as CostModel from "@evolution-sdk/evolution/core/CostModel"
-import * as Script from "@evolution-sdk/evolution/core/Script"
-import * as ScriptRef from "@evolution-sdk/evolution/core/ScriptRef"
-import * as Transaction from "@evolution-sdk/evolution/core/Transaction"
-import * as TransactionInput from "@evolution-sdk/evolution/core/TransactionInput"
-import * as TxOut from "@evolution-sdk/evolution/core/TxOut"
-import type * as UTxO from "@evolution-sdk/evolution/core/UTxO"
+import * as Bytes from "@evolution-sdk/evolution/Bytes"
+import * as CBOR from "@evolution-sdk/evolution/CBOR"
+import type * as CostModel from "@evolution-sdk/evolution/CostModel"
+import * as Redeemer from "@evolution-sdk/evolution/Redeemer"
+import * as Script from "@evolution-sdk/evolution/Script"
+import * as ScriptRef from "@evolution-sdk/evolution/ScriptRef"
+import * as Transaction from "@evolution-sdk/evolution/Transaction"
+import * as TransactionInput from "@evolution-sdk/evolution/TransactionInput"
+import * as TxOut from "@evolution-sdk/evolution/TxOut"
+import type * as UTxO from "@evolution-sdk/evolution/UTxO"
 import * as TransactionBuilder from "@evolution-sdk/evolution/sdk/builders/TransactionBuilder"
 import type * as EvalRedeemer from "@evolution-sdk/evolution/sdk/EvalRedeemer"
 import { Effect, Schema } from "effect"
@@ -46,9 +47,9 @@ function buildUtxoMapCBOR(utxos: ReadonlyArray<UTxO.UTxO>): Uint8Array {
 
 function decodeCostModels(costModels: CostModel.CostModels): Array<Array<number>> {
   // Scalus expects a flattened representation of the cost models as number arrays
-  const plutusV1 = costModels.PlutusV1.costs.map((c) => Number(c))
-  const plutusV2 = costModels.PlutusV2.costs.map((c) => Number(c))
-  const plutusV3 = costModels.PlutusV3.costs.map((c) => Number(c))
+  const plutusV1 = costModels.PlutusV1.costs.map((c: bigint) => Number(c))
+  const plutusV2 = costModels.PlutusV2.costs.map((c: bigint) => Number(c))
+  const plutusV3 = costModels.PlutusV3.costs.map((c: bigint) => Number(c))
   return [plutusV1, plutusV2, plutusV3]
 }
 
@@ -122,13 +123,11 @@ export function makeEvaluator(): TransactionBuilder.Evaluator {
         // Transform Scalus redeemers to Evolution format and check for zero execution units
         const evalRedeemers: Array<EvalRedeemer.EvalRedeemer> = []
         for (const r of redeemers) {
-          const exUnits = {
-            mem: Number(r.budget.memory),
-            steps: Number(r.budget.steps)
-          }
+          const mem = BigInt(r.budget.memory)
+          const steps = BigInt(r.budget.steps)
 
           // Check if execution units are zero (indicates evaluation failure)
-          if (exUnits.mem === 0 && exUnits.steps === 0) {
+          if (mem === 0n && steps === 0n) {
             return yield* Effect.fail(
               new TransactionBuilder.EvaluationError({
                 message: `Scalus evaluation returned zero execution units for redeemer ${r.tag}:${r.index}`,
@@ -137,11 +136,11 @@ export function makeEvaluator(): TransactionBuilder.Evaluator {
             )
           }
 
-          const tagMap: Record<string, EvalRedeemer.EvalRedeemer["redeemer_tag"]> = {
+          const tagMap: Record<string, Redeemer.RedeemerTag> = {
             Spend: "spend",
             Mint: "mint",
-            Cert: "publish",
-            Reward: "withdraw",
+            Cert: "cert",
+            Reward: "reward",
             Voting: "vote",
             Proposing: "propose"
           }
@@ -149,7 +148,7 @@ export function makeEvaluator(): TransactionBuilder.Evaluator {
           evalRedeemers.push({
             redeemer_tag: tagMap[r.tag] || "spend",
             redeemer_index: r.index,
-            ex_units: exUnits
+            ex_units: new Redeemer.ExUnits({ mem, steps })
           })
         }
 

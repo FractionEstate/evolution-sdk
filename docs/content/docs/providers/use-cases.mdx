@@ -12,7 +12,7 @@ Practical patterns and complete examples showing how to use providers in real ap
 Query and display address information:
 
 ```typescript twoslash
-import { Core, createClient } from "@evolution-sdk/evolution";
+import { Address, PoolKeyHash, RewardAddress, Transaction, TransactionHash, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -34,7 +34,7 @@ export async function exploreAddress(
   addressBech32: string
 ): Promise<AddressInfo> {
   const utxos = await client.getUtxos(
-    Core.Address.fromBech32(addressBech32)
+    Address.fromBech32(addressBech32)
   );
   
   const lovelace = utxos.reduce(
@@ -56,7 +56,7 @@ export async function exploreAddress(
 Track balances across multiple addresses:
 
 ```typescript twoslash
-import { Core, createClient } from "@evolution-sdk/evolution";
+import { Address, PoolKeyHash, RewardAddress, Transaction, TransactionHash, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -88,7 +88,7 @@ export async function trackPortfolio(
   const wallets = await Promise.all(
     addressesBech32.map(async (addressBech32) => {
       const utxos = await client.getUtxos(
-        Core.Address.fromBech32(addressBech32)
+        Address.fromBech32(addressBech32)
       );
       
       let lovelace = 0n;
@@ -132,7 +132,7 @@ export async function trackPortfolio(
 Backend API endpoint for transaction submission:
 
 ```typescript twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { Address, PoolKeyHash, RewardAddress, Transaction, TransactionHash, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -155,7 +155,8 @@ export async function handleSubmission(
 ): Promise<SubmissionResponse> {
   try {
     // Submit transaction
-    const txHash = await client.submitTx(signedTxCbor);
+    const signedTx = Transaction.fromCBORHex(signedTxCbor);
+    const txHash = await client.submitTx(signedTx);
     
     console.log("Transaction submitted:", txHash);
     
@@ -164,7 +165,7 @@ export async function handleSubmission(
     
     return {
       success: true,
-      txHash,
+      txHash: TransactionHash.toHex(txHash),
       confirmed
     };
   } catch (error: any) {
@@ -210,7 +211,7 @@ app.post("/api/submit", async (req, res) => {
 Track token distribution across holders:
 
 ```typescript twoslash
-import { Core, createClient } from "@evolution-sdk/evolution";
+import { Address, PoolKeyHash, RewardAddress, Transaction, TransactionHash, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -241,7 +242,7 @@ export async function trackDistribution(
   let totalSupply = 0n;
   
   for (const addressBech32 of addresses) {
-    const address = Core.Address.fromBech32(addressBech32);
+    const address = Address.fromBech32(addressBech32);
     const utxos = await client.getUtxosWithUnit(address, tokenUnit);
     
     if (utxos.length > 0) {
@@ -276,7 +277,7 @@ export async function trackDistribution(
 Track NFT ownership and rarity:
 
 ```typescript twoslash
-import { Core, createClient } from "@evolution-sdk/evolution";
+import { Address, PoolKeyHash, RewardAddress, Transaction, TransactionHash, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -309,8 +310,8 @@ export async function trackNFTCollection(
         return {
           tokenId: tokenName,
           unit,
-          owner: Core.Address.toBech32(utxo.address),
-          txHash: Core.TransactionHash.toHex(utxo.transactionId),
+          owner: Address.toBech32(utxo.address),
+          txHash: TransactionHash.toHex(utxo.transactionId),
           outputIndex: utxo.index
         };
       } catch (error) {
@@ -356,7 +357,7 @@ export async function getCollectionStats(
 Track delegators to a specific stake pool:
 
 ```typescript twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { Address, PoolKeyHash, RewardAddress, Transaction, TransactionHash, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -369,18 +370,18 @@ const client = createClient({
 
 interface Delegator {
   rewardAddress: string;
-  poolId: string | undefined;
+  poolId: PoolKeyHash.PoolKeyHash | null;
   rewards: bigint;
 }
 
 export async function trackPoolDelegators(
   rewardAddresses: string[],
-  targetPoolId: string
+  targetPoolId: PoolKeyHash.PoolKeyHash
 ): Promise<Delegator[]> {
   const delegators = await Promise.all(
     rewardAddresses.map(async (rewardAddress) => {
       try {
-        const delegation = await client.getDelegation(rewardAddress);
+        const delegation = await client.getDelegation(RewardAddress.RewardAddress.make(rewardAddress));
         
         return {
           rewardAddress,
@@ -395,14 +396,14 @@ export async function trackPoolDelegators(
   
   // Filter to only target pool delegators
   return delegators.filter(
-    (d) => d !== null && d.poolId === targetPoolId
+    (d) => d !== null && d.poolId !== null && PoolKeyHash.toHex(d.poolId) === PoolKeyHash.toHex(targetPoolId)
   ) as Delegator[];
 }
 
 // Get pool statistics
 export async function getPoolStats(
   rewardAddresses: string[],
-  targetPoolId: string
+  targetPoolId: PoolKeyHash.PoolKeyHash
 ) {
   const delegators = await trackPoolDelegators(
     rewardAddresses,
@@ -427,7 +428,7 @@ export async function getPoolStats(
 Monitor network parameters for changes:
 
 ```typescript twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { Address, PoolKeyHash, RewardAddress, Transaction, TransactionHash, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -513,12 +514,12 @@ export class ParameterMonitor {
 Implement provider failover for reliability:
 
 ```typescript twoslash
-import { Core, createClient } from "@evolution-sdk/evolution";
+import { Address, PoolKeyHash, RewardAddress, Transaction, TransactionHash, createClient } from "@evolution-sdk/evolution";
 
 // Type for clients with common provider methods
 interface ProviderClient {
-  getUtxos: (address: Core.Address.Address) => Promise<any>;
-  submitTx: (txCbor: string) => Promise<string>;
+  getUtxos: (address: Address.Address) => Promise<any>;
+  submitTx: (tx: Transaction.Transaction) => Promise<TransactionHash.TransactionHash>;
   getProtocolParameters: () => Promise<any>;
 }
 
@@ -564,12 +565,12 @@ class ProviderWithFallback {
     throw lastError;
   }
   
-  async getUtxos(address: Core.Address.Address) {
+  async getUtxos(address: Address.Address) {
     return this.withFallback((client) => client.getUtxos(address));
   }
   
-  async submitTx(txCbor: string) {
-    return this.withFallback((client) => client.submitTx(txCbor));
+  async submitTx(tx: Transaction.Transaction) {
+    return this.withFallback((client) => client.submitTx(tx));
   }
   
   async getProtocolParameters() {
@@ -599,7 +600,7 @@ const resilientProvider = new ProviderWithFallback([
   }
 ]);
 
-const address = Core.Address.fromBech32("addr1qxy8sclc58rsck0pzsc0v4skmqjwuqsqpwfcvrdldl5sjvvhyltp7fk0fmtmrlnykgmhnzcns2msa2cmpvllzgqd2azqhpv8e4");
+const address = Address.fromBech32("addr1qxy8sclc58rsck0pzsc0v4skmqjwuqsqpwfcvrdldl5sjvvhyltp7fk0fmtmrlnykgmhnzcns2msa2cmpvllzgqd2azqhpv8e4");
 const utxos = await resilientProvider.getUtxos(address);
 ```
 

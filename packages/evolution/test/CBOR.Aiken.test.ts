@@ -1,10 +1,10 @@
 import { describe, expect, it } from "vitest"
 
-import * as Bytes from "../src/core/Bytes.js"
-import * as CBOR from "../src/core/CBOR.js"
-import * as Data from "../src/core/Data.js"
-import * as Text from "../src/core/Text.js"
-import * as TSchema from "../src/core/TSchema.js"
+import * as Bytes from "../src/Bytes.js"
+import * as CBOR from "../src/CBOR.js"
+import * as Data from "../src/Data.js"
+import * as Text from "../src/Text.js"
+import * as TSchema from "../src/TSchema.js"
 
 describe("Aiken CBOR Encoding Compatibility", () => {
   // Test #1: encode_int_small

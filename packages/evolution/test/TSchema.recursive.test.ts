@@ -1,9 +1,9 @@
 import { Schema } from "effect"
 import { describe, expect, it } from "vitest"
 
-import { fromHex } from "../src/core/Bytes.js"
-import * as Data from "../src/core/Data.js"
-import * as TSchema from "../src/core/TSchema.js"
+import { fromHex } from "../src/Bytes.js"
+import * as Data from "../src/Data.js"
+import * as TSchema from "../src/TSchema.js"
 
 /**
  * Tests for recursive TSchema structures

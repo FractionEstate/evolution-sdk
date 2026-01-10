@@ -7,7 +7,7 @@
 
 import { Effect, Ref } from "effect"
 
-import * as CoreAssets from "../../../core/Assets/index.js"
+import * as CoreAssets from "../../../Assets/index.js"
 import { TxContext } from "../TransactionBuilder.js"
 import { makeTxOutput } from "../TxBuilderImpl.js"
 import type { PayToAddressParams } from "./Operations.js"

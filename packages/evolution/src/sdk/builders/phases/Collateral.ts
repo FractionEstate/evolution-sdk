@@ -11,9 +11,9 @@
 
 import { Effect, Ref } from "effect"
 
-import * as CoreAssets from "../../../core/Assets/index.js"
-import * as TxOut from "../../../core/TxOut.js"
-import * as UTxO from "../../../core/UTxO.js"
+import * as CoreAssets from "../../../Assets/index.js"
+import * as TxOut from "../../../TxOut.js"
+import * as UTxO from "../../../UTxO.js"
 import {
   AvailableUtxosTag,
   BuildOptionsTag,

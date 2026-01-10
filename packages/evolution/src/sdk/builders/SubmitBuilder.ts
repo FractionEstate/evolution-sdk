@@ -10,7 +10,8 @@
 
 import type { Effect } from "effect"
 
-import type * as TransactionWitnessSet from "../../core/TransactionWitnessSet.js"
+import type * as TransactionHash from "../../TransactionHash.js"
+import type * as TransactionWitnessSet from "../../TransactionWitnessSet.js"
 import type { EffectToPromiseAPI } from "../Type.js"
 import type { TransactionBuilderError } from "./TransactionBuilder.js"
 
@@ -27,7 +28,7 @@ export interface SubmitBuilderEffect {
    * @returns Effect resolving to the transaction hash
    * @since 2.0.0
    */
-  readonly submit: () => Effect.Effect<string, TransactionBuilderError>
+  readonly submit: () => Effect.Effect<TransactionHash.TransactionHash, TransactionBuilderError>
 }
 
 /**

@@ -1,6 +1,6 @@
 ---
 title: sdk/builders/SubmitBuilder.ts
-nav_order: 177
+nav_order: 146
 parent: Modules
 ---
 
@@ -72,7 +72,7 @@ export interface SubmitBuilderEffect {
    * @returns Effect resolving to the transaction hash
    * @since 2.0.0
    */
-  readonly submit: () => Effect.Effect<string, TransactionBuilderError>
+  readonly submit: () => Effect.Effect<TransactionHash.TransactionHash, TransactionBuilderError>
 }
 ```
 

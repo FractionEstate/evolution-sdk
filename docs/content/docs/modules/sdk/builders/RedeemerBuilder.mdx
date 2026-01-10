@@ -1,6 +1,6 @@
 ---
 title: sdk/builders/RedeemerBuilder.ts
-nav_order: 174
+nav_order: 143
 parent: Modules
 ---
 

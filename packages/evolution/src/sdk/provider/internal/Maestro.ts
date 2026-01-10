@@ -5,13 +5,13 @@
 
 import { Schema } from "effect"
 
-import * as CoreAddress from "../../../core/Address.js"
-import * as CoreAssets from "../../../core/Assets/index.js"
-import * as TransactionHash from "../../../core/TransactionHash.js"
-import * as CoreUTxO from "../../../core/UTxO.js"
-import * as Delegation from "../../Delegation.js"
+import * as CoreAddress from "../../../Address.js"
+import * as CoreAssets from "../../../Assets/index.js"
+import * as PoolKeyHash from "../../../PoolKeyHash.js"
+import * as TransactionHash from "../../../TransactionHash.js"
+import * as CoreUTxO from "../../../UTxO.js"
 import type { EvalRedeemer } from "../../EvalRedeemer.js"
-import type * as ProtocolParameters from "../../ProtocolParameters.js"
+import type * as Provider from "../Provider.js"
 
 // ============================================================================
 // Maestro API Response Schemas
@@ -178,7 +178,7 @@ export const parseDecimalFromRational = (rationalStr: string): number => {
  */
 export const transformProtocolParameters = (
   maestroParams: Schema.Schema.Type<typeof MaestroProtocolParameters>
-): ProtocolParameters.ProtocolParameters => {
+): Provider.ProtocolParameters => {
   return {
     minFeeA: parseInt(maestroParams.min_fee_coefficient),
     minFeeB: parseInt(maestroParams.min_fee_constant.ada.lovelace),
@@ -302,11 +302,13 @@ export const transformUTxO = (
  */
 export const transformDelegation = (
   maestroDelegation: Schema.Schema.Type<typeof MaestroDelegation>
-): Delegation.Delegation => {
-  return Delegation.make(
-    maestroDelegation.delegated_pool || undefined,
-    BigInt(maestroDelegation.rewards_available)
-  )
+): Provider.Delegation => {
+  return {
+    poolId: maestroDelegation.delegated_pool 
+      ? Schema.decodeSync(PoolKeyHash.FromHex)(maestroDelegation.delegated_pool)
+      : null,
+    rewards: BigInt(maestroDelegation.rewards_available)
+  }
 }
 
 /**
@@ -317,5 +319,6 @@ export const transformEvaluationResult = (
 ): Array<EvalRedeemer> => {
   // For now, return as-is since we don't have the exact Maestro eval format
   // This will need to be updated based on actual Maestro evaluation response
+  // Note: May need to convert mem/steps to bigint when Maestro format is known
   return maestroResult as Array<EvalRedeemer>
 }

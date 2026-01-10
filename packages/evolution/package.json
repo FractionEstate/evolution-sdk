@@ -1,6 +1,6 @@
 {
   "name": "@evolution-sdk/evolution",
-  "version": "0.3.10",
+  "version": "0.3.11",
   "description": "A modern TypeScript SDK for Cardano blockchain development",
   "type": "module",
   "main": "./dist/index.js",
@@ -16,8 +16,12 @@
   "exports": {
     "./package.json": "./package.json",
     ".": "./src/index.ts",
-    "./core/plutus": "./src/core/plutus/index.ts",
-    "./core/*": "./src/core/*.ts",
+    "./Assets": "./src/Assets/index.ts",
+    "./Time": "./src/Time/index.ts",
+    "./blueprint": "./src/blueprint/index.ts",
+    "./message-signing": "./src/message-signing/index.ts",
+    "./plutus": "./src/plutus/index.ts",
+    "./uplc": "./src/uplc/index.ts",
     "./*": "./src/*.ts",
     "./internal/*": null,
     "./*/index": null
@@ -82,8 +86,12 @@
     "exports": {
       "./package.json": "./package.json",
       ".": "./dist/index.js",
-      "./core/plutus": "./dist/core/plutus/index.js",
-      "./core/*": "./dist/core/*.js",
+      "./Assets": "./dist/Assets/index.js",
+      "./Time": "./dist/Time/index.js",
+      "./blueprint": "./dist/blueprint/index.js",
+      "./message-signing": "./dist/message-signing/index.js",
+      "./plutus": "./dist/plutus/index.js",
+      "./uplc": "./dist/uplc/index.js",
       "./*": "./dist/*.js",
       "./internal/*": null,
       "./*/index": null

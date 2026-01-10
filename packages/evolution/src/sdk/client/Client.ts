@@ -1,8 +1,7 @@
 import { Data, type Effect, type Schedule } from "effect"
 
-import type * as CoreUTxO from "../../core/UTxO.js"
+import type * as CoreUTxO from "../../UTxO.js"
 import type { ReadOnlyTransactionBuilder, SigningTransactionBuilder } from "../builders/TransactionBuilder.js"
-import type * as Delegation from "../Delegation.js"
 import type * as Provider from "../provider/Provider.js"
 import type { EffectToPromiseAPI } from "../Type.js"
 import type { ApiWalletEffect, ReadOnlyWalletEffect, SigningWalletEffect, WalletApi, WalletError } from "../wallet/WalletNew.js"
@@ -36,7 +35,7 @@ export interface MinimalClientEffect {
  */
 export interface ReadOnlyClientEffect extends Provider.ProviderEffect, ReadOnlyWalletEffect {
   readonly getWalletUtxos: () => Effect.Effect<ReadonlyArray<CoreUTxO.UTxO>, Provider.ProviderError>
-  readonly getWalletDelegation: () => Effect.Effect<Delegation.Delegation, Provider.ProviderError>
+  readonly getWalletDelegation: () => Effect.Effect<Provider.Delegation, Provider.ProviderError>
 }
 
 /**
@@ -47,7 +46,7 @@ export interface ReadOnlyClientEffect extends Provider.ProviderEffect, ReadOnlyW
  */
 export interface SigningClientEffect extends Provider.ProviderEffect, SigningWalletEffect {
   readonly getWalletUtxos: () => Effect.Effect<ReadonlyArray<CoreUTxO.UTxO>, WalletError | Provider.ProviderError>
-  readonly getWalletDelegation: () => Effect.Effect<Delegation.Delegation, WalletError | Provider.ProviderError>
+  readonly getWalletDelegation: () => Effect.Effect<Provider.Delegation, WalletError | Provider.ProviderError>
 }
 
 /**

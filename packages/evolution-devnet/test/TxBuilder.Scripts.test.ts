@@ -1,11 +1,11 @@
 import { afterAll, beforeAll, describe, expect, it } from "@effect/vitest"
 import { createAikenEvaluator } from "@evolution-sdk/aiken-uplc"
-import { Core } from "@evolution-sdk/evolution"
-import * as CoreAddress from "@evolution-sdk/evolution/core/Address"
-import * as Bytes from "@evolution-sdk/evolution/core/Bytes"
-import * as Data from "@evolution-sdk/evolution/core/Data"
-import * as PlutusV2 from "@evolution-sdk/evolution/core/PlutusV2"
-import * as ScriptHash from "@evolution-sdk/evolution/core/ScriptHash"
+import { Cardano } from "@evolution-sdk/evolution"
+import * as CoreAddress from "@evolution-sdk/evolution/Address"
+import * as Bytes from "@evolution-sdk/evolution/Bytes"
+import * as Data from "@evolution-sdk/evolution/Data"
+import * as PlutusV2 from "@evolution-sdk/evolution/PlutusV2"
+import * as ScriptHash from "@evolution-sdk/evolution/ScriptHash"
 import type { TxBuilderConfig } from "@evolution-sdk/evolution/sdk/builders/TransactionBuilder"
 import { makeTxBuilder } from "@evolution-sdk/evolution/sdk/builders/TransactionBuilder"
 import { KupmiosProvider } from "@evolution-sdk/evolution/sdk/provider/Kupmios"
@@ -15,8 +15,8 @@ import { Schema } from "effect"
 import * as Cluster from "../src/Cluster.js"
 import { createCoreTestUtxo } from "./utils/utxo-helpers.js"
 
-// Alias for Core.Assets
-const CoreAssets = Core.Assets
+// Alias for Cardano.Assets
+const CoreAssets = Cardano.Assets
 
 describe("TxBuilder Script Handling", () => {
   // ============================================================================
@@ -246,7 +246,6 @@ describe("TxBuilder Script Handling", () => {
       availableUtxos: [fundingUtxo],
       protocolParameters: PROTOCOL_PARAMS,
       evaluator: createAikenEvaluator,
-      debug: true // Enable debug logging
     })
 
     const tx = await signBuilder.toTransaction()

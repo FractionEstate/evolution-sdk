@@ -1,6 +1,6 @@
 ---
 title: sdk/builders/TransactionBuilder.ts
-nav_order: 179
+nav_order: 148
 parent: Modules
 ---
 
@@ -268,8 +268,8 @@ export interface TransactionBuilderBase {
    *
    * @example
    * ```typescript
-   * import * as Script from "../../core/Script.js"
-   * import * as NativeScripts from "../../core/NativeScripts.js"
+   * import * as Script from "../../Script.js"
+   * import * as NativeScripts from "../../NativeScripts.js"
    *
    * const nativeScript = NativeScripts.makeScriptPubKey(keyHashBytes)
    * const script = Script.fromNativeScript(nativeScript)
@@ -346,7 +346,7 @@ export interface TransactionBuilderBase {
    *
    * @example
    * ```typescript
-   * import * as UTxO from "../../core/UTxO.js"
+   * import * as UTxO from "../../UTxO.js"
    *
    * // Use reference script stored on-chain instead of attaching to transaction
    * const refScriptUtxo = await provider.getUtxoByTxHash("abc123...")
@@ -619,7 +619,7 @@ export interface TransactionBuilderBase {
    *
    * @example
    * ```typescript
-   * import * as Time from "@evolution-sdk/core/Time"
+   * import * as Time from "@evolution-sdk/Time"
    *
    * // Transaction valid for 10 minutes from now
    * const tx = await builder
@@ -641,6 +641,118 @@ export interface TransactionBuilderBase {
   readonly setValidity: (params: ValidityParams) => this
 
   /**
+   * Submit votes on governance actions.
+   *
+   * Submits voting procedures to vote on governance proposals. Supports multiple
+   * voters voting on multiple proposals in a single transaction.
+   *
+   * For script-controlled voters (DRep, Constitutional Committee member, or stake pool
+   * with script credential), provide a redeemer to satisfy the vote purpose validator.
+   * The redeemer will be applied to all script voters in the voting procedures.
+   *
+   * Use VotingProcedures.singleVote() helper for simple cases or construct
+   * VotingProcedures directly for complex multi-voter scenarios.
+   *
+   * Queues a deferred operation that will be executed when build() is called.
+   * Returns the same builder for method chaining.
+   *
+   * @example
+   * ```typescript
+   * import * as VotingProcedures from "@evolution-sdk/VotingProcedures"
+   * import * as Vote from "@evolution-sdk/Vote"
+   * import * as Data from "@evolution-sdk/Data"
+   *
+   * // Simple single vote with helper
+   * await client.newTx()
+   *   .vote({
+   *     votingProcedures: VotingProcedures.singleVote(
+   *       new VotingProcedures.DRepVoter({ credential: myDRepCred }),
+   *       govActionId,
+   *       new VotingProcedures.VotingProcedure({
+   *         vote: Vote.yes(),
+   *         anchor: null
+   *       })
+   *     ),
+   *     redeemer: Data.to(new Constr(0, [])) // for script DRep
+   *   })
+   *   .attachScript({ script: voteScript })
+   *   .build()
+   *   .then(tx => tx.sign())
+   *   .then(tx => tx.submit())
+   *
+   * // Multiple votes from same voter
+   * await client.newTx()
+   *   .vote({
+   *     votingProcedures: VotingProcedures.multiVote(
+   *       new VotingProcedures.DRepVoter({ credential: myDRepCred }),
+   *       [
+   *         [govActionId1, new VotingProcedures.VotingProcedure({ vote: Vote.yes(), anchor: null })],
+   *         [govActionId2, new VotingProcedures.VotingProcedure({ vote: Vote.no(), anchor: null })]
+   *       ]
+   *     )
+   *   })
+   *   .build()
+   * ```
+   *
+   * @since 2.0.0
+   * @category governance-methods
+   */
+  readonly vote: (params: VoteParams) => this
+
+  /**
+   * Submit a governance action proposal.
+   *
+   * Submits a governance action proposal to the blockchain.
+   * The deposit (govActionDeposit) is automatically fetched from protocol parameters
+   * and will be refunded to the specified reward account when the proposal is finalized.
+   *
+   * Call .propose() multiple times to submit multiple proposals in one transaction.
+   * Consistent with .registerStake() and .registerDRep() - no manual deposit handling.
+   *
+   * The deposit amount is automatically deducted during transaction balancing.
+   *
+   * Queues a deferred operation that will be executed when build() is called.
+   * Returns the same builder for method chaining.
+   *
+   * @example
+   * ```typescript
+   * import * as GovernanceAction from "@evolution-sdk/GovernanceAction"
+   * import * as RewardAccount from "@evolution-sdk/RewardAccount"
+   *
+   * // Submit single proposal (deposit auto-fetched)
+   * await client.newTx()
+   *   .propose({
+   *     governanceAction: new GovernanceAction.InfoAction({}),
+   *     rewardAccount: myRewardAccount,
+   *     anchor: myAnchor // or null
+   *   })
+   *   .build()
+   *   .then(tx => tx.sign())
+   *   .then(tx => tx.submit())
+   *
+   * // Multiple proposals in one transaction
+   * await client.newTx()
+   *   .propose({
+   *     governanceAction: new GovernanceAction.InfoAction({}),
+   *     rewardAccount: myRewardAccount,
+   *     anchor: null
+   *   })
+   *   .propose({
+   *     governanceAction: new GovernanceAction.NoConfidenceAction({ govActionId: null }),
+   *     rewardAccount: myRewardAccount,
+   *     anchor: myOtherAnchor
+   *   })
+   *   .build()
+   *   .then(tx => tx.sign())
+   *   .then(tx => tx.submit())
+   * ```
+   *
+   * @since 2.0.0
+   * @category governance-methods
+   */
+  readonly propose: (params: ProposeParams) => this
+
+  /**
    * Add a required signer to the transaction.
    *
    * Adds a key hash to the transaction's requiredSigners field. This is used to
@@ -657,8 +769,8 @@ export interface TransactionBuilderBase {
    *
    * @example
    * ```typescript
-   * import * as KeyHash from "@evolution-sdk/core/KeyHash"
-   * import * as Address from "@evolution-sdk/core/Address"
+   * import * as KeyHash from "@evolution-sdk/KeyHash"
+   * import * as Address from "@evolution-sdk/Address"
    *
    * // Add signer from address credential
    * const address = Address.fromBech32("addr_test1...")
@@ -693,7 +805,7 @@ export interface TransactionBuilderBase {
    *
    * @example
    * ```typescript
-   * import { fromEntries } from "@evolution-sdk/evolution/core/TransactionMetadatum"
+   * import { fromEntries } from "@evolution-sdk/evolution/TransactionMetadatum"
    *
    * // Attach a simple message (CIP-20)
    * const tx = await builder
@@ -1255,7 +1367,7 @@ Contains callback that will be resolved after coin selection completes.
 
 ```ts
 export interface DeferredRedeemerData {
-  readonly tag: "spend" | "mint" | "cert" | "reward"
+  readonly tag: "spend" | "mint" | "cert" | "reward" | "vote"
   readonly deferred: DeferredRedeemer
   readonly exUnits?: {
     readonly mem: bigint
@@ -1277,7 +1389,7 @@ Index is determined later during witness assembly based on input ordering.
 
 ```ts
 export interface RedeemerData {
-  readonly tag: "spend" | "mint" | "cert" | "reward"
+  readonly tag: "spend" | "mint" | "cert" | "reward" | "vote"
   readonly data: PlutusData.Data
   readonly exUnits?: {
     // Optional: from script evaluation
@@ -1312,6 +1424,8 @@ export interface TxBuilderState {
   readonly withdrawals: Map<RewardAccount.RewardAccount, bigint> // Withdrawal amounts by reward account
   readonly poolDeposits: Map<string, bigint> // Pool deposits keyed by pool key hash
   readonly mint?: Mint.Mint // Assets being minted/burned (positive = mint, negative = burn)
+  readonly votingProcedures?: VotingProcedures.VotingProcedures // Voting procedures for governance actions (Conway)
+  readonly proposalProcedures?: ProposalProcedures.ProposalProcedures // Proposal procedures for governance actions (Conway)
   readonly collateral?: {
     // Collateral data for script transactions
     readonly inputs: ReadonlyArray<CoreUTxO.UTxO>

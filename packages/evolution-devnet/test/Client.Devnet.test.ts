@@ -2,21 +2,21 @@ import { describe, expect, it } from "@effect/vitest"
 import * as Cluster from "@evolution-sdk/devnet/Cluster"
 import * as Config from "@evolution-sdk/devnet/Config"
 import * as Genesis from "@evolution-sdk/devnet/Genesis"
-import { Core } from "@evolution-sdk/evolution"
-import * as CoreAddress from "@evolution-sdk/evolution/core/Address"
+import { Cardano } from "@evolution-sdk/evolution"
+import * as CoreAddress from "@evolution-sdk/evolution/Address"
 import { createClient } from "@evolution-sdk/evolution/sdk/client/ClientImpl"
 import type { ProtocolParameters } from "@evolution-sdk/evolution/sdk/ProtocolParameters"
 import { afterAll, beforeAll } from "vitest"
 
-// Alias for Core.Assets
-const CoreAssets = Core.Assets
+// Alias for Cardano.Assets
+const CoreAssets = Cardano.Assets
 
 /**
  * Client integration tests with local Devnet
  */
 describe("Client with Devnet", () => {
   let devnetCluster: Cluster.Cluster | undefined
-  let genesisUtxos: Array<Core.UTxO.UTxO> = []
+  let genesisUtxos: Array<Cardano.UTxO.UTxO> = []
   let genesisConfig: Config.ShelleyGenesis
 
   const TEST_MNEMONIC =
@@ -81,7 +81,7 @@ describe("Client with Devnet", () => {
 
     const utxo = calculatedUtxos[0]
     expect(utxo.transactionId).toBeDefined()
-    expect(Core.TransactionHash.toHex(utxo.transactionId).length).toBe(64)
+    expect(Cardano.TransactionHash.toHex(utxo.transactionId).length).toBe(64)
     expect(utxo.index).toBe(0n)
     expect(CoreAddress.toBech32(utxo.address)).toMatch(/^addr_test/)
     expect(utxo.assets.lovelace).toBe(900_000_000_000n)
@@ -149,7 +149,7 @@ describe("Client with Devnet", () => {
     expect(submitBuilder.witnessSet.vkeyWitnesses).toBeDefined()
 
     const txHash = await submitBuilder.submit()
-    expect(txHash.length).toBe(64)
+    expect(Cardano.TransactionHash.toHex(txHash).length).toBe(64)
 
     const confirmed = await client.awaitTx(txHash, 1000)
     expect(confirmed).toBe(true)

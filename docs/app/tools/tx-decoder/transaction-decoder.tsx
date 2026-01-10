@@ -1,7 +1,7 @@
 'use client'
 
 import { useState } from 'react'
-import { Core, Schema } from "@evolution-sdk/evolution"
+import { Transaction, TransactionWitnessSet, Data, Schema } from "@evolution-sdk/evolution"
 
 type DecodeType = 'transaction' | 'witnessSet' | 'data'
 
@@ -24,16 +24,16 @@ export function TransactionDecoder() {
       }
       
       if (decodeType === 'transaction') {
-        const tx = Core.Transaction.fromCBORHex(cleanHex)
-        const json = Schema.encodeSync(Schema.parseJson(Core.Transaction.Transaction, {space: 2}))(tx)
+        const tx = Transaction.fromCBORHex(cleanHex)
+        const json = Schema.encodeSync(Schema.parseJson(Transaction.Transaction, {space: 2}))(tx)
         setDecodedJson(json)
       } else if (decodeType === 'witnessSet') {
-        const witnessSet = Core.TransactionWitnessSet.fromCBORHex(cleanHex)
-        const json = Schema.encodeSync(Schema.parseJson(Core.TransactionWitnessSet.TransactionWitnessSet, {space: 2}))(witnessSet)
+        const witnessSet = TransactionWitnessSet.fromCBORHex(cleanHex)
+        const json = Schema.encodeSync(Schema.parseJson(TransactionWitnessSet.TransactionWitnessSet, {space: 2}))(witnessSet)
         setDecodedJson(json)
       } else {
-        const data = Core.Data.fromCBORHex(cleanHex)
-        const json = Schema.encodeSync(Schema.parseJson(Core.Data.DataSchema, {space: 2}))(data)
+        const data = Data.fromCBORHex(cleanHex)
+        const json = Schema.encodeSync(Schema.parseJson(Data.DataSchema, {space: 2}))(data)
         setDecodedJson(json)
       }
     } catch (err) {

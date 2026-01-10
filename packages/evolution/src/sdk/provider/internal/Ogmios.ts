@@ -1,16 +1,16 @@
 import type { Record } from "effect"
 import { Schema } from "effect"
 
-import * as CoreAddress from "../../../core/Address.js"
-import * as AssetName from "../../../core/AssetName.js"
-import type * as CoreAssets from "../../../core/Assets/index.js"
-import * as Bytes from "../../../core/Bytes.js"
-import * as PlutusData from "../../../core/Data.js"
-import type * as DatumOption from "../../../core/DatumOption.js"
-import * as PolicyId from "../../../core/PolicyId.js"
-import * as CoreScript from "../../../core/Script.js"
-import * as TransactionHash from "../../../core/TransactionHash.js"
-import type * as CoreUTxO from "../../../core/UTxO.js"
+import * as CoreAddress from "../../../Address.js"
+import * as AssetName from "../../../AssetName.js"
+import type * as CoreAssets from "../../../Assets/index.js"
+import * as Bytes from "../../../Bytes.js"
+import * as PlutusData from "../../../Data.js"
+import type * as DatumOption from "../../../DatumOption.js"
+import * as PolicyId from "../../../PolicyId.js"
+import * as CoreScript from "../../../Script.js"
+import * as TransactionHash from "../../../TransactionHash.js"
+import type * as CoreUTxO from "../../../UTxO.js"
 
 export const JSONRPCSchema = <A, I, R>(schema: Schema.Schema<A, I, R>) =>
   Schema.Struct({

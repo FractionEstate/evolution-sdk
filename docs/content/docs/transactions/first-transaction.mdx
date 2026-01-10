@@ -14,7 +14,7 @@ This guide walks through a complete payment transaction from client setup to on-
 Here's a full transaction workflow—configure once, then build, sign, and submit:
 
 ```ts twoslash
-import { Core, createClient } from "@evolution-sdk/evolution";
+import { Address, Assets, createClient } from "@evolution-sdk/evolution";
 
 // 1. Configure your client
 const client = createClient({
@@ -35,8 +35,8 @@ const client = createClient({
 const tx = await client
   .newTx()
   .payToAddress({
-    address: Core.Address.fromBech32("addr_test1vrm9x2dgvdau8vckj4duc89m638t8djmluqw5pdrFollw8qd9k63"),
-    assets: Core.Assets.fromLovelace(2_000_000n)
+    address: Address.fromBech32("addr_test1vrm9x2dgvdau8vckj4duc89m638t8djmluqw5pdrFollw8qd9k63"),
+    assets: Assets.fromLovelace(2_000_000n)
   })
   .build();
 
@@ -54,7 +54,7 @@ console.log("Transaction submitted:", txHash);
 
 Set up your connection to the network. This happens once—you'll reuse the client throughout your application:
 ```ts twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { Address, Assets, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "preprod",
@@ -76,7 +76,7 @@ const client = createClient({
 Chain operations to specify what the transaction should do. Call `.build()` when ready to finalize:
 
 ```ts twoslash
-import { Core, createClient } from "@evolution-sdk/evolution";
+import { Address, Assets, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "preprod",
@@ -86,8 +86,8 @@ const client = createClient({
 
 const tx = await client.newTx()
   .payToAddress({
-    address: Core.Address.fromBech32("addr_test1vrm9x2dgvdau8vckj4duc89m638t8djmluqw5pdrFollw8qd9k63"),
-    assets: Core.Assets.fromLovelace(2_000_000n)
+    address: Address.fromBech32("addr_test1vrm9x2dgvdau8vckj4duc89m638t8djmluqw5pdrFollw8qd9k63"),
+    assets: Assets.fromLovelace(2_000_000n)
   })
   .build();
 ```
@@ -99,7 +99,7 @@ The builder handles UTxO selection, fee calculation, and change outputs automati
 Authorize the transaction with your wallet's private keys:
 
 ```ts twoslash
-import { Core, createClient } from "@evolution-sdk/evolution";
+import { Address, Assets, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "preprod",
@@ -108,7 +108,7 @@ const client = createClient({
 });
 
 const tx = await client.newTx()
-  .payToAddress({ address: Core.Address.fromBech32("addr_test1vrm9x2dgvdau8vckj4duc89m638t8djmluqw5pdrFollw8qd9k63"), assets: Core.Assets.fromLovelace(2_000_000n) })
+  .payToAddress({ address: Address.fromBech32("addr_test1vrm9x2dgvdau8vckj4duc89m638t8djmluqw5pdrFollw8qd9k63"), assets: Assets.fromLovelace(2_000_000n) })
   .build();
 
 const signed = await tx.sign();
@@ -119,7 +119,7 @@ const signed = await tx.sign();
 Broadcast the signed transaction to the blockchain and get the transaction hash:
 
 ```ts twoslash
-import { Core, createClient } from "@evolution-sdk/evolution";
+import { Address, Assets, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "preprod",
@@ -128,7 +128,7 @@ const client = createClient({
 });
 
 const tx = await client.newTx()
-  .payToAddress({ address: Core.Address.fromBech32("addr_test1vrm9x2dgvdau8vckj4duc89m638t8djmluqw5pdrFollw8qd9k63"), assets: Core.Assets.fromLovelace(2_000_000n) })
+  .payToAddress({ address: Address.fromBech32("addr_test1vrm9x2dgvdau8vckj4duc89m638t8djmluqw5pdrFollw8qd9k63"), assets: Assets.fromLovelace(2_000_000n) })
   .build();
 
 const signed = await tx.sign();

@@ -11,7 +11,7 @@
   "enforceExports": false,
   "skipExamplesValidation": true,
   "skipModulesValidation": true,
-  "exclude": ["**/*.test.ts", "**/*.spec.ts", "**/test/**", "**/tests/**", "**/internal/**", "**/index.ts", "**/debug/**"],
+  "exclude": ["**/*.test.ts", "**/*.spec.ts", "**/test/**", "**/tests/**", "**/internal/**", "**/index.ts", "**/debug/**", "**/Cardano.ts"],
   "projectHomepage": "https://github.com/IntersectMBO/evolution-sdk",
   "docsHomepage": "TBD",
   "projectName": "Evolution SDK",

@@ -7,11 +7,11 @@
 
 import { Effect, Ref } from "effect"
 
-import * as AssetName from "../../../core/AssetName.js"
-import * as Assets from "../../../core/Assets/index.js"
-import * as Mint from "../../../core/Mint.js"
-import * as NonZeroInt64 from "../../../core/NonZeroInt64.js"
-import * as PolicyId from "../../../core/PolicyId.js"
+import * as AssetName from "../../../AssetName.js"
+import * as Assets from "../../../Assets/index.js"
+import * as Mint from "../../../Mint.js"
+import * as NonZeroInt64 from "../../../NonZeroInt64.js"
+import * as PolicyId from "../../../PolicyId.js"
 import * as RedeemerBuilder from "../RedeemerBuilder.js"
 import { TransactionBuilderError, TxContext } from "../TransactionBuilder.js"
 import type { MintTokensParams } from "./Operations.js"

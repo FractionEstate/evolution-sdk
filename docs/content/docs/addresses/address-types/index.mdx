@@ -11,13 +11,13 @@ The Evolution SDK implements all Cardano address formats as defined in the ledge
 
 Evolution SDK provides two interfaces for working with addresses:
 
-**Core Address Module (`Core.Address`)**: A unified API for common address operations.
+**Core Address Module (`Address`)**: A unified API for common address operations.
 - Handles `Payment Credential + Optional Staking Credential`
 - Automatically serializes as Base Address (with staking) or Enterprise Address (without staking)
 - Simplifies most serialization tasks
 
 **Type-Specific Modules**: Complete implementations for protocol compliance.
-- `Core.BaseAddress`, `Core.EnterpriseAddress`, `Core.RewardAddress`, `Core.PointerAddress`, `Core.ByronAddress`
+- `BaseAddress`, `EnterpriseAddress`, `RewardAddress`, `PointerAddress`, `ByronAddress`
 - Required for exact CBOR encoding/decoding
 - Used for protocol-level operations and blockchain tooling
 

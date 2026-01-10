@@ -52,21 +52,21 @@ This flexibility makes the pattern ideal for complex custody arrangements, DeFi 
 Build directly from two independent key hashes using the Core `Address` class:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution";
+import { Address, KeyHash } from "@evolution-sdk/evolution";
 
 // Create Franken address with payment from Wallet A, stake from Wallet B
-const frankenAddress = new Core.Address.Address({
+const frankenAddress = new Address.Address({
   networkId: 1, // mainnet
-  paymentCredential: new Core.KeyHash.KeyHash({
+  paymentCredential: new KeyHash.KeyHash({
     hash: new Uint8Array(28) // Wallet A's payment key hash
   }),
-  stakingCredential: new Core.KeyHash.KeyHash({
+  stakingCredential: new KeyHash.KeyHash({
     hash: new Uint8Array(28) // Wallet B's stake key hash (different!)
   })
 });
 
 // Convert to Bech32
-const bech32 = Core.Address.toBech32(frankenAddress);
+const bech32 = Address.toBech32(frankenAddress);
 console.log("Franken address:", bech32);
 ```
 
@@ -75,7 +75,7 @@ console.log("Franken address:", bech32);
 A common use case is a custodial platform where the platform controls fund management, but users retain control over staking delegation:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution";
+import { Address, KeyHash } from "@evolution-sdk/evolution";
 
 // Platform controls spending (payment credential)
 // User controls delegation (stake credential)
@@ -83,12 +83,12 @@ function createCustodialAddress(
   platformPaymentHash: Uint8Array,
   userStakeHash: Uint8Array
 ) {
-  return new Core.Address.Address({
+  return new Address.Address({
     networkId: 1,
-    paymentCredential: new Core.KeyHash.KeyHash({
+    paymentCredential: new KeyHash.KeyHash({
       hash: platformPaymentHash
     }),
-    stakingCredential: new Core.KeyHash.KeyHash({
+    stakingCredential: new KeyHash.KeyHash({
       hash: userStakeHash
     })
   });

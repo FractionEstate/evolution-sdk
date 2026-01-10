@@ -5,12 +5,16 @@
 
 import { Effect, Schedule, Schema } from "effect"
 
-import * as CoreAddress from "../../../core/Address.js"
-import * as Bytes from "../../../core/Bytes.js"
-import type * as CoreUTxO from "../../../core/UTxO.js"
-import type * as Credential from "../../Credential.js"
-import type * as OutRef from "../../OutRef.js"
-import type * as RewardAddress from "../../RewardAddress.js"
+import * as CoreAddress from "../../../Address.js"
+import * as Bytes from "../../../Bytes.js"
+import type * as Credential from "../../../Credential.js"
+import * as PlutusData from "../../../Data.js"
+import type * as DatumOption from "../../../DatumOption.js"
+import type * as RewardAddress from "../../../RewardAddress.js"
+import * as Transaction from "../../../Transaction.js"
+import * as TransactionHash from "../../../TransactionHash.js"
+import type * as TransactionInput from "../../../TransactionInput.js"
+import type * as CoreUTxO from "../../../UTxO.js"
 import { ProviderError } from "../Provider.js"
 import * as Blockfrost from "./Blockfrost.js"
 import * as HttpUtils from "./HttpUtils.js"
@@ -151,22 +155,22 @@ export const getUtxoByUnit = (baseUrl: string, projectId?: string) =>
     )
 
 /**
- * Get UTxOs by output references
- * Returns: (baseUrl, projectId?) => (outRefs) => Effect<UTxO[], ProviderError>
+ * Get UTxOs by transaction inputs (output references)
+ * Returns: (baseUrl, projectId?) => (inputs) => Effect<UTxO[], ProviderError>
  */
 export const getUtxosByOutRef = (baseUrl: string, projectId?: string) =>
-  (outRefs: ReadonlyArray<OutRef.OutRef>) => {
+  (inputs: ReadonlyArray<TransactionInput.TransactionInput>) => {
     // Blockfrost doesn't have a bulk endpoint, so we need to make individual calls
-    const effects = outRefs.map((outRef) =>
+    const effects = inputs.map((input) =>
       withRateLimit(
         HttpUtils.get(
-          `${baseUrl}/txs/${outRef.txHash}/utxos`,
+          `${baseUrl}/txs/${TransactionHash.toHex(input.transactionId)}/utxos`,
           Schema.Array(Blockfrost.BlockfrostUTxO),
           createHeaders(projectId)
         ).pipe(
           Effect.map((utxos) => 
             utxos
-              .filter((utxo) => utxo.output_index === outRef.outputIndex)
+              .filter((utxo) => utxo.output_index === Number(input.index))
               .map((utxo) => Blockfrost.transformUTxO(utxo, "unknown"))
           ),
           Effect.mapError(wrapError("getUtxosByOutRef"))
@@ -202,30 +206,39 @@ export const getDelegation = (baseUrl: string, projectId?: string) =>
 
 /**
  * Get datum by hash
- * Returns: (baseUrl, projectId?) => (datumHash) => Effect<string, ProviderError>
+ * Returns: (baseUrl, projectId?) => (datumHash) => Effect<PlutusData, ProviderError>
  */
 export const getDatum = (baseUrl: string, projectId?: string) =>
-  (datumHash: string) =>
-    withRateLimit(
+  (datumHash: DatumOption.DatumHash) => {
+    const datumHashHex = Bytes.toHex(datumHash.hash)
+    return withRateLimit(
       HttpUtils.get(
-        `${baseUrl}/scripts/datum/${datumHash}`,
+        `${baseUrl}/scripts/datum/${datumHashHex}`,
         Blockfrost.BlockfrostDatum,
         createHeaders(projectId)
       ).pipe(
-        Effect.map((datum) => datum.cbor),
+        Effect.flatMap((datum) => {
+          // Parse CBOR hex to PlutusData
+          return Effect.try({
+            try: () => Schema.decodeSync(PlutusData.FromCBORHex())(datum.cbor),
+            catch: (error) => new ProviderError({ message: "Failed to parse datum CBOR", cause: error })
+          })
+        }),
         Effect.mapError(wrapError("getDatum"))
       )
     )
+  }
 
 /**
  * Await transaction confirmation
  * Returns: (baseUrl, projectId?) => (txHash, checkInterval?) => Effect<boolean, ProviderError>
  */
 export const awaitTx = (baseUrl: string, projectId?: string) =>
-  (txHash: string, checkInterval: number = 5000) => {
+  (txHash: TransactionHash.TransactionHash, checkInterval: number = 5000) => {
+    const txHashHex = TransactionHash.toHex(txHash)
     const checkTx = withRateLimit(
       HttpUtils.get(
-        `${baseUrl}/txs/${txHash}`,
+        `${baseUrl}/txs/${txHashHex}`,
         Schema.Struct({ hash: Schema.String }),
         createHeaders(projectId)
       ).pipe(
@@ -246,12 +259,12 @@ export const awaitTx = (baseUrl: string, projectId?: string) =>
 
 /**
  * Submit transaction
- * Returns: (baseUrl, projectId?) => (cbor) => Effect<string, ProviderError>
+ * Returns: (baseUrl, projectId?) => (tx) => Effect<TransactionHash, ProviderError>
  */
 export const submitTx = (baseUrl: string, projectId?: string) =>
-  (cbor: string) => {
-    // Convert CBOR hex string to Uint8Array for submission
-    const cborBytes = Bytes.fromHex(cbor)
+  (tx: Transaction.Transaction) => {
+    // Convert Transaction to CBOR bytes for submission
+    const cborBytes = Transaction.toCBORBytes(tx)
     
     // Create headers without Content-Type (will be set by postUint8Array)
     const headers = projectId ? { "project_id": projectId } : undefined
@@ -263,6 +276,13 @@ export const submitTx = (baseUrl: string, projectId?: string) =>
         Blockfrost.BlockfrostSubmitResponse,
         headers
       ).pipe(
+        Effect.flatMap((txHashHex) => {
+          // Parse transaction hash from hex string
+          return Effect.try({
+            try: () => Schema.decodeSync(TransactionHash.FromHex)(txHashHex),
+            catch: (error) => new ProviderError({ message: "Failed to parse transaction hash", cause: error })
+          })
+        }),
         Effect.mapError(wrapError("submitTx"))
       )
     )
@@ -273,7 +293,9 @@ export const submitTx = (baseUrl: string, projectId?: string) =>
  * Returns: (baseUrl, projectId?) => (tx, additionalUTxOs?) => Effect<EvalRedeemer[], ProviderError>
  */
 export const evaluateTx = (baseUrl: string, projectId?: string) =>
-  (tx: string, additionalUTxOs?: Array<CoreUTxO.UTxO>) => {
+  (tx: Transaction.Transaction, additionalUTxOs?: Array<CoreUTxO.UTxO>) => {
+    // Convert Transaction to CBOR hex for evaluation
+    const txCborHex = Transaction.toCBORHex(tx)
     
     // If additional UTxOs provided, use the /utils/txs/evaluate/utxos endpoint with JSON payload
     if (additionalUTxOs && additionalUTxOs.length > 0) {
@@ -306,7 +328,7 @@ export const evaluateTx = (baseUrl: string, projectId?: string) =>
       })
       
       const payload = {
-        cbor: tx, // Transaction CBOR (hex)
+        cbor: txCborHex, // Transaction CBOR (hex)
         additionalUtxoSet
       }
       
@@ -324,7 +346,7 @@ export const evaluateTx = (baseUrl: string, projectId?: string) =>
     }
     
     // Otherwise use the simpler /utils/txs/evaluate endpoint with CBOR body
-    const txBytes = Bytes.fromHex(tx)
+    const txBytes = Transaction.toCBORBytes(tx)
     
     // Create headers with application/cbor content-type
     const headers = {

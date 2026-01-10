@@ -1,6 +1,6 @@
 ---
 title: sdk/client/Client.ts
-nav_order: 183
+nav_order: 152
 parent: Modules
 ---
 
@@ -338,7 +338,7 @@ ReadOnlyClient Effect - provider, read-only wallet, and utility methods.
 ```ts
 export interface ReadOnlyClientEffect extends Provider.ProviderEffect, ReadOnlyWalletEffect {
   readonly getWalletUtxos: () => Effect.Effect<ReadonlyArray<CoreUTxO.UTxO>, Provider.ProviderError>
-  readonly getWalletDelegation: () => Effect.Effect<Delegation.Delegation, Provider.ProviderError>
+  readonly getWalletDelegation: () => Effect.Effect<Provider.Delegation, Provider.ProviderError>
 }
 ```
 
@@ -451,7 +451,7 @@ SigningClient Effect - provider, signing wallet, and utility methods.
 ```ts
 export interface SigningClientEffect extends Provider.ProviderEffect, SigningWalletEffect {
   readonly getWalletUtxos: () => Effect.Effect<ReadonlyArray<CoreUTxO.UTxO>, WalletError | Provider.ProviderError>
-  readonly getWalletDelegation: () => Effect.Effect<Delegation.Delegation, WalletError | Provider.ProviderError>
+  readonly getWalletDelegation: () => Effect.Effect<Provider.Delegation, WalletError | Provider.ProviderError>
 }
 ```
 

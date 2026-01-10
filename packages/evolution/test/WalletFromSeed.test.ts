@@ -1,7 +1,7 @@
 import { describe, expect, it } from "@effect/vitest"
 import { Effect } from "effect"
 
-import * as Address from "../src/core/Address.js"
+import * as Address from "../src/Address.js"
 import { walletFromSeed } from "../src/sdk/wallet/Derivation.js"
 
 const seedPhrase =

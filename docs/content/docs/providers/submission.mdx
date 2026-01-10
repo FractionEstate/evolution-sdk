@@ -12,7 +12,7 @@ Providers handle transaction submission and confirmation monitoring. Submit pre-
 Submit a signed transaction CBOR string:
 
 ```typescript twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { Transaction, TransactionHash, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -25,7 +25,8 @@ const client = createClient({
 
 // Submit signed transaction
 const signedTxCbor = "84a300..."; // Signed transaction CBOR
-const txHash = await client.submitTx(signedTxCbor);
+const signedTx = Transaction.fromCBORHex(signedTxCbor);
+const txHash = await client.submitTx(signedTx);
 
 console.log("Transaction submitted:", txHash);
 ```
@@ -35,7 +36,7 @@ console.log("Transaction submitted:", txHash);
 Monitor transaction until confirmed on blockchain:
 
 ```typescript twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { Transaction, TransactionHash, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -47,7 +48,8 @@ const client = createClient({
 });
 
 const signedTxCbor = "84a300...";
-const txHash = await client.submitTx(signedTxCbor);
+const signedTx = Transaction.fromCBORHex(signedTxCbor);
+const txHash = await client.submitTx(signedTx);
 
 // Wait for confirmation (checks every 5 seconds by default)
 const confirmed = await client.awaitTx(txHash);
@@ -64,7 +66,7 @@ if (confirmed) {
 Specify how often to check for confirmation:
 
 ```typescript twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { Transaction, TransactionHash, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -75,7 +77,8 @@ const client = createClient({
   }
 });
 
-const txHash = "abc123...";
+const txHashHex = "abc123...";
+const txHash = TransactionHash.fromHex(txHashHex);
 
 // Check every 10 seconds
 const confirmed = await client.awaitTx(txHash, 10000);
@@ -88,7 +91,7 @@ console.log("Confirmed:", confirmed);
 Evaluate transaction before submission to estimate script execution costs:
 
 ```typescript twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { Transaction, TransactionHash, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -100,9 +103,10 @@ const client = createClient({
 });
 
 const unsignedTxCbor = "84a300..."; // Unsigned transaction
+const unsignedTx = Transaction.fromCBORHex(unsignedTxCbor);
 
 // Evaluate script execution
-const redeemers = await client.evaluateTx(unsignedTxCbor);
+const redeemers = await client.evaluateTx(unsignedTx);
 
 redeemers.forEach((redeemer) => {
   console.log("Redeemer tag:", redeemer.redeemer_tag);
@@ -117,7 +121,7 @@ redeemers.forEach((redeemer) => {
 Create a transaction submission service with error handling:
 
 ```typescript twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { Transaction, TransactionHash, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -140,7 +144,8 @@ export async function submitAndWait(
   checkInterval = 5000
 ): Promise<SubmissionResult> {
   try {
-    const txHash = await client.submitTx(signedTxCbor);
+    const signedTx = Transaction.fromCBORHex(signedTxCbor);
+    const txHash = await client.submitTx(signedTx);
     
     console.log("Transaction submitted:", txHash);
     
@@ -148,7 +153,7 @@ export async function submitAndWait(
     
     return {
       success: true,
-      txHash,
+      txHash: TransactionHash.toHex(txHash),
       confirmed
     };
   } catch (error: any) {
@@ -167,7 +172,7 @@ export async function submitAndWait(
 Submit multiple transactions sequentially:
 
 ```typescript twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { Transaction, TransactionHash, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -183,14 +188,15 @@ async function submitBatch(signedTxs: string[]) {
   
   for (const txCbor of signedTxs) {
     try {
-      const txHash = await client.submitTx(txCbor);
+      const tx = Transaction.fromCBORHex(txCbor);
+      const txHash = await client.submitTx(tx);
       console.log("Submitted:", txHash);
       
       const confirmed = await client.awaitTx(txHash);
       
       results.push({
         success: true,
-        txHash,
+        txHash: TransactionHash.toHex(txHash),
         confirmed
       });
     } catch (error: any) {
@@ -210,7 +216,7 @@ async function submitBatch(signedTxs: string[]) {
 Handle common submission errors:
 
 ```typescript twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { Transaction, TransactionHash, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -223,7 +229,8 @@ const client = createClient({
 
 async function safeSubmit(signedTxCbor: string) {
   try {
-    const txHash = await client.submitTx(signedTxCbor);
+    const signedTx = Transaction.fromCBORHex(signedTxCbor);
+    const txHash = await client.submitTx(signedTx);
     return { success: true as const, txHash };
   } catch (error: any) {
     // Common errors
@@ -268,7 +275,7 @@ async function safeSubmit(signedTxCbor: string) {
 Implement retry logic for transient failures:
 
 ```typescript twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { Transaction, TransactionHash, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -288,7 +295,8 @@ async function submitWithRetry(
   
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
-      const txHash = await client.submitTx(signedTxCbor);
+      const signedTx = Transaction.fromCBORHex(signedTxCbor);
+      const txHash = await client.submitTx(signedTx);
       console.log(`Success on attempt ${attempt}:`, txHash);
       return { success: true as const, txHash };
     } catch (error: any) {
@@ -321,7 +329,7 @@ async function submitWithRetry(
 Track transaction status with periodic checks:
 
 ```typescript twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { Transaction, TransactionHash, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -333,18 +341,19 @@ const client = createClient({
 });
 
 async function monitorTransaction(
-  txHash: string,
+  txHashHex: string,
   timeout = 300000, // 5 minutes
   checkInterval = 5000
 ): Promise<boolean> {
   const startTime = Date.now();
+  const txHash = TransactionHash.fromHex(txHashHex);
   
   while (Date.now() - startTime < timeout) {
     try {
       const confirmed = await client.awaitTx(txHash, checkInterval);
       
       if (confirmed) {
-        console.log("Transaction confirmed:", txHash);
+        console.log("Transaction confirmed:", txHashHex);
         return true;
       }
     } catch (error: any) {
@@ -354,7 +363,7 @@ async function monitorTransaction(
     await new Promise(resolve => setTimeout(resolve, checkInterval));
   }
   
-  console.log("Transaction confirmation timeout:", txHash);
+  console.log("Transaction confirmation timeout:", txHashHex);
   return false;
 }
 ```
@@ -364,7 +373,7 @@ async function monitorTransaction(
 End-to-end transaction submission with all error handling:
 
 ```typescript twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { Transaction, TransactionHash, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -394,7 +403,8 @@ export async function submitTransaction(
     attempts++;
     
     try {
-      const txHash = await client.submitTx(signedTxCbor);
+      const signedTx = Transaction.fromCBORHex(signedTxCbor);
+      const txHash = await client.submitTx(signedTx);
       
       console.log(`Submitted (attempt ${attempts}):`, txHash);
       
@@ -404,7 +414,7 @@ export async function submitTransaction(
       if (confirmed) {
         return {
           status: "confirmed",
-          txHash,
+          txHash: TransactionHash.toHex(txHash),
           attempts,
           confirmedAt: new Date()
         };
@@ -412,7 +422,7 @@ export async function submitTransaction(
       
       return {
         status: "submitted",
-        txHash,
+        txHash: TransactionHash.toHex(txHash),
         attempts
       };
       
@@ -452,7 +462,7 @@ export async function submitTransaction(
 Validate scripts before submitting:
 
 ```typescript twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { Transaction, TransactionHash, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -466,7 +476,8 @@ const client = createClient({
 async function evaluateAndSubmit(signedTxCbor: string) {
   try {
     // Evaluate first
-    const redeemers = await client.evaluateTx(signedTxCbor);
+    const signedTx = Transaction.fromCBORHex(signedTxCbor);
+    const redeemers = await client.evaluateTx(signedTx);
     
     console.log("Script evaluation:");
     redeemers.forEach((r, i) => {
@@ -478,12 +489,12 @@ async function evaluateAndSubmit(signedTxCbor: string) {
     });
     
     // Submit if evaluation succeeds
-    const txHash = await client.submitTx(signedTxCbor);
+    const txHash = await client.submitTx(signedTx);
     const confirmed = await client.awaitTx(txHash);
     
     return {
       success: true,
-      txHash,
+      txHash: TransactionHash.toHex(txHash),
       confirmed,
       redeemers
     };

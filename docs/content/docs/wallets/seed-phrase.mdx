@@ -36,10 +36,10 @@ Mnemonics provide human-friendly backup and recovery. The same 24 words reconstr
 Use the SDK to generate a cryptographically secure 24-word mnemonic:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution";
+import { PrivateKey } from "@evolution-sdk/evolution";
 
 // Generate 24-word mnemonic (256-bit entropy)
-const mnemonic = Core.PrivateKey.generateMnemonic();
+const mnemonic = PrivateKey.generateMnemonic();
 console.log(mnemonic);
 // Example output: "abandon abandon abandon ... art art art"
 ```
@@ -48,7 +48,7 @@ console.log(mnemonic);
 ## Basic Setup
 
 ```typescript twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { PrivateKey, createClient } from "@evolution-sdk/evolution";
 
 // Create a signing-only client with seed wallet (no provider)
 // Can sign transactions but cannot query blockchain or submit
@@ -84,7 +84,7 @@ interface SeedWalletConfig {
 Different networks use the same wallet configuration—just change the network parameter:
 
 ```typescript twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { PrivateKey, createClient } from "@evolution-sdk/evolution";
 
 // Testnet client
 const testClient = createClient({
@@ -116,7 +116,7 @@ BLOCKFROST_PROJECT_ID="preprodYourProjectIdHere"
 ```
 
 ```typescript twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { PrivateKey, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "preprod",
@@ -133,7 +133,7 @@ const client = createClient({
 Generate independent wallets from the same mnemonic using different `accountIndex` values:
 
 ```typescript twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { PrivateKey, createClient } from "@evolution-sdk/evolution";
 
 // Account 0 (default)
 const account0 = createClient({
@@ -165,7 +165,7 @@ console.log("Different addresses:", addr0 !== addr1); // true
 ### Development Testing
 
 ```typescript twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { PrivateKey, createClient } from "@evolution-sdk/evolution";
 
 // Mock test runner functions for documentation
 declare function describe(name: string, fn: () => void): void;

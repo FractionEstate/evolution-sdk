@@ -30,12 +30,12 @@ Define your schema once, get TypeScript types and CBOR encoding automatically.
 Define a schema, extract types, create codec:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution"
+import { Bytes, Data, TSchema } from "@evolution-sdk/evolution"
 
 // Define schema
-const OutputReferenceSchema = Core.TSchema.Struct({
-  transaction_id: Core.TSchema.ByteArray,
-  output_index: Core.TSchema.Integer
+const OutputReferenceSchema = TSchema.Struct({
+  transaction_id: TSchema.ByteArray,
+  output_index: TSchema.Integer
 })
 
 // Extract TypeScript type
@@ -46,11 +46,11 @@ type OutputReference = typeof OutputReferenceSchema.Type
 // }
 
 // Create codec
-const OutputReferenceCodec = Core.Data.withSchema(OutputReferenceSchema)
+const OutputReferenceCodec = Data.withSchema(OutputReferenceSchema)
 
 // Use it
 const outRef: OutputReference = {
-  transaction_id: Core.Bytes.fromHex("a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2"),
+  transaction_id: Bytes.fromHex("a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2"),
   output_index: 0n
 }
 
@@ -65,14 +65,14 @@ const decoded = OutputReferenceCodec.fromCBORHex(cborHex)
 For hashes, policy IDs, addresses, and binary data:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution"
+import { Bytes, Data, TSchema } from "@evolution-sdk/evolution"
 
-const HashSchema = Core.TSchema.ByteArray
+const HashSchema = TSchema.ByteArray
 
 type Hash = typeof HashSchema.Type
 // Uint8Array
 
-const txHash: Hash = Core.Bytes.fromHex(
+const txHash: Hash = Bytes.fromHex(
   "a1b2c3d4e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3f4a5b6c7d8e9f0a1b2"
 )
 ```
@@ -82,9 +82,9 @@ const txHash: Hash = Core.Bytes.fromHex(
 For amounts, quantities, timestamps, indices:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution"
+import { Bytes, Data, TSchema } from "@evolution-sdk/evolution"
 
-const AmountSchema = Core.TSchema.Integer
+const AmountSchema = TSchema.Integer
 
 type Amount = typeof AmountSchema.Type
 // bigint
@@ -97,11 +97,11 @@ const lovelace: Amount = 5000000n
 For records with named fields (encoded as Plutus Constructor):
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution"
+import { Bytes, Data, TSchema } from "@evolution-sdk/evolution"
 
-const AddressSchema = Core.TSchema.Struct({
-  payment_credential: Core.TSchema.ByteArray,
-  stake_credential: Core.TSchema.ByteArray
+const AddressSchema = TSchema.Struct({
+  payment_credential: TSchema.ByteArray,
+  stake_credential: TSchema.ByteArray
 })
 
 type Address = typeof AddressSchema.Type
@@ -110,11 +110,11 @@ type Address = typeof AddressSchema.Type
 //   stake_credential: Uint8Array
 // }
 
-const Codec = Core.Data.withSchema(AddressSchema)
+const Codec = Data.withSchema(AddressSchema)
 
 const addr: Address = {
-  payment_credential: Core.Bytes.fromHex("abc123def456abc123def456abc123def456abc123def456abc123de"),
-  stake_credential: Core.Bytes.fromHex("def456abc123def456abc123def456abc123def456abc123def456ab")
+  payment_credential: Bytes.fromHex("abc123def456abc123def456abc123def456abc123def456abc123de"),
+  stake_credential: Bytes.fromHex("def456abc123def456abc123def456abc123def456abc123def456ab")
 }
 
 const cbor = Codec.toCBORHex(addr)
@@ -125,14 +125,14 @@ const cbor = Codec.toCBORHex(addr)
 For sum types (multiple possible constructors):
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution"
+import { Bytes, Data, TSchema } from "@evolution-sdk/evolution"
 
-const CredentialSchema = Core.TSchema.Variant({
+const CredentialSchema = TSchema.Variant({
   VerificationKey: {
-    hash: Core.TSchema.ByteArray
+    hash: TSchema.ByteArray
   },
   Script: {
-    hash: Core.TSchema.ByteArray
+    hash: TSchema.ByteArray
   }
 })
 
@@ -140,19 +140,19 @@ type Credential = typeof CredentialSchema.Type
 // | { VerificationKey: { hash: Uint8Array } }
 // | { Script: { hash: Uint8Array } }
 
-const Codec = Core.Data.withSchema(CredentialSchema)
+const Codec = Data.withSchema(CredentialSchema)
 
 // Verification key credential
 const vkeyCred: Credential = {
   VerificationKey: {
-    hash: Core.Bytes.fromHex("abc123def456abc123def456abc123def456abc123def456abc123de")
+    hash: Bytes.fromHex("abc123def456abc123def456abc123def456abc123def456abc123de")
   }
 }
 
 // Script credential
 const scriptCred: Credential = {
   Script: {
-    hash: Core.Bytes.fromHex("def456abc123def456abc123def456abc123def456abc123def456ab")
+    hash: Bytes.fromHex("def456abc123def456abc123def456abc123def456abc123def456ab")
   }
 }
 
@@ -165,14 +165,14 @@ const cbor2 = Codec.toCBORHex(scriptCred)
 For lists of values:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution"
+import { Bytes, Data, TSchema } from "@evolution-sdk/evolution"
 
-const IntListSchema = Core.TSchema.Array(Core.TSchema.Integer)
+const IntListSchema = TSchema.Array(TSchema.Integer)
 
 type IntList = typeof IntListSchema.Type
 // ReadonlyArray<bigint>
 
-const Codec = Core.Data.withSchema(IntListSchema)
+const Codec = Data.withSchema(IntListSchema)
 
 const amounts: IntList = [100n, 200n, 300n]
 const cbor = Codec.toCBORHex(amounts)
@@ -183,21 +183,21 @@ const cbor = Codec.toCBORHex(amounts)
 For key-value mappings:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution"
+import { Bytes, Data, TSchema } from "@evolution-sdk/evolution"
 
-const AssetsSchema = Core.TSchema.Map(
-  Core.TSchema.ByteArray, // AssetName
-  Core.TSchema.Integer    // Quantity
+const AssetsSchema = TSchema.Map(
+  TSchema.ByteArray, // AssetName
+  TSchema.Integer    // Quantity
 )
 
 type Assets = typeof AssetsSchema.Type
 // Map<Uint8Array, bigint>
 
-const Codec = Core.Data.withSchema(AssetsSchema)
+const Codec = Data.withSchema(AssetsSchema)
 
 const assets: Assets = new Map([
-  [Core.Bytes.fromHex("546f6b656e"), 100n], // "Token" in hex
-  [Core.Bytes.fromHex("4e4654"), 1n]        // "NFT" in hex
+  [Bytes.fromHex("546f6b656e"), 100n], // "Token" in hex
+  [Bytes.fromHex("4e4654"), 1n]        // "NFT" in hex
 ])
 
 const cbor = Codec.toCBORHex(assets)
@@ -208,11 +208,11 @@ const cbor = Codec.toCBORHex(assets)
 For optional fields (Maybe pattern):
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution"
+import { Bytes, Data, TSchema } from "@evolution-sdk/evolution"
 
-const PersonSchema = Core.TSchema.Struct({
-  name: Core.TSchema.ByteArray,
-  nickname: Core.TSchema.UndefinedOr(Core.TSchema.ByteArray)
+const PersonSchema = TSchema.Struct({
+  name: TSchema.ByteArray,
+  nickname: TSchema.UndefinedOr(TSchema.ByteArray)
 })
 
 type Person = typeof PersonSchema.Type
@@ -221,16 +221,16 @@ type Person = typeof PersonSchema.Type
 //   nickname: Uint8Array | undefined
 // }
 
-const Codec = Core.Data.withSchema(PersonSchema)
+const Codec = Data.withSchema(PersonSchema)
 
 const person1: Person = {
-  name: Core.Bytes.fromHex("416c696365"), // "Alice"
+  name: Bytes.fromHex("416c696365"), // "Alice"
   nickname: undefined
 }
 
 const person2: Person = {
-  name: Core.Bytes.fromHex("426f62"), // "Bob"
-  nickname: Core.Bytes.fromHex("426f62627920") // "Bobby"
+  name: Bytes.fromHex("426f62"), // "Bob"
+  nickname: Bytes.fromHex("426f62627920") // "Bobby"
 }
 ```
 
@@ -239,14 +239,14 @@ const person2: Person = {
 Use `Data.withSchema()` to create a codec from any schema:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution"
+import { Bytes, Data, TSchema } from "@evolution-sdk/evolution"
 
-const Schema = Core.TSchema.Struct({
-  id: Core.TSchema.ByteArray,
-  amount: Core.TSchema.Integer
+const Schema = TSchema.Struct({
+  id: TSchema.ByteArray,
+  amount: TSchema.Integer
 })
 
-const Codec = Core.Data.withSchema(Schema)
+const Codec = Data.withSchema(Schema)
 
 // Codec provides:
 // - toData(value) → PlutusData
@@ -262,25 +262,25 @@ const Codec = Core.Data.withSchema(Schema)
 ### Payment Credential
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution"
+import { Bytes, Data, TSchema } from "@evolution-sdk/evolution"
 
-const PaymentCredentialSchema = Core.TSchema.Variant({
+const PaymentCredentialSchema = TSchema.Variant({
   VerificationKey: {
-    hash: Core.TSchema.ByteArray
+    hash: TSchema.ByteArray
   },
   Script: {
-    hash: Core.TSchema.ByteArray
+    hash: TSchema.ByteArray
   }
 })
 
 export type PaymentCredential = typeof PaymentCredentialSchema.Type
 
-export const PaymentCredentialCodec = Core.Data.withSchema(PaymentCredentialSchema)
+export const PaymentCredentialCodec = Data.withSchema(PaymentCredentialSchema)
 
 // Use in your app
 const cred: PaymentCredential = {
   VerificationKey: {
-    hash: Core.Bytes.fromHex("abc123def456abc123def456abc123def456abc123def456abc123de")
+    hash: Bytes.fromHex("abc123def456abc123def456abc123def456abc123def456abc123de")
   }
 }
 
@@ -290,21 +290,21 @@ const cbor = PaymentCredentialCodec.toCBORHex(cred)
 ### Escrow Datum
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution"
+import { Bytes, Data, TSchema } from "@evolution-sdk/evolution"
 
-const EscrowDatumSchema = Core.TSchema.Struct({
-  beneficiary: Core.TSchema.ByteArray,
-  deadline: Core.TSchema.Integer,
-  amount: Core.TSchema.Integer
+const EscrowDatumSchema = TSchema.Struct({
+  beneficiary: TSchema.ByteArray,
+  deadline: TSchema.Integer,
+  amount: TSchema.Integer
 })
 
 export type EscrowDatum = typeof EscrowDatumSchema.Type
 
-export const EscrowDatumCodec = Core.Data.withSchema(EscrowDatumSchema)
+export const EscrowDatumCodec = Data.withSchema(EscrowDatumSchema)
 
 // Create datum
 const datum: EscrowDatum = {
-  beneficiary: Core.Bytes.fromHex("abc123def456abc123def456abc123def456abc123def456abc123de"),
+  beneficiary: Bytes.fromHex("abc123def456abc123def456abc123def456abc123def456abc123de"),
   deadline: 1735689600000n,
   amount: 10000000n
 }
@@ -316,27 +316,27 @@ const datumCbor = EscrowDatumCodec.toCBORHex(datum)
 ### Multi-Action Redeemer
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution"
+import { Bytes, Data, TSchema } from "@evolution-sdk/evolution"
 
-const RedeemerSchema = Core.TSchema.Variant({
+const RedeemerSchema = TSchema.Variant({
   Claim: {},
   Cancel: {},
   Update: {
-    new_beneficiary: Core.TSchema.ByteArray,
-    new_deadline: Core.TSchema.Integer
+    new_beneficiary: TSchema.ByteArray,
+    new_deadline: TSchema.Integer
   }
 })
 
 export type Redeemer = typeof RedeemerSchema.Type
 
-export const RedeemerCodec = Core.Data.withSchema(RedeemerSchema)
+export const RedeemerCodec = Data.withSchema(RedeemerSchema)
 
 // Different actions
 const claim: Redeemer = { Claim: {} }
 const cancel: Redeemer = { Cancel: {} }
 const update: Redeemer = {
   Update: {
-    new_beneficiary: Core.Bytes.fromHex("def456abc123def456abc123def456abc123def456abc123def456ab"),
+    new_beneficiary: Bytes.fromHex("def456abc123def456abc123def456abc123def456abc123def456ab"),
     new_deadline: 1735776000000n
   }
 }
@@ -353,32 +353,32 @@ For CIP-68 metadata with arbitrary PlutusData fields, you can build the schema m
 Schemas compose naturally:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution"
+import { Bytes, Data, TSchema } from "@evolution-sdk/evolution"
 
 // Base schemas
-const CredentialSchema = Core.TSchema.Variant({
-  VerificationKey: { hash: Core.TSchema.ByteArray },
-  Script: { hash: Core.TSchema.ByteArray }
+const CredentialSchema = TSchema.Variant({
+  VerificationKey: { hash: TSchema.ByteArray },
+  Script: { hash: TSchema.ByteArray }
 })
 
-const StakeCredentialSchema = Core.TSchema.Variant({
+const StakeCredentialSchema = TSchema.Variant({
   Inline: { credential: CredentialSchema },
   Pointer: {
-    slot_number: Core.TSchema.Integer,
-    transaction_index: Core.TSchema.Integer,
-    certificate_index: Core.TSchema.Integer
+    slot_number: TSchema.Integer,
+    transaction_index: TSchema.Integer,
+    certificate_index: TSchema.Integer
   }
 })
 
 // Composed schema
-const AddressSchema = Core.TSchema.Struct({
+const AddressSchema = TSchema.Struct({
   payment_credential: CredentialSchema,
-  stake_credential: Core.TSchema.UndefinedOr(StakeCredentialSchema)
+  stake_credential: TSchema.UndefinedOr(StakeCredentialSchema)
 })
 
 export type Address = typeof AddressSchema.Type
 
-export const AddressCodec = Core.Data.withSchema(AddressSchema)
+export const AddressCodec = Data.withSchema(AddressSchema)
 ```
 
 ## Type Extraction
@@ -386,12 +386,12 @@ export const AddressCodec = Core.Data.withSchema(AddressSchema)
 Get TypeScript types from any schema:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution"
+import { Bytes, Data, TSchema } from "@evolution-sdk/evolution"
 
-const Schema = Core.TSchema.Struct({
-  id: Core.TSchema.ByteArray,
-  amount: Core.TSchema.Integer,
-  metadata: Core.TSchema.UndefinedOr(Core.TSchema.ByteArray)
+const Schema = TSchema.Struct({
+  id: TSchema.ByteArray,
+  amount: TSchema.Integer,
+  metadata: TSchema.UndefinedOr(TSchema.ByteArray)
 })
 
 // Extract type
@@ -430,14 +430,14 @@ function process(data: MyType) {
 **Export types and codecs**: Make both the type and codec available:
 
 ```typescript twoslash
-import { Core } from "@evolution-sdk/evolution"
+import { Bytes, Data, TSchema } from "@evolution-sdk/evolution"
 
-const MyDatumSchema = Core.TSchema.Struct({
-  value: Core.TSchema.Integer
+const MyDatumSchema = TSchema.Struct({
+  value: TSchema.Integer
 })
 
 export type MyDatum = typeof MyDatumSchema.Type
-export const MyDatumCodec = Core.Data.withSchema(MyDatumSchema)
+export const MyDatumCodec = Data.withSchema(MyDatumSchema)
 ```
 
 ## Next Steps

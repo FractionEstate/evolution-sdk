@@ -7,18 +7,12 @@
 
 import { Effect, Ref } from "effect"
 
-import * as Bytes from "../../../core/Bytes.js"
-import * as Certificate from "../../../core/Certificate.js"
-import * as RewardAccount from "../../../core/RewardAccount.js"
+import * as Bytes from "../../../Bytes.js"
+import * as Certificate from "../../../Certificate.js"
+import * as RewardAccount from "../../../RewardAccount.js"
 import * as RedeemerBuilder from "../RedeemerBuilder.js"
 import { TransactionBuilderError, type TxBuilderConfig, TxBuilderConfigTag, TxContext } from "../TransactionBuilder.js"
 import type { DelegateToDRepParams, DelegateToParams, DelegateToPoolAndDRepParams, DelegateToPoolParams, DeregisterStakeParams, RegisterAndDelegateToParams, RegisterStakeParams, WithdrawParams } from "./Operations.js"
-
-/**
- * Get hex string from credential hash for use as map key
- */
-const credentialToKey = (credential: Certificate.StakeRegistration["stakeCredential"]): string =>
-  Bytes.toHex(credential.hash)
 
 /**
  * Creates a ProgramStep for registerStake operation.
@@ -73,7 +67,7 @@ export const createRegisterStakeProgram = (params: RegisterStakeParams): Effect.
       // Track redeemer if script-controlled
       if (params.redeemer && isScriptControlled) {
         const deferred = RedeemerBuilder.toDeferredRedeemer(params.redeemer)
-        const certKey = `cert:${credentialToKey(params.stakeCredential)}`
+        const certKey = `cert:${Bytes.toHex(params.stakeCredential.hash)}`
 
         if (deferred._tag === "static") {
           newRedeemers = new Map(state.redeemers)
@@ -174,7 +168,7 @@ export const createDelegateToProgram = (params: DelegateToParams): Effect.Effect
       // Track redeemer if script-controlled
       if (params.redeemer && isScriptControlled) {
         const deferred = RedeemerBuilder.toDeferredRedeemer(params.redeemer)
-        const certKey = `cert:${credentialToKey(params.stakeCredential)}`
+        const certKey = `cert:${Bytes.toHex(params.stakeCredential.hash)}`
 
         if (deferred._tag === "static") {
           newRedeemers = new Map(state.redeemers)
@@ -249,7 +243,7 @@ export const createDelegateToPoolProgram = (params: DelegateToPoolParams): Effec
       // Track redeemer if script-controlled
       if (params.redeemer && isScriptControlled) {
         const deferred = RedeemerBuilder.toDeferredRedeemer(params.redeemer)
-        const certKey = `cert:${credentialToKey(params.stakeCredential)}`
+        const certKey = `cert:${Bytes.toHex(params.stakeCredential.hash)}`
 
         if (deferred._tag === "static") {
           newRedeemers = new Map(state.redeemers)
@@ -318,7 +312,7 @@ export const createDelegateToDRepProgram = (params: DelegateToDRepParams): Effec
       // Track redeemer if script-controlled
       if (params.redeemer && isScriptControlled) {
         const deferred = RedeemerBuilder.toDeferredRedeemer(params.redeemer)
-        const certKey = `cert:${credentialToKey(params.stakeCredential)}`
+        const certKey = `cert:${Bytes.toHex(params.stakeCredential.hash)}`
 
         if (deferred._tag === "static") {
           newRedeemers = new Map(state.redeemers)
@@ -388,7 +382,7 @@ export const createDelegateToPoolAndDRepProgram = (params: DelegateToPoolAndDRep
       // Track redeemer if script-controlled
       if (params.redeemer && isScriptControlled) {
         const deferred = RedeemerBuilder.toDeferredRedeemer(params.redeemer)
-        const certKey = `cert:${credentialToKey(params.stakeCredential)}`
+        const certKey = `cert:${Bytes.toHex(params.stakeCredential.hash)}`
 
         if (deferred._tag === "static") {
           newRedeemers = new Map(state.redeemers)
@@ -509,7 +503,7 @@ export const createRegisterAndDelegateToProgram = (params: RegisterAndDelegateTo
       // Track redeemer if script-controlled
       if (params.redeemer && isScriptControlled) {
         const deferred = RedeemerBuilder.toDeferredRedeemer(params.redeemer)
-        const certKey = `cert:${credentialToKey(params.stakeCredential)}`
+        const certKey = `cert:${Bytes.toHex(params.stakeCredential.hash)}`
 
         if (deferred._tag === "static") {
           newRedeemers = new Map(state.redeemers)
@@ -603,7 +597,7 @@ export const createDeregisterStakeProgram = (params: DeregisterStakeParams): Eff
       if (params.redeemer && isScriptControlled) {
         const deferred = RedeemerBuilder.toDeferredRedeemer(params.redeemer)
         // Use credential hash as key for cert redeemers
-        const certKey = `cert:${credentialToKey(params.stakeCredential)}`
+        const certKey = `cert:${Bytes.toHex(params.stakeCredential.hash)}`
 
         if (deferred._tag === "static") {
           newRedeemers = new Map(state.redeemers)
@@ -677,7 +671,7 @@ export const createWithdrawProgram = (params: WithdrawParams, config: TxBuilderC
       if (params.redeemer && isScriptControlled) {
         const deferred = RedeemerBuilder.toDeferredRedeemer(params.redeemer)
         // Use reward account as key for reward redeemers
-        const rewardKey = `reward:${credentialToKey(params.stakeCredential)}`
+        const rewardKey = `reward:${Bytes.toHex(params.stakeCredential.hash)}`
 
         if (deferred._tag === "static") {
           newRedeemers = new Map(state.redeemers)
@@ -711,6 +705,6 @@ export const createWithdrawProgram = (params: WithdrawParams, config: TxBuilderC
     })
 
     yield* Effect.logDebug(
-      `[Withdraw] Added withdrawal of ${params.amount} lovelace from ${credentialToKey(params.stakeCredential)}`
+      `[Withdraw] Added withdrawal of ${params.amount} lovelace from ${Bytes.toHex(params.stakeCredential.hash)}`
     )
   })

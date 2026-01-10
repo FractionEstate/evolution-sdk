@@ -12,7 +12,7 @@ Providers expose methods to query UTxOs, protocol parameters, delegation informa
 Retrieve current network parameters for fee calculation and transaction constraints:
 
 ```typescript twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { Address, Bytes, Credential, DatumOption, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -48,7 +48,7 @@ Query unspent transaction outputs by address, credential, unit, or reference.
 ### By Address
 
 ```typescript twoslash
-import { Core, createClient } from "@evolution-sdk/evolution";
+import { Address, Bytes, Credential, DatumOption, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -61,7 +61,7 @@ const client = createClient({
 
 // Get all UTxOs at address
 const utxos = await client.getUtxos(
-  Core.Address.fromBech32("addr1qxy8sclc58rsck0pzsc0v4skmqjwuqsqpwfcvrdldl5sjvvhyltp7fk0fmtmrlnykgmhnzcns2msa2cmpvllzgqd2azqhpv8e4")
+  Address.fromBech32("addr1qxy8sclc58rsck0pzsc0v4skmqjwuqsqpwfcvrdldl5sjvvhyltp7fk0fmtmrlnykgmhnzcns2msa2cmpvllzgqd2azqhpv8e4")
 );
 
 // Calculate total ADA
@@ -86,7 +86,7 @@ utxos.forEach((utxo) => {
 Query UTxOs by payment credential instead of full address:
 
 ```typescript
-import { createClient, Credential } from "@evolution-sdk/evolution";
+import { Address, Bytes, Credential, DatumOption, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -109,7 +109,7 @@ const utxos = await client.getUtxos(credential);
 Query UTxOs containing specific native asset:
 
 ```typescript twoslash
-import { Core, createClient } from "@evolution-sdk/evolution";
+import { Address, Bytes, Credential, DatumOption, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -126,7 +126,7 @@ const assetName = "MyToken";
 const unit = policyId + assetName;
 
 const utxosWithToken = await client.getUtxosWithUnit(
-  Core.Address.fromBech32("addr1qxy8sclc58rsck0pzsc0v4skmqjwuqsqpwfcvrdldl5sjvvhyltp7fk0fmtmrlnykgmhnzcns2msa2cmpvllzgqd2azqhpv8e4"),
+  Address.fromBech32("addr1qxy8sclc58rsck0pzsc0v4skmqjwuqsqpwfcvrdldl5sjvvhyltp7fk0fmtmrlnykgmhnzcns2msa2cmpvllzgqd2azqhpv8e4"),
   unit
 );
 
@@ -138,7 +138,7 @@ console.log("UTxOs with token:", utxosWithToken.length);
 Query specific UTxOs by transaction output reference:
 
 ```typescript twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { Address, Bytes, Credential, DatumOption, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -151,8 +151,14 @@ const client = createClient({
 
 // Query specific UTxOs
 const utxos = await client.getUtxosByOutRef([
-  { txHash: "abc123...", outputIndex: 0 },
-  { txHash: "def456...", outputIndex: 1 }
+  new TransactionInput.TransactionInput({
+    transactionId: TransactionHash.fromHex("abc123..."),
+    index: 0n
+  }),
+  new TransactionInput.TransactionInput({
+    transactionId: TransactionHash.fromHex("def456..."),
+    index: 1n
+  })
 ]);
 
 console.log("Found UTxOs:", utxos.length);
@@ -163,7 +169,7 @@ console.log("Found UTxOs:", utxos.length);
 Find a single UTxO by unique unit identifier:
 
 ```typescript twoslash
-import { Core, createClient } from "@evolution-sdk/evolution";
+import { Address, Bytes, Credential, DatumOption, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -178,8 +184,8 @@ const client = createClient({
 const nftUnit = "policyId" + "tokenName";
 const utxo = await client.getUtxoByUnit(nftUnit);
 
-console.log("NFT found at:", Core.Address.toBech32(utxo.address));
-console.log("Current owner UTxO:", Core.TransactionHash.toHex(utxo.transactionId));
+console.log("NFT found at:", Address.toBech32(utxo.address));
+console.log("Current owner UTxO:", TransactionHash.toHex(utxo.transactionId));
 ```
 
 ## Delegation Queries
@@ -187,7 +193,7 @@ console.log("Current owner UTxO:", Core.TransactionHash.toHex(utxo.transactionId
 Query staking delegation and reward information:
 
 ```typescript twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { Address, Bytes, Credential, DatumOption, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -198,7 +204,7 @@ const client = createClient({
   }
 });
 
-const delegation = await client.getDelegation("stake1uxy...");
+const delegation = await client.getDelegation(RewardAddress.RewardAddress.make("stake1uxy..."));
 
 console.log("Delegated to pool:", delegation.poolId);
 console.log("Is delegated:", delegation.poolId !== undefined);
@@ -210,7 +216,7 @@ console.log("Rewards:", delegation.rewards);
 Retrieve datum content by hash:
 
 ```typescript twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { Address, Bytes, Credential, DatumOption, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -222,7 +228,7 @@ const client = createClient({
 });
 
 // Get datum from hash
-const datumHash = "abc123...";
+const datumHash = new DatumOption.DatumHash({ hash: Bytes.fromHex("abc123...") });
 const datumCbor = await client.getDatum(datumHash);
 
 console.log("Datum CBOR:", datumCbor);
@@ -235,7 +241,7 @@ console.log("Datum CBOR:", datumCbor);
 Calculate total balance across multiple addresses:
 
 ```typescript twoslash
-import { Core, createClient } from "@evolution-sdk/evolution";
+import { Address, Bytes, Credential, DatumOption, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -249,7 +255,7 @@ const client = createClient({
 async function getPortfolioBalance(addressesBech32: string[]) {
   const balances = await Promise.all(
     addressesBech32.map(async (addressBech32) => {
-      const address = Core.Address.fromBech32(addressBech32);
+      const address = Address.fromBech32(addressBech32);
       const utxos = await client.getUtxos(address);
       const lovelace = utxos.reduce(
         (sum, utxo) => sum + utxo.assets.lovelace,
@@ -284,7 +290,7 @@ async function getPortfolioBalance(addressesBech32: string[]) {
 Find all holders of a specific token:
 
 ```typescript twoslash
-import { Core, createClient } from "@evolution-sdk/evolution";
+import { Address, Bytes, Credential, DatumOption, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -302,7 +308,7 @@ async function getTokenHolders(
   const holders = [];
   
   for (const addressBech32 of addresses) {
-    const address = Core.Address.fromBech32(addressBech32);
+    const address = Address.fromBech32(addressBech32);
     const utxos = await client.getUtxosWithUnit(address, tokenUnit);
     
     if (utxos.length > 0) {
@@ -324,7 +330,7 @@ async function getTokenHolders(
 Check if addresses are delegated to specific pool:
 
 ```typescript twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { Address, Bytes, Credential, DatumOption, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -337,17 +343,17 @@ const client = createClient({
 
 async function checkPoolDelegation(
   rewardAddresses: string[],
-  targetPoolId: string
+  targetPoolIdHex: string
 ) {
   const results = await Promise.all(
     rewardAddresses.map(async (rewardAddress) => {
-      const delegation = await client.getDelegation(rewardAddress);
+      const delegation = await client.getDelegation(RewardAddress.RewardAddress.make(rewardAddress));
       
       return {
         rewardAddress,
-        delegatedToTarget: delegation.poolId === targetPoolId,
+        delegatedToTarget: delegation.poolId !== null && PoolKeyHash.toHex(delegation.poolId) === targetPoolIdHex,
         currentPool: delegation.poolId,
-        isDelegated: delegation.poolId !== undefined,
+        isDelegated: delegation.poolId !== null,
         rewards: delegation.rewards
       };
     })
@@ -362,7 +368,7 @@ async function checkPoolDelegation(
 Track NFT ownership across collection:
 
 ```typescript twoslash
-import { Core, createClient } from "@evolution-sdk/evolution";
+import { Address, Bytes, Credential, DatumOption, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -380,8 +386,8 @@ async function getNFTOwnership(nftUnits: string[]) {
         const utxo = await client.getUtxoByUnit(unit);
         return {
           unit,
-          owner: Core.Address.toBech32(utxo.address),
-          txHash: Core.TransactionHash.toHex(utxo.transactionId),
+          owner: Address.toBech32(utxo.address),
+          txHash: TransactionHash.toHex(utxo.transactionId),
           outputIndex: utxo.index
         };
       } catch (error: any) {
@@ -403,7 +409,7 @@ async function getNFTOwnership(nftUnits: string[]) {
 Handle query errors gracefully:
 
 ```typescript twoslash
-import { Core, createClient } from "@evolution-sdk/evolution";
+import { Address, Bytes, Credential, DatumOption, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -416,7 +422,7 @@ const client = createClient({
 
 async function safeGetUtxos(addressBech32: string) {
   try {
-    const address = Core.Address.fromBech32(addressBech32);
+    const address = Address.fromBech32(addressBech32);
     const utxos = await client.getUtxos(address);
     return { success: true as const, utxos };
   } catch (error: any) {
@@ -427,7 +433,7 @@ async function safeGetUtxos(addressBech32: string) {
 
 async function safeGetDelegation(rewardAddress: string) {
   try {
-    const delegation = await client.getDelegation(rewardAddress);
+    const delegation = await client.getDelegation(RewardAddress.RewardAddress.make(rewardAddress));
     return { success: true as const, delegation };
   } catch (error: any) {
     // May fail if address not registered
@@ -441,7 +447,7 @@ async function safeGetDelegation(rewardAddress: string) {
 Optimize queries for better performance:
 
 ```typescript twoslash
-import { Core, createClient } from "@evolution-sdk/evolution";
+import { Address, Bytes, Credential, DatumOption, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -457,7 +463,7 @@ async function batchQuery(addressesBech32: string[]) {
   // Good: parallel queries
   const results = await Promise.all(
     addressesBech32.map(addr => 
-      client.getUtxos(Core.Address.fromBech32(addr))
+      client.getUtxos(Address.fromBech32(addr))
     )
   );
   

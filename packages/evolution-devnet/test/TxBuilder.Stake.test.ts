@@ -15,10 +15,9 @@ import { afterAll, beforeAll, describe, expect, it } from "@effect/vitest"
 import * as Cluster from "@evolution-sdk/devnet/Cluster"
 import * as Config from "@evolution-sdk/devnet/Config"
 import * as Genesis from "@evolution-sdk/devnet/Genesis"
-import type { Core } from "@evolution-sdk/evolution"
-import * as Address from "@evolution-sdk/evolution/core/Address"
-import * as DRep from "@evolution-sdk/evolution/core/DRep"
-import * as PoolKeyHash from "@evolution-sdk/evolution/core/PoolKeyHash"
+import * as Address from "@evolution-sdk/evolution/Address"
+import * as DRep from "@evolution-sdk/evolution/DRep"
+import * as PoolKeyHash from "@evolution-sdk/evolution/PoolKeyHash"
 import { createClient } from "@evolution-sdk/evolution/sdk/client/ClientImpl"
 
 // Default devnet stake pool ID from Config.ts
@@ -28,7 +27,7 @@ describe("TxBuilder Stake Operations", () => {
   let devnetCluster: Cluster.Cluster | undefined
   let genesisConfig: Config.ShelleyGenesis
   // Store genesis UTxOs per account index for independent tests
-  const genesisUtxosByAccount: Map<number, Core.UTxO.UTxO> = new Map()
+  const genesisUtxosByAccount: Map<number, Cardano.UTxO.UTxO> = new Map()
 
   const TEST_MNEMONIC =
     "test test test test test test test test test test test test test test test test test test test test test test test sauce"

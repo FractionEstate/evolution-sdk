@@ -2,16 +2,17 @@ import { afterAll, beforeAll, describe, expect, it } from "@effect/vitest"
 import * as Cluster from "@evolution-sdk/devnet/Cluster"
 import * as Config from "@evolution-sdk/devnet/Config"
 import * as Genesis from "@evolution-sdk/devnet/Genesis"
-import { Core } from "@evolution-sdk/evolution"
-import * as CoreAddress from "@evolution-sdk/evolution/core/Address"
-import * as AssetName from "@evolution-sdk/evolution/core/AssetName"
-import * as NativeScripts from "@evolution-sdk/evolution/core/NativeScripts"
-import * as PolicyId from "@evolution-sdk/evolution/core/PolicyId"
-import * as ScriptHash from "@evolution-sdk/evolution/core/ScriptHash"
-import * as Text from "@evolution-sdk/evolution/core/Text"
+import { Cardano } from "@evolution-sdk/evolution"
+import * as CoreAddress from "@evolution-sdk/evolution/Address"
+import * as AssetName from "@evolution-sdk/evolution/AssetName"
+import * as NativeScripts from "@evolution-sdk/evolution/NativeScripts"
+import * as PolicyId from "@evolution-sdk/evolution/PolicyId"
+import * as ScriptHash from "@evolution-sdk/evolution/ScriptHash"
 import { createClient } from "@evolution-sdk/evolution/sdk/client/ClientImpl"
+import * as Text from "@evolution-sdk/evolution/Text"
+import * as TransactionHash from "@evolution-sdk/evolution/TransactionHash"
 
-const CoreAssets = Core.Assets
+const CoreAssets = Cardano.Assets
 
 describe("TxBuilder Minting (Devnet Submit)", () => {
   // ============================================================================
@@ -20,7 +21,7 @@ describe("TxBuilder Minting (Devnet Submit)", () => {
 
   let devnetCluster: Cluster.Cluster | undefined
   let genesisConfig: Config.ShelleyGenesis
-  let genesisUtxos: ReadonlyArray<Core.UTxO.UTxO> = []
+  let genesisUtxos: ReadonlyArray<Cardano.UTxO.UTxO> = []
   let nativeScript: NativeScripts.NativeScript
   let policyId: string
 
@@ -133,7 +134,7 @@ describe("TxBuilder Minting (Devnet Submit)", () => {
 
     const submitBuilder = await signBuilder.sign()
     const txHash = await submitBuilder.submit()
-    expect(txHash.length).toBe(64)
+    expect(TransactionHash.toHex(txHash).length).toBe(64)
 
     const confirmed = await client.awaitTx(txHash, 1000)
     expect(confirmed).toBe(true)
@@ -257,7 +258,7 @@ describe("TxBuilder Minting (Devnet Submit)", () => {
     // Submit burn transaction and verify
     const burnSubmitBuilder = await burnBuilder.sign()
     const burnTxHash = await burnSubmitBuilder.submit()
-    expect(burnTxHash.length).toBe(64)
+    expect(TransactionHash.toHex(burnTxHash).length).toBe(64)
 
     const burnConfirmed = await client.awaitTx(burnTxHash, 1000)
     expect(burnConfirmed).toBe(true)

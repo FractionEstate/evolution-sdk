@@ -36,7 +36,7 @@ const lucid = await Lucid.new(blockfrostProvider, "Preprod");
 
 **Evolution SDK:**
 ```ts twoslash
-import { createClient } from "@evolution-sdk/evolution";
+import { Address, Assets, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "preprod",
@@ -65,7 +65,7 @@ lucid
 
 **Evolution SDK:**
 ```ts twoslash
-import { Core, createClient } from "@evolution-sdk/evolution";
+import { Address, Assets, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "preprod",
@@ -85,8 +85,8 @@ const client = createClient({
 const tx = await client
   .newTx()
   .payToAddress({ 
-    address: Core.Address.fromBech32("addr_test1qzrf9g3ea6hdc5vfujgrpjc0c0xq3qqkz8zkpwh3s6nqzhgey8k3eq73kr0gcqd7cyy75s0qqx0qqx0qqx0qqx0qx7e8pq"),
-    assets: Core.Assets.fromLovelace(2_000_000n)
+    address: Address.fromBech32("addr_test1qzrf9g3ea6hdc5vfujgrpjc0c0xq3qqkz8zkpwh3s6nqzhgey8k3eq73kr0gcqd7cyy75s0qqx0qqx0qqx0qqx0qx7e8pq"),
+    assets: Assets.fromLovelace(2_000_000n)
   })
   .build();
 ```

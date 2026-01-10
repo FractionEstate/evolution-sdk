@@ -10,18 +10,19 @@ import { afterAll, beforeAll, describe, expect, it } from "@effect/vitest"
 import * as Cluster from "@evolution-sdk/devnet/Cluster"
 import * as Config from "@evolution-sdk/devnet/Config"
 import * as Genesis from "@evolution-sdk/devnet/Genesis"
-import { Core } from "@evolution-sdk/evolution"
-import * as CoreAddress from "@evolution-sdk/evolution/core/Address"
-import * as AssetName from "@evolution-sdk/evolution/core/AssetName"
-import * as Bytes from "@evolution-sdk/evolution/core/Bytes"
-import * as Data from "@evolution-sdk/evolution/core/Data"
-import * as PlutusV3 from "@evolution-sdk/evolution/core/PlutusV3"
-import * as PolicyId from "@evolution-sdk/evolution/core/PolicyId"
-import * as ScriptHash from "@evolution-sdk/evolution/core/ScriptHash"
-import * as Text from "@evolution-sdk/evolution/core/Text"
+import { Cardano } from "@evolution-sdk/evolution"
+import * as CoreAddress from "@evolution-sdk/evolution/Address"
+import * as AssetName from "@evolution-sdk/evolution/AssetName"
+import * as Bytes from "@evolution-sdk/evolution/Bytes"
+import * as Data from "@evolution-sdk/evolution/Data"
+import * as PlutusV3 from "@evolution-sdk/evolution/PlutusV3"
+import * as PolicyId from "@evolution-sdk/evolution/PolicyId"
+import * as ScriptHash from "@evolution-sdk/evolution/ScriptHash"
 import { createClient } from "@evolution-sdk/evolution/sdk/client/ClientImpl"
+import * as Text from "@evolution-sdk/evolution/Text"
+import * as TransactionHash from "@evolution-sdk/evolution/TransactionHash"
 
-const CoreAssets = Core.Assets
+const CoreAssets = Cardano.Assets
 
 describe("TxBuilder Plutus Minting (Devnet Submit)", () => {
   // ============================================================================
@@ -30,7 +31,7 @@ describe("TxBuilder Plutus Minting (Devnet Submit)", () => {
 
   let devnetCluster: Cluster.Cluster | undefined
   let genesisConfig: Config.ShelleyGenesis
-  let genesisUtxos: ReadonlyArray<Core.UTxO.UTxO> = []
+  let genesisUtxos: ReadonlyArray<Cardano.UTxO.UTxO> = []
 
   const TEST_MNEMONIC = "test test test test test test test test test test test test test test test test test test test test test test test sauce"
 
@@ -179,7 +180,7 @@ describe("TxBuilder Plutus Minting (Devnet Submit)", () => {
     // Submit transaction
     const submitBuilder = await signBuilder.sign()
     const txHash = await submitBuilder.submit()
-    expect(txHash.length).toBe(64)
+    expect(TransactionHash.toHex(txHash).length).toBe(64)
 
     const confirmed = await client.awaitTx(txHash, 1000)
     expect(confirmed).toBe(true)
@@ -308,7 +309,7 @@ describe("TxBuilder Plutus Minting (Devnet Submit)", () => {
     // Submit burn transaction
     const burnSubmitBuilder = await burnBuilder.sign()
     const burnTxHash = await burnSubmitBuilder.submit()
-    expect(burnTxHash.length).toBe(64)
+    expect(TransactionHash.toHex(burnTxHash).length).toBe(64)
 
     // eslint-disable-next-line no-console
     console.log(`✓ Submitted Plutus burn tx: ${burnTxHash}`)

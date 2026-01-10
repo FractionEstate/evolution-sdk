@@ -11,13 +11,14 @@ import { afterAll, beforeAll, describe, expect, it } from "@effect/vitest"
 import * as Cluster from "@evolution-sdk/devnet/Cluster"
 import * as Config from "@evolution-sdk/devnet/Config"
 import * as Genesis from "@evolution-sdk/devnet/Genesis"
-import { Core } from "@evolution-sdk/evolution"
-import * as Address from "@evolution-sdk/evolution/core/Address"
-import * as NativeScripts from "@evolution-sdk/evolution/core/NativeScripts"
-import * as ScriptHash from "@evolution-sdk/evolution/core/ScriptHash"
-import * as Text from "@evolution-sdk/evolution/core/Text"
-import * as UTxO from "@evolution-sdk/evolution/core/UTxO"
+import { Cardano } from "@evolution-sdk/evolution"
+import * as Address from "@evolution-sdk/evolution/Address"
+import * as NativeScripts from "@evolution-sdk/evolution/NativeScripts"
+import * as ScriptHash from "@evolution-sdk/evolution/ScriptHash"
 import { createClient } from "@evolution-sdk/evolution/sdk/client/ClientImpl"
+import * as Text from "@evolution-sdk/evolution/Text"
+import * as TransactionHash from "@evolution-sdk/evolution/TransactionHash"
+import * as UTxO from "@evolution-sdk/evolution/UTxO"
 
 // Time utility functions (duplicated from core since Time module is not externally accessible)
 const now = (): bigint => BigInt(Date.now())
@@ -34,7 +35,7 @@ const slotToUnixTime = (slot: bigint, slotConfig: Cluster.SlotConfig): bigint =>
 describe("TxBuilder NativeScript (Devnet Submit)", () => {
   let devnetCluster: Cluster.Cluster | undefined
   let genesisConfig: Config.ShelleyGenesis
-  let genesisUtxos: ReadonlyArray<Core.UTxO.UTxO> = []
+  let genesisUtxos: ReadonlyArray<Cardano.UTxO.UTxO> = []
 
   const TEST_MNEMONIC =
     "test test test test test test test test test test test test test test test test test test test test test test test sauce"
@@ -126,11 +127,11 @@ describe("TxBuilder NativeScript (Devnet Submit)", () => {
       .newTx()
       .attachScript({ script: multiSigScript })
       .mintAssets({
-        assets: Core.Assets.fromRecord({ [unit]: 500n })
+        assets: Cardano.Assets.fromRecord({ [unit]: 500n })
       })
       .payToAddress({
         address: address1,
-        assets: Core.Assets.fromLovelace(2_000_000n)
+        assets: Cardano.Assets.fromLovelace(2_000_000n)
       })
       .build({ availableUtxos: [...genesisUtxos] })
 
@@ -152,7 +153,7 @@ describe("TxBuilder NativeScript (Devnet Submit)", () => {
     const submitBuilder = await signBuilder.assemble([witness1, witness2])
     const txHash = await submitBuilder.submit()
 
-    expect(txHash.length).toBe(64)
+    expect(TransactionHash.toHex(txHash).length).toBe(64)
 
     const confirmed = await client1.awaitTx(txHash, 1000)
     expect(confirmed).toBe(true)
@@ -188,11 +189,11 @@ describe("TxBuilder NativeScript (Devnet Submit)", () => {
       .newTx()
       .attachScript({ script: anyScript })
       .mintAssets({
-        assets: Core.Assets.fromRecord({ [unit]: 100n })
+        assets: Cardano.Assets.fromRecord({ [unit]: 100n })
       })
       .payToAddress({
         address: address1,
-        assets: Core.Assets.fromLovelace(2_000_000n)
+        assets: Cardano.Assets.fromLovelace(2_000_000n)
       })
       .build()
 
@@ -205,7 +206,7 @@ describe("TxBuilder NativeScript (Devnet Submit)", () => {
     const submitBuilder = await signBuilder.sign()
     const txHash = await submitBuilder.submit()
 
-    expect(txHash.length).toBe(64)
+    expect(TransactionHash.toHex(txHash).length).toBe(64)
 
     const confirmed = await client1.awaitTx(txHash, 1000)
     expect(confirmed).toBe(true)
@@ -244,11 +245,11 @@ describe("TxBuilder NativeScript (Devnet Submit)", () => {
       .newTx()
       .attachScript({ script: nOfKScript })
       .mintAssets({
-        assets: Core.Assets.fromRecord({ [unit]: 200n })
+        assets: Cardano.Assets.fromRecord({ [unit]: 200n })
       })
       .payToAddress({
         address: address1,
-        assets: Core.Assets.fromLovelace(2_000_000n)
+        assets: Cardano.Assets.fromLovelace(2_000_000n)
       })
       .build()
 
@@ -265,7 +266,7 @@ describe("TxBuilder NativeScript (Devnet Submit)", () => {
     const submitBuilder = await signBuilder.assemble([witness1, witness2])
     const txHash = await submitBuilder.submit()
 
-    expect(txHash.length).toBe(64)
+    expect(TransactionHash.toHex(txHash).length).toBe(64)
 
     const confirmed = await client1.awaitTx(txHash, 1000)
     expect(confirmed).toBe(true)
@@ -307,11 +308,11 @@ describe("TxBuilder NativeScript (Devnet Submit)", () => {
       .attachScript({ script: timelockScript })
       .setValidity({ to: futureUnixTime })
       .mintAssets({
-        assets: Core.Assets.fromRecord({ [unit]: 50n })
+        assets: Cardano.Assets.fromRecord({ [unit]: 50n })
       })
       .payToAddress({
         address: myAddress,
-        assets: Core.Assets.fromLovelace(2_000_000n)
+        assets: Cardano.Assets.fromLovelace(2_000_000n)
       })
       .build()
 
@@ -324,7 +325,7 @@ describe("TxBuilder NativeScript (Devnet Submit)", () => {
 
     const submitBuilder = await signBuilder.sign()
     const txHash = await submitBuilder.submit()
-    expect(txHash.length).toBe(64)
+    expect(TransactionHash.toHex(txHash).length).toBe(64)
     const confirmed = await client.awaitTx(txHash, 1000)
     expect(confirmed).toBe(true)
   })
@@ -375,11 +376,11 @@ describe("TxBuilder NativeScript (Devnet Submit)", () => {
       .attachScript({ script: complexScript })
       .setValidity({ to: beforeUnixTime })
       .mintAssets({
-        assets: Core.Assets.fromRecord({ [unit]: 25n })
+        assets: Cardano.Assets.fromRecord({ [unit]: 25n })
       })
       .payToAddress({
         address: myAddress,
-        assets: Core.Assets.fromLovelace(2_000_000n)
+        assets: Cardano.Assets.fromLovelace(2_000_000n)
       })
       .build()
 
@@ -392,7 +393,7 @@ describe("TxBuilder NativeScript (Devnet Submit)", () => {
     const submitBuilder = await signBuilder.sign()
     const txHash = await submitBuilder.submit()
 
-    expect(txHash.length).toBe(64)
+    expect(TransactionHash.toHex(txHash).length).toBe(64)
 
     const confirmed = await client.awaitTx(txHash, 1000)
     expect(confirmed).toBe(true)
@@ -431,7 +432,7 @@ describe("TxBuilder NativeScript (Devnet Submit)", () => {
       .newTx()
       .payToAddress({
         address: scriptAddress,
-        assets: Core.Assets.fromLovelace(10_000_000n)
+        assets: Cardano.Assets.fromLovelace(10_000_000n)
       })
       .build()
 
@@ -446,7 +447,7 @@ describe("TxBuilder NativeScript (Devnet Submit)", () => {
     expect(scriptUtxos.length).toBeGreaterThan(0)
 
     const scriptUtxo = scriptUtxos.find(
-      (u) => UTxO.toOutRefString(u).startsWith(fundTxHash)
+      (u) => UTxO.toOutRefString(u).startsWith(TransactionHash.toHex(fundTxHash))
     )
     expect(scriptUtxo).toBeDefined()
 
@@ -458,7 +459,7 @@ describe("TxBuilder NativeScript (Devnet Submit)", () => {
       .collectFrom({ inputs: [scriptUtxo!] })
       .payToAddress({
         address: address1,
-        assets: Core.Assets.fromLovelace(5_000_000n)
+        assets: Cardano.Assets.fromLovelace(5_000_000n)
       })
       .build()
 
@@ -471,7 +472,7 @@ describe("TxBuilder NativeScript (Devnet Submit)", () => {
     const spendSubmitBuilder = await spendSignBuilder.assemble([witness1, witness2])
     const spendTxHash = await spendSubmitBuilder.submit()
 
-    expect(spendTxHash.length).toBe(64)
+    expect(TransactionHash.toHex(spendTxHash).length).toBe(64)
 
     const spendConfirmed = await client1.awaitTx(spendTxHash, 1000)
     expect(spendConfirmed).toBe(true)
@@ -504,7 +505,7 @@ describe("TxBuilder NativeScript (Devnet Submit)", () => {
       .newTx()
       .payToAddress({
         address: address1,
-        assets: Core.Assets.fromLovelace(5_000_000n),
+        assets: Cardano.Assets.fromLovelace(5_000_000n),
         script: multiSigScript
       })
       .build()
@@ -512,14 +513,14 @@ describe("TxBuilder NativeScript (Devnet Submit)", () => {
     const refScriptSubmitBuilder = await refScriptSignBuilder.sign()
     const refScriptTxHash = await refScriptSubmitBuilder.submit()
 
-    expect(refScriptTxHash.length).toBe(64)
+    expect(TransactionHash.toHex(refScriptTxHash).length).toBe(64)
     await client1.awaitTx(refScriptTxHash, 1000)
     await new Promise((resolve) => setTimeout(resolve, 2_000))
 
     // Find the UTxO with the reference script
     const walletUtxos = await client1.getUtxos(address1)
     const refScriptUtxo = walletUtxos.find(
-      (u) => UTxO.toOutRefString(u).startsWith(refScriptTxHash) && u.scriptRef !== undefined
+      (u) => UTxO.toOutRefString(u).startsWith(TransactionHash.toHex(refScriptTxHash)) && u.scriptRef !== undefined
     )
     expect(refScriptUtxo).toBeDefined()
     expect(refScriptUtxo!.scriptRef).toBeDefined()
@@ -532,11 +533,11 @@ describe("TxBuilder NativeScript (Devnet Submit)", () => {
       .newTx()
       .readFrom({ referenceInputs: [refScriptUtxo!] }) // Reference the UTxO with the script
       .mintAssets({
-        assets: Core.Assets.fromRecord({ [unit]: 100n })
+        assets: Cardano.Assets.fromRecord({ [unit]: 100n })
       })
       .payToAddress({
         address: address1,
-        assets: Core.Assets.fromLovelace(2_000_000n)
+        assets: Cardano.Assets.fromLovelace(2_000_000n)
       })
       .build()
 
@@ -551,7 +552,7 @@ describe("TxBuilder NativeScript (Devnet Submit)", () => {
     const mintSubmitBuilder = await mintSignBuilder.assemble([mintWitness1, mintWitness2])
     const mintTxHash = await mintSubmitBuilder.submit()
 
-    expect(mintTxHash.length).toBe(64)
+    expect(TransactionHash.toHex(mintTxHash).length).toBe(64)
 
     const mintConfirmed = await client1.awaitTx(mintTxHash, 1000)
     expect(mintConfirmed).toBe(true)
@@ -590,7 +591,7 @@ describe("TxBuilder NativeScript (Devnet Submit)", () => {
       .newTx()
       .payToAddress({
         address: address1,
-        assets: Core.Assets.fromLovelace(5_000_000n),
+        assets: Cardano.Assets.fromLovelace(5_000_000n),
         script: multiSigScript
       })
       .build()
@@ -598,7 +599,7 @@ describe("TxBuilder NativeScript (Devnet Submit)", () => {
     const refScriptSubmitBuilder = await refScriptSignBuilder.sign()
     const refScriptTxHash = await refScriptSubmitBuilder.submit()
 
-    expect(refScriptTxHash.length).toBe(64)
+    expect(TransactionHash.toHex(refScriptTxHash).length).toBe(64)
     await client1.awaitTx(refScriptTxHash, 1000)
     await new Promise((resolve) => setTimeout(resolve, 2_000))
 
@@ -607,7 +608,7 @@ describe("TxBuilder NativeScript (Devnet Submit)", () => {
       .newTx()
       .payToAddress({
         address: scriptAddress,
-        assets: Core.Assets.fromLovelace(10_000_000n)
+        assets: Cardano.Assets.fromLovelace(10_000_000n)
       })
       .build()
 
@@ -621,13 +622,13 @@ describe("TxBuilder NativeScript (Devnet Submit)", () => {
     const scriptUtxos = await client1.getUtxos(scriptAddress)
     expect(scriptUtxos.length).toBeGreaterThan(0)
 
-    const scriptUtxo = scriptUtxos.find((u) => UTxO.toOutRefString(u).startsWith(fundTxHash))
+    const scriptUtxo = scriptUtxos.find((u) => UTxO.toOutRefString(u).startsWith(TransactionHash.toHex(fundTxHash)))
     expect(scriptUtxo).toBeDefined()
 
     // Find the UTxO with the reference script (fetch AFTER fund tx to get fresh state)
     const walletUtxos = await client1.getUtxos(address1)
     const refScriptUtxo = walletUtxos.find(
-      (u) => UTxO.toOutRefString(u).startsWith(refScriptTxHash) && u.scriptRef !== undefined
+      (u) => UTxO.toOutRefString(u).startsWith(TransactionHash.toHex(refScriptTxHash)) && u.scriptRef !== undefined
     )
     expect(refScriptUtxo).toBeDefined()
     expect(refScriptUtxo!.scriptRef).toBeDefined()
@@ -640,7 +641,7 @@ describe("TxBuilder NativeScript (Devnet Submit)", () => {
       .collectFrom({ inputs: [scriptUtxo!] }) // Spend from the script address
       .payToAddress({
         address: address1,
-        assets: Core.Assets.fromLovelace(5_000_000n)
+        assets: Cardano.Assets.fromLovelace(5_000_000n)
       })
       .build()
 
@@ -653,7 +654,7 @@ describe("TxBuilder NativeScript (Devnet Submit)", () => {
     const spendSubmitBuilder = await spendSignBuilder.assemble([witness1, witness2])
     const spendTxHash = await spendSubmitBuilder.submit()
     
-    expect(spendTxHash.length).toBe(64)
+    expect(TransactionHash.toHex(spendTxHash).length).toBe(64)
     const spendConfirmed = await client1.awaitTx(spendTxHash, 1000)
     expect(spendConfirmed).toBe(true)
   })

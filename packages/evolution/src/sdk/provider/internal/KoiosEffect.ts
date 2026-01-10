@@ -1,17 +1,22 @@
 import { FetchHttpClient } from "@effect/platform"
 import { Effect, pipe, Schedule, Schema } from "effect"
 
-import * as CoreAddress from "../../../core/Address.js"
-import * as CoreAssets from "../../../core/Assets/index.js"
-import * as Bytes from "../../../core/Bytes.js"
-import * as TransactionHash from "../../../core/TransactionHash.js"
-import type * as CoreUTxO from "../../../core/UTxO.js"
-import type * as Credential from "../../Credential.js"
-import type * as Delegation from "../../Delegation.js"
+import * as CoreAddress from "../../../Address.js"
+import * as CoreAssets from "../../../Assets/index.js"
+import * as AssetsUnit from "../../../Assets/Unit.js"
+import * as Bytes from "../../../Bytes.js"
+import type * as Credential from "../../../Credential.js"
+import * as PlutusData from "../../../Data.js"
+import type * as DatumOption from "../../../DatumOption.js"
+import * as PolicyId from "../../../PolicyId.js"
+import * as PoolKeyHash from "../../../PoolKeyHash.js"
+import * as Redeemer from "../../../Redeemer.js"
+import type * as CoreRewardAddress from "../../../RewardAddress.js"
+import * as Transaction from "../../../Transaction.js"
+import * as TransactionHash from "../../../TransactionHash.js"
+import type * as TransactionInput from "../../../TransactionInput.js"
+import type * as CoreUTxO from "../../../UTxO.js"
 import type * as EvalRedeemer from "../../EvalRedeemer.js"
-import type * as OutRef from "../../OutRef.js"
-import type * as RewardAddress from "../../RewardAddress.js"
-import * as Unit from "../../Unit.js"
 import * as Provider from "../Provider.js"
 import * as HttpUtils from "./HttpUtils.js"
 import * as _Koios from "./Koios.js"
@@ -59,9 +64,9 @@ export const getProtocolParameters = (baseUrl: string, token?: string) =>
 
 export const getUtxos =
   (baseUrl: string, token?: string) => (addressOrCredential: CoreAddress.Address | Credential.Credential) => {
-    // Convert Core Address to bech32 string for API call
-    const addressStr = addressOrCredential instanceof CoreAddress.Address 
-      ? CoreAddress.toBech32(addressOrCredential) 
+    // Convert CoreAddress to Bech32 string for Koios API
+    const addressStr = addressOrCredential instanceof CoreAddress.Address
+      ? CoreAddress.toBech32(addressOrCredential)
       : addressOrCredential
     return pipe(
       _Koios.getUtxosEffect(baseUrl, addressStr, token ? { Authorization: `Bearer ${token}` } : undefined),
@@ -74,10 +79,10 @@ export const getUtxos =
 
 export const getUtxosWithUnit =
   (baseUrl: string, token?: string) =>
-  (addressOrCredential: CoreAddress.Address | Credential.Credential, unit: Unit.Unit) => {
-    // Convert Core Address to bech32 string for API call
-    const addressStr = addressOrCredential instanceof CoreAddress.Address 
-      ? CoreAddress.toBech32(addressOrCredential) 
+  (addressOrCredential: CoreAddress.Address | Credential.Credential, unit: string) => {
+    // Convert CoreAddress to Bech32 string for Koios API
+    const addressStr = addressOrCredential instanceof CoreAddress.Address
+      ? CoreAddress.toBech32(addressOrCredential)
       : addressOrCredential
     return pipe(
       _Koios.getUtxosEffect(baseUrl, addressStr, token ? { Authorization: `Bearer ${token}` } : undefined),
@@ -94,11 +99,13 @@ export const getUtxosWithUnit =
     )
   }
 
-export const getUtxoByUnit = (baseUrl: string, token?: string) => (unit: Unit.Unit) =>
+export const getUtxoByUnit = (baseUrl: string, token?: string) => (unit: string) =>
   pipe(
-    Effect.sync(() => Unit.fromUnit(unit)),
+    Effect.sync(() => AssetsUnit.fromUnit(unit)),
     Effect.flatMap(({ assetName, policyId }) => {
-      const url = `${baseUrl}/asset_addresses?_asset_policy=${policyId}&_asset_name=${assetName}`
+      const policyIdHex = PolicyId.toHex(policyId)
+      const assetNameHex = assetName ? Bytes.toHex(assetName.bytes) : ""
+      const url = `${baseUrl}/asset_addresses?_asset_policy=${policyIdHex}&_asset_name=${assetNameHex}`
       const bearerToken = token ? { Authorization: `Bearer ${token}` } : undefined
 
       return pipe(
@@ -144,11 +151,11 @@ export const getUtxoByUnit = (baseUrl: string, token?: string) => (unit: Unit.Un
     )
   )
 
-export const getUtxosByOutRef = (baseUrl: string, token?: string) => (outRefs: ReadonlyArray<OutRef.OutRef>) =>
+export const getUtxosByOutRef = (baseUrl: string, token?: string) => (inputs: ReadonlyArray<TransactionInput.TransactionInput>) =>
   Effect.gen(function* () {
     const url = `${baseUrl}/tx_info`
     const body = {
-      _tx_hashes: [...new Set(outRefs.map((outRef) => outRef.txHash))],
+      _tx_hashes: [...new Set(inputs.map((input) => TransactionHash.toHex(input.transactionId)))],
       _assets: true,
       _scripts: true
     }
@@ -181,9 +188,9 @@ export const getUtxosByOutRef = (baseUrl: string, token?: string) => (outRefs: R
         )
       )
       return utxos.filter((utxo) =>
-        outRefs.some((outRef) => 
-          TransactionHash.toHex(utxo.transactionId) === outRef.txHash && 
-          Number(utxo.index) === outRef.outputIndex
+        inputs.some((input) => 
+          TransactionHash.toHex(utxo.transactionId) === TransactionHash.toHex(input.transactionId) && 
+          Number(utxo.index) === Number(input.index)
         )
       )
     } else {
@@ -191,7 +198,7 @@ export const getUtxosByOutRef = (baseUrl: string, token?: string) => (outRefs: R
     }
   })
 
-export const getDelegation = (baseUrl: string, token?: string) => (rewardAddress: RewardAddress.RewardAddress) =>
+export const getDelegation = (baseUrl: string, token?: string) => (rewardAddress: CoreRewardAddress.RewardAddress) =>
   Effect.gen(function* () {
     const body = {
       _stake_addresses: [rewardAddress]
@@ -219,15 +226,16 @@ export const getDelegation = (baseUrl: string, token?: string) => (rewardAddress
     )
 
     return {
-      poolId: result.delegated_pool || undefined,
+      poolId: result.delegated_pool ? Schema.decodeSync(PoolKeyHash.FromHex)(result.delegated_pool) : null,
       rewards: BigInt(result.rewards_available)
-    } satisfies Delegation.Delegation
+    } satisfies Provider.Delegation
   })
 
-export const getDatum = (baseUrl: string, token?: string) => (datumHash: string) =>
+export const getDatum = (baseUrl: string, token?: string) => (datumHash: DatumOption.DatumHash) =>
   Effect.gen(function* () {
+    const datumHashHex = Bytes.toHex(datumHash.hash)
     const body = {
-      _datum_hashes: [datumHash]
+      _datum_hashes: [datumHashHex]
     }
     const url = `${baseUrl}/datum_info`
     const bearerToken = token ? { Authorization: `Bearer ${token}` } : undefined
@@ -251,15 +259,16 @@ export const getDatum = (baseUrl: string, token?: string) => (datumHash: string)
       )
     )
 
-    return result.bytes
+    return Schema.decodeSync(PlutusData.FromCBORHex())(result.bytes)
   })
 
 export const awaitTx =
   (baseUrl: string, token?: string) =>
-  (txHash: string, checkInterval = 20000) =>
+  (txHash: TransactionHash.TransactionHash, checkInterval = 20000) =>
     Effect.gen(function* () {
+      const txHashHex = TransactionHash.toHex(txHash)
       const body = {
-        _tx_hashes: [txHash]
+        _tx_hashes: [txHashHex]
       }
       const url = `${baseUrl}/tx_info`
       const bearerToken = token ? { Authorization: `Bearer ${token}` } : undefined
@@ -281,35 +290,37 @@ export const awaitTx =
       return result
     })
 
-export const submitTx = (baseUrl: string, token?: string) => (tx: string) =>
+export const submitTx = (baseUrl: string, token?: string) => (tx: Transaction.Transaction) =>
   Effect.gen(function* () {
+    const txCborBytes = Transaction.toCBORBytes(tx)
     const url = `${baseUrl}/submittx`
     const bearerToken = token ? { Authorization: `Bearer ${token}` } : undefined
 
     const result = yield* pipe(
-      HttpUtils.postUint8Array(url, Bytes.fromHex(tx), _Koios.TxHashSchema, bearerToken),
+      HttpUtils.postUint8Array(url, txCborBytes, _Koios.TxHashSchema, bearerToken),
       Effect.provide(FetchHttpClient.layer),
       Effect.timeout(10_000),
       Effect.catchAllCause((cause) => new Provider.ProviderError({ cause, message: "Failed to submit transaction" }))
     )
 
-    return result
+    return Schema.decodeSync(TransactionHash.FromHex)(result)
   })
 
 export const evaluateTx =
   (baseUrl: string, token?: string) =>
   (
-    tx: string,
+    tx: Transaction.Transaction,
     additionalUTxOs?: Array<CoreUTxO.UTxO>
   ): Effect.Effect<Array<EvalRedeemer.EvalRedeemer>, Provider.ProviderError> =>
     Effect.gen(function* () {
+      const txCborHex = Transaction.toCBORHex(tx)
       const url = `${baseUrl}/ogmios`
       // Use Core UTxOs directly with Ogmios format
       const body = {
         jsonrpc: "2.0",
         method: "evaluateTransaction",
         params: {
-          transaction: { cbor: tx },
+          transaction: { cbor: txCborHex },
           additionalUtxo: _Ogmios.toOgmiosUTxOs(additionalUTxOs)
         },
         id: null
@@ -326,14 +337,23 @@ export const evaluateTx =
         )
       )
 
-      const evalRedeemers = result.map((item) => ({
-        ex_units: {
-          mem: item.budget.memory,
-          steps: item.budget.cpu
-        },
-        redeemer_index: item.validator.index,
-        redeemer_tag: item.validator.purpose
-      }))
+      const evalRedeemers = result.map((item) => {
+        // Map Ogmios terminology to Core terminology
+        const purpose = item.validator.purpose as string
+        let tag: Redeemer.RedeemerTag
+        if (purpose === "publish") tag = "cert"
+        else if (purpose === "withdraw") tag = "reward"
+        else tag = purpose as Redeemer.RedeemerTag
+        
+        return {
+          ex_units: new Redeemer.ExUnits({
+            mem: BigInt(item.budget.memory),
+            steps: BigInt(item.budget.cpu)
+          }),
+          redeemer_index: item.validator.index,
+          redeemer_tag: tag
+        }
+      })
 
       return evalRedeemers
     })
