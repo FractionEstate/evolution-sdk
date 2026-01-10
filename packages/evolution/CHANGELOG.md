@@ -1,5 +1,64 @@
 # @evolution-sdk/evolution
 
+## 0.3.12
+
+### Patch Changes
+
+- [#127](https://github.com/IntersectMBO/evolution-sdk/pull/127) [`15be602`](https://github.com/IntersectMBO/evolution-sdk/commit/15be602a53dfcf59b8f0ccec55081904eaf7ff89) Thanks [@solidsnakedev](https://github.com/solidsnakedev)! - **BREAKING CHANGE:** Remove `Core` namespace, flatten package structure
+
+  ### What changed
+  - Moved all modules from `src/core/` to `src/`
+  - Removed the `Core` namespace export
+  - Added `Cardano` namespace for API discovery/exploration
+  - Individual module exports remain available for tree-shaking
+
+  ### Migration
+
+  **Before:**
+
+  ```typescript
+  import { Core } from "@evolution-sdk/evolution"
+  const address = Core.Address.fromBech32("addr...")
+  ```
+
+  **After (namespace style):**
+
+  ```typescript
+  import { Cardano } from "@evolution-sdk/evolution"
+  const address = Cardano.Address.fromBech32("addr...")
+  ```
+
+  **After (individual imports - recommended for production):**
+
+  ```typescript
+  import { Address } from "@evolution-sdk/evolution"
+  const address = Address.fromBech32("addr...")
+  ```
+
+- [#125](https://github.com/IntersectMBO/evolution-sdk/pull/125) [`8b8ade7`](https://github.com/IntersectMBO/evolution-sdk/commit/8b8ade75f51dd1103dcf4b3714f0012d8e430725) Thanks [@solidsnakedev](https://github.com/solidsnakedev)! - # Remove SDK types and consolidate type system
+
+  This release removes the duplicate SDK-level type wrappers and consolidates the type system to use core types throughout the codebase.
+
+  ## Breaking Changes
+  - **Removed SDK type modules**: Deleted redundant type wrappers including `sdk/Address.ts`, `sdk/AddressDetails.ts`, `sdk/Assets.ts`, `sdk/Credential.ts`, `sdk/Datum.ts`, `sdk/Delegation.ts`, `sdk/Network.ts`, `sdk/OutRef.ts`, `sdk/PolicyId.ts`, `sdk/PoolParams.ts`, `sdk/ProtocolParameters.ts`, `sdk/Relay.ts`, `sdk/RewardAddress.ts`, `sdk/Script.ts`, `sdk/UTxO.ts`, and `sdk/Unit.ts`
+  - **Direct core type usage**: All components now use core types directly instead of going through SDK wrappers, simplifying the type system and reducing maintenance burden
+
+  ## Bug Fixes
+  - **Aiken UPLC evaluator**: Fixed incorrect RedeemerTag mappings in the Aiken WASM evaluator
+    - Changed `cert: "publish"` → `cert: "cert"`
+    - Changed `reward: "withdraw"` → `reward: "reward"`
+    - Fixed `ex_units` to properly instantiate `Redeemer.ExUnits` class instead of plain objects
+    - Changed `Number()` to `BigInt()` for ExUnits memory and steps values
+  - **TransactionHash type handling**: Fixed numerous type errors related to `TransactionHash` object usage across test files
+    - Removed incorrect `.fromHex()` calls on `TransactionHash` objects
+    - Added proper `.toHex()` conversions for string operations
+    - Fixed length checks and string comparisons to use hex representation
+
+  ## Internal Changes
+  - Simplified type imports across the codebase
+  - Reduced code duplication between SDK and core type definitions
+  - Improved type safety by using Effect Schema validation throughout
+
 ## 0.3.11
 
 ### Patch Changes
