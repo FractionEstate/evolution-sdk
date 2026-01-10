@@ -3,17 +3,37 @@
   "version": "0.0.1",
   "description": "Scalus UPLC evaluator adapter for Evolution SDK",
   "type": "module",
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "sideEffects": [],
+  "tags": [
+    "typescript",
+    "cardano",
+    "scalus",
+    "uplc",
+    "evaluator"
+  ],
   "exports": {
     ".": {
       "types": "./src/index.node.ts",
       "node": "./src/index.node.ts",
       "default": "./src/index.node.ts"
-    }
+    },
+    "./package.json": "./package.json"
   },
+  "files": [
+    "src/**/*.ts",
+    "dist/**/*.js",
+    "dist/**/*.js.map",
+    "dist/**/*.d.ts",
+    "dist/**/*.d.ts.map"
+  ],
   "scripts": {
     "build": "tsc -b tsconfig.build.json",
     "dev": "tsc -b tsconfig.build.json --watch",
     "type-check": "tsc --noEmit",
+    "lint": "eslint \"src/**/*.{ts,mjs}\"",
     "test": "vitest run",
     "clean": "rm -rf dist .turbo .tsbuildinfo"
   },

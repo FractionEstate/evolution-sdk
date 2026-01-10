@@ -4,12 +4,12 @@ import type * as CostModel from "@evolution-sdk/evolution/CostModel"
 import * as Redeemer from "@evolution-sdk/evolution/Redeemer"
 import * as Script from "@evolution-sdk/evolution/Script"
 import * as ScriptRef from "@evolution-sdk/evolution/ScriptRef"
+import * as TransactionBuilder from "@evolution-sdk/evolution/sdk/builders/TransactionBuilder"
+import type * as EvalRedeemer from "@evolution-sdk/evolution/sdk/EvalRedeemer"
 import * as Transaction from "@evolution-sdk/evolution/Transaction"
 import * as TransactionInput from "@evolution-sdk/evolution/TransactionInput"
 import * as TxOut from "@evolution-sdk/evolution/TxOut"
 import type * as UTxO from "@evolution-sdk/evolution/UTxO"
-import * as TransactionBuilder from "@evolution-sdk/evolution/sdk/builders/TransactionBuilder"
-import type * as EvalRedeemer from "@evolution-sdk/evolution/sdk/EvalRedeemer"
 import { Effect, Schema } from "effect"
 import * as Scalus from "scalus"
 
@@ -82,7 +82,7 @@ export function makeEvaluator(): TransactionBuilder.Evaluator {
           `[Scalus UPLC] Slot config - zeroTime: ${zeroTime}, zeroSlot: ${zeroSlot}, slotLength: ${slotLength}`
         )
 
-        const costModels = decodeCostModels(context.costModels)
+        const costModels: Array<Array<number>> = decodeCostModels(context.costModels)
         yield* Effect.logDebug(
           `[Scalus UPLC] Cost models - V1: ${costModels[0].length}, V2: ${costModels[1].length}, V3: ${costModels[2].length} costs`
         )
