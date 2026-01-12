@@ -45,5 +45,41 @@
   },
   "devDependencies": {
     "typescript": "^5.9.2"
+  },
+  "keywords": [
+    "cardano",
+    "blockchain",
+    "scalus",
+    "uplc",
+    "evaluator",
+    "typescript",
+    "effect"
+  ],
+  "homepage": "https://github.com/IntersectMBO/evolution-sdk",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/IntersectMBO/evolution-sdk.git",
+    "directory": "packages/scalus-uplc"
+  },
+  "bugs": {
+    "url": "https://github.com/IntersectMBO/evolution-sdk/issues"
+  },
+  "license": "MIT",
+  "publishConfig": {
+    "access": "public",
+    "provenance": true,
+    "exports": {
+      ".": {
+        "node": {
+          "types": "./dist/index.node.d.ts",
+          "default": "./dist/index.node.js"
+        },
+        "default": {
+          "types": "./dist/index.node.d.ts",
+          "default": "./dist/index.node.js"
+        }
+      },
+      "./package.json": "./package.json"
+    }
   }
 }
