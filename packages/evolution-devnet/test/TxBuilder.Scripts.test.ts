@@ -179,7 +179,8 @@ describe("TxBuilder Script Handling", () => {
     const signBuilder = await builder.build({
       changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
       availableUtxos: [fundingUtxo],
-      protocolParameters: PROTOCOL_PARAMS
+      protocolParameters: PROTOCOL_PARAMS,
+      passAdditionalUtxos: true // Required for synthetic UTxOs not on chain
     })
 
     const tx = await signBuilder.toTransaction()
@@ -388,7 +389,8 @@ describe("TxBuilder Script Handling", () => {
     const signBuilder = await builder.build({
       changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
       availableUtxos: [multiAssetUtxo],
-      protocolParameters: PROTOCOL_PARAMS
+      protocolParameters: PROTOCOL_PARAMS,
+      passAdditionalUtxos: true // Required for synthetic UTxOs not on chain
     })
 
     const tx = await signBuilder.toTransaction()
@@ -600,7 +602,8 @@ describe("TxBuilder Script Handling", () => {
     const signBuilder = await builder.build({
       changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
       availableUtxos: [utxoWithRefScript, utxoWithoutRefScript],
-      protocolParameters: PROTOCOL_PARAMS
+      protocolParameters: PROTOCOL_PARAMS,
+      passAdditionalUtxos: true // Required for synthetic UTxOs not on chain
     })
 
     const tx = await signBuilder.toTransaction()
@@ -674,7 +677,8 @@ describe("TxBuilder Script Handling", () => {
     const signBuilder = await builder.build({
       changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
       availableUtxos: [tightFundingUtxo, collateralUtxo],
-      protocolParameters: PROTOCOL_PARAMS
+      protocolParameters: PROTOCOL_PARAMS,
+      passAdditionalUtxos: true // Required for synthetic UTxOs not on chain
     })
 
     const tx = await signBuilder.toTransaction()
@@ -755,7 +759,8 @@ describe("TxBuilder Script Handling", () => {
     const signBuilder = await builder.build({
       changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
       availableUtxos: [collateralUtxo],
-      protocolParameters: PROTOCOL_PARAMS
+      protocolParameters: PROTOCOL_PARAMS,
+      passAdditionalUtxos: true // Required for synthetic UTxOs not on chain
     })
 
     const tx = await signBuilder.toTransaction()
@@ -816,7 +821,8 @@ describe("TxBuilder Script Handling", () => {
     const signBuilder = await builder.build({
       changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
       availableUtxos: [],
-      protocolParameters: PROTOCOL_PARAMS
+      protocolParameters: PROTOCOL_PARAMS,
+      passAdditionalUtxos: true // Required for synthetic UTxOs not on chain
     })
 
     const tx = await signBuilder.toTransaction()
@@ -863,7 +869,8 @@ describe("TxBuilder Script Handling", () => {
     const signBuilder = await builder.build({
       changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
       availableUtxos: [],
-      protocolParameters: PROTOCOL_PARAMS
+      protocolParameters: PROTOCOL_PARAMS,
+      passAdditionalUtxos: true // Required for synthetic UTxOs not on chain
     })
 
     const tx = await signBuilder.toTransaction()
@@ -908,7 +915,8 @@ describe("TxBuilder Script Handling", () => {
     const signBuilder = await builder.build({
       changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
       availableUtxos: [],
-      protocolParameters: PROTOCOL_PARAMS
+      protocolParameters: PROTOCOL_PARAMS,
+      passAdditionalUtxos: true // Required for synthetic UTxOs not on chain
     })
 
     const tx = await signBuilder.toTransaction()
@@ -998,7 +1006,8 @@ describe("TxBuilder Script Handling", () => {
     const signBuilder = await builder.build({
       changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
       availableUtxos: [],
-      protocolParameters: PROTOCOL_PARAMS
+      protocolParameters: PROTOCOL_PARAMS,
+      passAdditionalUtxos: true // Required for synthetic UTxOs not on chain
     })
 
     const tx = await signBuilder.toTransaction()
@@ -1040,7 +1049,8 @@ describe("TxBuilder Script Handling", () => {
     const signBuilder = await builder.build({
       changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
       availableUtxos: [],
-      protocolParameters: PROTOCOL_PARAMS
+      protocolParameters: PROTOCOL_PARAMS,
+      passAdditionalUtxos: true // Required for synthetic UTxOs not on chain
     })
 
     const tx = await signBuilder.toTransaction()
@@ -1120,7 +1130,8 @@ describe("TxBuilder Script Handling", () => {
     const signBuilder = await builder.build({
       changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
       availableUtxos: [collateralUtxo1, collateralUtxo2, collateralUtxo3, collateralUtxo4],
-      protocolParameters: PROTOCOL_PARAMS
+      protocolParameters: PROTOCOL_PARAMS,
+      passAdditionalUtxos: true // Required for synthetic UTxOs not on chain
     })
 
     const tx = await signBuilder.toTransaction()
@@ -1195,7 +1206,8 @@ describe("TxBuilder Script Handling", () => {
     const signBuilder = await builder.build({
       changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
       availableUtxos: [collateralUtxo1, collateralUtxo2, collateralUtxo3],
-      protocolParameters: PROTOCOL_PARAMS
+      protocolParameters: PROTOCOL_PARAMS,
+      passAdditionalUtxos: true // Required for synthetic UTxOs not on chain
     })
 
     const tx = await signBuilder.toTransaction()

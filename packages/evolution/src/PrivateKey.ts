@@ -93,6 +93,8 @@ export const FromBech32 = Schema.transformOrFail(Schema.String, Schema.typeSchem
   decode: (fromA, _, ast) =>
     E.gen(function* () {
       const { prefix, words } = yield* ParseResult.try({
+        // Note: `as any` needed because bech32.decode expects template literal type `${Prefix}1${string}`
+        // but Schema provides plain string. Consider using decodeToBytes which accepts string.
         try: () => bech32.decode(fromA as any, 1023),
         catch: (error) => new ParseResult.Type(ast, fromA, `Failed to decode bech32 string: ${(error as Error).message}`)
       })

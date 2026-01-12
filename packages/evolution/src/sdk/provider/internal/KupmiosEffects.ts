@@ -19,7 +19,6 @@ import type * as CoreScript from "../../../Script.js"
 import * as Transaction from "../../../Transaction.js"
 import * as TransactionHash from "../../../TransactionHash.js"
 import type * as TransactionInput from "../../../TransactionInput.js"
-import * as UPLC from "../../../uplc/UPLC.js"
 import * as CoreUTxO from "../../../UTxO.js"
 import type { EvalRedeemer } from "../../EvalRedeemer.js"
 import * as Provider from "../Provider.js"
@@ -115,26 +114,25 @@ const getScriptEffect =
           Effect.retry(Schedule.compose(Schedule.exponential(50), Schedule.recurs(5))),
           Effect.timeout(5_000),
           Effect.map(({ language, script }): CoreScript.Script => {
-            // Convert script hex to bytes
-            const rawScriptBytes = Bytes.fromHex(script)
+            // Convert script hex to bytes - Kupo returns scripts already properly encoded
+            const scriptBytes = Bytes.fromHex(script)
             
             // Create the proper Script type based on language
             switch (language) {
               case "native": {
                 // Parse the native script from CBOR
-                return NativeScripts.fromCBORBytes(rawScriptBytes)
+                return NativeScripts.fromCBORBytes(scriptBytes)
               }
               case "plutus:v1": {
-                const doubleCborHex = UPLC.applyDoubleCborEncoding(script)
-                return new PlutusV1.PlutusV1({ bytes: Bytes.fromHex(doubleCborHex) })
+                // Kupo returns scripts in single CBOR-encoded format (59xxxx...)
+                // which is the correct format for PlutusV1/V2/V3 bytes field
+                return new PlutusV1.PlutusV1({ bytes: scriptBytes })
               }
               case "plutus:v2": {
-                const doubleCborHex = UPLC.applyDoubleCborEncoding(script)
-                return new PlutusV2.PlutusV2({ bytes: Bytes.fromHex(doubleCborHex) })
+                return new PlutusV2.PlutusV2({ bytes: scriptBytes })
               }
               case "plutus:v3": {
-                const doubleCborHex = UPLC.applyDoubleCborEncoding(script)
-                return new PlutusV3.PlutusV3({ bytes: Bytes.fromHex(doubleCborHex) })
+                return new PlutusV3.PlutusV3({ bytes: scriptBytes })
               }
               default:
                 throw new Error(`Unknown script language: ${language}`)
@@ -170,7 +168,7 @@ const kupmiosUtxosToUtxos =
           )
         )
       },
-      { concurrency: "unbounded" }
+      { concurrency: 10 }
     )
   }
 
@@ -190,7 +188,9 @@ export const getProtocolParametersEffect = Effect.fn("getProtocolParameters")(fu
   const { result } = yield* pipe(
     HttpUtils.postJson(ogmiosUrl, data, schema, headers?.ogmiosHeader),
     Effect.timeout(TIMEOUT),
-    Effect.catchAll((cause) => new Provider.ProviderError({ cause, message: "Failed to get protocol parameters" })),
+    Effect.catchAll((cause) =>
+      new Provider.ProviderError({ cause, message: "Failed to get protocol parameters" })
+    ),
     Effect.provide(FetchHttpClient.layer)
   )
   return toProtocolParameters(result)

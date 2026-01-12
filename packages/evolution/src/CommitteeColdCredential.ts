@@ -122,6 +122,8 @@ export const FromBech32 = Schema.transformOrFail(Schema.String, Schema.typeSchem
     Effect.gen(function* () {
       const result = yield* Effect.try({
         try: () => {
+          // Note: `as any` needed because bech32.decode expects template literal type `${Prefix}1${string}`
+          // but Schema provides plain string. Consider using decodeToBytes which accepts string.
           const decoded = bech32.decode(fromA as any, false)
           if (decoded.prefix !== "cc_cold") {
             throw new Error(`Invalid prefix: expected "cc_cold", got "${decoded.prefix}"`)

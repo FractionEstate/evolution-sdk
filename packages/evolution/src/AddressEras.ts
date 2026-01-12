@@ -176,6 +176,8 @@ export const FromBech32 = Schema.transformOrFail(Schema.String, Schema.typeSchem
     Eff.gen(function* () {
       const result = yield* Eff.try({
         try: () => {
+          // Note: `as any` needed because bech32.decode expects template literal type `${Prefix}1${string}`
+          // but Schema provides plain string. Consider using decodeToBytes which accepts string.
           const decoded = bech32.decode(fromA as any, false)
           const bytes = bech32.fromWords(decoded.words)
           return new Uint8Array(bytes)

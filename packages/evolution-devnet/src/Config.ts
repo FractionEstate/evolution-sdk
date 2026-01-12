@@ -720,7 +720,7 @@ export const DEFAULT_KUPO_CONFIG: Required<KupoConfig> = {
  */
 export const DEFAULT_OGMIOS_CONFIG: Required<OgmiosConfig> = {
   enabled: true,
-  image: "cardanosolutions/ogmios:v6.12.0",
+  image: "cardanosolutions/ogmios:v6.14.0",
   port: 1337,
   logLevel: "info"
 } as const
@@ -734,7 +734,7 @@ export const DEFAULT_OGMIOS_CONFIG: Required<OgmiosConfig> = {
  */
 export const DEFAULT_DEVNET_CONFIG: Required<DevNetConfig> = {
   clusterName: "devnet",
-  image: "ghcr.io/intersectmbo/cardano-node:10.4.1",
+  image: "ghcr.io/intersectmbo/cardano-node:10.5.1",
   ports: {
     node: 4001,
     submit: 8090

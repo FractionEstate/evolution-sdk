@@ -497,16 +497,17 @@ export const executeEvaluation = (): Effect.Effect<
     }
 
     // Step 7: Call evaluator
-    // Pass the selected UTxOs AND reference inputs so Ogmios can resolve script hashes
-    // Reference inputs are needed when scripts reference on-chain validators or datums
+    // Always pass additionalUtxos - provider-based evaluators ignore them by default
+    // (they resolve UTxOs from chain). Custom evaluators (Aiken, Scalus) use them.
+    // Use passAdditionalUtxos: true in BuildOptions to override for edge cases.
     const additionalUtxos = [
       ...Array.from(updatedState.selectedUtxos.values()),
       ...updatedState.referenceInputs
     ]
-    
+
     const evalResults = yield* evaluator.evaluate(
       transaction,
-      additionalUtxos, // UTxOs being spent + reference inputs (needed to resolve script hashes and datums)
+      additionalUtxos,
       evaluationContext
     ).pipe(
       Effect.mapError(

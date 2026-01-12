@@ -3,18 +3,24 @@
  * Internal module implementing all provider operations using Effect pattern
  */
 
+import { HttpClientError } from "@effect/platform"
 import { Effect, Schedule, Schema } from "effect"
 
 import * as CoreAddress from "../../../Address.js"
 import * as Bytes from "../../../Bytes.js"
 import type * as Credential from "../../../Credential.js"
 import * as PlutusData from "../../../Data.js"
-import type * as DatumOption from "../../../DatumOption.js"
+import * as DatumOption from "../../../DatumOption.js"
+import * as PlutusV1 from "../../../PlutusV1.js"
+import * as PlutusV2 from "../../../PlutusV2.js"
+import * as PlutusV3 from "../../../PlutusV3.js"
 import type * as RewardAddress from "../../../RewardAddress.js"
+import type * as Script from "../../../Script.js"
 import * as Transaction from "../../../Transaction.js"
 import * as TransactionHash from "../../../TransactionHash.js"
 import type * as TransactionInput from "../../../TransactionInput.js"
-import type * as CoreUTxO from "../../../UTxO.js"
+import * as CoreUTxO from "../../../UTxO.js"
+import type * as Provider from "../Provider.js"
 import { ProviderError } from "../Provider.js"
 import * as Blockfrost from "./Blockfrost.js"
 import * as HttpUtils from "./HttpUtils.js"
@@ -52,6 +58,16 @@ const wrapError = (operation: string) => (error: unknown) =>
   })
 
 /**
+ * Check if an error is a 404 Not Found response
+ */
+const is404Error = (error: unknown): boolean => {
+  if (error instanceof HttpClientError.ResponseError) {
+    return error.response.status === 404
+  }
+  return false
+}
+
+/**
  * Convert address or credential to appropriate Blockfrost endpoint path
  */
 const getAddressPath = (addressOrCredential: CoreAddress.Address | Credential.Credential): string => {
@@ -62,6 +78,99 @@ const getAddressPath = (addressOrCredential: CoreAddress.Address | Credential.Cr
   // For Credential, convert to string representation
   return addressOrCredential.toString()
 }
+
+/**
+ * Blockfrost script info response schema
+ */
+const BlockfrostScriptInfo = Schema.Struct({
+  script_hash: Schema.String,
+  type: Schema.String,
+  serialised_size: Schema.optional(Schema.Number)
+})
+
+/**
+ * Blockfrost script CBOR response schema
+ */
+const BlockfrostScriptCbor = Schema.Struct({
+  cbor: Schema.String
+})
+
+/**
+ * Fetch script by hash and return as Script type
+ */
+const getScriptByHash = (baseUrl: string, projectId?: string) =>
+  (scriptHash: string): Effect.Effect<Script.Script, ProviderError> => {
+    // First get script info to determine type
+    return withRateLimit(
+      HttpUtils.get(
+        `${baseUrl}/scripts/${scriptHash}`,
+        BlockfrostScriptInfo,
+        createHeaders(projectId)
+      )
+    ).pipe(
+      Effect.mapError(wrapError("getScriptByHash")),
+      Effect.flatMap((info) => {
+        // For native scripts, we could return NativeScript but for now focus on Plutus
+        if (info.type === "timelock" || info.type === "native") {
+          return Effect.fail(new ProviderError({
+            message: `Native scripts not yet supported: ${scriptHash}`,
+            cause: "Native script"
+          }))
+        }
+        // Fetch CBOR for Plutus scripts
+        return withRateLimit(
+          HttpUtils.get(
+            `${baseUrl}/scripts/${scriptHash}/cbor`,
+            BlockfrostScriptCbor,
+            createHeaders(projectId)
+          )
+        ).pipe(
+          Effect.mapError(wrapError("getScriptByHash")),
+          Effect.map((cbor) => {
+            const scriptBytes = Bytes.fromHex(cbor.cbor)
+            switch (info.type) {
+              case "plutusV1":
+                return new PlutusV1.PlutusV1({ bytes: scriptBytes })
+              case "plutusV2":
+                return new PlutusV2.PlutusV2({ bytes: scriptBytes })
+              case "plutusV3":
+                return new PlutusV3.PlutusV3({ bytes: scriptBytes })
+              default:
+                throw new Error(`Unknown script type: ${info.type}`)
+            }
+          })
+        )
+      })
+    )
+  }
+
+/**
+ * Blockfrost datum CBOR response schema
+ */
+const BlockfrostDatumCbor = Schema.Struct({
+  cbor: Schema.String
+})
+
+/**
+ * Fetch datum by hash and return as DatumOption.
+ * Since we've resolved the actual datum data, we return InlineDatum.
+ */
+const getDatumByHash = (baseUrl: string, projectId?: string) =>
+  (datumHash: string): Effect.Effect<DatumOption.DatumOption, ProviderError> => {
+    return withRateLimit(
+      HttpUtils.get(
+        `${baseUrl}/scripts/datum/${datumHash}/cbor`,
+        BlockfrostDatumCbor,
+        createHeaders(projectId)
+      )
+    ).pipe(
+      Effect.map((datum) => {
+        const data = PlutusData.fromCBORHex(datum.cbor)
+        return new DatumOption.InlineDatum({ data })
+      }),
+      Effect.mapError(wrapError("getDatumByHash"))
+    )
+  }
 
 // ============================================================================
 // Blockfrost Effect Functions (Curry Pattern)
@@ -84,75 +193,287 @@ export const getProtocolParameters = (baseUrl: string, projectId?: string) =>
   )
 
 /**
- * Get UTxOs for an address or credential
+ * Get UTxOs for an address or credential with pagination support
+ * Fetches reference scripts and resolves datum hashes for complete UTxO data
  * Returns: (baseUrl, projectId?) => (addressOrCredential) => Effect<UTxO[], ProviderError>
  */
 export const getUtxos = (baseUrl: string, projectId?: string) => 
   (addressOrCredential: CoreAddress.Address | Credential.Credential) => {
     const addressPath = getAddressPath(addressOrCredential)
+    const fetchScript = getScriptByHash(baseUrl, projectId)
+    const fetchDatum = getDatumByHash(baseUrl, projectId)
     
-    return withRateLimit(
-      HttpUtils.get(
-        `${baseUrl}/addresses/${addressPath}/utxos`,
-        Schema.Array(Blockfrost.BlockfrostUTxO),
-        createHeaders(projectId)
-      ).pipe(
-        Effect.map((utxos) => 
-          utxos.map((utxo) => Blockfrost.transformUTxO(utxo, addressPath))
-        ),
-        Effect.mapError(wrapError("getUtxos"))
+    // Fetch all pages of UTxOs
+    const fetchPage = (page: number): Effect.Effect<ReadonlyArray<Blockfrost.BlockfrostUTxO>, unknown> =>
+      withRateLimit(
+        HttpUtils.get(
+          `${baseUrl}/addresses/${addressPath}/utxos?page=${page}&count=100`,
+          Schema.Array(Blockfrost.BlockfrostUTxO),
+          createHeaders(projectId)
+        )
       )
+    
+    const fetchAllPages = Effect.gen(function* () {
+      const allUtxos: Array<Blockfrost.BlockfrostUTxO> = []
+      let page = 1
+      let hasMore = true
+      
+      while (hasMore) {
+        const pageResult = yield* fetchPage(page).pipe(
+          // Handle 404 as empty array (no UTxOs at address)
+          Effect.catchIf(is404Error, () => Effect.succeed([] as ReadonlyArray<Blockfrost.BlockfrostUTxO>))
+        )
+        
+        allUtxos.push(...pageResult)
+        
+        // If we got less than 100 results, we've reached the end
+        if (pageResult.length < 100) {
+          hasMore = false
+        } else {
+          page++
+        }
+      }
+      
+      return allUtxos
+    })
+    
+    // Transform UTxOs with full script and datum resolution
+    const transformWithResolution = (utxo: Blockfrost.BlockfrostUTxO) => {
+      const scriptEffect = utxo.reference_script_hash
+        ? fetchScript(utxo.reference_script_hash).pipe(
+            Effect.map((s) => s as Script.Script | undefined),
+            Effect.catchAll(() => Effect.succeed(undefined))
+          )
+        : Effect.succeed(undefined)
+      
+      const dataHash = utxo.data_hash
+      const datumEffect = utxo.inline_datum
+        ? Effect.succeed(
+            new DatumOption.InlineDatum({ 
+              data: PlutusData.fromCBORHex(utxo.inline_datum) 
+            }) as DatumOption.DatumOption | undefined
+          )
+        : dataHash
+          ? fetchDatum(dataHash).pipe(
+              Effect.map((d) => d as DatumOption.DatumOption | undefined),
+              Effect.catchAll(() => Effect.succeed(
+                new DatumOption.DatumHash({ hash: Bytes.fromHex(dataHash) }) as DatumOption.DatumOption | undefined
+              ))
+            )
+          : Effect.succeed(undefined)
+      
+      return Effect.all([scriptEffect, datumEffect]).pipe(
+        Effect.map(([scriptRef, datumOption]) => {
+          const assets = Blockfrost.transformAmounts(utxo.amount)
+          const address = CoreAddress.fromBech32(addressPath)
+          const transactionId = TransactionHash.fromHex(utxo.tx_hash)
+          
+          return new CoreUTxO.UTxO({
+            transactionId,
+            index: BigInt(utxo.output_index),
+            address,
+            assets,
+            scriptRef,
+            datumOption
+          })
+        })
+      )
+    }
+    
+    return fetchAllPages.pipe(
+      Effect.flatMap((utxos) => 
+        Effect.forEach(utxos, transformWithResolution, { concurrency: 10 })
+      ),
+      Effect.mapError(wrapError("getUtxos"))
     )
   }
 
 /**
- * Get UTxOs with a specific unit (asset)
+ * Get UTxOs with a specific unit (asset) with pagination support
+ * Fetches reference scripts and resolves datum hashes for complete UTxO data
  * Returns: (baseUrl, projectId?) => (addressOrCredential, unit) => Effect<UTxO[], ProviderError>
  */
 export const getUtxosWithUnit = (baseUrl: string, projectId?: string) =>
   (addressOrCredential: CoreAddress.Address | Credential.Credential, unit: string) => {
     const addressPath = getAddressPath(addressOrCredential)
+    const fetchScript = getScriptByHash(baseUrl, projectId)
+    const fetchDatum = getDatumByHash(baseUrl, projectId)
     
-    return withRateLimit(
-      HttpUtils.get(
-        `${baseUrl}/addresses/${addressPath}/utxos/${unit}`,
-        Schema.Array(Blockfrost.BlockfrostUTxO),
-        createHeaders(projectId)
-      ).pipe(
-        Effect.map((utxos) => 
-          utxos.map((utxo) => Blockfrost.transformUTxO(utxo, addressPath))
-        ),
-        Effect.mapError(wrapError("getUtxosWithUnit"))
+    // Fetch all pages of UTxOs
+    const fetchPage = (page: number): Effect.Effect<ReadonlyArray<Blockfrost.BlockfrostUTxO>, unknown> =>
+      withRateLimit(
+        HttpUtils.get(
+          `${baseUrl}/addresses/${addressPath}/utxos/${unit}?page=${page}&count=100`,
+          Schema.Array(Blockfrost.BlockfrostUTxO),
+          createHeaders(projectId)
+        )
       )
+    
+    const fetchAllPages = Effect.gen(function* () {
+      const allUtxos: Array<Blockfrost.BlockfrostUTxO> = []
+      let page = 1
+      let hasMore = true
+      
+      while (hasMore) {
+        const pageResult = yield* fetchPage(page).pipe(
+          // Handle 404 as empty array (no UTxOs with this unit at address)
+          Effect.catchIf(is404Error, () => Effect.succeed([] as ReadonlyArray<Blockfrost.BlockfrostUTxO>))
+        )
+        
+        allUtxos.push(...pageResult)
+        
+        // If we got less than 100 results, we've reached the end
+        if (pageResult.length < 100) {
+          hasMore = false
+        } else {
+          page++
+        }
+      }
+      
+      return allUtxos
+    })
+    
+    // Transform UTxOs with full script and datum resolution
+    const transformWithResolution = (utxo: Blockfrost.BlockfrostUTxO) => {
+      const scriptEffect = utxo.reference_script_hash
+        ? fetchScript(utxo.reference_script_hash).pipe(
+            Effect.map((s) => s as Script.Script | undefined),
+            Effect.catchAll(() => Effect.succeed(undefined))
+          )
+        : Effect.succeed(undefined)
+      
+      const dataHash = utxo.data_hash
+      const datumEffect = utxo.inline_datum
+        ? Effect.succeed(
+            new DatumOption.InlineDatum({ 
+              data: PlutusData.fromCBORHex(utxo.inline_datum) 
+            }) as DatumOption.DatumOption | undefined
+          )
+        : dataHash
+          ? fetchDatum(dataHash).pipe(
+              Effect.map((d) => d as DatumOption.DatumOption | undefined),
+              Effect.catchAll(() => Effect.succeed(
+                new DatumOption.DatumHash({ hash: Bytes.fromHex(dataHash) }) as DatumOption.DatumOption | undefined
+              ))
+            )
+          : Effect.succeed(undefined)
+      
+      return Effect.all([scriptEffect, datumEffect]).pipe(
+        Effect.map(([scriptRef, datumOption]) => {
+          const assets = Blockfrost.transformAmounts(utxo.amount)
+          const address = CoreAddress.fromBech32(addressPath)
+          const transactionId = TransactionHash.fromHex(utxo.tx_hash)
+          
+          return new CoreUTxO.UTxO({
+            transactionId,
+            index: BigInt(utxo.output_index),
+            address,
+            assets,
+            scriptRef,
+            datumOption
+          })
+        })
+      )
+    }
+    
+    return fetchAllPages.pipe(
+      Effect.flatMap((utxos) => 
+        Effect.forEach(utxos, transformWithResolution, { concurrency: 10 })
+      ),
+      Effect.mapError(wrapError("getUtxosWithUnit"))
     )
   }
 
 /**
  * Get UTxO by unit (first occurrence)
+ * Fetches reference script and resolves datum for complete UTxO data
  * Returns: (baseUrl, projectId?) => (unit) => Effect<UTxO, ProviderError>
  */
 export const getUtxoByUnit = (baseUrl: string, projectId?: string) =>
-  (unit: string) =>
-    withRateLimit(
+  (unit: string) => {
+    const fetchScript = getScriptByHash(baseUrl, projectId)
+    const fetchDatum = getDatumByHash(baseUrl, projectId)
+    
+    // First, get addresses holding this unit
+    return withRateLimit(
       HttpUtils.get(
         `${baseUrl}/assets/${unit}/addresses`,
-        Schema.Array(Blockfrost.BlockfrostUTxO),
+        Schema.Array(Blockfrost.BlockfrostAssetAddress),
         createHeaders(projectId)
-      ).pipe(
-        Effect.flatMap((utxos) => {
-          if (utxos.length === 0) {
-            return Effect.fail(new ProviderError({
-              message: `No UTxO found for unit ${unit}`,
-              cause: "No UTxO found"
-            }))
-          }
-          // Use the first address for the UTxO transformation
-          const firstUtxo = utxos[0]
-          return Effect.succeed(Blockfrost.transformUTxO(firstUtxo, "unknown"))
-        }),
-        Effect.mapError(wrapError("getUtxoByUnit"))
       )
+    ).pipe(
+      Effect.flatMap((addresses) => {
+        if (addresses.length === 0) {
+          return Effect.fail(new ProviderError({
+            message: `No address found holding unit ${unit}`,
+            cause: "No UTxO found"
+          }))
+        }
+        // Get UTxOs from the first address holding the unit
+        const address = addresses[0].address
+        return withRateLimit(
+          HttpUtils.get(
+            `${baseUrl}/addresses/${address}/utxos/${unit}`,
+            Schema.Array(Blockfrost.BlockfrostUTxO),
+            createHeaders(projectId)
+          )
+        ).pipe(
+          Effect.flatMap((utxos) => {
+            if (utxos.length === 0) {
+              return Effect.fail(new ProviderError({
+                message: `No UTxO found for unit ${unit}`,
+                cause: "No UTxO found"
+              }))
+            }
+            
+            const utxo = utxos[0]
+            
+            // Fetch script and datum if present
+            const scriptEffect = utxo.reference_script_hash
+              ? fetchScript(utxo.reference_script_hash).pipe(
+                  Effect.map((s) => s as Script.Script | undefined),
+                  Effect.catchAll(() => Effect.succeed(undefined))
+                )
+              : Effect.succeed(undefined)
+            
+            const dataHash = utxo.data_hash
+            const datumEffect = utxo.inline_datum
+              ? Effect.succeed(
+                  new DatumOption.InlineDatum({ 
+                    data: PlutusData.fromCBORHex(utxo.inline_datum) 
+                  }) as DatumOption.DatumOption | undefined
+                )
+              : dataHash
+                ? fetchDatum(dataHash).pipe(
+                    Effect.map((d) => d as DatumOption.DatumOption | undefined),
+                    Effect.catchAll(() => Effect.succeed(
+                      new DatumOption.DatumHash({ hash: Bytes.fromHex(dataHash) }) as DatumOption.DatumOption | undefined
+                    ))
+                  )
+                : Effect.succeed(undefined)
+            
+            return Effect.all([scriptEffect, datumEffect]).pipe(
+              Effect.map(([scriptRef, datumOption]) => {
+                const assets = Blockfrost.transformAmounts(utxo.amount)
+                const coreAddress = CoreAddress.fromBech32(address)
+                const transactionId = TransactionHash.fromHex(utxo.tx_hash)
+                
+                return new CoreUTxO.UTxO({
+                  transactionId,
+                  index: BigInt(utxo.output_index),
+                  address: coreAddress,
+                  assets,
+                  scriptRef,
+                  datumOption
+                })
+              })
+            )
+          })
+        )
+      }),
+      Effect.mapError(wrapError("getUtxoByUnit"))
     )
+  }
 
 /**
  * Get UTxOs by transaction inputs (output references)
@@ -160,21 +481,71 @@ export const getUtxoByUnit = (baseUrl: string, projectId?: string) =>
  */
 export const getUtxosByOutRef = (baseUrl: string, projectId?: string) =>
   (inputs: ReadonlyArray<TransactionInput.TransactionInput>) => {
+    const fetchScript = getScriptByHash(baseUrl, projectId)
+    const fetchDatum = getDatumByHash(baseUrl, projectId)
+    
     // Blockfrost doesn't have a bulk endpoint, so we need to make individual calls
     const effects = inputs.map((input) =>
       withRateLimit(
         HttpUtils.get(
           `${baseUrl}/txs/${TransactionHash.toHex(input.transactionId)}/utxos`,
-          Schema.Array(Blockfrost.BlockfrostUTxO),
+          Blockfrost.BlockfrostTxUtxos,
           createHeaders(projectId)
-        ).pipe(
-          Effect.map((utxos) => 
-            utxos
-              .filter((utxo) => utxo.output_index === Number(input.index))
-              .map((utxo) => Blockfrost.transformUTxO(utxo, "unknown"))
-          ),
-          Effect.mapError(wrapError("getUtxosByOutRef"))
         )
+      ).pipe(
+        Effect.flatMap((txUtxos) => {
+          const matchingOutputs = txUtxos.outputs.filter(
+            (output) => output.output_index === Number(input.index)
+          )
+          
+          // For each output, fetch script and datum if needed
+          return Effect.forEach(
+            matchingOutputs,
+            (output) => {
+              const scriptEffect = output.reference_script_hash
+                ? fetchScript(output.reference_script_hash).pipe(
+                    Effect.map((s) => s as Script.Script | undefined),
+                    Effect.catchAll(() => Effect.succeed(undefined))
+                  )
+                : Effect.succeed(undefined)
+              
+              const dataHash = output.data_hash
+              const datumEffect = output.inline_datum
+                ? Effect.succeed(
+                    new DatumOption.InlineDatum({ 
+                      data: PlutusData.fromCBORHex(output.inline_datum) 
+                    }) as DatumOption.DatumOption | undefined
+                  )
+                : dataHash
+                  ? fetchDatum(dataHash).pipe(
+                      Effect.map((d) => d as DatumOption.DatumOption | undefined),
+                      Effect.catchAll(() => Effect.succeed(
+                        new DatumOption.DatumHash({ hash: Bytes.fromHex(dataHash) }) as DatumOption.DatumOption | undefined
+                      ))
+                    )
+                  : Effect.succeed(undefined)
+              
+              return Effect.all([scriptEffect, datumEffect]).pipe(
+                Effect.map(([scriptRef, datumOption]) => {
+                  const assets = Blockfrost.transformAmounts(output.amount)
+                  const address = CoreAddress.fromBech32(output.address)
+                  const transactionId = TransactionHash.fromHex(txUtxos.hash)
+                  
+                  return new CoreUTxO.UTxO({
+                    transactionId,
+                    index: BigInt(output.output_index),
+                    address,
+                    assets,
+                    scriptRef,
+                    datumOption
+                  })
+                })
+              )
+            },
+            { concurrency: 10 }
+          )
+        }),
+        Effect.mapError(wrapError("getUtxosByOutRef"))
       )
     )
     
@@ -189,18 +560,20 @@ export const getUtxosByOutRef = (baseUrl: string, projectId?: string) =>
  */
 export const getDelegation = (baseUrl: string, projectId?: string) =>
   (rewardAddress: RewardAddress.RewardAddress) => {
-    // Assume RewardAddress has a string representation
-    const rewardAddressStr = String(rewardAddress)
-    
+    // RewardAddress is a branded string, use it directly
     return withRateLimit(
       HttpUtils.get(
-        `${baseUrl}/accounts/${rewardAddressStr}`,
+        `${baseUrl}/accounts/${rewardAddress}`,
         Blockfrost.BlockfrostDelegation,
         createHeaders(projectId)
-      ).pipe(
-        Effect.map(Blockfrost.transformDelegation),
-        Effect.mapError(wrapError("getDelegation"))
       )
+    ).pipe(
+      Effect.map(Blockfrost.transformDelegation),
+      // Handle 404 - account not registered/never staked
+      Effect.catchIf(is404Error, () => 
+        Effect.succeed({ poolId: null, rewards: 0n } as Provider.Delegation)
+      ),
+      Effect.mapError(wrapError("getDelegation"))
     )
   }
 
@@ -297,71 +670,50 @@ export const evaluateTx = (baseUrl: string, projectId?: string) =>
     // Convert Transaction to CBOR hex for evaluation
     const txCborHex = Transaction.toCBORHex(tx)
     
-    // If additional UTxOs provided, use the /utils/txs/evaluate/utxos endpoint with JSON payload
-    if (additionalUTxOs && additionalUTxOs.length > 0) {
-      // Create headers with application/json content-type
-      const headers = {
-        ...(projectId ? { "project_id": projectId } : {}),
-        "Content-Type": "application/json"
-      }
-      
-      // Use Ogmios format for additional UTxOs
-      const additionalUtxoSet = Ogmios.toOgmiosUTxOs(additionalUTxOs).map(utxo => {
-        const txIn = {
-          txId: utxo.transaction.id,
-          index: utxo.index
-        }
-        
-        const txOut: Record<string, unknown> = {
-          address: utxo.address,
-          value: utxo.value
-        }
-        
-        // Add datum if present
-        if (utxo.datum) {
-          txOut.datum = utxo.datum
-        } else if (utxo.datumHash) {
-          txOut.datumHash = utxo.datumHash
-        }
-        
-        return [txIn, txOut]
-      })
-      
-      const payload = {
-        cbor: txCborHex, // Transaction CBOR (hex)
-        additionalUtxoSet
-      }
-      
-      return withRateLimit(
-        HttpUtils.postJson(
-          `${baseUrl}/utils/txs/evaluate/utxos`,
-          payload,
-          Blockfrost.JsonwspOgmiosEvaluationResponse,
-          headers
-        ).pipe(
-          Effect.map(Blockfrost.transformJsonwspOgmiosEvaluationResult),
-          Effect.mapError(wrapError("evaluateTx"))
-        )
-      )
-    }
-    
-    // Otherwise use the simpler /utils/txs/evaluate endpoint with CBOR body
-    const txBytes = Transaction.toCBORBytes(tx)
-    
-    // Create headers with application/cbor content-type
+    // Always use the /utils/txs/evaluate/utxos JSON endpoint as it's more reliable
+    // The /utils/txs/evaluate CBOR endpoint has intermittent 500 errors
     const headers = {
       ...(projectId ? { "project_id": projectId } : {}),
-      "Content-Type": "application/cbor"
+      "Content-Type": "application/json"
+    }
+    
+    // Build additional UTxO set if provided
+    const additionalUtxoSet = additionalUTxOs && additionalUTxOs.length > 0
+      ? Ogmios.toOgmiosUTxOs(additionalUTxOs).map(utxo => {
+          const txIn = {
+            txId: utxo.transaction.id,
+            index: utxo.index
+          }
+          
+          const txOut: Record<string, unknown> = {
+            address: utxo.address,
+            value: utxo.value
+          }
+          
+          // Add datum if present
+          if (utxo.datum) {
+            txOut.datum = utxo.datum
+          } else if (utxo.datumHash) {
+            txOut.datumHash = utxo.datumHash
+          }
+          
+          return [txIn, txOut]
+        })
+      : []
+    
+    const payload = {
+      cbor: txCborHex,
+      additionalUtxoSet
     }
     
     return withRateLimit(
-      HttpUtils.postUint8Array(
-        `${baseUrl}/utils/txs/evaluate`,
-        txBytes,
-        Blockfrost.BlockfrostEvaluationResponse,
+      HttpUtils.postJson(
+        `${baseUrl}/utils/txs/evaluate/utxos`,
+        payload,
+        Blockfrost.JsonwspOgmiosEvaluationResponse,
         headers
       ).pipe(
-        Effect.map(Blockfrost.transformEvaluationResult),
+        Effect.map(Blockfrost.transformJsonwspOgmiosEvaluationResult),
         Effect.mapError(wrapError("evaluateTx"))
       )
     )

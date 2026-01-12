@@ -7,8 +7,9 @@ import type * as CoreAssets from "../../../Assets/index.js"
 import * as Bytes from "../../../Bytes.js"
 import * as PlutusData from "../../../Data.js"
 import type * as DatumOption from "../../../DatumOption.js"
+import * as NativeScripts from "../../../NativeScripts.js"
 import * as PolicyId from "../../../PolicyId.js"
-import * as CoreScript from "../../../Script.js"
+import type * as CoreScript from "../../../Script.js"
 import * as TransactionHash from "../../../TransactionHash.js"
 import type * as CoreUTxO from "../../../UTxO.js"
 
@@ -161,13 +162,16 @@ export const toOgmiosUTxOs = (utxos: Array<CoreUTxO.UTxO> | undefined): Array<Og
       // Script type directly tells us the language
       switch (script._tag) {
         case "NativeScript":
-          return { language: "native", cbor: CoreScript.toCBORHex(script) }
+          // For native scripts, encode the inner script structure
+          return { language: "native", cbor: NativeScripts.toCBORHex(script) }
         case "PlutusV1":
-          return { language: "plutus:v1", cbor: CoreScript.toCBORHex(script) }
+          // For Plutus scripts, send only the raw script bytes without CBOR envelope
+          // Ogmios v6 expects raw scripts without CBOR tags when using explicit JSON notation
+          return { language: "plutus:v1", cbor: Bytes.toHex(script.bytes) }
         case "PlutusV2":
-          return { language: "plutus:v2", cbor: CoreScript.toCBORHex(script) }
+          return { language: "plutus:v2", cbor: Bytes.toHex(script.bytes) }
         case "PlutusV3":
-          return { language: "plutus:v3", cbor: CoreScript.toCBORHex(script) }
+          return { language: "plutus:v3", cbor: Bytes.toHex(script.bytes) }
       }
     }
     return undefined

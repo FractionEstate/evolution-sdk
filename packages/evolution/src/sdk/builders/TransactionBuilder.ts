@@ -381,8 +381,14 @@ const resolveEvaluator = (config: TxBuilderConfig, options?: BuildOptions): Eval
         additionalUtxos: ReadonlyArray<CoreUTxO.UTxO> | undefined,
         _context: EvaluationContext
       ) => {
-        // Provider now accepts Transaction directly
-        return config.provider!.Effect.evaluateTx(tx, additionalUtxos as Array<CoreUTxO.UTxO> | undefined).pipe(
+        // Provider-based evaluators (Ogmios, Blockfrost) resolve UTxOs from chain.
+        // By default, don't pass additionalUtxos to avoid OverlappingAdditionalUtxo errors.
+        // Use passAdditionalUtxos: true for edge cases (e.g., UTxOs not yet on chain).
+        const utxosToPass = options?.passAdditionalUtxos
+          ? (additionalUtxos as Array<CoreUTxO.UTxO> | undefined)
+          : undefined
+
+        return config.provider!.Effect.evaluateTx(tx, utxosToPass).pipe(
           Effect.mapError((providerError) => {
             // Parse provider error into structured failures
             const failures = parseProviderError(providerError)
@@ -1029,6 +1035,37 @@ export interface BuildOptions {
    * @since 2.0.0
    */
   readonly evaluator?: Evaluator
+
+  /**
+   * Pass additional UTxOs to provider-based evaluators.
+   *
+   * By default, provider evaluators (Ogmios, Blockfrost) don't receive additionalUtxos
+   * because they can resolve UTxOs from the chain, and passing them causes
+   * "OverlappingAdditionalUtxo" errors.
+   *
+   * Set to `true` for edge cases where you need to evaluate with UTxOs that
+   * are not yet on chain (e.g., chained transactions, emulator scenarios).
+   *
+   * Note: This option has no effect on custom evaluators (Aiken, Scalus) which
+   * always receive additionalUtxos since they cannot resolve from chain.
+   *
+   * @default false
+   * @since 2.0.0
+   */
+  readonly passAdditionalUtxos?: boolean
+
+  /**
+   * Format for encoding redeemers in the script data hash.
+   *
+   * - `"array"` (DEFAULT): Conway-era format, redeemers encoded as array
+   * - `"map"`: Babbage-era format, redeemers encoded as map
+   *
+   * Use `"map"` for Babbage compatibility or debugging.
+   *
+   * @default "array"
+   * @since 2.0.0
+   */
+  readonly scriptDataFormat?: "array" | "map"
 
   /**
    * Custom slot configuration for script evaluation.

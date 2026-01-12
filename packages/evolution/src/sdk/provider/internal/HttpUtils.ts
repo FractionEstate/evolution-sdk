@@ -49,10 +49,11 @@ export const postJson = <A, I, R>(
   Effect.gen(function* () {
     let request = HttpClientRequest.post(url)
     request = yield* HttpClientRequest.bodyJson(request, body)
-    request = HttpClientRequest.setHeaders(request, {
+    const finalHeaders = {
       "Content-Type": "application/json",
       ...(headers || {})
-    })
+    }
+    request = HttpClientRequest.setHeaders(request, finalHeaders)
 
     const response = yield* HttpClient.execute(request)
     const filteredResponse = yield* filterStatusOk(response)

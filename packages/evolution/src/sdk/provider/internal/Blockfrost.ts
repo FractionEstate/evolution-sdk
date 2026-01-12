@@ -5,12 +5,9 @@
 
 import { Schema } from "effect"
 
-import * as CoreAddress from "../../../Address.js"
 import * as CoreAssets from "../../../Assets/index.js"
 import * as PoolKeyHash from "../../../PoolKeyHash.js"
 import * as Redeemer from "../../../Redeemer.js"
-import * as TransactionHash from "../../../TransactionHash.js"
-import * as CoreUTxO from "../../../UTxO.js"
 import type { EvalRedeemer } from "../../EvalRedeemer.js"
 import type * as Provider from "../Provider.js"
 
@@ -41,7 +38,10 @@ export const BlockfrostProtocolParameters = Schema.Struct({
   collateral_percent: Schema.optional(Schema.Number),
   max_collateral_inputs: Schema.optional(Schema.Number),
   coins_per_utxo_size: Schema.optional(Schema.String),
-  min_fee_ref_script_cost_per_byte: Schema.optional(Schema.Number)
+  min_fee_ref_script_cost_per_byte: Schema.optional(Schema.Number),
+  // Conway era governance parameters
+  drep_deposit: Schema.optional(Schema.String),
+  gov_action_deposit: Schema.optional(Schema.String)
 })
 
 export type BlockfrostProtocolParameters = Schema.Schema.Type<typeof BlockfrostProtocolParameters>
@@ -73,16 +73,62 @@ export const BlockfrostUTxO = Schema.Struct({
 export type BlockfrostUTxO = Schema.Schema.Type<typeof BlockfrostUTxO>
 
 /**
- * Blockfrost delegation response schema
+ * Blockfrost delegation/account response schema
+ * From /accounts/{stake_address} endpoint
  */
 export const BlockfrostDelegation = Schema.Struct({
+  stake_address: Schema.String,
   active: Schema.Boolean,
+  active_epoch: Schema.NullOr(Schema.Number),
   pool_id: Schema.NullOr(Schema.String),
-  live_stake: Schema.String,
-  active_stake: Schema.String
+  controlled_amount: Schema.String,
+  rewards_sum: Schema.String,
+  withdrawals_sum: Schema.String,
+  reserves_sum: Schema.String,
+  treasury_sum: Schema.String,
+  withdrawable_amount: Schema.String,
+  drep_id: Schema.NullOr(Schema.String)
 })
 
 export type BlockfrostDelegation = Schema.Schema.Type<typeof BlockfrostDelegation>
+
+/**
+ * Blockfrost asset address response schema (from /assets/{unit}/addresses endpoint)
+ */
+export const BlockfrostAssetAddress = Schema.Struct({
+  address: Schema.String,
+  quantity: Schema.String
+})
+
+export type BlockfrostAssetAddress = Schema.Schema.Type<typeof BlockfrostAssetAddress>
+
+/**
+ * Blockfrost transaction UTxO output schema (from /txs/{hash}/utxos endpoint)
+ * Different from regular UTxO - uses output_index instead of tx_index
+ */
+export const BlockfrostTxUtxoOutput = Schema.Struct({
+  address: Schema.String,
+  amount: Schema.Array(BlockfrostAmount),
+  output_index: Schema.Number,
+  data_hash: Schema.NullOr(Schema.String),
+  inline_datum: Schema.NullOr(Schema.String),
+  reference_script_hash: Schema.NullOr(Schema.String),
+  collateral: Schema.Boolean,
+  consumed_by_tx: Schema.NullOr(Schema.String)
+})
+
+export type BlockfrostTxUtxoOutput = Schema.Schema.Type<typeof BlockfrostTxUtxoOutput>
+
+/**
+ * Blockfrost transaction UTxOs response schema (from /txs/{hash}/utxos endpoint)
+ */
+export const BlockfrostTxUtxos = Schema.Struct({
+  hash: Schema.String,
+  inputs: Schema.Array(Schema.Unknown),
+  outputs: Schema.Array(BlockfrostTxUtxoOutput)
+})
+
+export type BlockfrostTxUtxos = Schema.Schema.Type<typeof BlockfrostTxUtxos>
 
 /**
  * Blockfrost transaction submit response schema
@@ -102,32 +148,9 @@ export const BlockfrostDatum = Schema.Struct({
 export type BlockfrostDatum = Schema.Schema.Type<typeof BlockfrostDatum>
 
 /**
- * Blockfrost transaction evaluation response schema
- */
-export const BlockfrostRedeemer = Schema.Struct({
-  tx_index: Schema.Number,
-  purpose: Schema.Literal("spend", "mint", "cert", "reward"),
-  unit_mem: Schema.String,
-  unit_steps: Schema.String,
-  fee: Schema.String
-})
-
-/**
- * Blockfrost evaluation response schema (array format)
- * Used by /utils/txs/evaluate endpoint (CBOR body, no additional UTxOs)
- */
-export const BlockfrostEvaluationResponse = Schema.Struct({
-  result: Schema.Struct({
-    EvaluationResult: Schema.Array(BlockfrostRedeemer)
-  })
-})
-
-export type BlockfrostEvaluationResponse = Schema.Schema.Type<typeof BlockfrostEvaluationResponse>
-
-/**
  * Schema for JSONWSP-wrapped Ogmios evaluation response
  * Used by /utils/txs/evaluate/utxos endpoint
- * Format: { type: "jsonwsp/response", result: { EvaluationResult: { "spend:0": { memory, steps } } } }
+ * Can contain either EvaluationResult (success) or EvaluationFailure (error)
  */
 export const JsonwspOgmiosEvaluationResponse = Schema.Struct({
   type: Schema.optional(Schema.String),
@@ -135,13 +158,14 @@ export const JsonwspOgmiosEvaluationResponse = Schema.Struct({
   servicename: Schema.optional(Schema.String),
   methodname: Schema.optional(Schema.String),
   result: Schema.Struct({
-    EvaluationResult: Schema.Record({
+    EvaluationResult: Schema.optional(Schema.Record({
       key: Schema.String, // "spend:0", "mint:1", etc.
       value: Schema.Struct({
         memory: Schema.Number,
         steps: Schema.Number
       })
-    })
+    })),
+    EvaluationFailure: Schema.optional(Schema.Unknown)
   }),
   reflection: Schema.optional(Schema.Unknown)
 })
@@ -173,8 +197,8 @@ export const transformProtocolParameters = (
     collateralPercentage: blockfrostParams.collateral_percent || 0,
     maxCollateralInputs: blockfrostParams.max_collateral_inputs || 0,
     minFeeRefScriptCostPerByte: blockfrostParams.min_fee_ref_script_cost_per_byte || 0,
-    drepDeposit: 0n, // Not provided by this endpoint
-    govActionDeposit: 0n, // Not provided by this endpoint
+    drepDeposit: blockfrostParams.drep_deposit ? BigInt(blockfrostParams.drep_deposit) : 0n,
+    govActionDeposit: blockfrostParams.gov_action_deposit ? BigInt(blockfrostParams.gov_action_deposit) : 0n,
     costModels: {
       PlutusV1: (blockfrostParams.cost_models?.PlutusV1 as Record<string, number>) || {},
       PlutusV2: (blockfrostParams.cost_models?.PlutusV2 as Record<string, number>) || {},
@@ -213,60 +237,15 @@ export const transformAmounts = (amounts: ReadonlyArray<BlockfrostAmount>): Core
 }
 
 /**
- * Transform Blockfrost UTxO to Core UTxO
- */
-export const transformUTxO = (blockfrostUtxo: BlockfrostUTxO, addressStr: string): CoreUTxO.UTxO => {
-  const assets = transformAmounts(blockfrostUtxo.amount)
-  const address = CoreAddress.fromBech32(addressStr)
-  const transactionId = TransactionHash.fromHex(blockfrostUtxo.tx_hash)
-
-  // TODO: Handle datum and script ref when Core types support them
-  // let datumOption: Datum.Datum | undefined = undefined
-  // if (blockfrostUtxo.inline_datum) {
-  //   datumOption = { type: "inlineDatum", inline: blockfrostUtxo.inline_datum }
-  // } else if (blockfrostUtxo.data_hash) {
-  //   datumOption = { type: "datumHash", hash: blockfrostUtxo.data_hash }
-  // }
-
-  return new CoreUTxO.UTxO({
-    transactionId,
-    index: BigInt(blockfrostUtxo.output_index),
-    address,
-    assets
-  })
-}
-
-/**
  * Transform Blockfrost delegation to delegation info
  */
 export const transformDelegation = (blockfrostDelegation: BlockfrostDelegation): Provider.Delegation => {
-  if (!blockfrostDelegation.active || !blockfrostDelegation.pool_id) {
-    return { poolId: null, rewards: 0n }
+  if (!blockfrostDelegation.pool_id) {
+    return { poolId: null, rewards: BigInt(blockfrostDelegation.withdrawable_amount) }
   }
 
-  const poolId = Schema.decodeSync(PoolKeyHash.FromHex)(blockfrostDelegation.pool_id)
-  return { poolId, rewards: BigInt(blockfrostDelegation.active_stake) }
-}
-
-/**
- * Transform Blockfrost evaluation response to Evolution SDK format
- */
-export const transformEvaluationResult = (
-  blockfrostResponse: BlockfrostEvaluationResponse
-): Array<EvalRedeemer> => {
-  return blockfrostResponse.result.EvaluationResult.map((redeemer: Schema.Schema.Type<typeof BlockfrostRedeemer>) => {
-    // Blockfrost uses "cert" and "reward" which match Core terminology
-    const tag: Redeemer.RedeemerTag = redeemer.purpose as Redeemer.RedeemerTag
-    
-    return {
-      ex_units: new Redeemer.ExUnits({
-        mem: BigInt(redeemer.unit_mem),
-        steps: BigInt(redeemer.unit_steps)
-      }),
-      redeemer_index: redeemer.tx_index,
-      redeemer_tag: tag
-    }
-  })
+  const poolId = Schema.decodeSync(PoolKeyHash.FromBech32)(blockfrostDelegation.pool_id)
+  return { poolId, rewards: BigInt(blockfrostDelegation.withdrawable_amount) }
 }
 
 /**
@@ -277,8 +256,19 @@ export const transformEvaluationResult = (
 export const transformJsonwspOgmiosEvaluationResult = (
   jsonwspResponse: JsonwspOgmiosEvaluationResponse
 ): Array<EvalRedeemer> => {
-  const result: Array<EvalRedeemer> = []
+  // Check for evaluation failure
+  if (jsonwspResponse.result.EvaluationFailure) {
+    const failure = jsonwspResponse.result.EvaluationFailure
+    throw new Error(`Script evaluation failed: ${JSON.stringify(failure)}`)
+  }
+  
+  // Handle success case
   const evaluationResult = jsonwspResponse.result.EvaluationResult
+  if (!evaluationResult) {
+    throw new Error("No evaluation result returned from Blockfrost")
+  }
+  
+  const result: Array<EvalRedeemer> = []
   
   for (const [key, budget] of Object.entries(evaluationResult)) {
     // Parse "spend:0", "mint:1", etc.

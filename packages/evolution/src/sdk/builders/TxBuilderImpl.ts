@@ -670,9 +670,27 @@ export const assembleTransaction = (
 
       // Only include cost models for Plutus versions actually used in the transaction
       // The scriptDataHash must use the same languages as the node will compute
-      const hasPlutusV1 = plutusV1Scripts.length > 0
-      const hasPlutusV2 = plutusV2Scripts.length > 0
-      const hasPlutusV3 = plutusV3Scripts.length > 0
+      // Check both witness set scripts AND reference scripts
+      let hasPlutusV1 = plutusV1Scripts.length > 0
+      let hasPlutusV2 = plutusV2Scripts.length > 0
+      let hasPlutusV3 = plutusV3Scripts.length > 0
+      
+      // Also check reference inputs for Plutus scripts
+      for (const refUtxo of state.referenceInputs) {
+        if (refUtxo.scriptRef) {
+          switch (refUtxo.scriptRef._tag) {
+            case "PlutusV1":
+              hasPlutusV1 = true
+              break
+            case "PlutusV2":
+              hasPlutusV2 = true
+              break
+            case "PlutusV3":
+              hasPlutusV3 = true
+              break
+          }
+        }
+      }
 
       const plutusV1Costs = hasPlutusV1
         ? Object.values(fullProtocolParams.costModels.PlutusV1).map((v) => BigInt(v))
@@ -693,8 +711,10 @@ export const assembleTransaction = (
       })
 
       // Compute the hash of script data (redeemers + optional datums + cost models)
-      scriptDataHash = hashScriptData(redeemers, costModels, plutusDataArray.length > 0 ? plutusDataArray : undefined)
-      yield* Effect.logDebug(`[Assembly] Computed scriptDataHash: ${scriptDataHash.hash.toString()}`)
+      const buildOpts = yield* BuildOptionsTag
+      const scriptDataFmt = buildOpts.scriptDataFormat ?? "array"
+      scriptDataHash = hashScriptData(redeemers, costModels, plutusDataArray.length > 0 ? plutusDataArray : undefined, scriptDataFmt)
+      yield* Effect.logDebug(`[Assembly] Computed scriptDataHash (format=${scriptDataFmt}): ${scriptDataHash.hash.toString()}`)
     }
 
     yield* Effect.logDebug(`[Assembly] WitnessSet populated:`)
