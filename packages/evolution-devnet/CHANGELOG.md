@@ -1,5 +1,14 @@
 # @evolution-sdk/devnet
 
+## 1.1.13
+
+### Patch Changes
+
+- Updated dependencies [[`8494053`](https://github.com/IntersectMBO/evolution-sdk/commit/84940535cee0bd742417c20969f06181ed9cf260), [`2742e40`](https://github.com/IntersectMBO/evolution-sdk/commit/2742e40ea0e62cd75d2a958bed0b6ff6138ded59)]:
+  - @evolution-sdk/scalus-uplc@0.0.3
+  - @evolution-sdk/evolution@0.3.13
+  - @evolution-sdk/aiken-uplc@0.0.5
+
 ## 1.1.12
 
 ### Patch Changes

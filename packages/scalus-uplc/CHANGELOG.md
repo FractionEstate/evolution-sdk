@@ -1,5 +1,14 @@
 # @evolution-sdk/scalus-uplc
 
+## 0.0.3
+
+### Patch Changes
+
+- [#130](https://github.com/IntersectMBO/evolution-sdk/pull/130) [`8494053`](https://github.com/IntersectMBO/evolution-sdk/commit/84940535cee0bd742417c20969f06181ed9cf260) Thanks [@solidsnakedev](https://github.com/solidsnakedev)! - Add publish configuration and package metadata for npm publishing. Includes repository links, keywords, homepage, and publishConfig with public access and provenance settings.
+
+- Updated dependencies [[`2742e40`](https://github.com/IntersectMBO/evolution-sdk/commit/2742e40ea0e62cd75d2a958bed0b6ff6138ded59)]:
+  - @evolution-sdk/evolution@0.3.13
+
 ## 0.0.2
 
 ### Patch Changes
