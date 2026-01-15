@@ -197,6 +197,57 @@ export const executeChangeCreation = (): Effect.Effect<
     const rawLeftover = CoreAssets.subtractLovelace(leftoverBeforeFee, buildCtx.calculatedFee)
     const tentativeLeftover = CoreAssets.filter(rawLeftover, (_unit, amount) => amount > 0n)
 
+    // === SendAll Mode ===
+    // If sendAllTo is set, create a single output with all remaining assets to the target address
+    if (state.sendAllTo !== undefined) {
+      yield* Effect.logDebug(
+        `[ChangeCreation] SendAll mode: Creating output to ${state.sendAllTo} with ` +
+          `${formatAssetsForLog(tentativeLeftover)}`
+      )
+
+      const leftoverLovelace = CoreAssets.lovelaceOf(tentativeLeftover)
+
+      // Validate that we have enough for minUTxO
+      const protocolParams = yield* ProtocolParametersTag
+      const sendAllMinUtxo = yield* calculateMinimumUtxoLovelace({
+        address: state.sendAllTo,
+        assets: tentativeLeftover,
+        coinsPerUtxoByte: protocolParams.coinsPerUtxoByte
+      })
+
+      if (leftoverLovelace < sendAllMinUtxo) {
+        return yield* Effect.fail(
+          new TransactionBuilderError({
+            message:
+              `sendAll() failed: Insufficient funds to create valid output. ` +
+              `Available: ${leftoverLovelace} lovelace, Required: ${sendAllMinUtxo} lovelace (minUTxO). ` +
+              `The wallet balance after fees is too low to create a valid UTxO.`
+          })
+        )
+      }
+
+      // Create the sendAll output using the txOutputToTransactionOutput helper
+      const sendAllOutput = yield* txOutputToTransactionOutput({
+        address: state.sendAllTo,
+        assets: tentativeLeftover
+      })
+
+      // Store sendAll output in changeOutputs (the standard pattern for outputs created during phases).
+      // This follows the same convention as normal change outputs - outputs created during the
+      // phase loop go in changeOutputs, while state.outputs contains user-specified outputs.
+      yield* Ref.update(buildCtxRef, (ctx) => ({
+        ...ctx,
+        changeOutputs: [sendAllOutput]
+      }))
+
+      yield* Effect.logDebug(
+        `[ChangeCreation] SendAll: Created output with ${formatAssetsForLog(tentativeLeftover)}`
+      )
+
+      return { next: "feeCalculation" as const }
+    }
+
+    // === Normal Change Creation ===
     // Step 3: Check if negative - return to selection immediately
     const leftoverLovelace = CoreAssets.lovelaceOf(tentativeLeftover)
     if (leftoverLovelace < 0n) {

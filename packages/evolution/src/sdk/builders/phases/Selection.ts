@@ -210,6 +210,104 @@ export const executeSelection = (): Effect.Effect<PhaseResult, TransactionBuilde
     const buildCtx = yield* Ref.get(buildCtxRef)
 
     const state = yield* Ref.get(ctx)
+
+    // === SendAll Mode ===
+    // If sendAllTo is set, collect ALL available UTxOs and skip normal selection
+    if (state.sendAllTo !== undefined) {
+      yield* Effect.logDebug("[Selection] SendAll mode detected - collecting all available UTxOs")
+
+      // Validation: sendAll is mutually exclusive with other builder operations
+      if (state.outputs.length > 0) {
+        return yield* Effect.fail(
+          new TransactionBuilderError({
+            message:
+              "sendAll() cannot be used with payToAddress(). " +
+              "sendAll automatically creates the output with all wallet assets."
+          })
+        )
+      }
+
+      if (state.selectedUtxos.length > 0) {
+        return yield* Effect.fail(
+          new TransactionBuilderError({
+            message:
+              "sendAll() cannot be used with collectFrom(). " +
+              "sendAll automatically collects all wallet UTxOs."
+          })
+        )
+      }
+
+      if (state.mint !== undefined) {
+        return yield* Effect.fail(
+          new TransactionBuilderError({
+            message:
+              "sendAll() cannot be used with mintAssets(). " +
+              "sendAll is designed for draining a wallet, not minting operations."
+          })
+        )
+      }
+
+      if (state.certificates.length > 0) {
+        return yield* Effect.fail(
+          new TransactionBuilderError({
+            message:
+              "sendAll() cannot be used with staking operations (registerStake, deregisterStake, delegateTo, etc.). " +
+              "sendAll is designed for simple wallet drain operations only."
+          })
+        )
+      }
+
+      if (state.withdrawals.size > 0) {
+        return yield* Effect.fail(
+          new TransactionBuilderError({
+            message:
+              "sendAll() cannot be used with withdraw(). " +
+              "sendAll is designed for simple wallet drain operations only."
+          })
+        )
+      }
+
+      if (state.votingProcedures !== undefined || state.proposalProcedures !== undefined) {
+        return yield* Effect.fail(
+          new TransactionBuilderError({
+            message:
+              "sendAll() cannot be used with governance operations (vote, propose). " +
+              "sendAll is designed for simple wallet drain operations only."
+          })
+        )
+      }
+
+      // Get all available UTxOs
+      const allAvailableUtxos = yield* AvailableUtxosTag
+
+      if (allAvailableUtxos.length === 0) {
+        return yield* Effect.fail(
+          new TransactionBuilderError({
+            message: "sendAll() failed: Wallet has no UTxOs to send."
+          })
+        )
+      }
+
+      // Select ALL UTxOs
+      yield* addUtxosToState(allAvailableUtxos)
+
+      const stateAfterSelection = yield* Ref.get(ctx)
+      const totalInputAssets = stateAfterSelection.totalInputAssets
+
+      yield* Effect.logDebug(
+        `[Selection] SendAll: Collected ${allAvailableUtxos.length} UTxO(s) with ` +
+          `${formatAssetsForLog(totalInputAssets)}`
+      )
+
+      // Update attempt counter
+      yield* Ref.update(buildCtxRef, (ctx) => ({ ...ctx, attempt: ctx.attempt + 1, shortfall: 0n }))
+
+      // sendAll is always a simple payment transaction (no scripts)
+      // All script operations (collectFrom, mint, staking, governance) are blocked above
+      return { next: "changeCreation" as const }
+    }
+
+    // === Normal Selection Mode ===
     const inputAssets = state.totalInputAssets
     const outputAssets = state.totalOutputAssets
 
