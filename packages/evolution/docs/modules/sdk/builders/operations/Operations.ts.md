@@ -20,6 +20,8 @@ parent: Modules
   - [VoteParams (interface)](#voteparams-interface)
 - [metadata](#metadata)
   - [AttachMetadataParams (interface)](#attachmetadataparams-interface)
+- [payment](#payment)
+  - [SendAllParams (interface)](#sendallparams-interface)
 - [pool](#pool)
   - [RegisterPoolParams (interface)](#registerpoolparams-interface)
   - [RetirePoolParams (interface)](#retirepoolparams-interface)
@@ -233,6 +235,30 @@ export interface AttachMetadataParams {
   readonly label: Metadata.MetadataLabel
   /** Metadata content as TransactionMetadatum */
   readonly metadata: TransactionMetadatum.TransactionMetadatum
+}
+```
+
+Added in v2.0.0
+
+# payment
+
+## SendAllParams (interface)
+
+Parameters for sending all wallet assets to a recipient address.
+
+This operation collects all wallet UTxOs and creates a single output
+containing all assets minus the transaction fee. It's commonly used for:
+
+- Draining a wallet completely
+- Consolidating all UTxOs into a single output
+- Migrating funds to a new address
+
+**Signature**
+
+```ts
+export interface SendAllParams {
+  /** The recipient address to receive all assets */
+  readonly to: CoreAddress.Address
 }
 ```
 

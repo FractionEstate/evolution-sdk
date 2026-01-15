@@ -84,6 +84,7 @@ import type {
   RegisterStakeParams,
   ResignCommitteeColdParams,
   RetirePoolParams,
+  SendAllParams,
   UpdateDRepParams,
   ValidityParams,
   VoteParams,
@@ -93,6 +94,7 @@ import { createPayToAddressProgram } from "./operations/Pay.js"
 import { createRegisterPoolProgram, createRetirePoolProgram } from "./operations/Pool.js"
 import { createProposeProgram } from "./operations/Propose.js"
 import { createReadFromProgram } from "./operations/ReadFrom.js"
+import { createSendAllProgram } from "./operations/SendAll.js"
 import {
   createDelegateToDRepProgram,
   createDelegateToPoolAndDRepProgram,
@@ -1345,6 +1347,7 @@ export interface TxBuilderState {
   }
   readonly requiredSigners: ReadonlyArray<KeyHash.KeyHash> // Extra signers required (for script validation)
   readonly auxiliaryData?: AuxiliaryData.AuxiliaryData // Auxiliary data (metadata, scripts, etc.)
+  readonly sendAllTo?: CoreAddress.Address // Target address for sendAll operation
 }
 
 /**
@@ -1599,6 +1602,39 @@ export interface TransactionBuilderBase {
    * @category builder-methods
    */
   readonly collectFrom: (params: CollectFromParams) => this
+
+  /**
+   * Send all wallet assets to a recipient address.
+   *
+   * This operation collects all wallet UTxOs and creates a single output
+   * containing all assets minus the transaction fee. No change output is created.
+   *
+   * Use cases:
+   * - Draining a wallet completely
+   * - Consolidating all UTxOs into a single output
+   * - Migrating funds to a new address
+   *
+   * **Important**: This operation is mutually exclusive with `payToAddress` and `collectFrom`.
+   * When `sendAll` is used, all wallet UTxOs are automatically collected and the output
+   * is automatically created. Any existing outputs or inputs will cause an error.
+   *
+   * Queues a deferred operation that will be executed when build() is called.
+   * Returns the same builder for method chaining.
+   *
+   * @example
+   * ```typescript
+   * import { Address } from "@evolution-sdk/evolution"
+   *
+   * const tx = await client
+   *   .newTx()
+   *   .sendAll({ to: Address.fromBech32("addr1...") })
+   *   .build()
+   * ```
+   *
+   * @since 2.0.0
+   * @category builder-methods
+   */
+  readonly sendAll: (params: SendAllParams) => this
 
   /**
    * Attach a script to the transaction.
@@ -2454,6 +2490,13 @@ export function makeTxBuilder(config: TxBuilderConfig) {
     collectFrom: (params: CollectFromParams) => {
       // Create ProgramStep for deferred execution
       const program = createCollectFromProgram(params)
+      programs.push(program)
+      return txBuilder // Return same instance for chaining
+    },
+
+    sendAll: (params: SendAllParams) => {
+      // Create ProgramStep for deferred execution
+      const program = createSendAllProgram(params)
       programs.push(program)
       return txBuilder // Return same instance for chaining
     },

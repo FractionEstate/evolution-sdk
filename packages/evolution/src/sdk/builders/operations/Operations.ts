@@ -486,3 +486,24 @@ export interface ProposeParams {
   /** Optional anchor with metadata URL and hash */
   readonly anchor: Anchor.Anchor | null
 }
+
+// ============================================================================
+// Send All Operation
+// ============================================================================
+
+/**
+ * Parameters for sending all wallet assets to a recipient address.
+ *
+ * This operation collects all wallet UTxOs and creates a single output
+ * containing all assets minus the transaction fee. It's commonly used for:
+ * - Draining a wallet completely
+ * - Consolidating all UTxOs into a single output
+ * - Migrating funds to a new address
+ *
+ * @since 2.0.0
+ * @category payment
+ */
+export interface SendAllParams {
+  /** The recipient address to receive all assets */
+  readonly to: CoreAddress.Address
+}
