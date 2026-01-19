@@ -163,9 +163,7 @@ interface PhaseContext {
   readonly canUnfrack: boolean
 }
 
-// const PhaseContextTag = Context.GenericTag<Ref.Ref<BuildContext>>("PhaseContext")
 export class PhaseContextTag extends Context.Tag("PhaseContextTag")<PhaseContextTag, Ref.Ref<PhaseContext>>() {}
-// export class TxContext extends Context.Tag("TxContext")<TxContext, TxContextData>() {}
 
 // Initial state for transaction builder
 const initialTxBuilderState: TxBuilderState = {
