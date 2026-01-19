@@ -1271,36 +1271,13 @@ export interface TxBuilderConfig {
 
 /**
  * Mutable state created FRESH on each build() call.
- * Uses Effect Ref for simple, sequential state updates within a single build.
+ * Contains all state needed during transaction construction.
  *
  * State lifecycle:
  * 1. Created fresh when build() is called
  * 2. Modified by ProgramSteps during execution
  * 3. Used to construct final transaction
  * 4. Discarded after build completes
- *
- * State modifications during execution:
- * - UTxOs selected from availableUtxos (config) → selectedUtxos (state)
- * - Outputs added during payToAddress operations
- * - Scripts attached when needed
- * - Assets tracked for balancing
- *
- * @since 2.0.0
- * @category state
- */
-/**
- * Mutable state created FRESH on each build() call.
- * Contains all Refs for transaction building state.
- *
- * Design: Stores Core types (CoreUTxO.UTxO, CoreAssets.Assets) for
- * coin selection and transaction assembly.
- *
- * @since 2.0.0
- * @category state
- */
-/**
- * Mutable state for transaction building.
- * Contains all state needed during transaction construction.
  *
  * @since 2.0.0
  * @category state
@@ -1374,20 +1351,8 @@ export interface DeferredRedeemerData {
 }
 
 /**
- * Combined transaction context containing all necessary data for building.
- *
- * @since 2.0.0
- * @category context
- */
-/**
- * Combined transaction context containing all necessary data for building.
- *
- * @since 2.0.0
- * @category context
- */
-/**
  * Context service providing transaction building state to programs.
- * Directly holds the mutable state Ref - config is passed as a regular parameter.
+ * Holds the mutable state Ref - config is passed as a regular parameter.
  *
  * @since 2.0.0
  * @category context
