@@ -60,6 +60,7 @@ export type BlockfrostAmount = Schema.Schema.Type<typeof BlockfrostAmount>
  * Blockfrost UTxO response schema
  */
 export const BlockfrostUTxO = Schema.Struct({
+  address: Schema.String,
   tx_hash: Schema.String,
   tx_index: Schema.Number,
   output_index: Schema.Number,
