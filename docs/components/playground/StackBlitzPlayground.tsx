@@ -8,12 +8,12 @@ export interface StackBlitzPlaygroundProps {
 	onVmReady?: (vm: VM) => void
 }
 
-const defaultCode = `import { Core } from "@evolution-sdk/evolution"
+const defaultCode = `import { Address } from "@evolution-sdk/evolution"
 
 const bech32 = "addr_test1qz2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3jcu5d8ps7zex2k2xt3uqxgjqnnj83ws8lhrn648jjxtwq2ytjqp"
 
 // Parse from Bech32
-const address = Core.Address.fromBech32(bech32)
+const address = Address.fromBech32(bech32)
 
 console.log("Address:", address)
 console.log("Network ID:", address.networkId)
@@ -21,7 +21,7 @@ console.log("Payment credential:", address.paymentCredential)
 console.log("Has staking:", address.stakingCredential !== undefined)
 
 // Check if it's an enterprise address
-console.log("Is enterprise:", Core.Address.isEnterprise(address))
+console.log("Is enterprise:", Address.isEnterprise(address))
 `
 
 export function StackBlitzPlayground({ initialCode = defaultCode, onVmReady }: StackBlitzPlaygroundProps) {
