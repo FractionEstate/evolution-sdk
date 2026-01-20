@@ -3,6 +3,7 @@ import { Either as E, Equal, FastCheck, Hash, Inspectable, ParseResult, Schema }
 import * as AddressEras from "./AddressEras.js"
 import * as BaseAddress from "./BaseAddress.js"
 import * as CBOR from "./CBOR.js"
+import * as DatumHash from "./DatumHash.js"
 import * as DatumOption from "./DatumOption.js"
 import * as EnterpriseAddress from "./EnterpriseAddress.js"
 import * as ScriptRef from "./ScriptRef.js"
@@ -15,7 +16,7 @@ const encValue = ParseResult.encodeEither(Value.FromCDDL)
 const decValue = ParseResult.decodeUnknownEither(Value.FromCDDL)
 const encDatumOption = ParseResult.encodeEither(DatumOption.FromCDDL)
 const decDatumOption = ParseResult.decodeUnknownEither(DatumOption.FromCDDL)
-const decDatumHash = ParseResult.decodeEither(DatumOption.DatumHashFromBytes)
+const decDatumHash = ParseResult.decodeEither(DatumHash.FromBytes)
 const encScriptRef = ParseResult.encodeEither(ScriptRef.FromCDDL)
 const decScriptRef = ParseResult.decodeUnknownEither(ScriptRef.FromCDDL)
 
@@ -36,7 +37,7 @@ export class ShelleyTransactionOutput extends Schema.TaggedClass<ShelleyTransact
     address: AddressEras.FromBech32,
     // Schema.Union(BaseAddress.BaseAddress, EnterpriseAddress.EnterpriseAddress),
     amount: Value.Value,
-    datumHash: Schema.optional(DatumOption.DatumHash)
+    datumHash: Schema.optional(DatumHash.DatumHash)
   }
 ) {
   toJSON() {
@@ -181,7 +182,7 @@ export const FromShelleyTransactionOutputCDDLSchema = Schema.transformOrFail(
         const [addressBytes, valueBytes, datumHashBytes] = fromI
         const address = yield* decAddress(addressBytes)
         const amount = yield* decValue(valueBytes)
-        let datumHash: DatumOption.DatumHash | undefined
+        let datumHash: DatumHash.DatumHash | undefined
         if (datumHashBytes !== undefined) {
           datumHash = yield* decDatumHash(datumHashBytes)
         }
@@ -313,7 +314,7 @@ export const arbitrary = FastCheck.oneof(
   FastCheck.record({
     address: FastCheck.oneof(BaseAddress.arbitrary, EnterpriseAddress.arbitrary),
     amount: Value.arbitrary,
-    datumHash: FastCheck.option(DatumOption.datumHashArbitrary, { nil: undefined })
+    datumHash: FastCheck.option(DatumHash.arbitrary, { nil: undefined })
   }).map((props) => new ShelleyTransactionOutput(props)),
 
   // Babbage TransactionOutput

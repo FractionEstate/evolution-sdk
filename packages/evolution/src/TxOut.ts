@@ -3,6 +3,7 @@ import { Either as E, Equal, FastCheck, Hash, Inspectable, ParseResult, Schema }
 import * as Address from "./Address.js"
 import * as Assets from "./Assets/index.js"
 import * as CBOR from "./CBOR.js"
+import * as DatumHash from "./DatumHash.js"
 import * as DatumOption from "./DatumOption.js"
 import * as ScriptRef from "./ScriptRef.js"
 
@@ -13,7 +14,7 @@ const encAssets = ParseResult.encodeEither(Assets.FromCDDL)
 const decAssets = ParseResult.decodeUnknownEither(Assets.FromCDDL)
 const encDatumOption = ParseResult.encodeEither(DatumOption.FromCDDL)
 const decDatumOption = ParseResult.decodeUnknownEither(DatumOption.FromCDDL)
-const decDatumHash = ParseResult.decodeEither(DatumOption.DatumHashFromBytes)
+const decDatumHash = ParseResult.decodeEither(DatumHash.FromBytes)
 const encScriptRef = ParseResult.encodeEither(ScriptRef.FromCDDL)
 const decScriptRef = ParseResult.decodeUnknownEither(ScriptRef.FromCDDL)
 
