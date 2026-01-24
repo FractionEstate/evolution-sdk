@@ -1,6 +1,6 @@
 ---
 title: Numeric.ts
-nav_order: 85
+nav_order: 87
 parent: Modules
 ---
 

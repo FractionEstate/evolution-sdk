@@ -1,6 +1,6 @@
 ---
 title: DatumOption.ts
-nav_order: 47
+nav_order: 48
 parent: Modules
 ---
 
@@ -22,29 +22,14 @@ parent: Modules
   - [isDatumHash](#isdatumhash)
   - [isInlineDatum](#isinlinedatum)
 - [schemas](#schemas)
-  - [DatumHash (class)](#datumhash-class)
-    - [toJSON (method)](#tojson-method)
-    - [toString (method)](#tostring-method)
-    - [[Inspectable.NodeInspectSymbol] (method)](#inspectablenodeinspectsymbol-method)
-    - [[Equal.symbol] (method)](#equalsymbol-method)
-    - [[Hash.symbol] (method)](#hashsymbol-method)
   - [DatumOptionSchema](#datumoptionschema)
   - [FromCBORBytes](#fromcborbytes-1)
   - [FromCBORHex](#fromcborhex-1)
   - [FromCDDL](#fromcddl)
-  - [InlineDatum (class)](#inlinedatum-class)
-    - [toJSON (method)](#tojson-method-1)
-    - [toString (method)](#tostring-method-1)
-    - [[Inspectable.NodeInspectSymbol] (method)](#inspectablenodeinspectsymbol-method-1)
-    - [[Equal.symbol] (method)](#equalsymbol-method-1)
-    - [[Hash.symbol] (method)](#hashsymbol-method-1)
 - [testing](#testing)
   - [arbitrary](#arbitrary)
 - [utils](#utils)
   - [CDDLSchema](#cddlschema)
-  - [DatumHashFromBytes](#datumhashfrombytes)
-  - [datumHashArbitrary](#datumhasharbitrary)
-  - [inlineDatumArbitrary](#inlinedatumarbitrary)
 
 ---
 
@@ -57,7 +42,10 @@ Convert CBOR bytes to DatumOption.
 **Signature**
 
 ```ts
-export declare const fromCBORBytes: (bytes: Uint8Array, options?: CBOR.CodecOptions) => DatumHash | InlineDatum
+export declare const fromCBORBytes: (
+  bytes: Uint8Array,
+  options?: CBOR.CodecOptions
+) => DatumHash.DatumHash | InlineDatum.InlineDatum
 ```
 
 Added in v2.0.0
@@ -69,7 +57,10 @@ Convert CBOR hex string to DatumOption.
 **Signature**
 
 ```ts
-export declare const fromCBORHex: (hex: string, options?: CBOR.CodecOptions) => DatumHash | InlineDatum
+export declare const fromCBORHex: (
+  hex: string,
+  options?: CBOR.CodecOptions
+) => DatumHash.DatumHash | InlineDatum.InlineDatum
 ```
 
 Added in v2.0.0
@@ -124,7 +115,7 @@ Check if a DatumOption is a datum hash.
 **Signature**
 
 ```ts
-export declare const isDatumHash: (u: unknown, overrideOptions?: ParseOptions | number) => u is DatumHash
+export declare const isDatumHash: (u: unknown, overrideOptions?: ParseOptions | number) => u is DatumHash.DatumHash
 ```
 
 Added in v2.0.0
@@ -136,75 +127,15 @@ Check if a DatumOption is inline data.
 **Signature**
 
 ```ts
-export declare const isInlineDatum: (u: unknown, overrideOptions?: ParseOptions | number) => u is InlineDatum
+export declare const isInlineDatum: (
+  u: unknown,
+  overrideOptions?: ParseOptions | number
+) => u is InlineDatum.InlineDatum
 ```
 
 Added in v2.0.0
 
 # schemas
-
-## DatumHash (class)
-
-Schema for DatumHash variant of DatumOption.
-Represents a reference to datum data stored elsewhere via its hash.
-
-**Signature**
-
-```ts
-export declare class DatumHash
-```
-
-Added in v2.0.0
-
-### toJSON (method)
-
-**Signature**
-
-```ts
-toJSON()
-```
-
-Added in v2.0.0
-
-### toString (method)
-
-**Signature**
-
-```ts
-toString(): string
-```
-
-Added in v2.0.0
-
-### [Inspectable.NodeInspectSymbol] (method)
-
-**Signature**
-
-```ts
-[Inspectable.NodeInspectSymbol](): unknown
-```
-
-Added in v2.0.0
-
-### [Equal.symbol] (method)
-
-**Signature**
-
-```ts
-[Equal.symbol](that: unknown): boolean
-```
-
-Added in v2.0.0
-
-### [Hash.symbol] (method)
-
-**Signature**
-
-```ts
-[Hash.symbol](): number
-```
-
-Added in v2.0.0
 
 ## DatumOptionSchema
 
@@ -220,7 +151,7 @@ Where:
 **Signature**
 
 ```ts
-export declare const DatumOptionSchema: Schema.Union<[typeof DatumHash, typeof InlineDatum]>
+export declare const DatumOptionSchema: Schema.Union<[typeof DatumHash.DatumHash, typeof InlineDatum.InlineDatum]>
 ```
 
 Added in v2.0.0
@@ -251,7 +182,11 @@ export declare const FromCBORBytes: (
         >
       ]
     >,
-    Schema.SchemaClass<DatumHash | InlineDatum, DatumHash | InlineDatum, never>,
+    Schema.SchemaClass<
+      DatumHash.DatumHash | InlineDatum.InlineDatum,
+      DatumHash.DatumHash | InlineDatum.InlineDatum,
+      never
+    >,
     never
   >
 >
@@ -287,7 +222,11 @@ export declare const FromCBORHex: (
           >
         ]
       >,
-      Schema.SchemaClass<DatumHash | InlineDatum, DatumHash | InlineDatum, never>,
+      Schema.SchemaClass<
+        DatumHash.DatumHash | InlineDatum.InlineDatum,
+        DatumHash.DatumHash | InlineDatum.InlineDatum,
+        never
+      >,
       never
     >
   >
@@ -319,72 +258,13 @@ export declare const FromCDDL: Schema.transformOrFail<
       >
     ]
   >,
-  Schema.SchemaClass<DatumHash | InlineDatum, DatumHash | InlineDatum, never>,
+  Schema.SchemaClass<
+    DatumHash.DatumHash | InlineDatum.InlineDatum,
+    DatumHash.DatumHash | InlineDatum.InlineDatum,
+    never
+  >,
   never
 >
-```
-
-Added in v2.0.0
-
-## InlineDatum (class)
-
-Schema for InlineDatum variant of DatumOption.
-Represents inline plutus data embedded directly in the transaction output.
-
-**Signature**
-
-```ts
-export declare class InlineDatum
-```
-
-Added in v2.0.0
-
-### toJSON (method)
-
-**Signature**
-
-```ts
-toJSON()
-```
-
-Added in v2.0.0
-
-### toString (method)
-
-**Signature**
-
-```ts
-toString(): string
-```
-
-Added in v2.0.0
-
-### [Inspectable.NodeInspectSymbol] (method)
-
-**Signature**
-
-```ts
-[Inspectable.NodeInspectSymbol](): unknown
-```
-
-Added in v2.0.0
-
-### [Equal.symbol] (method)
-
-**Signature**
-
-```ts
-[Equal.symbol](that: unknown): boolean
-```
-
-Added in v2.0.0
-
-### [Hash.symbol] (method)
-
-**Signature**
-
-```ts
-[Hash.symbol](): number
 ```
 
 Added in v2.0.0
@@ -398,7 +278,7 @@ FastCheck arbitrary for generating random DatumOption instances
 **Signature**
 
 ```ts
-export declare const arbitrary: FastCheck.Arbitrary<DatumHash | InlineDatum>
+export declare const arbitrary: FastCheck.Arbitrary<DatumHash.DatumHash | InlineDatum.InlineDatum>
 ```
 
 Added in v2.0.0
@@ -419,31 +299,4 @@ export declare const CDDLSchema: Schema.Union<
     >
   ]
 >
-```
-
-## DatumHashFromBytes
-
-**Signature**
-
-```ts
-export declare const DatumHashFromBytes: Schema.transform<
-  Schema.SchemaClass<Uint8Array, Uint8Array, never>,
-  Schema.SchemaClass<DatumHash, DatumHash, never>
->
-```
-
-## datumHashArbitrary
-
-**Signature**
-
-```ts
-export declare const datumHashArbitrary: FastCheck.Arbitrary<DatumHash>
-```
-
-## inlineDatumArbitrary
-
-**Signature**
-
-```ts
-export declare const inlineDatumArbitrary: FastCheck.Arbitrary<InlineDatum>
 ```
