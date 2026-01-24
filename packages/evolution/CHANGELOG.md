@@ -1,5 +1,16 @@
 # @evolution-sdk/evolution
 
+## 0.3.15
+
+### Patch Changes
+
+- [#135](https://github.com/IntersectMBO/evolution-sdk/pull/135) [`d801fa1`](https://github.com/IntersectMBO/evolution-sdk/commit/d801fa1ce89c4cdea70cb19c4efa919446dadcaa) Thanks [@solidsnakedev](https://github.com/solidsnakedev)! - Separate DatumOption into dedicated DatumHash and InlineDatum modules.
+  - Add `DatumHash` module with `fromHex`, `toHex`, `fromBytes`, `toBytes` functions
+  - Add `InlineDatum` module for inline plutus data
+  - Refactor `DatumOption` to import from new modules (union type preserved)
+  - Fix `BlockfrostUTxO` schema to include `address` field
+  - Update all provider implementations to use new module imports
+
 ## 0.3.14
 
 ### Patch Changes
