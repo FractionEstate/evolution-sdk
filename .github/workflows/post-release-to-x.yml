@@ -1,0 +1,22 @@
+name: Post Release to X
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  notify:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Tweet new release
+        uses: nearform-actions/github-action-notify-twitter@v1
+        with:
+          message: |
+            Evolution SDK ${{ github.event.release.tag_name }} out now
+            ${{ github.event.release.html_url }}
+            Happy building! 🛠️
+          twitter-app-key: ${{ secrets.TWITTER_API_KEY }}
+          twitter-app-secret: ${{ secrets.TWITTER_API_SECRET }}
+          twitter-access-token: ${{ secrets.TWITTER_ACCESS_TOKEN }}
+          twitter-access-token-secret: ${{ secrets.TWITTER_ACCESS_TOKEN_SECRET }}
