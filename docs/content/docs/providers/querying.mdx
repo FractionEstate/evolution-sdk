@@ -12,7 +12,7 @@ Providers expose methods to query UTxOs, protocol parameters, delegation informa
 Retrieve current network parameters for fee calculation and transaction constraints:
 
 ```typescript twoslash
-import { Address, Bytes, Credential, DatumOption, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
+import { Address, Bytes, Credential, DatumHash, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -48,7 +48,7 @@ Query unspent transaction outputs by address, credential, unit, or reference.
 ### By Address
 
 ```typescript twoslash
-import { Address, Bytes, Credential, DatumOption, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
+import { Address, Bytes, Credential, DatumHash, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -86,7 +86,7 @@ utxos.forEach((utxo) => {
 Query UTxOs by payment credential instead of full address:
 
 ```typescript
-import { Address, Bytes, Credential, DatumOption, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
+import { Address, Bytes, Credential, DatumHash, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -109,7 +109,7 @@ const utxos = await client.getUtxos(credential);
 Query UTxOs containing specific native asset:
 
 ```typescript twoslash
-import { Address, Bytes, Credential, DatumOption, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
+import { Address, Bytes, Credential, DatumHash, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -138,7 +138,7 @@ console.log("UTxOs with token:", utxosWithToken.length);
 Query specific UTxOs by transaction output reference:
 
 ```typescript twoslash
-import { Address, Bytes, Credential, DatumOption, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
+import { Address, Bytes, Credential, DatumHash, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -169,7 +169,7 @@ console.log("Found UTxOs:", utxos.length);
 Find a single UTxO by unique unit identifier:
 
 ```typescript twoslash
-import { Address, Bytes, Credential, DatumOption, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
+import { Address, Bytes, Credential, DatumHash, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -193,7 +193,7 @@ console.log("Current owner UTxO:", TransactionHash.toHex(utxo.transactionId));
 Query staking delegation and reward information:
 
 ```typescript twoslash
-import { Address, Bytes, Credential, DatumOption, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
+import { Address, Bytes, Credential, DatumHash, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -216,7 +216,7 @@ console.log("Rewards:", delegation.rewards);
 Retrieve datum content by hash:
 
 ```typescript twoslash
-import { Address, Bytes, Credential, DatumOption, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
+import { Address, Bytes, Credential, DatumHash, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -228,7 +228,7 @@ const client = createClient({
 });
 
 // Get datum from hash
-const datumHash = new DatumOption.DatumHash({ hash: Bytes.fromHex("abc123...") });
+const datumHash = new DatumHash.DatumHash({ hash: Bytes.fromHex("abc123...") });
 const datumCbor = await client.getDatum(datumHash);
 
 console.log("Datum CBOR:", datumCbor);
@@ -241,7 +241,7 @@ console.log("Datum CBOR:", datumCbor);
 Calculate total balance across multiple addresses:
 
 ```typescript twoslash
-import { Address, Bytes, Credential, DatumOption, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
+import { Address, Bytes, Credential, DatumHash, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -290,7 +290,7 @@ async function getPortfolioBalance(addressesBech32: string[]) {
 Find all holders of a specific token:
 
 ```typescript twoslash
-import { Address, Bytes, Credential, DatumOption, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
+import { Address, Bytes, Credential, DatumHash, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -330,7 +330,7 @@ async function getTokenHolders(
 Check if addresses are delegated to specific pool:
 
 ```typescript twoslash
-import { Address, Bytes, Credential, DatumOption, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
+import { Address, Bytes, Credential, DatumHash, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -368,7 +368,7 @@ async function checkPoolDelegation(
 Track NFT ownership across collection:
 
 ```typescript twoslash
-import { Address, Bytes, Credential, DatumOption, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
+import { Address, Bytes, Credential, DatumHash, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -409,7 +409,7 @@ async function getNFTOwnership(nftUnits: string[]) {
 Handle query errors gracefully:
 
 ```typescript twoslash
-import { Address, Bytes, Credential, DatumOption, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
+import { Address, Bytes, Credential, DatumHash, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
@@ -447,7 +447,7 @@ async function safeGetDelegation(rewardAddress: string) {
 Optimize queries for better performance:
 
 ```typescript twoslash
-import { Address, Bytes, Credential, DatumOption, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
+import { Address, Bytes, Credential, DatumHash, PoolKeyHash, RewardAddress, TransactionHash, TransactionInput, createClient } from "@evolution-sdk/evolution";
 
 const client = createClient({
   network: "mainnet",
