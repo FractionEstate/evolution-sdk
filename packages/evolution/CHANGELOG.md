@@ -1,5 +1,11 @@
 # @evolution-sdk/evolution
 
+## 0.3.16
+
+### Patch Changes
+
+- [#139](https://github.com/IntersectMBO/evolution-sdk/pull/139) [`63c8491`](https://github.com/IntersectMBO/evolution-sdk/commit/63c84919b79690dc3b108616bb84fbd3841f09b7) Thanks [@solidsnakedev](https://github.com/solidsnakedev)! - Update Address module @since labels from 1.0.0 to 2.0.0
+
 ## 0.3.15
 
 ### Patch Changes
