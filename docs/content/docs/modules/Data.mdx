@@ -33,6 +33,8 @@ parent: Modules
   - [arbitraryPlutusData](#arbitraryplutusdata)
   - [arbitraryPlutusList](#arbitraryplutuslist)
   - [arbitraryPlutusMap](#arbitraryplutusmap)
+- [hashing](#hashing)
+  - [hashData](#hashdata)
 - [model](#model)
   - [Data (type alias)](#data-type-alias)
   - [DataEncoded (type alias)](#dataencoded-type-alias)
@@ -303,6 +305,39 @@ Following a similar distribution pattern:
 
 ```ts
 export declare const arbitraryPlutusMap: (depth: number) => FastCheck.Arbitrary<Map>
+```
+
+Added in v2.0.0
+
+# hashing
+
+## hashData
+
+Compute the hash of PlutusData using blake2b-256 over its CBOR encoding.
+Defaults to CML_DATA_DEFAULT_OPTIONS (indefinite-length arrays/maps).
+
+**Signature**
+
+```ts
+export declare const hashData: (data: Data, options?: CBOR.CodecOptions) => DatumHash.DatumHash
+```
+
+**Example**
+
+```typescript
+import * as Data from "@evolution-sdk/evolution/Data"
+
+// Hash a simple integer
+const intData = 42n
+const intHash = Data.hashData(intData)
+
+// Hash a constructor
+const constr = new Data.Constr({ index: 0n, fields: [1n, 2n] })
+const constrHash = Data.hashData(constr)
+
+// Hash a bytearray
+const bytes = new Uint8Array([0xde, 0xad, 0xbe, 0xef])
+const bytesHash = Data.hashData(bytes)
 ```
 
 Added in v2.0.0

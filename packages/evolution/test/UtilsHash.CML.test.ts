@@ -63,10 +63,10 @@ describe("UtilsHash helpers CML parity", () => {
     )
   })
 
-  it("property: hashPlutusData matches CML.hash_plutus_data", () => {
+  it("property: Data.hashData matches CML.hash_plutus_data", () => {
     FastCheck.assert(
       FastCheck.property(Data.arbitrary, (datum) => {
-        const evolutionHash = UtilsHash.hashPlutusData(datum)
+        const evolutionHash = Data.hashData(datum)
         const evolutionBytes = evolutionHash.hash
 
         const hex = Data.toCBORHex(datum)

@@ -1,6 +1,8 @@
+import { blake2b } from "@noble/hashes/blake2"
 import { Data as EffectData, Effect, Equal, FastCheck, Hash, ParseResult, Schema } from "effect"
 
 import * as CBOR from "./CBOR.js"
+import * as DatumHash from "./DatumHash.js"
 import * as Numeric from "./Numeric.js"
 
 /**
@@ -915,4 +917,33 @@ export const withSchema = <A, I extends Data>(
     fromCBORHex: Schema.decodeSync(Schema.compose(FromCBORHex(options), schema)),
     fromCBORBytes: Schema.decodeSync(Schema.compose(FromCBORBytes(options), schema))
   }
+}
+
+/**
+ * Compute the hash of PlutusData using blake2b-256 over its CBOR encoding.
+ * Defaults to CML_DATA_DEFAULT_OPTIONS (indefinite-length arrays/maps).
+ *
+ * @since 2.0.0
+ * @category hashing
+ * @example
+ * ```typescript
+ * import * as Data from "@evolution-sdk/evolution/Data"
+ *
+ * // Hash a simple integer
+ * const intData = 42n
+ * const intHash = Data.hashData(intData)
+ *
+ * // Hash a constructor
+ * const constr = new Data.Constr({ index: 0n, fields: [1n, 2n] })
+ * const constrHash = Data.hashData(constr)
+ *
+ * // Hash a bytearray
+ * const bytes = new Uint8Array([0xde, 0xad, 0xbe, 0xef])
+ * const bytesHash = Data.hashData(bytes)
+ * ```
+ */
+export const hashData = (data: Data, options: CBOR.CodecOptions = CBOR.CML_DATA_DEFAULT_OPTIONS): DatumHash.DatumHash => {
+  const bytes = toCBORBytes(data, options)
+  const digest = blake2b(bytes, { dkLen: 32 })
+  return new DatumHash.DatumHash({ hash: digest })
 }

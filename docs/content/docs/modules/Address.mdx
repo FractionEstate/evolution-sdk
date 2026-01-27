@@ -6,7 +6,7 @@ parent: Modules
 
 ## Address overview
 
-Added in v1.0.0
+Added in v2.0.0
 
 ---
 
@@ -57,7 +57,7 @@ FastCheck arbitrary generator for testing
 export declare const arbitrary: FastCheck.Arbitrary<Address>
 ```
 
-Added in v1.0.0
+Added in v2.0.0
 
 # Functions
 
@@ -71,7 +71,7 @@ Sync functions using Schema utilities
 export declare const fromBech32: (i: string, overrideOptions?: ParseOptions) => Address
 ```
 
-Added in v1.0.0
+Added in v2.0.0
 
 # Model
 
@@ -94,7 +94,7 @@ export interface AddressDetails {
 }
 ```
 
-Added in v1.0.0
+Added in v2.0.0
 
 # Schema
 
@@ -106,7 +106,7 @@ Added in v1.0.0
 export declare class Address
 ```
 
-Added in v1.0.0
+Added in v2.0.0
 
 ### toJSON (method)
 
@@ -164,7 +164,7 @@ export declare const FromBech32: Schema.transformOrFail<
 >
 ```
 
-Added in v1.0.0
+Added in v2.0.0
 
 ## FromBytes
 
@@ -181,7 +181,7 @@ export declare const FromBytes: Schema.transformOrFail<
 >
 ```
 
-Added in v1.0.0
+Added in v2.0.0
 
 ## FromHex
 
@@ -202,7 +202,7 @@ export declare const FromHex: Schema.transform<
 >
 ```
 
-Added in v1.0.0
+Added in v2.0.0
 
 # Utils
 
@@ -236,7 +236,7 @@ if (details) {
 }
 ```
 
-Added in v1.0.0
+Added in v2.0.0
 
 ## getNetworkId
 
@@ -248,7 +248,7 @@ Get network ID from AddressStructure
 export declare const getNetworkId: (address: Address) => NetworkId.NetworkId
 ```
 
-Added in v1.0.0
+Added in v2.0.0
 
 ## getPaymentCredential
 
@@ -261,7 +261,7 @@ Returns undefined if the address cannot be parsed
 export declare const getPaymentCredential: (address: string) => Credential.Credential | undefined
 ```
 
-Added in v1.0.0
+Added in v2.0.0
 
 ## getStakingCredential
 
@@ -274,7 +274,7 @@ Returns undefined if the address has no staking credential or cannot be parsed
 export declare const getStakingCredential: (address: string) => Credential.Credential | undefined
 ```
 
-Added in v1.0.0
+Added in v2.0.0
 
 ## hasStakingCredential
 
@@ -286,7 +286,7 @@ Check if AddressStructure has staking credential (BaseAddress-like)
 export declare const hasStakingCredential: (address: Address) => boolean
 ```
 
-Added in v1.0.0
+Added in v2.0.0
 
 ## isEnterprise
 
@@ -298,7 +298,7 @@ Check if AddressStructure is enterprise-like (no staking credential)
 export declare const isEnterprise: (address: Address) => boolean
 ```
 
-Added in v1.0.0
+Added in v2.0.0
 
 # utils
 
