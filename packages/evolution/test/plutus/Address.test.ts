@@ -9,7 +9,7 @@ describe("Plutus Address", () => {
       const hash = Bytes.fromHex("abcdef1234567890abcdef1234567890abcdef1234567890abcdef12")
       const addr = {
         payment_credential: { VerificationKey: { hash } },
-        stake_credential: undefined,
+        stake_credential: undefined
       }
       const data = Address.Codec.toData(addr)
       expect(data.index).toBe(0n)
@@ -20,7 +20,7 @@ describe("Plutus Address", () => {
       const hash = Bytes.fromHex("fedcba0987654321fedcba0987654321fedcba0987654321fedcba09")
       const addr = {
         payment_credential: { Script: { hash } },
-        stake_credential: undefined,
+        stake_credential: undefined
       }
       const data = Address.Codec.toData(addr)
       expect(data.index).toBe(0n)
@@ -31,7 +31,7 @@ describe("Plutus Address", () => {
       const hash = Bytes.fromHex("1234567890abcdef1234567890abcdef1234567890abcdef1234567890")
       const addr = {
         payment_credential: { VerificationKey: { hash } },
-        stake_credential: undefined,
+        stake_credential: undefined
       }
       const encoded = Address.Codec.toCBORHex(addr)
       const decoded = Address.Codec.fromCBORHex(encoded)
@@ -48,9 +48,9 @@ describe("Plutus Address", () => {
         payment_credential: { VerificationKey: { hash: paymentHash } },
         stake_credential: {
           Inline: {
-            credential: { VerificationKey: { hash: stakeHash } },
-          },
-        },
+            credential: { VerificationKey: { hash: stakeHash } }
+          }
+        }
       }
       const data = Address.Codec.toData(addr)
       expect(data.index).toBe(0n)
@@ -65,9 +65,9 @@ describe("Plutus Address", () => {
           Pointer: {
             slot_number: 12345n,
             transaction_index: 2n,
-            certificate_index: 0n,
-          },
-        },
+            certificate_index: 0n
+          }
+        }
       }
       const data = Address.Codec.toData(addr)
       expect(data.index).toBe(0n)
@@ -81,9 +81,9 @@ describe("Plutus Address", () => {
         payment_credential: { VerificationKey: { hash: paymentHash } },
         stake_credential: {
           Inline: {
-            credential: { Script: { hash: stakeHash } },
-          },
-        },
+            credential: { Script: { hash: stakeHash } }
+          }
+        }
       }
       const encoded = Address.Codec.toCBORHex(addr)
       const decoded = Address.Codec.fromCBORHex(encoded)
@@ -99,9 +99,9 @@ describe("Plutus Address", () => {
           Pointer: {
             slot_number: 999999n,
             transaction_index: 42n,
-            certificate_index: 7n,
-          },
-        },
+            certificate_index: 7n
+          }
+        }
       }
       const encoded = Address.Codec.toCBORHex(addr)
       const decoded = Address.Codec.fromCBORHex(encoded)
@@ -118,9 +118,9 @@ describe("Plutus Address", () => {
         payment_credential: { Script: { hash: paymentHash } },
         stake_credential: {
           Inline: {
-            credential: { VerificationKey: { hash: stakeHash } },
-          },
-        },
+            credential: { VerificationKey: { hash: stakeHash } }
+          }
+        }
       }
       const encoded = Address.Codec.toCBORHex(addr)
       const decoded = Address.Codec.fromCBORHex(encoded)
@@ -135,9 +135,9 @@ describe("Plutus Address", () => {
         payment_credential: { VerificationKey: { hash: paymentHash } },
         stake_credential: {
           Inline: {
-            credential: { Script: { hash: stakeHash } },
-          },
-        },
+            credential: { Script: { hash: stakeHash } }
+          }
+        }
       }
       const encoded = Address.Codec.toCBORHex(addr)
       const decoded = Address.Codec.fromCBORHex(encoded)

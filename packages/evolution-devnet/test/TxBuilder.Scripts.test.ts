@@ -36,7 +36,7 @@ describe("TxBuilder Script Handling", () => {
           submit: 9001
         },
         shelleyGenesis: {
-          slotLength: 0.02,       // 20ms per slot (fast)
+          slotLength: 0.02, // 20ms per slot (fast)
           epochLength: 50,
           activeSlotsCoeff: 1.0
         },
@@ -48,20 +48,20 @@ describe("TxBuilder Script Handling", () => {
       })
 
       await Cluster.start(devnetCluster)
-      
+
       // Wait for Ogmios to be ready
       await new Promise((resolve) => setTimeout(resolve, 2_000))
 
       // Ogmios serves both HTTP (for JSON-RPC) and WebSocket on the same port
       const ogmiosUrl = "http://localhost:1337"
-      
+
       // Create provider using local Ogmios
       // Note: Kupo URL is required but not used in these tests (only Ogmios for evaluation)
       kupmiosProvider = new KupmiosProvider(
         "http://localhost:1442", // Kupo (not used)
-        ogmiosUrl                 // Ogmios for script evaluation via HTTP
+        ogmiosUrl // Ogmios for script evaluation via HTTP
       )
-      
+
       // eslint-disable-next-line no-console
       console.log(`✓ Devnet ready - Ogmios: ${ogmiosUrl}`)
     } catch (error) {
@@ -247,7 +247,7 @@ describe("TxBuilder Script Handling", () => {
       changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
       availableUtxos: [fundingUtxo],
       protocolParameters: PROTOCOL_PARAMS,
-      evaluator: createAikenEvaluator,
+      evaluator: createAikenEvaluator
     })
 
     const tx = await signBuilder.toTransaction()
@@ -336,7 +336,7 @@ describe("TxBuilder Script Handling", () => {
     expect(redeemer.exUnits.mem).toBe(1100n)
     expect(redeemer.exUnits.steps).toBe(160100n)
   })
-  
+
   it("should handle collateral inputs with multiassets and return excess to user as collateral return", async () => {
     const alwaysSucceedsScript = makePlutusV2Script(ALWAYS_SUCCEED_SCRIPT_CBOR)
     const scriptAddress = scriptToAddress(ALWAYS_SUCCEED_SCRIPT_CBOR)
@@ -399,7 +399,7 @@ describe("TxBuilder Script Handling", () => {
     // Verify collateral inputs were selected
     expect(tx.body.collateralInputs).toBeDefined()
     expect(tx.body.collateralInputs!.length).toBe(1)
-    
+
     const collateralInput = tx.body.collateralInputs![0]
     expect(collateralInput.transactionId.hash).toEqual(new Uint8Array(32).fill(187)) // "b".repeat(64) = 0xBB repeated
     expect(collateralInput.index).toBe(0n)
@@ -411,21 +411,21 @@ describe("TxBuilder Script Handling", () => {
     // Verify collateralReturn exists and contains tokens
     expect(tx.body.collateralReturn).toBeDefined()
     const collateralReturn = tx.body.collateralReturn!
-    
+
     // Verify lovelace amount in collateralReturn
     expect(collateralReturn.assets.multiAsset).toBeDefined()
     if (collateralReturn.assets.multiAsset !== undefined) {
       expect(collateralReturn.assets.lovelace).toBeGreaterThan(0n)
-      
+
       // Count total number of tokens across all policies
       let totalTokens = 0
       for (const [_policyId, assetMap] of collateralReturn.assets.multiAsset.map.entries()) {
         totalTokens += assetMap.size
       }
-      
+
       // Verify all 10 tokens are returned (regardless of how they're organized)
       expect(totalTokens).toBe(10)
-      
+
       // Verify collateralReturn meets minUTxO requirement (with tokens, should be > 1.5 ADA)
       expect(collateralReturn.assets.lovelace).toBeGreaterThanOrEqual(1_500_000n)
     }
@@ -612,14 +612,14 @@ describe("TxBuilder Script Handling", () => {
     // Verify collateral inputs were selected
     expect(tx.body.collateralInputs).toBeDefined()
     expect(tx.body.collateralInputs!.length).toBe(1)
-    
+
     const collateralInput = tx.body.collateralInputs![0]
-    
+
     // Verify that the collateral input is the one WITHOUT reference script
     // UTxO "c" (without ref script) should be selected, not "b" (with ref script)
     expect(collateralInput.transactionId.hash).toEqual(new Uint8Array(32).fill(204)) // "c".repeat(64) = 0xCC repeated
     expect(collateralInput.index).toBe(0n)
-    
+
     // Verify it's NOT the UTxO with reference script
     expect(collateralInput.transactionId.hash).not.toEqual(new Uint8Array(32).fill(187)) // "b".repeat(64) = 0xBB
   })
@@ -687,7 +687,7 @@ describe("TxBuilder Script Handling", () => {
     // Verify transaction was built successfully
     expect(tx.body.inputs.length).toBe(1)
     expect(tx.body.collateralInputs).toBeDefined()
-    
+
     // Test largest-first selection: With 2 available UTxOs (3.2 ADA, 5 ADA):
     // - Candidates sorted: pure ADA first, then largest first
     // - Selects 5 ADA UTxO (already >= 5 ADA target, stops immediately)
@@ -696,7 +696,7 @@ describe("TxBuilder Script Handling", () => {
 
     // Extract the actual amounts from the transaction
     const fee = tx.body.fee
-    
+
     // Get change output (should be the last output)
     const changeOutput = tx.body.outputs[tx.body.outputs.length - 1]
     const changeAmount = changeOutput.assets.lovelace
@@ -707,9 +707,9 @@ describe("TxBuilder Script Handling", () => {
     // - FeeCalculation includes collateral size (188 bytes)
     // - Change created with correct fee from the start
     const expectedChange = CoreAssets.lovelaceOf(scriptUtxo.assets) - 2_000_000n - fee
-    
+
     expect(changeAmount).toBe(expectedChange)
-    
+
     // Verify the fee is reasonable and includes collateral overhead
     expect(fee).toBeGreaterThan(163_000n) // Base fee ~163k
     expect(fee).toBeLessThan(180_000n) // But still reasonable
@@ -769,14 +769,14 @@ describe("TxBuilder Script Handling", () => {
     // Verify collateral was selected
     expect(tx.body.collateralInputs).toBeDefined()
     expect(tx.body.collateralInputs!.length).toBe(1)
-    
+
     // Verify totalCollateral is set to 5 ADA
     expect(tx.body.totalCollateral).toBe(5_000_000n)
 
     // Verify collateral return exists (5 ADA leftover)
     expect(tx.body.collateralReturn).toBeDefined()
     const collateralReturn = tx.body.collateralReturn!
-    
+
     // Verify return amount is the leftover (10 ADA - 5 ADA = 5 ADA)
     expect(collateralReturn.assets.lovelace).toBe(5_000_000n)
     // Should be pure ADA (no tokens)
@@ -836,7 +836,7 @@ describe("TxBuilder Script Handling", () => {
     // - Base fee for transaction
     // - Reference script fee: 10,000 bytes * 15 lovelace/byte = 150,000 lovelace
     const expectedMinRefScriptFee = 150_000n
-    
+
     // Fee should be at least base fee + reference script fee
     // We can't calculate exact base fee, but we know ref script fee is included
     expect(tx.body.fee).toBeGreaterThan(expectedMinRefScriptFee)
@@ -884,7 +884,7 @@ describe("TxBuilder Script Handling", () => {
     // Tier 2: 5,000 bytes * 25 lovelace/byte = 125,000
     // Total: 500,000 lovelace
     const expectedMinRefScriptFee = 500_000n
-    
+
     expect(tx.body.fee).toBeGreaterThan(expectedMinRefScriptFee)
   })
 
@@ -931,7 +931,7 @@ describe("TxBuilder Script Handling", () => {
     // Tier 3: 10,000 bytes * 100 lovelace/byte = 1,000,000
     // Total: 2,000,000 lovelace
     const expectedMinRefScriptFee = 2_000_000n
-    
+
     expect(tx.body.fee).toBeGreaterThan(expectedMinRefScriptFee)
   })
 
@@ -974,9 +974,9 @@ describe("TxBuilder Script Handling", () => {
     // Create two reference script UTxOs
     const script1Size = 15_000 // 15KB
     const script2Size = 20_000 // 20KB
-    
+
     const referenceScript1 = makePlutusV2ScriptFromHex("48".repeat(script1Size))
-    
+
     const referenceScript2 = makePlutusV2ScriptFromHex("48".repeat(script2Size))
 
     const refScriptUtxo1 = createCoreTestUtxo({
@@ -1022,7 +1022,7 @@ describe("TxBuilder Script Handling", () => {
     // Tier 2: 10,000 bytes * 25 lovelace/byte = 250,000
     // Total: 625,000 lovelace
     const expectedMinRefScriptFee = 625_000n
-    
+
     expect(tx.body.fee).toBeGreaterThan(expectedMinRefScriptFee)
   })
 
@@ -1136,14 +1136,14 @@ describe("TxBuilder Script Handling", () => {
 
     // Verify collateral was selected
     expect(tx.body.collateralInputs).toBeDefined()
-    
+
     // CRITICAL: Must select exactly 3 inputs (protocol limit), NOT 4
     // Even though 4 UTxOs are available, protocol forbids more than 3
     expect(tx.body.collateralInputs!.length).toBe(3)
-    
+
     // Verify total collateral is 5 ADA (the target)
     expect(tx.body.totalCollateral).toBe(5_000_000n)
-    
+
     // Should have collateral return of 1 ADA (6 ADA input - 5 ADA target)
     expect(tx.body.collateralReturn).toBeDefined()
     const collateralReturn = tx.body.collateralReturn!
@@ -1210,14 +1210,14 @@ describe("TxBuilder Script Handling", () => {
     // Verify collateral was selected
     expect(tx.body.collateralInputs).toBeDefined()
     expect(tx.body.collateralInputs!.length).toBe(3)
-    
+
     // Verify total collateral is 5 ADA
     expect(tx.body.totalCollateral).toBe(5_000_000n)
-    
+
     // Verify collateral return exists (6 ADA - 5 ADA = 1 ADA leftover)
     expect(tx.body.collateralReturn).toBeDefined()
     const collateralReturn = tx.body.collateralReturn!
-    
+
     expect(collateralReturn.assets.lovelace).toBe(1_000_000n) // 1 ADA return
   })
 

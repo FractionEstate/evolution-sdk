@@ -96,7 +96,8 @@ export const FromBech32 = Schema.transformOrFail(Schema.String, Schema.typeSchem
         // Note: `as any` needed because bech32.decode expects template literal type `${Prefix}1${string}`
         // but Schema provides plain string. Consider using decodeToBytes which accepts string.
         try: () => bech32.decode(fromA as any, 1023),
-        catch: (error) => new ParseResult.Type(ast, fromA, `Failed to decode bech32 string: ${(error as Error).message}`)
+        catch: (error) =>
+          new ParseResult.Type(ast, fromA, `Failed to decode bech32 string: ${(error as Error).message}`)
       })
       if (prefix !== "ed25519e_sk" && prefix !== "ed25519_sk") {
         throw new ParseResult.Type(ast, fromA, `Expected ed25519e_sk or ed25519_sk prefix, got ${prefix}`)
@@ -116,8 +117,8 @@ export const FromBech32 = Schema.transformOrFail(Schema.String, Schema.typeSchem
  * @since 2.0.0
  * @category arbitrary
  */
-export const arbitrary = FastCheck.uint8Array({ minLength: 32, maxLength: 32 }).map((bytes) =>
-  new PrivateKey({ key: bytes }, { disableValidation: true })
+export const arbitrary = FastCheck.uint8Array({ minLength: 32, maxLength: 32 }).map(
+  (bytes) => new PrivateKey({ key: bytes }, { disableValidation: true })
 )
 
 // ============================================================================
@@ -328,8 +329,9 @@ export namespace Either {
       if (!hdKey.privateKey) {
         return yield* E.left(new PrivateKeyError("No private key in HD key"))
       }
-      return yield* E.mapLeft(ParseResult.decodeEither(FromBytes)(hdKey.privateKey), (error) =>
-        new PrivateKeyError(`Failed to decode private key: ${error}`)
+      return yield* E.mapLeft(
+        ParseResult.decodeEither(FromBytes)(hdKey.privateKey),
+        (error) => new PrivateKeyError(`Failed to decode private key: ${error}`)
       )
     })
 
@@ -341,16 +343,18 @@ export namespace Either {
    */
   export const derive = (privateKey: PrivateKey, path: string): E.Either<PrivateKey, PrivateKeyError> =>
     E.gen(function* () {
-      const privateKeyBytes = yield* E.mapLeft(ParseResult.encodeEither(FromBytes)(privateKey), (error) =>
-        new PrivateKeyError(`Failed to encode private key: ${error}`)
+      const privateKeyBytes = yield* E.mapLeft(
+        ParseResult.encodeEither(FromBytes)(privateKey),
+        (error) => new PrivateKeyError(`Failed to encode private key: ${error}`)
       )
       const hdKey = BIP32.HDKey.fromMasterSeed(privateKeyBytes)
       const childKey = hdKey.derive(path)
       if (!childKey.privateKey) {
         return yield* E.left(new PrivateKeyError("No private key in derived HD key"))
       }
-      return yield* E.mapLeft(ParseResult.decodeEither(FromBytes)(childKey.privateKey), (error) =>
-        new PrivateKeyError(`Failed to decode derived private key: ${error}`)
+      return yield* E.mapLeft(
+        ParseResult.decodeEither(FromBytes)(childKey.privateKey),
+        (error) => new PrivateKeyError(`Failed to decode derived private key: ${error}`)
       )
     })
 
@@ -365,8 +369,9 @@ export namespace Either {
     message: Uint8Array
   ): E.Either<Ed25519Signature.Ed25519Signature, PrivateKeyError> =>
     E.gen(function* () {
-      const privateKeyBytes = yield* E.mapLeft(ParseResult.encodeEither(FromBytes)(privateKey), (error) =>
-        new PrivateKeyError(`Failed to encode private key: ${error}`)
+      const privateKeyBytes = yield* E.mapLeft(
+        ParseResult.encodeEither(FromBytes)(privateKey),
+        (error) => new PrivateKeyError(`Failed to encode private key: ${error}`)
       )
 
       if (privateKeyBytes.length === 64) {

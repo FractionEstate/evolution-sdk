@@ -59,15 +59,11 @@ export class DatumHash extends Schema.TaggedClass<DatumHash>()("DatumHash", {
  * @since 2.0.0
  * @category schemas
  */
-export const FromBytes = Schema.transform(
-  Schema.typeSchema(Bytes32.BytesFromHex),
-  Schema.typeSchema(DatumHash),
-  {
-    strict: true,
-    decode: (bytes) => new DatumHash({ hash: bytes }, { disableValidation: true }),
-    encode: (dh) => dh.hash
-  }
-).annotations({
+export const FromBytes = Schema.transform(Schema.typeSchema(Bytes32.BytesFromHex), Schema.typeSchema(DatumHash), {
+  strict: true,
+  decode: (bytes) => new DatumHash({ hash: bytes }, { disableValidation: true }),
+  encode: (dh) => dh.hash
+}).annotations({
   identifier: "DatumHash.FromBytes"
 })
 

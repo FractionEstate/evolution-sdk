@@ -42,18 +42,11 @@ export class SingleHostName extends Schema.TaggedClass<SingleHostName>()("Single
   }
 
   [Equal.symbol](that: unknown): boolean {
-    return (
-      that instanceof SingleHostName &&
-      this.port === that.port &&
-      Equal.equals(this.dnsName, that.dnsName)
-    )
+    return that instanceof SingleHostName && this.port === that.port && Equal.equals(this.dnsName, that.dnsName)
   }
 
   [Hash.symbol](): number {
-    return Hash.cached(
-      this,
-      Hash.combine(Hash.hash(this.port))(Hash.hash(this.dnsName))
-    )
+    return Hash.cached(this, Hash.combine(Hash.hash(this.port))(Hash.hash(this.dnsName)))
   }
 
   /**

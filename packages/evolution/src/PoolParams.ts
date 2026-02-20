@@ -127,9 +127,7 @@ export class PoolParams extends Schema.TaggedClass<PoolParams>()("PoolParams", {
               Hash.combine(Hash.hash(this.margin))(
                 Hash.combine(Hash.hash(this.rewardAccount))(
                   Hash.combine(Hash.array(this.poolOwners.map((o) => Hash.hash(o))))(
-                    Hash.combine(Hash.array(this.relays.map((r) => Hash.hash(r))))(
-                      Hash.hash(this.poolMetadata)
-                    )
+                    Hash.combine(Hash.array(this.relays.map((r) => Hash.hash(r))))(Hash.hash(this.poolMetadata))
                   )
                 )
               )

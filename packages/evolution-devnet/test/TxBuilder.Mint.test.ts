@@ -25,7 +25,8 @@ describe("TxBuilder Minting (Devnet Submit)", () => {
   let nativeScript: NativeScripts.NativeScript
   let policyId: string
 
-  const TEST_MNEMONIC = "test test test test test test test test test test test test test test test test test test test test test test test sauce"
+  const TEST_MNEMONIC =
+    "test test test test test test test test test test test test test test test test test test test test test test test sauce"
   const ASSET_NAME = "TestToken"
 
   const createTestClient = () =>
@@ -57,7 +58,7 @@ describe("TxBuilder Minting (Devnet Submit)", () => {
 
     // Create native script requiring signature from payment key
     nativeScript = NativeScripts.makeScriptPubKey(paymentKeyHash)
-    
+
     // Calculate policy ID from script hash using core module
     const scriptHash = ScriptHash.fromScript(nativeScript)
     policyId = ScriptHash.toHex(scriptHash)
@@ -122,7 +123,7 @@ describe("TxBuilder Minting (Devnet Submit)", () => {
       })
       .payToAddress({
         address,
-        assets: CoreAssets.fromRecord({ 
+        assets: CoreAssets.fromRecord({
           lovelace: 3_000_000n,
           [unit]: 5000n
         })

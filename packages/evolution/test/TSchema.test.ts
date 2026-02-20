@@ -1,3 +1,4 @@
+import { Schema } from "effect"
 import { describe, expect, it } from "vitest"
 
 import * as Bytes from "../src/Bytes.js"
@@ -359,9 +360,7 @@ describe("TypeTaggedSchema Tests", () => {
           stakeCredential: TSchema.NullOr(TSchema.Integer)
         })
 
-        const Foo = TSchema.Union(
-          TSchema.Struct({ foo: AddressSchema }, { flatFields: true })
-        )
+        const Foo = TSchema.Union(TSchema.Struct({ foo: AddressSchema }, { flatFields: true }))
 
         const input = {
           foo: {
@@ -567,6 +566,66 @@ describe("TypeTaggedSchema Tests", () => {
       const decoded = Data.withSchema(MintAction).fromCBORHex(encoded)
 
       expect(eq(decoded, input)).toBe(true)
+    })
+  })
+
+  describe("PlutusData Schema", () => {
+    it("should encode/decode PlutusData inside Struct via TSchema.PlutusData", () => {
+      const FooSchema = TSchema.Struct({
+        foo: TSchema.PlutusData
+      })
+
+      type Foo = typeof FooSchema.Type
+
+      const serialise = (d: Foo) => Data.withSchema(FooSchema).toCBORHex(d)
+
+      expect(
+        serialise({
+          foo: Data.fromCBORHex("d87980")
+        })
+      ).toEqual("d8799fd87980ff")
+    })
+
+    it("should encode/decode PlutusData inside Struct via Schema.typeSchema", () => {
+      const OpaqueData = Schema.typeSchema(Data.DataSchema)
+
+      const FooSchema = TSchema.Struct({
+        foo: OpaqueData
+      })
+
+      type Foo = typeof FooSchema.Type
+
+      const serialise = (d: Foo) => Data.withSchema(FooSchema).toCBORHex(d)
+
+      expect(
+        serialise({
+          foo: Data.fromCBORHex("d87980")
+        })
+      ).toEqual("d8799fd87980ff")
+    })
+
+    it("should encode/decode PlutusData inside NullOr", () => {
+      const NullableData = TSchema.NullOr(TSchema.PlutusData)
+      const codec = Data.withSchema(NullableData)
+
+      const just = codec.toCBORHex(Data.fromCBORHex("d87980"))
+      const nothing = codec.toCBORHex(null)
+
+      expect(codec.fromCBORHex(just)).toBeInstanceOf(Data.Constr)
+      expect(codec.fromCBORHex(nothing)).toBeNull()
+    })
+
+    it("should encode/decode PlutusData inside Array", () => {
+      const DataListSchema = TSchema.Array(TSchema.PlutusData)
+      const codec = Data.withSchema(DataListSchema)
+
+      const input: ReadonlyArray<Data.Data> = [42n, Data.fromCBORHex("d87980")]
+      const encoded = codec.toCBORHex(input)
+      const decoded = codec.fromCBORHex(encoded)
+
+      expect(decoded.length).toBe(2)
+      expect(decoded[0]).toBe(42n)
+      expect(decoded[1]).toBeInstanceOf(Data.Constr)
     })
   })
 

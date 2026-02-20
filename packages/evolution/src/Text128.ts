@@ -20,9 +20,7 @@ export const TEXT128_MAX_LENGTH = 128
  * @since 2.0.0
  * @category schemas
  */
-export const Text128 = Text.Text.pipe(
-  Text.between(TEXT128_MIN_LENGTH, TEXT128_MAX_LENGTH, "Text128")
-).annotations({
+export const Text128 = Text.Text.pipe(Text.between(TEXT128_MIN_LENGTH, TEXT128_MAX_LENGTH, "Text128")).annotations({
   identifier: "Text128"
 })
 

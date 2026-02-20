@@ -150,8 +150,9 @@ interface GroupManifest {
   title: string
   description?: string
   output: string
-  steps?: boolean  // Enable Steps component for sequential workflows
-  tabs?: Array<{   // Enable Tabs component for alternative implementations
+  steps?: boolean // Enable Steps component for sequential workflows
+  tabs?: Array<{
+    // Enable Tabs component for alternative implementations
     name: string
     file: string
   }>
@@ -159,14 +160,14 @@ interface GroupManifest {
     file: string
     heading?: string
     description?: string
-    accordion?: boolean  // Wrap section in Accordion (collapsible)
+    accordion?: boolean // Wrap section in Accordion (collapsible)
   }>
 }
 
 async function processGroup(manifestPath: string, srcDir: string, outDir: string): Promise<number> {
   const manifestContent = await readText(manifestPath)
   const manifest: GroupManifest = JSON.parse(manifestContent)
-  
+
   // Build frontmatter
   const frontmatter = [
     "---",
@@ -175,33 +176,33 @@ async function processGroup(manifestPath: string, srcDir: string, outDir: string
     "---",
     ""
   ].join("\n")
-  
+
   // Process each file in the group
   const sections: string[] = [frontmatter]
-  
+
   // Handle Tabs mode (alternative implementations)
   if (manifest.tabs) {
     sections.push("import { Tab, Tabs } from 'fumadocs-ui/components/tabs'\n")
-    sections.push(`<Tabs items={[${manifest.tabs.map(t => `'${t.name}'`).join(', ')}]}>\n`)
-    
+    sections.push(`<Tabs items={[${manifest.tabs.map((t) => `'${t.name}'`).join(", ")}]}>\n`)
+
     for (const tab of manifest.tabs) {
       const filePath = path.join(srcDir, tab.file)
       const code = await getExampleCodeForFile(filePath)
-      
+
       sections.push(`<Tab value="${tab.name}">\n`)
       sections.push("```typescript twoslash")
       sections.push(code)
       sections.push("```\n")
       sections.push("</Tab>\n")
     }
-    
+
     sections.push("</Tabs>\n")
   }
   // Handle Steps mode (sequential workflow) or regular files mode
   else if (manifest.files) {
     // Check if any file uses accordion
-    const hasAccordion = manifest.files.some(f => f.accordion)
-    
+    const hasAccordion = manifest.files.some((f) => f.accordion)
+
     // Add imports
     const imports: string[] = []
     if (manifest.steps) {
@@ -213,19 +214,19 @@ async function processGroup(manifestPath: string, srcDir: string, outDir: string
     if (imports.length > 0) {
       sections.push(imports.join("\n") + "\n")
     }
-    
+
     // Add Steps opening tag if enabled
     if (manifest.steps) {
       sections.push("<Steps>\n")
     }
-    
+
     // Track if we're inside an Accordions wrapper
     let inAccordionsBlock = false
-    
+
     for (const fileSpec of manifest.files) {
       const filePath = path.join(srcDir, fileSpec.file)
       const code = await getExampleCodeForFile(filePath)
-      
+
       // Open Accordions wrapper if this is the first accordion and we haven't opened it yet
       if (fileSpec.accordion && !inAccordionsBlock) {
         sections.push("<Accordions>\n")
@@ -236,7 +237,7 @@ async function processGroup(manifestPath: string, srcDir: string, outDir: string
         sections.push("</Accordions>\n")
         inAccordionsBlock = false
       }
-      
+
       // Wrap in Accordion if specified
       if (fileSpec.accordion && fileSpec.heading) {
         sections.push(`<Accordion title="${fileSpec.heading}">\n`)
@@ -246,49 +247,49 @@ async function processGroup(manifestPath: string, srcDir: string, outDir: string
         const headingLevel = manifest.steps ? "###" : "##"
         sections.push(`${headingLevel} ${fileSpec.heading}\n`)
       }
-      
+
       // Add description if specified
       if (fileSpec.description) {
         sections.push(`${fileSpec.description}\n`)
       }
-      
+
       // Add code block (complete and independent)
       sections.push("```typescript twoslash")
       sections.push(code)
       sections.push("```\n")
-      
+
       // Close Accordion if it was opened
       if (fileSpec.accordion) {
         sections.push("</Accordion>\n")
       }
     }
-    
+
     // Close Accordions wrapper if still open at the end
     if (inAccordionsBlock) {
       sections.push("</Accordions>\n")
     }
-    
+
     // Close Steps component if enabled
     if (manifest.steps) {
       sections.push("</Steps>\n")
     }
   }
-  
+
   // Write grouped MDX
   const mdx = sections.join("\n")
   const outFile = path.join(outDir, manifest.output)
-  
+
   let shouldWrite = true
   try {
     const existing = await fs.readFile(outFile, "utf8")
     if (existing === mdx) shouldWrite = false
   } catch {}
-  
+
   if (shouldWrite) {
     await fs.writeFile(outFile, mdx)
     return 1
   }
-  
+
   return 0
 }
 
@@ -298,7 +299,7 @@ async function processGroup(manifestPath: string, srcDir: string, outDir: string
 async function getExampleCodeForFile(filePath: string): Promise<string> {
   const content = await readText(filePath)
   const regionName = extractDirective(content, "region") || "main"
-  
+
   try {
     return await extractRegion(filePath, regionName)
   } catch {
@@ -345,27 +346,27 @@ async function generateFromExamples(srcDir: string, relativeOutDir: string): Pro
   const groupManifests: string[] = []
   const groupedFiles = new Set<string>()
   const groupOutputs: Array<{ title: string; slug: string }> = []
-  
+
   for (const e of entries) {
-    if (e.isFile() && e.name.endsWith('.group.json')) {
+    if (e.isFile() && e.name.endsWith(".group.json")) {
       const manifestPath = path.join(absSrc, e.name)
       groupManifests.push(manifestPath)
-      
+
       // Track which files are in groups
       const manifestContent = await readText(manifestPath)
       const manifest: GroupManifest = JSON.parse(manifestContent)
-      
+
       // Add files from tabs or files array
       if (manifest.tabs) {
-        manifest.tabs.forEach(t => groupedFiles.add(t.file))
+        manifest.tabs.forEach((t) => groupedFiles.add(t.file))
       } else if (manifest.files) {
-        manifest.files.forEach(f => groupedFiles.add(f.file))
+        manifest.files.forEach((f) => groupedFiles.add(f.file))
       }
-      
+
       // Process the group
       const groupCreated = await processGroup(manifestPath, absSrc, outDir)
       created += groupCreated
-      
+
       // Track for index generation
       const slug = toSlug(manifest.output.replace(/\.mdx$/i, ""))
       groupOutputs.push({ title: manifest.title, slug })
@@ -443,20 +444,20 @@ async function generateFromExamples(srcDir: string, relativeOutDir: string): Pro
     indexLines.push(`# ${indexTitle}`)
     indexLines.push("")
     indexLines.push("<Cards>")
-    
+
     // Add subdirectories as cards
     for (const d of dirs) {
       const dirTitle = toTitleCase(d)
       const dirPath = path.relative(PAGES_DIR, path.join(outDir, d)).replace(/\\/g, "/")
       indexLines.push(`  <Card title="${dirTitle}" href="/docs/${dirPath}" />`)
     }
-    
+
     // Add grouped pages as cards
     for (const group of groupOutputs) {
       const groupPath = path.relative(PAGES_DIR, path.join(outDir, group.slug)).replace(/\\/g, "/")
       indexLines.push(`  <Card title="${group.title}" href="/docs/${groupPath}" />`)
     }
-    
+
     // Add standalone files as cards
     for (const f of files) {
       const cached = fileCache.get(f)
@@ -465,14 +466,16 @@ async function generateFromExamples(srcDir: string, relativeOutDir: string): Pro
       const desc = cached?.desc || ""
       const slug = toSlug(name)
       const filePath = path.relative(PAGES_DIR, path.join(outDir, slug)).replace(/\\/g, "/")
-      
+
       if (desc) {
-        indexLines.push(`  <Card title="${title}" description="${desc.replace(/"/g, '\\"')}" href="/docs/${filePath}" />`)
+        indexLines.push(
+          `  <Card title="${title}" description="${desc.replace(/"/g, '\\"')}" href="/docs/${filePath}" />`
+        )
       } else {
         indexLines.push(`  <Card title="${title}" href="/docs/${filePath}" />`)
       }
     }
-    
+
     indexLines.push("</Cards>")
     indexLines.push("")
 

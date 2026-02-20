@@ -14,14 +14,14 @@ import { Effect } from "effect"
  * Produces blocks every 20ms instead of default 1s (50x faster).
  */
 const FAST_SHELLEY_GENESIS = {
-  slotLength: 0.02,       // 20ms per slot (50x faster than default 1s)
-  epochLength: 50,        // Very short epochs for faster testing
-  activeSlotsCoeff: 1.0   // Block every slot (100% probability)
+  slotLength: 0.02, // 20ms per slot (50x faster than default 1s)
+  epochLength: 50, // Very short epochs for faster testing
+  activeSlotsCoeff: 1.0 // Block every slot (100% probability)
 } as const
 
 /**
  * Integration tests for Devnet module using REAL Docker containers.
- * 
+ *
  * Prerequisites:
  * - Docker daemon must be running
  * - Sufficient disk space for cardano-node image
@@ -72,7 +72,7 @@ describe("Devnet Integration Tests", () => {
       const publicKey = VKey.fromPrivateKey(privateKey)
       const keyHash = KeyHash.fromVKey(publicKey)
       const addressHex = KeyHash.toHex(keyHash)
-      
+
       const cluster = await Cluster.make({
         clusterName: "test-custom-initial-funds",
         shelleyGenesis: {
@@ -103,7 +103,7 @@ describe("Devnet Integration Tests", () => {
 
       expect(cluster.kupo).toBeDefined()
       expect(cluster.kupo?.name).toBe("test-kupo-enabled-kupo")
-      
+
       const docker = new Docker()
       const container = docker.getContainer(cluster.kupo!.id)
       const info = await container.inspect()
@@ -119,7 +119,7 @@ describe("Devnet Integration Tests", () => {
 
       expect(cluster.ogmios).toBeDefined()
       expect(cluster.ogmios?.name).toBe("test-ogmios-enabled-ogmios")
-      
+
       const docker = new Docker()
       const container = docker.getContainer(cluster.ogmios!.id)
       const info = await container.inspect()
@@ -128,16 +128,16 @@ describe("Devnet Integration Tests", () => {
 
     it("should remove and recreate cluster with same name", { timeout: 180_000 }, async () => {
       const clusterName = "test-recreate-same-name"
-      
+
       const cluster1 = await Cluster.make({ clusterName })
       const firstId = cluster1.cardanoNode.id
-      
+
       const cluster2 = await Cluster.make({ clusterName })
       createdClusters.push(cluster2)
-      
+
       expect(cluster2.cardanoNode.id).not.toBe(firstId)
       expect(cluster2.cardanoNode.name).toBe(cluster1.cardanoNode.name)
-      
+
       const docker = new Docker()
       await expect(docker.getContainer(firstId).inspect()).rejects.toThrow()
     })
@@ -165,13 +165,12 @@ describe("Devnet Integration Tests", () => {
 
       const logs = await container.logs({ stdout: true, stderr: true, tail: 100 })
       const logString = logs.toString()
-      
+
       const hasBlockProduction =
-        logString.includes("Forge.Loop.AdoptedBlock") ||
-        logString.includes("Forge.Loop.NodeIsLeader")
+        logString.includes("Forge.Loop.AdoptedBlock") || logString.includes("Forge.Loop.NodeIsLeader")
 
       expect(hasBlockProduction).toBe(true)
-      
+
       await Cluster.stop(cluster)
     })
 
@@ -187,18 +186,22 @@ describe("Devnet Integration Tests", () => {
       await new Promise((resolve) => setTimeout(resolve, 500))
 
       const output = await Container.execCommand(cluster.cardanoNode, [
-        "cardano-cli", "query", "tip",
-        "--socket-path", "/opt/cardano/ipc/node.socket",
-        "--testnet-magic", "42"
+        "cardano-cli",
+        "query",
+        "tip",
+        "--socket-path",
+        "/opt/cardano/ipc/node.socket",
+        "--testnet-magic",
+        "42"
       ])
 
       const tipData = JSON.parse(output)
-      
+
       expect(tipData).toHaveProperty("block")
       expect(tipData).toHaveProperty("epoch")
       expect(tipData).toHaveProperty("slot")
       expect(tipData.block).toBeGreaterThan(0)
-      
+
       await Cluster.stop(cluster)
     })
 
@@ -263,7 +266,7 @@ describe("Devnet Integration Tests", () => {
 
       expect(info.State.Running).toBe(true)
       expect(info.State.Status).toBe("running")
-      
+
       await Cluster.stop(cluster)
     })
   })
@@ -283,7 +286,7 @@ describe("Devnet Integration Tests", () => {
       const info = await docker.getContainer(cluster.cardanoNode.id).inspect()
 
       expect(info.State.Running).toBe(true)
-      
+
       await Container.stop(cluster.cardanoNode)
     })
 
@@ -325,15 +328,11 @@ describe("Devnet Integration Tests", () => {
         name: "fake-container"
       }
 
-      await expect(
-        Container.getStatus(fakeContainer)
-      ).rejects.toThrow()
+      await expect(Container.getStatus(fakeContainer)).rejects.toThrow()
     })
 
     it("should handle missing Docker image gracefully", { timeout: 30_000 }, async () => {
-      const isAvailable = await Container.isImageAvailable(
-        "cardanosolutions/cardano-node-ogmios:latest-nonexistent"
-      )
+      const isAvailable = await Container.isImageAvailable("cardanosolutions/cardano-node-ogmios:latest-nonexistent")
 
       expect(isAvailable).toBe(false)
     })
@@ -344,9 +343,7 @@ describe("Devnet Integration Tests", () => {
       })
       createdClusters.push(cluster)
 
-      await expect(
-        Container.stop(cluster.cardanoNode)
-      ).resolves.not.toThrow()
+      await expect(Container.stop(cluster.cardanoNode)).resolves.not.toThrow()
     })
   })
 
@@ -356,7 +353,7 @@ describe("Devnet Integration Tests", () => {
         const cluster = yield* Cluster.makeEffect({
           clusterName: "test-effect-gen-create"
         })
-        
+
         return cluster
       })
 
@@ -372,13 +369,11 @@ describe("Devnet Integration Tests", () => {
           id: "fake-id-for-effect",
           name: "fake"
         }
-        
+
         yield* Container.getStatusEffect(fakeContainer)
       })
 
-      await expect(
-        Effect.runPromise(program)
-      ).rejects.toThrow(/container may be corrupted or inaccessible/i)
+      await expect(Effect.runPromise(program)).rejects.toThrow(/container may be corrupted or inaccessible/i)
     })
 
     it("should compose cluster operations in Effect pipeline", { timeout: 180_000 }, async () => {
@@ -388,14 +383,14 @@ describe("Devnet Integration Tests", () => {
           ports: { node: 4008, submit: 8097 },
           shelleyGenesis: FAST_SHELLEY_GENESIS
         })
-        
+
         yield* Cluster.startEffect(cluster)
         yield* Effect.promise(() => new Promise((resolve) => setTimeout(resolve, 500)))
-        
+
         const status = yield* Container.getStatusEffect(cluster.cardanoNode)
-        
+
         yield* Cluster.stopEffect(cluster)
-        
+
         return { cluster, wasRunning: status?.State.Running }
       })
 
@@ -403,7 +398,7 @@ describe("Devnet Integration Tests", () => {
       createdClusters.push(result.cluster)
 
       expect(result.wasRunning).toBe(true)
-      
+
       await Cluster.stop(result.cluster)
     })
   })
@@ -453,7 +448,7 @@ describe("Devnet Integration Tests", () => {
       ])
 
       expect(output).toContain(addressBech32)
-      
+
       await Cluster.stop(cluster)
     })
 
@@ -479,13 +474,13 @@ describe("Devnet Integration Tests", () => {
       await new Promise((resolve) => setTimeout(resolve, 2_000))
 
       const docker = new Docker()
-      
+
       const nodeInfo = await docker.getContainer(cluster.cardanoNode.id).inspect()
       expect(nodeInfo.State.Running).toBe(true)
-      
+
       const kupoInfo = await docker.getContainer(cluster.kupo!.id).inspect()
       expect(kupoInfo.State.Running).toBe(true)
-      
+
       const ogmiosInfo = await docker.getContainer(cluster.ogmios!.id).inspect()
       expect(ogmiosInfo.State.Running).toBe(true)
 

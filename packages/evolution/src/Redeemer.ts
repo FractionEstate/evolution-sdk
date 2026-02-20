@@ -48,11 +48,7 @@ export class ExUnits extends Schema.Class<ExUnits>("Redeemer.ExUnits")({
   }
 
   [Equal.symbol](that: unknown): boolean {
-    return (
-      that instanceof ExUnits &&
-      Equal.equals(this.mem, that.mem) &&
-      Equal.equals(this.steps, that.steps)
-    )
+    return that instanceof ExUnits && Equal.equals(this.mem, that.mem) && Equal.equals(this.steps, that.steps)
   }
 
   [Hash.symbol](): number {

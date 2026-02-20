@@ -20,7 +20,8 @@ const PROTOCOL_PARAMS = {
   maxTxSize: 16_384
 }
 
-const CHANGE_ADDRESS = "addr_test1qz2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgs68faae"
+const CHANGE_ADDRESS =
+  "addr_test1qz2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3n0d3vllmyqwsx5wktcd8cc3sq835lu7drv2xwl2wywfgs68faae"
 
 const baseConfig: TxBuilderConfig = {}
 

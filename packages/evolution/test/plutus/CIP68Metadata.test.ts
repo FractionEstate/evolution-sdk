@@ -10,7 +10,7 @@ describe("CIP68 Metadata", () => {
       const datum = {
         metadata: 0n,
         version: 1n,
-        extra: [],
+        extra: []
       }
       const data = CIP68Metadata.Codec.toData(datum)
       expect(data.index).toBe(0n)
@@ -18,13 +18,11 @@ describe("CIP68 Metadata", () => {
     })
 
     it("should create datum with metadata map", () => {
-      const metadataMap = Data.map([
-        [Text.toBytes("name"), Text.toBytes("Token")],
-      ])
+      const metadataMap = Data.map([[Text.toBytes("name"), Text.toBytes("Token")]])
       const datum = {
         metadata: metadataMap,
         version: 1n,
-        extra: [],
+        extra: []
       }
       const data = CIP68Metadata.Codec.toData(datum)
       expect(data.index).toBe(0n)
@@ -35,7 +33,7 @@ describe("CIP68 Metadata", () => {
       const datum = {
         metadata: 0n,
         version: 1n,
-        extra: [],
+        extra: []
       }
       const encoded = CIP68Metadata.Codec.toCBORHex(datum)
       const decoded = CIP68Metadata.Codec.fromCBORHex(encoded)
@@ -46,7 +44,7 @@ describe("CIP68 Metadata", () => {
       const datum = {
         metadata: 0n,
         version: 2n,
-        extra: [],
+        extra: []
       }
       const encoded = CIP68Metadata.Codec.toCBORHex(datum)
       const decoded = CIP68Metadata.Codec.fromCBORHex(encoded)
@@ -57,7 +55,7 @@ describe("CIP68 Metadata", () => {
       const datum = {
         metadata: 0n,
         version: 3n,
-        extra: [],
+        extra: []
       }
       const encoded = CIP68Metadata.Codec.toCBORHex(datum)
       const decoded = CIP68Metadata.Codec.fromCBORHex(encoded)
@@ -69,7 +67,7 @@ describe("CIP68 Metadata", () => {
       const datum = {
         metadata: 0n,
         version: 1n,
-        extra: extraData,
+        extra: extraData
       }
       const data = CIP68Metadata.Codec.toData(datum)
       expect(data.index).toBe(0n)
@@ -81,7 +79,7 @@ describe("CIP68 Metadata", () => {
       const datum = {
         metadata: 0n,
         version: 1n,
-        extra: [],
+        extra: []
       }
       const encoded = CIP68Metadata.Codec.toCBORHex(datum)
       const decoded = CIP68Metadata.Codec.fromCBORHex(encoded)
@@ -93,12 +91,12 @@ describe("CIP68 Metadata", () => {
     it("should round-trip datum with metadata", () => {
       const metadataMap = Data.map([
         [Text.toBytes("name"), Text.toBytes("TestToken")],
-        [Text.toBytes("image"), Text.toBytes("ipfs://test")],
+        [Text.toBytes("image"), Text.toBytes("ipfs://test")]
       ])
       const datum = {
         metadata: metadataMap,
         version: 1n,
-        extra: [],
+        extra: []
       }
       const encoded = CIP68Metadata.Codec.toCBORHex(datum)
       const decoded = CIP68Metadata.Codec.fromCBORHex(encoded)
@@ -108,14 +106,11 @@ describe("CIP68 Metadata", () => {
     })
 
     it("should round-trip datum with extra data", () => {
-      const extraData = [
-        42n,
-        Data.map([[Text.toBytes("key"), Text.toBytes("value")]]),
-      ]
+      const extraData = [42n, Data.map([[Text.toBytes("key"), Text.toBytes("value")]])]
       const datum = {
         metadata: 0n,
         version: 2n,
-        extra: extraData,
+        extra: extraData
       }
       const encoded = CIP68Metadata.Codec.toCBORHex(datum)
       const decoded = CIP68Metadata.Codec.fromCBORHex(encoded)
@@ -129,12 +124,12 @@ describe("CIP68 Metadata", () => {
       const nftMetadata = Data.map([
         [Text.toBytes("name"), Text.toBytes("TestNFT")],
         [Text.toBytes("image"), Text.toBytes("ipfs://test/image.png")],
-        [Text.toBytes("description"), Text.toBytes("This is a test token")],
+        [Text.toBytes("description"), Text.toBytes("This is a test token")]
       ])
       const datum = {
         metadata: nftMetadata,
         version: 1n,
-        extra: [],
+        extra: []
       }
       const encoded = CIP68Metadata.Codec.toCBORHex(datum)
       const decoded = CIP68Metadata.Codec.fromCBORHex(encoded)
@@ -147,12 +142,12 @@ describe("CIP68 Metadata", () => {
       const ftMetadata = Data.map([
         [Text.toBytes("name"), Text.toBytes("TestToken")],
         [Text.toBytes("decimals"), 6n],
-        [Text.toBytes("ticker"), Text.toBytes("TEST")],
+        [Text.toBytes("ticker"), Text.toBytes("TEST")]
       ])
       const datum = {
         metadata: ftMetadata,
         version: 1n,
-        extra: [],
+        extra: []
       }
       const encoded = CIP68Metadata.Codec.toCBORHex(datum)
       const decoded = CIP68Metadata.Codec.fromCBORHex(encoded)
@@ -165,12 +160,12 @@ describe("CIP68 Metadata", () => {
       const rftMetadata = Data.map([
         [Text.toBytes("name"), Text.toBytes("TestRFT")],
         [Text.toBytes("image"), Text.toBytes("ipfs://test/image.png")],
-        [Text.toBytes("decimals"), 2n],
+        [Text.toBytes("decimals"), 2n]
       ])
       const datum = {
         metadata: rftMetadata,
         version: 3n,
-        extra: [],
+        extra: []
       }
       const encoded = CIP68Metadata.Codec.toCBORHex(datum)
       const decoded = CIP68Metadata.Codec.fromCBORHex(encoded)

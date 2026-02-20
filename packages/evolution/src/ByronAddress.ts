@@ -29,9 +29,7 @@ export class ByronAddress extends Schema.TaggedClass<ByronAddress>("ByronAddress
   }
 
   [Equal.symbol](that: unknown): boolean {
-    return (
-      that instanceof ByronAddress && this.networkId === that.networkId && this.bytes === that.bytes
-    )
+    return that instanceof ByronAddress && this.networkId === that.networkId && this.bytes === that.bytes
   }
 
   [Hash.symbol](): number {

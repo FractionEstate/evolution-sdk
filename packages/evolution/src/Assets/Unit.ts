@@ -40,7 +40,7 @@ export const fromUnit = (unit: Unit): UnitDetails => {
   const assetNameHex = unit.slice(56) || null
 
   const policyId = Schema.decodeSync(PolicyId.FromHex)(policyIdHex)
-  
+
   if (!assetNameHex) {
     return {
       policyId,
@@ -51,12 +51,12 @@ export const fromUnit = (unit: Unit): UnitDetails => {
   }
 
   const assetName = Schema.decodeSync(AssetName.FromHex)(assetNameHex)
-  
+
   // Check for CIP-67 label (first 8 chars of asset name)
   if (assetNameHex.length >= 8) {
     const potentialLabel = assetNameHex.slice(0, 8)
     const labelNum = Label.fromLabel(potentialLabel)
-    
+
     if (labelNum !== undefined) {
       // Has valid label, extract name without label
       const nameHex = assetNameHex.slice(8)
@@ -94,7 +94,7 @@ export const toUnit = (
   label?: number | null
 ): Unit => {
   const policyIdHex = Schema.encodeSync(PolicyId.FromHex)(policyId)
-  
+
   if (policyIdHex.length !== 56) {
     throw new Error(`Policy id invalid: ${policyIdHex}`)
   }
@@ -129,12 +129,9 @@ export const isLovelace = (unit: Unit): boolean => unit === "lovelace"
  * @category schemas
  */
 export const UnitSchema = Schema.String.pipe(
-  Schema.filter(
-    (s) => s === "lovelace" || (s.length >= 56 && s.length <= 120 && /^[0-9a-fA-F]+$/.test(s)),
-    {
-      message: () => 'Unit must be "lovelace" or hex string (56-120 chars)'
-    }
-  )
+  Schema.filter((s) => s === "lovelace" || (s.length >= 56 && s.length <= 120 && /^[0-9a-fA-F]+$/.test(s)), {
+    message: () => 'Unit must be "lovelace" or hex string (56-120 chars)'
+  })
 ).annotations({
   identifier: "Assets.Unit",
   description: "Unit identifier for native assets (policyId + assetName)"

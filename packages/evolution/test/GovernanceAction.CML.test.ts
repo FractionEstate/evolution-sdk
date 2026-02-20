@@ -34,8 +34,7 @@ describe("GovernanceAction Map types CBOR round-trip", () => {
         ]
       ])
 
-      const policyHash =
-        i % 2 === 0 ? new ScriptHash.ScriptHash({ hash: new Uint8Array(28).fill(i % 256) }) : null
+      const policyHash = i % 2 === 0 ? new ScriptHash.ScriptHash({ hash: new Uint8Array(28).fill(i % 256) }) : null
 
       const original = new GovernanceAction.TreasuryWithdrawalsAction({
         withdrawals,
@@ -98,4 +97,3 @@ describe("GovernanceAction Map types CBOR round-trip", () => {
     }
   })
 })
-

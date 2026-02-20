@@ -27,7 +27,9 @@ import type { ProposeParams } from "./Operations.js"
  * @since 2.0.0
  * @category programs
  */
-export const createProposeProgram = (params: ProposeParams): Effect.Effect<void, TransactionBuilderError, TxContext | TxBuilderConfigTag> =>
+export const createProposeProgram = (
+  params: ProposeParams
+): Effect.Effect<void, TransactionBuilderError, TxContext | TxBuilderConfigTag> =>
   Effect.gen(function* () {
     const ctx = yield* TxContext
     const config = yield* TxBuilderConfigTag
@@ -42,9 +44,12 @@ export const createProposeProgram = (params: ProposeParams): Effect.Effect<void,
     }
 
     const protocolParams = yield* config.provider.Effect.getProtocolParameters().pipe(
-      Effect.mapError((err) => new TransactionBuilderError({
-        message: `Failed to fetch protocol parameters: ${err.message}`
-      }))
+      Effect.mapError(
+        (err) =>
+          new TransactionBuilderError({
+            message: `Failed to fetch protocol parameters: ${err.message}`
+          })
+      )
     )
     const govActionDeposit = protocolParams.govActionDeposit
 
@@ -63,10 +68,7 @@ export const createProposeProgram = (params: ProposeParams): Effect.Effect<void,
       if (mergedProposalProcedures) {
         // Merge with existing proposals
         mergedProposalProcedures = new ProposalProcedures.ProposalProcedures({
-          procedures: [
-            ...mergedProposalProcedures.procedures,
-            proposalProcedure
-          ]
+          procedures: [...mergedProposalProcedures.procedures, proposalProcedure]
         })
       } else {
         // First proposal
@@ -81,7 +83,5 @@ export const createProposeProgram = (params: ProposeParams): Effect.Effect<void,
       }
     })
 
-    yield* Effect.logDebug(
-      `[Propose] Added governance proposal with deposit ${govActionDeposit}`
-    )
+    yield* Effect.logDebug(`[Propose] Added governance proposal with deposit ${govActionDeposit}`)
   })

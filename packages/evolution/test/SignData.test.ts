@@ -232,12 +232,12 @@ describe("SignData", () => {
     it("should create and verify a signed message using COSESign1Builder with external AAD", () => {
       // 1) Create keys and message (matching Emurgo example)
       const skBytes = new Uint8Array([
-        34, 125, 55, 10, 222, 244, 31, 91, 181, 231, 62, 80, 90, 53, 246, 160,
-        226, 111, 123, 228, 188, 90, 15, 130, 210, 206, 78, 199, 209, 18, 202, 234
+        34, 125, 55, 10, 222, 244, 31, 91, 181, 231, 62, 80, 90, 53, 246, 160, 226, 111, 123, 228, 188, 90, 15, 130,
+        210, 206, 78, 199, 209, 18, 202, 234
       ])
       const privateKey = PrivateKey.fromBytes(skBytes)
       const publicKey = PrivateKey.toPublicKey(privateKey)
-      
+
       const payload = Utils.fromText("message to sign")
       const externalAAD = Utils.fromText("externally supplied data not in sign object")
 
@@ -248,16 +248,16 @@ describe("SignData", () => {
 
       // Use COSESign1Builder
       let builder = COSESign1.coseSign1BuilderNew(headers, payload, false)
-      
+
       // Set external AAD
       builder = builder.setExternalAad(externalAAD)
-      
+
       // Create SigStructure to sign
       const toSignBytes = builder.makeDataToSign()
-      
+
       // Sign it using Ed25519
       const signature = PrivateKey.sign(privateKey, toSignBytes)
-      
+
       // Build the final COSESign1
       const coseSign1 = builder.build(signature)
 
@@ -270,11 +270,11 @@ describe("SignData", () => {
 
       // Reconstruct SigStructure for verification
       const sigStructBytes = coseSign1.signedData(externalAAD, undefined)
-      
+
       // Verify the signature
       const isValid = VKey.verify(publicKey, sigStructBytes, signatureToVerify.bytes)
       expect(isValid).toBe(true)
-      
+
       // Verify payload matches
       expect(Bytes.toHex(payloadToVerify!)).toBe(Bytes.toHex(payload))
     })
@@ -283,7 +283,7 @@ describe("SignData", () => {
       const skBytes = PrivateKey.generate()
       const privateKey = PrivateKey.fromBytes(skBytes)
       const publicKey = PrivateKey.toPublicKey(privateKey)
-      
+
       const payload = Utils.fromText("message to sign")
       const externalAAD1 = Utils.fromText("external data 1")
       const externalAAD2 = Utils.fromText("external data 2")
@@ -301,7 +301,7 @@ describe("SignData", () => {
 
       // Try to verify with externalAAD2 (should fail)
       const sigStructBytes = coseSign1.signedData(externalAAD2, undefined)
-      
+
       const isValid = VKey.verify(publicKey, sigStructBytes, coseSign1.signature.bytes)
       expect(isValid).toBe(false)
     })
@@ -310,7 +310,7 @@ describe("SignData", () => {
       const skBytes = PrivateKey.generate()
       const privateKey = PrivateKey.fromBytes(skBytes)
       const publicKey = PrivateKey.toPublicKey(privateKey)
-      
+
       const payload = Utils.fromText("message to sign")
 
       // Create and sign without external AAD
@@ -325,7 +325,7 @@ describe("SignData", () => {
 
       // Verify without external AAD
       const sigStructBytes = coseSign1.signedData()
-      
+
       const isValid = VKey.verify(publicKey, sigStructBytes, coseSign1.signature.bytes)
       expect(isValid).toBe(true)
     })
@@ -334,7 +334,7 @@ describe("SignData", () => {
       const skBytes = PrivateKey.generate()
       const privateKey = PrivateKey.fromBytes(skBytes)
       const publicKey = PrivateKey.toPublicKey(privateKey)
-      
+
       const payload = Utils.fromText("external payload")
 
       // Create with external payload (isPayloadExternal = true)
@@ -353,7 +353,7 @@ describe("SignData", () => {
 
       // Verify with external payload
       const sigStructBytes = coseSign1.signedData(undefined, payload)
-      
+
       const isValid = VKey.verify(publicKey, sigStructBytes, coseSign1.signature.bytes)
       expect(isValid).toBe(true)
     })

@@ -71,7 +71,11 @@ export const FromBytes = Schema.transformOrFail(Schema.Uint8ArrayFromSelf, Schem
 
       if (keyType !== 0x01) {
         return yield* ParseResult.fail(
-          new ParseResult.Type(ast, fromA, `Invalid key type in header: expected 0x01 (CC Hot), got 0x0${keyType.toString(16)}`)
+          new ParseResult.Type(
+            ast,
+            fromA,
+            `Invalid key type in header: expected 0x01 (CC Hot), got 0x0${keyType.toString(16)}`
+          )
         )
       }
 
@@ -84,7 +88,11 @@ export const FromBytes = Schema.transformOrFail(Schema.Uint8ArrayFromSelf, Schem
       }
 
       return yield* ParseResult.fail(
-        new ParseResult.Type(ast, fromA, `Invalid credential type in header: expected 0x0E or 0x0F, got 0x0${credType.toString(16)}`)
+        new ParseResult.Type(
+          ast,
+          fromA,
+          `Invalid credential type in header: expected 0x0E or 0x0F, got 0x0${credType.toString(16)}`
+        )
       )
     })
 }).annotations({

@@ -1,6 +1,6 @@
 /**
  * Mint operation - creates minting transactions for native tokens.
- * 
+ *
  * @module operations/Mint
  * @since 2.0.0
  */
@@ -19,22 +19,24 @@ import type { MintTokensParams } from "./Operations.js"
 /**
  * Creates a ProgramStep for mintAssets operation.
  * Adds minting information to the transaction and tracks redeemers by PolicyId.
- * 
+ *
  * Implementation:
  * 1. Validates that only native tokens are being minted (no lovelace)
  * 2. Converts SDK Assets to Core.Mint structure
  * 3. Merges with existing mint state
  * 4. Tracks redeemer information for script-based minting policies (by PolicyId)
- * 
+ *
  * **RedeemerBuilder Support:**
  * - Static: Direct Data value stored immediately
  * - Self: Callback stored for per-policy resolution after coin selection
  * - Batch: Callback + input set stored for multi-policy resolution
- * 
+ *
  * @since 2.0.0
  * @category programs
  */
-export const createMintAssetsProgram = (params: MintTokensParams): Effect.Effect<void, TransactionBuilderError, TxContext> =>
+export const createMintAssetsProgram = (
+  params: MintTokensParams
+): Effect.Effect<void, TransactionBuilderError, TxContext> =>
   Effect.gen(function* () {
     const ctx = yield* TxContext
 
@@ -78,7 +80,7 @@ export const createMintAssetsProgram = (params: MintTokensParams): Effect.Effect
             })
           )
         }
-        
+
         // Insert into mint (amount is already a valid bigint)
         newMint = Mint.insert(newMint, policyId, assetName, amount as NonZeroInt64.NonZeroInt64)
       }
@@ -88,7 +90,7 @@ export const createMintAssetsProgram = (params: MintTokensParams): Effect.Effect
     yield* Ref.update(ctx, (state) => {
       // Merge mints
       let mergedMint = state.mint || new Mint.Mint({ map: new Map() })
-      
+
       for (const [policyId, assetMap] of newMint.map.entries()) {
         for (const [assetName, amount] of assetMap.entries()) {
           mergedMint = Mint.insert(mergedMint, policyId, assetName, amount)
@@ -98,10 +100,10 @@ export const createMintAssetsProgram = (params: MintTokensParams): Effect.Effect
       // Track redeemer by PolicyId if provided
       let newRedeemers = state.redeemers
       let newDeferredRedeemers = state.deferredRedeemers
-      
+
       if (params.redeemer && policyIds.size > 0) {
         const deferred = RedeemerBuilder.toDeferredRedeemer(params.redeemer)
-        
+
         if (deferred._tag === "static") {
           // Static mode: store resolved data immediately
           newRedeemers = new Map(state.redeemers)
@@ -138,12 +140,12 @@ export const createMintAssetsProgram = (params: MintTokensParams): Effect.Effect
 
 /**
  * Convert Mint to Assets preserving sign.
- * 
+ *
  * Used in ChangeCreation and Balance phases where we need to account for
  * the actual minted/burned amounts in calculations:
  * - Positive values = tokens minted (assets created)
  * - Negative values = tokens burned (assets destroyed)
- * 
+ *
  * @param mint - The mint field from transaction state
  * @returns Assets record with mint amounts preserved
  * @internal
@@ -169,12 +171,12 @@ export const mintToAssets = (mint: Mint.Mint | undefined): Assets.Assets => {
 
 /**
  * Convert Mint to Assets with negated values.
- * 
+ *
  * Used in Selection phase for coin selection calculation where minted
  * assets reduce the selection requirements:
  * - Positive mints → negative (surplus, don't need to select from inputs)
  * - Negative burns → positive (deficit, need to select from inputs)
- * 
+ *
  * @param mint - The mint field from transaction state
  * @returns Assets record with negated mint amounts
  * @internal

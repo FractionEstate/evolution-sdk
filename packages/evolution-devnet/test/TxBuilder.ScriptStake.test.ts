@@ -233,8 +233,16 @@ describe("TxBuilder Script Stake Operations", () => {
     const outputPerUtxo = utxosToSpend.reduce((acc, u) => acc + u.assets.lovelace, 0n) / 2n
 
     txBuilder = txBuilder
-      .payToAddress({ address: scriptPaymentAddress, assets: Cardano.Assets.fromLovelace(outputPerUtxo), datum: unitDatum })
-      .payToAddress({ address: scriptPaymentAddress, assets: Cardano.Assets.fromLovelace(outputPerUtxo), datum: unitDatum })
+      .payToAddress({
+        address: scriptPaymentAddress,
+        assets: Cardano.Assets.fromLovelace(outputPerUtxo),
+        datum: unitDatum
+      })
+      .payToAddress({
+        address: scriptPaymentAddress,
+        assets: Cardano.Assets.fromLovelace(outputPerUtxo),
+        datum: unitDatum
+      })
 
     const coordSignBuilder = await txBuilder.build()
     const coordSubmitBuilder = await coordSignBuilder.sign()
@@ -286,7 +294,11 @@ describe("TxBuilder Script Stake Operations", () => {
     const unitDatum = new InlineDatum.InlineDatum({ data: Data.constr(0n, []) })
     const fundSignBuilder = await client
       .newTx()
-      .payToAddress({ address: scriptPaymentAddress, assets: Cardano.Assets.fromLovelace(10_000_000n), datum: unitDatum })
+      .payToAddress({
+        address: scriptPaymentAddress,
+        assets: Cardano.Assets.fromLovelace(10_000_000n),
+        datum: unitDatum
+      })
       .build()
     await client.awaitTx(await (await fundSignBuilder.sign()).submit(), 1000)
     await new Promise((resolve) => setTimeout(resolve, 2000))

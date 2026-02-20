@@ -114,7 +114,7 @@ describe("TSchema.Struct with flatInUnion option", () => {
       const nestedEncoded = Data.withSchema(MixedUnion).toCBORHex(nested)
       const nestedDecoded = Data.withSchema(MixedUnion).fromCBORHex(nestedEncoded)
       expect(nestedDecoded).toEqual(nested)
-      
+
       const nestedRaw = Data.fromCBORHex(nestedEncoded) as Data.Constr
       expect(nestedRaw.index).toBe(0n)
       expect(nestedRaw.fields[0]).toBeInstanceOf(Data.Constr)
@@ -124,7 +124,7 @@ describe("TSchema.Struct with flatInUnion option", () => {
       const flatAutoEncoded = Data.withSchema(MixedUnion).toCBORHex(flatAuto)
       const flatAutoDecoded = Data.withSchema(MixedUnion).fromCBORHex(flatAutoEncoded)
       expect(flatAutoDecoded).toEqual(flatAuto)
-      
+
       const flatAutoRaw = Data.fromCBORHex(flatAutoEncoded) as Data.Constr
       expect(flatAutoRaw.index).toBe(1n)
       expect(flatAutoRaw.fields[0]).toBe(222n)
@@ -134,7 +134,7 @@ describe("TSchema.Struct with flatInUnion option", () => {
       const flatCustomEncoded = Data.withSchema(MixedUnion).toCBORHex(flatCustom)
       const flatCustomDecoded = Data.withSchema(MixedUnion).fromCBORHex(flatCustomEncoded)
       expect(flatCustomDecoded).toEqual(flatCustom)
-      
+
       const flatCustomRaw = Data.fromCBORHex(flatCustomEncoded) as Data.Constr
       expect(flatCustomRaw.index).toBe(121n)
       expect(flatCustomRaw.fields[0]).toBe(333n)
@@ -231,7 +231,7 @@ describe("TSchema.Struct with flatInUnion option", () => {
       const paramEncoded = Data.withSchema(GovernanceAction).toCBORHex(paramChange)
       const paramDecoded = Data.withSchema(GovernanceAction).fromCBORHex(paramEncoded)
       expect(paramDecoded).toEqual(paramChange)
-      
+
       const paramRaw = Data.fromCBORHex(paramEncoded) as Data.Constr
       expect(paramRaw.index).toBe(121n)
       expect(paramRaw.fields[0]).toBe(100n)
@@ -241,7 +241,7 @@ describe("TSchema.Struct with flatInUnion option", () => {
       const hardForkEncoded = Data.withSchema(GovernanceAction).toCBORHex(hardFork)
       const hardForkDecoded = Data.withSchema(GovernanceAction).fromCBORHex(hardForkEncoded)
       expect(hardForkDecoded).toEqual(hardFork)
-      
+
       const hardForkRaw = Data.fromCBORHex(hardForkEncoded) as Data.Constr
       expect(hardForkRaw.index).toBe(122n)
       expect(hardForkRaw.fields[0]).toBe(200n)
@@ -251,7 +251,7 @@ describe("TSchema.Struct with flatInUnion option", () => {
       const treasuryEncoded = Data.withSchema(GovernanceAction).toCBORHex(treasury)
       const treasuryDecoded = Data.withSchema(GovernanceAction).fromCBORHex(treasuryEncoded)
       expect(treasuryDecoded).toEqual(treasury)
-      
+
       const treasuryRaw = Data.fromCBORHex(treasuryEncoded) as Data.Constr
       expect(treasuryRaw.index).toBe(123n)
       expect(treasuryRaw.fields[0]).toBe(300n)
@@ -269,7 +269,7 @@ describe("TSchema.Struct with flatInUnion option", () => {
       const mintEncoded = Data.withSchema(ScriptPurpose).toCBORHex(minting)
       const mintDecoded = Data.withSchema(ScriptPurpose).fromCBORHex(mintEncoded)
       expect(mintDecoded).toEqual(minting)
-      
+
       const mintRaw = Data.fromCBORHex(mintEncoded) as Data.Constr
       expect(mintRaw.index).toBe(0n)
       // fields[0] is now a Uint8Array, convert to hex for comparison
@@ -280,7 +280,7 @@ describe("TSchema.Struct with flatInUnion option", () => {
       const spendEncoded = Data.withSchema(ScriptPurpose).toCBORHex(spending)
       const spendDecoded = Data.withSchema(ScriptPurpose).fromCBORHex(spendEncoded)
       expect(spendDecoded).toEqual(spending)
-      
+
       const spendRaw = Data.fromCBORHex(spendEncoded) as Data.Constr
       expect(spendRaw.index).toBe(1n)
       expect(Bytes.toHex(spendRaw.fields[0] as Uint8Array)).toBe("cafebabe")
@@ -290,7 +290,7 @@ describe("TSchema.Struct with flatInUnion option", () => {
       const rewardEncoded = Data.withSchema(ScriptPurpose).toCBORHex(rewarding)
       const rewardDecoded = Data.withSchema(ScriptPurpose).fromCBORHex(rewardEncoded)
       expect(rewardDecoded).toEqual(rewarding)
-      
+
       const rewardRaw = Data.fromCBORHex(rewardEncoded) as Data.Constr
       expect(rewardRaw.index).toBe(2n)
       expect(Bytes.toHex(rewardRaw.fields[0] as Uint8Array)).toBe("feedface")
@@ -306,7 +306,7 @@ describe("TSchema.Struct with flatInUnion option", () => {
       const decoded = Data.withSchema(MyUnion).fromCBORHex(encoded)
 
       expect(decoded).toEqual(value)
-      
+
       const rawData = Data.fromCBORHex(encoded) as Data.Constr
       expect(rawData.index).toBe(0n)
       expect(rawData.fields[0]).toBeInstanceOf(Data.Constr)
@@ -330,7 +330,7 @@ describe("TSchema.Struct with flatInUnion option", () => {
       const decoded = Data.withSchema(MyUnion).fromCBORHex(encoded)
 
       expect(decoded).toEqual(value)
-      
+
       const rawData = Data.fromCBORHex(encoded) as Data.Constr
       expect(rawData.index).toBe(100n)
       expect(rawData.fields.length).toBe(3)
@@ -349,7 +349,7 @@ describe("TSchema.Struct with flatInUnion option", () => {
       const decoded = Data.withSchema(MyUnion).fromCBORHex(encoded)
 
       expect(decoded).toEqual(value)
-      
+
       const rawData = Data.fromCBORHex(encoded) as Data.Constr
       expect(rawData.index).toBe(127n)
       expect(rawData.fields[0]).toBe(42n)

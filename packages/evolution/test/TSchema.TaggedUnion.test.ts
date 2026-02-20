@@ -27,7 +27,7 @@ describe("TSchema.TaggedUnion", () => {
       // Test encode - tag should be stripped from CBOR
       const mintValue = { _tag: "Mint" as const, amount: 100n }
       const mintEncoded = Data.withSchema(Action).toData(mintValue)
-      
+
       expect(mintEncoded).toBeInstanceOf(Data.Constr)
       expect(mintEncoded.index).toBe(0n)
       expect(mintEncoded.fields).toHaveLength(1)
@@ -40,7 +40,7 @@ describe("TSchema.TaggedUnion", () => {
       // Test second variant
       const burnValue = { _tag: "Burn" as const, amount: 50n }
       const burnEncoded = Data.withSchema(Action).toData(burnValue)
-      
+
       expect(burnEncoded.index).toBe(1n)
       expect(burnEncoded.fields).toEqual([50n])
 
@@ -181,15 +181,23 @@ describe("TSchema.TaggedUnion", () => {
 
   describe("TaggedStruct helper", () => {
     it("should create tagged structs with default _tag field", () => {
-      const Deposit = TSchema.TaggedStruct("Deposit", {
-        amount: TSchema.Integer,
-        account: TSchema.ByteArray
-      }, { flatInUnion: true, index: 0 })
+      const Deposit = TSchema.TaggedStruct(
+        "Deposit",
+        {
+          amount: TSchema.Integer,
+          account: TSchema.ByteArray
+        },
+        { flatInUnion: true, index: 0 }
+      )
 
-      const Withdrawal = TSchema.TaggedStruct("Withdrawal", {
-        amount: TSchema.Integer,
-        account: TSchema.ByteArray
-      }, { flatInUnion: true, index: 1 })
+      const Withdrawal = TSchema.TaggedStruct(
+        "Withdrawal",
+        {
+          amount: TSchema.Integer,
+          account: TSchema.ByteArray
+        },
+        { flatInUnion: true, index: 1 }
+      )
 
       const Payment = TSchema.Union(Deposit, Withdrawal)
 
@@ -208,14 +216,22 @@ describe("TSchema.TaggedUnion", () => {
     })
 
     it("should create tagged structs with custom tag field", () => {
-      const Read = TSchema.TaggedStruct("Read", {
-        key: TSchema.ByteArray
-      }, { tagField: "operation", flatInUnion: true, index: 0 })
+      const Read = TSchema.TaggedStruct(
+        "Read",
+        {
+          key: TSchema.ByteArray
+        },
+        { tagField: "operation", flatInUnion: true, index: 0 }
+      )
 
-      const Write = TSchema.TaggedStruct("Write", {
-        key: TSchema.ByteArray,
-        value: TSchema.ByteArray
-      }, { tagField: "operation", flatInUnion: true, index: 1 })
+      const Write = TSchema.TaggedStruct(
+        "Write",
+        {
+          key: TSchema.ByteArray,
+          value: TSchema.ByteArray
+        },
+        { tagField: "operation", flatInUnion: true, index: 1 }
+      )
 
       const Command = TSchema.Union(Read, Write)
 
@@ -251,13 +267,21 @@ describe("TSchema.TaggedUnion", () => {
 
   describe("Type inference", () => {
     it("should infer discriminated union types correctly", () => {
-      const Success = TSchema.TaggedStruct("Success", {
-        value: TSchema.Integer
-      }, { flatInUnion: true, index: 0 })
+      const Success = TSchema.TaggedStruct(
+        "Success",
+        {
+          value: TSchema.Integer
+        },
+        { flatInUnion: true, index: 0 }
+      )
 
-      const Failure = TSchema.TaggedStruct("Failure", {
-        error: TSchema.ByteArray
-      }, { flatInUnion: true, index: 1 })
+      const Failure = TSchema.TaggedStruct(
+        "Failure",
+        {
+          error: TSchema.ByteArray
+        },
+        { flatInUnion: true, index: 1 }
+      )
 
       const Result = TSchema.Union(Success, Failure)
 
@@ -295,9 +319,7 @@ describe("TSchema.TaggedUnion", () => {
         { flatInUnion: true, index: 1 }
       )
 
-      expect(() => TSchema.Union(A, B)).toThrow(
-        /Union members must have unique tag values.*Duplicate value "Same"/
-      )
+      expect(() => TSchema.Union(A, B)).toThrow(/Union members must have unique tag values.*Duplicate value "Same"/)
     })
 
     it("should throw error on different tag field names", () => {
@@ -357,14 +379,22 @@ describe("TSchema.TaggedUnion", () => {
         value: TSchema.Integer
       })
 
-      const Outer = TSchema.TaggedStruct("Outer", {
-        inner: Inner,
-        extra: TSchema.Integer
-      }, { flatInUnion: true, index: 0 })
+      const Outer = TSchema.TaggedStruct(
+        "Outer",
+        {
+          inner: Inner,
+          extra: TSchema.Integer
+        },
+        { flatInUnion: true, index: 0 }
+      )
 
-      const Another = TSchema.TaggedStruct("Another", {
-        data: TSchema.Integer
-      }, { flatInUnion: true, index: 1 })
+      const Another = TSchema.TaggedStruct(
+        "Another",
+        {
+          data: TSchema.Integer
+        },
+        { flatInUnion: true, index: 1 }
+      )
 
       const Combined = TSchema.Union(Outer, Another)
 
@@ -438,15 +468,9 @@ describe("TSchema.TaggedUnion", () => {
     })
 
     it("should handle unions with no tag fields at all", () => {
-      const A = TSchema.Struct(
-        { x: TSchema.Integer },
-        { flatInUnion: true, index: 0 }
-      )
+      const A = TSchema.Struct({ x: TSchema.Integer }, { flatInUnion: true, index: 0 })
 
-      const B = TSchema.Struct(
-        { y: TSchema.Integer },
-        { flatInUnion: true, index: 1 }
-      )
+      const B = TSchema.Struct({ y: TSchema.Integer }, { flatInUnion: true, index: 1 })
 
       const AB = TSchema.Union(A, B)
 
@@ -519,9 +543,13 @@ describe("TSchema.TaggedUnion", () => {
     })
 
     it("should handle single member union with tag field", () => {
-      const Only = TSchema.TaggedStruct("Only", {
-        value: TSchema.Integer
-      }, { flatInUnion: true, index: 0 })
+      const Only = TSchema.TaggedStruct(
+        "Only",
+        {
+          value: TSchema.Integer
+        },
+        { flatInUnion: true, index: 0 }
+      )
 
       const Single = TSchema.Union(Only)
 
@@ -567,13 +595,21 @@ describe("TSchema.TaggedUnion", () => {
 
     it("should handle union members with different index values", () => {
       // Non-sequential indices
-      const First = TSchema.TaggedStruct("First", {
-        value: TSchema.Integer
-      }, { flatInUnion: true, index: 5 })
+      const First = TSchema.TaggedStruct(
+        "First",
+        {
+          value: TSchema.Integer
+        },
+        { flatInUnion: true, index: 5 }
+      )
 
-      const Second = TSchema.TaggedStruct("Second", {
-        value: TSchema.Integer
-      }, { flatInUnion: true, index: 10 })
+      const Second = TSchema.TaggedStruct(
+        "Second",
+        {
+          value: TSchema.Integer
+        },
+        { flatInUnion: true, index: 10 }
+      )
 
       const NonSeq = TSchema.Union(First, Second)
 
@@ -589,7 +625,7 @@ describe("TSchema.TaggedUnion", () => {
 
     it("should handle very long tag field names", () => {
       const longTag = "veryLongDiscriminatorFieldNameThatExceedsNormalLength"
-      
+
       const A = TSchema.Struct(
         {
           [longTag]: TSchema.Literal("A"),
@@ -619,13 +655,21 @@ describe("TSchema.TaggedUnion", () => {
     })
 
     it("should handle empty string as tag value", () => {
-      const Empty = TSchema.TaggedStruct("", {
-        value: TSchema.Integer
-      }, { flatInUnion: true, index: 0 })
+      const Empty = TSchema.TaggedStruct(
+        "",
+        {
+          value: TSchema.Integer
+        },
+        { flatInUnion: true, index: 0 }
+      )
 
-      const NotEmpty = TSchema.TaggedStruct("NotEmpty", {
-        value: TSchema.Integer
-      }, { flatInUnion: true, index: 1 })
+      const NotEmpty = TSchema.TaggedStruct(
+        "NotEmpty",
+        {
+          value: TSchema.Integer
+        },
+        { flatInUnion: true, index: 1 }
+      )
 
       const EmptyTag = TSchema.Union(Empty, NotEmpty)
 
@@ -640,13 +684,21 @@ describe("TSchema.TaggedUnion", () => {
     })
 
     it("should handle unicode characters in tag values", () => {
-      const Emoji = TSchema.TaggedStruct("🎉", {
-        value: TSchema.Integer
-      }, { flatInUnion: true, index: 0 })
+      const Emoji = TSchema.TaggedStruct(
+        "🎉",
+        {
+          value: TSchema.Integer
+        },
+        { flatInUnion: true, index: 0 }
+      )
 
-      const Chinese = TSchema.TaggedStruct("中文", {
-        value: TSchema.Integer
-      }, { flatInUnion: true, index: 1 })
+      const Chinese = TSchema.TaggedStruct(
+        "中文",
+        {
+          value: TSchema.Integer
+        },
+        { flatInUnion: true, index: 1 }
+      )
 
       const Unicode = TSchema.Union(Emoji, Chinese)
 
@@ -669,19 +721,31 @@ describe("TSchema.TaggedUnion", () => {
         { _tag: "Transfer" as const, from: new Uint8Array([1]), to: new Uint8Array([2]), amount: 75n }
       ]
 
-      const Mint = TSchema.TaggedStruct("Mint", {
-        amount: TSchema.Integer
-      }, { flatInUnion: true, index: 0 })
+      const Mint = TSchema.TaggedStruct(
+        "Mint",
+        {
+          amount: TSchema.Integer
+        },
+        { flatInUnion: true, index: 0 }
+      )
 
-      const Burn = TSchema.TaggedStruct("Burn", {
-        amount: TSchema.Integer
-      }, { flatInUnion: true, index: 1 })
+      const Burn = TSchema.TaggedStruct(
+        "Burn",
+        {
+          amount: TSchema.Integer
+        },
+        { flatInUnion: true, index: 1 }
+      )
 
-      const Transfer = TSchema.TaggedStruct("Transfer", {
-        from: TSchema.ByteArray,
-        to: TSchema.ByteArray,
-        amount: TSchema.Integer
-      }, { flatInUnion: true, index: 2 })
+      const Transfer = TSchema.TaggedStruct(
+        "Transfer",
+        {
+          from: TSchema.ByteArray,
+          to: TSchema.ByteArray,
+          amount: TSchema.Integer
+        },
+        { flatInUnion: true, index: 2 }
+      )
 
       const Action = TSchema.Union(Mint, Burn, Transfer)
 
@@ -693,18 +757,26 @@ describe("TSchema.TaggedUnion", () => {
     })
 
     it("should handle CBOR hex round-trip", () => {
-      const Success = TSchema.TaggedStruct("Success", {
-        value: TSchema.Integer
-      }, { flatInUnion: true, index: 0 })
+      const Success = TSchema.TaggedStruct(
+        "Success",
+        {
+          value: TSchema.Integer
+        },
+        { flatInUnion: true, index: 0 }
+      )
 
-      const Failure = TSchema.TaggedStruct("Failure", {
-        error: TSchema.ByteArray
-      }, { flatInUnion: true, index: 1 })
+      const Failure = TSchema.TaggedStruct(
+        "Failure",
+        {
+          error: TSchema.ByteArray
+        },
+        { flatInUnion: true, index: 1 }
+      )
 
       const Result = TSchema.Union(Success, Failure)
 
       const successValue = { _tag: "Success" as const, value: 42n }
-      
+
       const hex = Data.withSchema(Result).toCBORHex(successValue)
       expect(typeof hex).toBe("string")
 

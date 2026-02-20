@@ -6,7 +6,6 @@ import * as CBOR from "./CBOR.js"
 import * as _Codec from "./Codec.js"
 import * as PolicyId from "./PolicyId.js"
 
-
 /**
  * Helper function for content-based Map equality using Equal.equals.
  * Compares two Maps by iterating entries and using Equal.equals for both keys and values.
@@ -16,7 +15,7 @@ import * as PolicyId from "./PolicyId.js"
  */
 const mapEquals = <K, V>(a: Map<K, V>, b: Map<K, V>): boolean => {
   if (a.size !== b.size) return false
-  
+
   for (const [aKey, aValue] of a.entries()) {
     let found = false
     for (const [bKey, bValue] of b.entries()) {
@@ -33,7 +32,7 @@ const mapEquals = <K, V>(a: Map<K, V>, b: Map<K, V>): boolean => {
     }
     if (!found) return false
   }
-  
+
   return true
 }
 
@@ -185,10 +184,10 @@ export const equals = (a: MultiAsset, b: MultiAsset): boolean => {
         break
       }
     }
-    
+
     if (bAssetMap === undefined) return false
     if (aAssetMap.size !== bAssetMap.size) return false
-    
+
     // Compare asset maps
     for (const [aAssetName, aAmount] of aAssetMap.entries()) {
       // Find matching asset name in b by comparing bytes
@@ -199,7 +198,7 @@ export const equals = (a: MultiAsset, b: MultiAsset): boolean => {
           break
         }
       }
-      
+
       if (bAmount === undefined) return false
       if ((aAmount as bigint) !== bAmount) return false
     }
@@ -222,11 +221,7 @@ export const empty = (): MultiAsset => new MultiAsset({ map: new Map() })
  * @since 2.0.0
  * @category constructors
  */
-export const singleton = (
-  policyId: PolicyId.PolicyId,
-  assetName: AssetName.AssetName,
-  amount: bigint
-): MultiAsset => {
+export const singleton = (policyId: PolicyId.PolicyId, assetName: AssetName.AssetName, amount: bigint): MultiAsset => {
   const assetMap = new Map([[assetName, amount]])
   const map = new Map([[policyId, assetMap]])
   return new MultiAsset({ map })
@@ -266,7 +261,7 @@ export const addAsset = (
         break
       }
     }
-    
+
     const newAmount = existingAmount !== undefined ? existingAmount + amount : amount
 
     const updatedAssetMap = new Map(existingAssetMap)
@@ -364,7 +359,10 @@ export const arbitrary: FastCheck.Arbitrary<MultiAsset> = FastCheck.uniqueArray(
       selector: (a) => Bytes.toHex(a.bytes)
     }).chain((names) =>
       // Generate exactly names.length amounts to pair with the unique names
-      FastCheck.array(FastCheck.bigInt({ min: 1n, max: 18446744073709551615n }), { minLength: names.length, maxLength: names.length }).map((amounts) => {
+      FastCheck.array(FastCheck.bigInt({ min: 1n, max: 18446744073709551615n }), {
+        minLength: names.length,
+        maxLength: names.length
+      }).map((amounts) => {
         const entries = names.map((n, i) => [n, amounts[i]] as const)
         return new Map(entries)
       })

@@ -23,7 +23,7 @@ export default defineConfig({
         dark: "github-dark"
       },
       // Explicit language list for lazy loading
-      langs: ['ts', 'tsx', 'js', 'jsx', 'bash', 'sh'],
+      langs: ["ts", "tsx", "js", "jsx", "bash", "sh"],
       transformers: [
         ...(rehypeCodeDefaultOptions.transformers ?? []),
         transformerTwoslash({

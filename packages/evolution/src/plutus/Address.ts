@@ -7,7 +7,7 @@ import * as Credential from "./Credential.js"
  */
 export const Address = TSchema.Struct({
   payment_credential: Credential.PaymentCredential,
-  stake_credential: TSchema.UndefinedOr(Credential.StakeCredential),
+  stake_credential: TSchema.UndefinedOr(Credential.StakeCredential)
 })
 
 // Export codec object with all conversion functions

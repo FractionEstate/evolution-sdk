@@ -24,16 +24,9 @@ function signData(addressHex: string, payload: string, privateKey: string): { si
   const signedSigStruc = priv.sign(toSign).to_raw_bytes()
   const coseSign1 = builder.build(signedSigStruc)
 
-  const key = M.COSEKey.new(
-    M.Label.from_key_type(M.KeyType.OKP)
-  )
+  const key = M.COSEKey.new(M.Label.from_key_type(M.KeyType.OKP))
   key.set_algorithm_id(M.Label.from_algorithm_id(M.AlgorithmId.EdDSA))
-  key.set_header(
-    M.Label.new_int(M.Int.new_negative(M.BigNum.from_str("1"))),
-    M.CBORValue.new_int(
-      M.Int.new_i32(6)
-    )
-  )
+  key.set_header(M.Label.new_int(M.Int.new_negative(M.BigNum.from_str("1"))), M.CBORValue.new_int(M.Int.new_i32(6)))
   key.set_header(
     M.Label.new_int(M.Int.new_negative(M.BigNum.from_str("2"))),
     M.CBORValue.new_bytes(priv.to_public().to_raw_bytes())
@@ -155,24 +148,24 @@ describe("SignData Parity with lucid-evolution", () => {
 
   it("should verify cross-compatibility: our sign → lucid verify", () => {
     const ourSigned = SignData.signData(addressHex, payload, privateKey)
-    
+
     const lucidFormat = {
       signature: toHex(ourSigned.signature),
-      key: toHex(ourSigned.key),
+      key: toHex(ourSigned.key)
     }
-    
+
     const verified = verifyData(addressHex, keyHashHex, payloadHex, lucidFormat)
     expect(verified).toBe(true)
   })
 
   it("should verify cross-compatibility: lucid sign → our verify", () => {
     const lucidSigned = signData(addressHex, payloadHex, privateKeyBech32)
-    
+
     const ourFormat = {
       signature: fromHex(lucidSigned.signature),
-      key: fromHex(lucidSigned.key),
+      key: fromHex(lucidSigned.key)
     }
-    
+
     const verified = SignData.verifyData(addressHex, keyHashHex, payload, ourFormat)
     expect(verified).toBe(true)
   })
@@ -180,10 +173,10 @@ describe("SignData Parity with lucid-evolution", () => {
   it("should produce identical outputs: our impl === lucid impl", () => {
     const ourSigned = SignData.signData(addressHex, payload, privateKey)
     const lucidSigned = signData(addressHex, payloadHex, privateKeyBech32)
-    
+
     const ourSignatureHex = toHex(ourSigned.signature)
     const ourKeyHex = toHex(ourSigned.key)
-    
+
     expect(ourSignatureHex).toBe(lucidSigned.signature)
     expect(ourKeyHex).toBe(lucidSigned.key)
   })
@@ -191,19 +184,19 @@ describe("SignData Parity with lucid-evolution", () => {
   it("should handle large payloads: both implementations", () => {
     const largePayload = new Uint8Array(1000).fill(42)
     const largePayloadHex = toHex(largePayload)
-    
+
     const ourSigned = SignData.signData(addressHex, largePayload, privateKey)
     const lucidSigned = signData(addressHex, largePayloadHex, privateKeyBech32)
-    
+
     const ourFormat = {
       signature: fromHex(lucidSigned.signature),
-      key: fromHex(lucidSigned.key),
+      key: fromHex(lucidSigned.key)
     }
     expect(SignData.verifyData(addressHex, keyHashHex, largePayload, ourFormat)).toBe(true)
-    
+
     const lucidFormat = {
       signature: toHex(ourSigned.signature),
-      key: toHex(ourSigned.key),
+      key: toHex(ourSigned.key)
     }
     expect(verifyData(addressHex, keyHashHex, largePayloadHex, lucidFormat)).toBe(true)
   })
@@ -213,38 +206,38 @@ describe("SignData Parity with lucid-evolution", () => {
     const payload2 = new Uint8Array([4, 5, 6])
     const payload1Hex = toHex(payload1)
     const payload2Hex = toHex(payload2)
-    
+
     const ourSigned = SignData.signData(addressHex, payload1, privateKey)
     const lucidSigned = signData(addressHex, payload1Hex, privateKeyBech32)
-    
+
     const ourFormat = {
       signature: fromHex(lucidSigned.signature),
-      key: fromHex(lucidSigned.key),
+      key: fromHex(lucidSigned.key)
     }
     expect(SignData.verifyData(addressHex, keyHashHex, payload2, ourFormat)).toBe(false)
-    
+
     const lucidFormat = {
       signature: toHex(ourSigned.signature),
-      key: toHex(ourSigned.key),
+      key: toHex(ourSigned.key)
     }
     expect(verifyData(addressHex, keyHashHex, payload2Hex, lucidFormat)).toBe(false)
   })
 
   it("should fail verification with wrong address: both implementations", () => {
     const wrongKeyHash = "0000000000000000000000000000000000000000000000000000000000000000"
-    
+
     const ourSigned = SignData.signData(addressHex, payload, privateKey)
     const lucidSigned = signData(addressHex, payloadHex, privateKeyBech32)
-    
+
     const ourFormat = {
       signature: fromHex(lucidSigned.signature),
-      key: fromHex(lucidSigned.key),
+      key: fromHex(lucidSigned.key)
     }
     expect(SignData.verifyData(wrongKeyHash, keyHashHex, payload, ourFormat)).toBe(false)
-    
+
     const lucidFormat = {
       signature: toHex(ourSigned.signature),
-      key: toHex(ourSigned.key),
+      key: toHex(ourSigned.key)
     }
     expect(verifyData(wrongKeyHash, keyHashHex, payloadHex, lucidFormat)).toBe(false)
   })

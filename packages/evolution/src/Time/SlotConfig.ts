@@ -39,23 +39,23 @@ export const SLOT_CONFIG_NETWORK: Record<Network.Network, SlotConfig> = {
   Mainnet: {
     zeroTime: 1596059091000n, // Shelley era start
     zeroSlot: 4492800n,
-    slotLength: 1000,
+    slotLength: 1000
   },
   Preview: {
     zeroTime: 1666656000000n,
     zeroSlot: 0n,
-    slotLength: 1000,
+    slotLength: 1000
   },
   Preprod: {
     zeroTime: 1654041600000n + 1728000000n, // 1655769600000n
     zeroSlot: 86400n,
-    slotLength: 1000,
+    slotLength: 1000
   },
   Custom: {
     zeroTime: 0n,
     zeroSlot: 0n,
-    slotLength: 0,
-  },
+    slotLength: 0
+  }
 }
 
 /**

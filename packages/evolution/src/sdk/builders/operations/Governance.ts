@@ -31,7 +31,9 @@ import type {
  * @since 2.0.0
  * @category programs
  */
-export const createRegisterDRepProgram = (params: RegisterDRepParams): Effect.Effect<void, TransactionBuilderError, TxContext | TxBuilderConfigTag> =>
+export const createRegisterDRepProgram = (
+  params: RegisterDRepParams
+): Effect.Effect<void, TransactionBuilderError, TxContext | TxBuilderConfigTag> =>
   Effect.gen(function* () {
     const ctx = yield* TxContext
     const config = yield* TxBuilderConfigTag
@@ -59,9 +61,12 @@ export const createRegisterDRepProgram = (params: RegisterDRepParams): Effect.Ef
     }
 
     const protocolParams = yield* config.provider.Effect.getProtocolParameters().pipe(
-      Effect.mapError((err) => new TransactionBuilderError({
-        message: `Failed to fetch protocol parameters: ${err.message}`
-      }))
+      Effect.mapError(
+        (err) =>
+          new TransactionBuilderError({
+            message: `Failed to fetch protocol parameters: ${err.message}`
+          })
+      )
     )
     const drepDeposit = protocolParams.drepDeposit
 
@@ -120,7 +125,9 @@ export const createRegisterDRepProgram = (params: RegisterDRepParams): Effect.Ef
  * @since 2.0.0
  * @category programs
  */
-export const createUpdateDRepProgram = (params: UpdateDRepParams): Effect.Effect<void, TransactionBuilderError, TxContext | TxBuilderConfigTag> =>
+export const createUpdateDRepProgram = (
+  params: UpdateDRepParams
+): Effect.Effect<void, TransactionBuilderError, TxContext | TxBuilderConfigTag> =>
   Effect.gen(function* () {
     const ctx = yield* TxContext
 
@@ -177,9 +184,7 @@ export const createUpdateDRepProgram = (params: UpdateDRepParams): Effect.Effect
       }
     })
 
-    yield* Effect.logDebug(
-      `[UpdateDRep] Added UpdateDrepCert for DRep ${Bytes.toHex(params.drepCredential.hash)}`
-    )
+    yield* Effect.logDebug(`[UpdateDRep] Added UpdateDrepCert for DRep ${Bytes.toHex(params.drepCredential.hash)}`)
   })
 
 /**
@@ -189,7 +194,9 @@ export const createUpdateDRepProgram = (params: UpdateDRepParams): Effect.Effect
  * @since 2.0.0
  * @category programs
  */
-export const createDeregisterDRepProgram = (params: DeregisterDRepParams): Effect.Effect<void, TransactionBuilderError, TxContext | TxBuilderConfigTag> =>
+export const createDeregisterDRepProgram = (
+  params: DeregisterDRepParams
+): Effect.Effect<void, TransactionBuilderError, TxContext | TxBuilderConfigTag> =>
   Effect.gen(function* () {
     const ctx = yield* TxContext
     const config = yield* TxBuilderConfigTag
@@ -215,9 +222,12 @@ export const createDeregisterDRepProgram = (params: DeregisterDRepParams): Effec
     }
 
     const protocolParams = yield* config.provider.Effect.getProtocolParameters().pipe(
-      Effect.mapError((err) => new TransactionBuilderError({
-        message: `Failed to fetch protocol parameters: ${err.message}`
-      }))
+      Effect.mapError(
+        (err) =>
+          new TransactionBuilderError({
+            message: `Failed to fetch protocol parameters: ${err.message}`
+          })
+      )
     )
     const drepDeposit = protocolParams.drepDeposit
 
@@ -280,7 +290,9 @@ export const createDeregisterDRepProgram = (params: DeregisterDRepParams): Effec
  * @since 2.0.0
  * @category programs
  */
-export const createAuthCommitteeHotProgram = (params: AuthCommitteeHotParams): Effect.Effect<void, TransactionBuilderError, TxContext> =>
+export const createAuthCommitteeHotProgram = (
+  params: AuthCommitteeHotParams
+): Effect.Effect<void, TransactionBuilderError, TxContext> =>
   Effect.gen(function* () {
     const ctx = yield* TxContext
 
@@ -350,7 +362,9 @@ export const createAuthCommitteeHotProgram = (params: AuthCommitteeHotParams): E
  * @since 2.0.0
  * @category programs
  */
-export const createResignCommitteeColdProgram = (params: ResignCommitteeColdParams): Effect.Effect<void, TransactionBuilderError, TxContext> =>
+export const createResignCommitteeColdProgram = (
+  params: ResignCommitteeColdParams
+): Effect.Effect<void, TransactionBuilderError, TxContext> =>
   Effect.gen(function* () {
     const ctx = yield* TxContext
 

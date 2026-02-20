@@ -24,7 +24,7 @@ describe("Plutus OutputReference", () => {
       const txId = Bytes.fromHex("abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890")
       const outRef = {
         transaction_id: txId,
-        output_index: 0n,
+        output_index: 0n
       }
       const data = OutputReference.Codec.toData(outRef)
       expect(data.index).toBe(0n)
@@ -35,7 +35,7 @@ describe("Plutus OutputReference", () => {
       const txId = Bytes.fromHex("fedcba0987654321fedcba0987654321fedcba0987654321fedcba0987654321")
       const outRef = {
         transaction_id: txId,
-        output_index: 5n,
+        output_index: 5n
       }
       const data = OutputReference.Codec.toData(outRef)
       expect(data.index).toBe(0n)
@@ -46,7 +46,7 @@ describe("Plutus OutputReference", () => {
       const txId = Bytes.fromHex("1111111111111111111111111111111111111111111111111111111111111111")
       const outRef = {
         transaction_id: txId,
-        output_index: 0n,
+        output_index: 0n
       }
       const encoded = OutputReference.Codec.toCBORHex(outRef)
       const decoded = OutputReference.Codec.fromCBORHex(encoded)
@@ -57,7 +57,7 @@ describe("Plutus OutputReference", () => {
       const txId = Bytes.fromHex("2222222222222222222222222222222222222222222222222222222222222222")
       const outRef = {
         transaction_id: txId,
-        output_index: 42n,
+        output_index: 42n
       }
       const encoded = OutputReference.Codec.toCBORHex(outRef)
       const decoded = OutputReference.Codec.fromCBORHex(encoded)
@@ -68,7 +68,7 @@ describe("Plutus OutputReference", () => {
       const txId = Bytes.fromHex("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
       const outRef = {
         transaction_id: txId,
-        output_index: 9999n,
+        output_index: 9999n
       }
       const encoded = OutputReference.Codec.toCBORHex(outRef)
       const decoded = OutputReference.Codec.fromCBORHex(encoded)
@@ -81,11 +81,11 @@ describe("Plutus OutputReference", () => {
 
       const outRef1 = {
         transaction_id: txId1,
-        output_index: 1n,
+        output_index: 1n
       }
       const outRef2 = {
         transaction_id: txId2,
-        output_index: 1n,
+        output_index: 1n
       }
 
       const encoded1 = OutputReference.Codec.toCBORHex(outRef1)
@@ -104,11 +104,11 @@ describe("Plutus OutputReference", () => {
       const txId = Bytes.fromHex("abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890")
       const outRef1 = {
         transaction_id: txId,
-        output_index: 0n,
+        output_index: 0n
       }
       const outRef2 = {
         transaction_id: txId,
-        output_index: 1n,
+        output_index: 1n
       }
 
       const encoded1 = OutputReference.Codec.toCBORHex(outRef1)

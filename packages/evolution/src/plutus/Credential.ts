@@ -16,11 +16,11 @@ export const ScriptHash = TSchema.ByteArray
  */
 export const Credential = TSchema.Variant({
   VerificationKey: {
-    hash: VerificationKeyHash,
+    hash: VerificationKeyHash
   },
   Script: {
-    hash: ScriptHash,
-  },
+    hash: ScriptHash
+  }
 })
 
 /**
@@ -28,11 +28,11 @@ export const Credential = TSchema.Variant({
  */
 export const PaymentCredential = TSchema.Variant({
   VerificationKey: {
-    hash: VerificationKeyHash,
+    hash: VerificationKeyHash
   },
   Script: {
-    hash: ScriptHash,
-  },
+    hash: ScriptHash
+  }
 })
 
 /**
@@ -40,13 +40,13 @@ export const PaymentCredential = TSchema.Variant({
  */
 export const StakeCredential = TSchema.Variant({
   Inline: {
-    credential: Credential,
+    credential: Credential
   },
   Pointer: {
     slot_number: TSchema.Integer,
     transaction_index: TSchema.Integer,
-    certificate_index: TSchema.Integer,
-  },
+    certificate_index: TSchema.Integer
+  }
 })
 
 // Export codec objects with all conversion functions

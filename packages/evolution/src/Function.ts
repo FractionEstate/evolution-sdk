@@ -97,16 +97,12 @@ export const makeCBOREncodeSync = <A, T extends CBOR.CBOR, E extends Error>(
 export const makeDecodeEither =
   <T, A, E extends Error>(schema: Schema.Schema<T, A>, ErrorClass: ErrorCtor<E>) =>
   (input: A) =>
-    Schema.decodeEither(schema)(input).pipe(
-      Either.mapLeft((e) => new ErrorClass({ message: e.message, cause: e }))
-    )
+    Schema.decodeEither(schema)(input).pipe(Either.mapLeft((e) => new ErrorClass({ message: e.message, cause: e })))
 
 export const makeEncodeEither =
   <T, A, E extends Error>(schema: Schema.Schema<T, A>, ErrorClass: ErrorCtor<E>) =>
   (input: T) =>
-    Schema.encodeEither(schema)(input).pipe(
-      Either.mapLeft((e) => new ErrorClass({ message: e.message, cause: e }))
-    )
+    Schema.encodeEither(schema)(input).pipe(Either.mapLeft((e) => new ErrorClass({ message: e.message, cause: e })))
 
 /**
  * Creates a synchronous function that decodes CBOR bytes into a value using a schema.

@@ -281,7 +281,9 @@ export const execCommand = (container: Container, command: Array<string>) =>
  * @category utilities
  * @internal
  */
-export const findContainerEffect = (containerName: string): Effect.Effect<Docker.Container | undefined, ContainerError> =>
+export const findContainerEffect = (
+  containerName: string
+): Effect.Effect<Docker.Container | undefined, ContainerError> =>
   Effect.tryPromise({
     try: () => {
       const docker = new Docker()

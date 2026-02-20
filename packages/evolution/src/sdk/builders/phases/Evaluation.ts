@@ -36,7 +36,7 @@ import { voterToKey } from "./utils.js"
 
 /**
  * Convert ProtocolParameters cost models to CostModels core type for evaluation.
- * 
+ *
  * Takes the cost models from protocol parameters (Record<string, number> format)
  * and converts them to the CostModels core type.
  */
@@ -62,7 +62,7 @@ const buildCostModels = (
 
 /**
  * Enrich raw script failures with labels and context from builder state.
- * 
+ *
  * Takes raw failures (from evaluator) and adds user-provided labels,
  * UTxO references, credentials, and policy IDs based on index mappings.
  */
@@ -120,10 +120,10 @@ const enrichFailuresWithLabels = (
 
 /**
  * Resolve deferred redeemers using the final sorted input list.
- * 
+ *
  * This function is called after coin selection completes, converting
  * SelfRedeemerFn and BatchRedeemerBuilder into resolved RedeemerData.
- * 
+ *
  */
 const resolveDeferredRedeemers = (
   deferredRedeemers: Map<string, DeferredRedeemerData>,
@@ -188,9 +188,7 @@ const resolveDeferredRedeemers = (
           const index = refToIndex.get(ref)
 
           if (index === undefined) {
-            yield* Effect.logWarning(
-              `[Evaluation] Batch input ${ref} not found in transaction - skipping`
-            )
+            yield* Effect.logWarning(`[Evaluation] Batch input ${ref} not found in transaction - skipping`)
             continue
           }
 
@@ -215,9 +213,7 @@ const resolveDeferredRedeemers = (
         })
 
         resolved.set(key, { tag, data, exUnits })
-        yield* Effect.logDebug(
-          `[Evaluation] Resolved batch redeemer for ${key} with ${batchInputs.length} inputs`
-        )
+        yield* Effect.logDebug(`[Evaluation] Resolved batch redeemer for ${key} with ${batchInputs.length} inputs`)
       }
     }
 
@@ -277,7 +273,7 @@ export const executeEvaluation = (): Effect.Effect<
     // 2. Provider.evaluateTx (wrapped as Evaluator during build setup)
     // The resolution happens in TransactionBuilder.makeBuild via resolveEvaluator()
     const evaluator = buildOptions.evaluator
-    
+
     if (!evaluator) {
       return yield* Effect.fail(
         new TransactionBuilderError({
@@ -291,12 +287,13 @@ export const executeEvaluation = (): Effect.Effect<
     if (!config.provider) {
       return yield* Effect.fail(
         new TransactionBuilderError({
-          message: "Script evaluation requires a provider to fetch full protocol parameters (cost models, execution limits)",
+          message:
+            "Script evaluation requires a provider to fetch full protocol parameters (cost models, execution limits)",
           cause: { redeemerCount: state.redeemers.size }
         })
       )
     }
-    
+
     const fullProtocolParams = yield* config.provider.Effect.getProtocolParameters().pipe(
       Effect.mapError(
         (providerError) =>
@@ -310,7 +307,7 @@ export const executeEvaluation = (): Effect.Effect<
     // Step 3: Check if there are redeemers to evaluate (resolved or deferred)
     const hasResolvedRedeemers = state.redeemers.size > 0
     const hasDeferredRedeemers = state.deferredRedeemers.size > 0
-    
+
     if (!hasResolvedRedeemers && !hasDeferredRedeemers) {
       yield* Effect.logDebug("[Evaluation] No redeemers found - skipping evaluation")
       return { next: "feeCalculation" as const }
@@ -319,7 +316,11 @@ export const executeEvaluation = (): Effect.Effect<
     // Step 3.5: Check if redeemers already have exUnits (already evaluated)
     // If all redeemers have non-zero exUnits, skip re-evaluation to prevent infinite loops
     // Note: We only check resolved redeemers - deferred ones need resolution first
-    if (hasResolvedRedeemers && !hasDeferredRedeemers && EvaluationStateManager.allRedeemersEvaluated(state.redeemers)) {
+    if (
+      hasResolvedRedeemers &&
+      !hasDeferredRedeemers &&
+      EvaluationStateManager.allRedeemersEvaluated(state.redeemers)
+    ) {
       yield* Effect.logDebug("[Evaluation] All redeemers already evaluated - skipping re-evaluation")
       return { next: "feeCalculation" as const }
     }
@@ -333,23 +334,23 @@ export const executeEvaluation = (): Effect.Effect<
     // IMPORTANT: We also need to know which input index corresponds to which UTxO
     // so we can match evaluation results back to our redeemers in state
     const inputIndexMapping = new Map<number, string>() // index -> "txHash#outputIndex"
-    
+
     // Build inputs from selectedUtxos (this will sort them canonically)
     const sortedUtxos = Array.from(state.selectedUtxos.values()).sort((a, b) => {
       // MUST use same sorting as buildTransactionInputs: byte comparison of tx hash
       const hashA = a.transactionId.hash
       const hashB = b.transactionId.hash
-      
+
       for (let i = 0; i < hashA.length; i++) {
         if (hashA[i] !== hashB[i]) {
           return hashA[i]! - hashB[i]!
         }
       }
-      
+
       // If hashes equal, compare by output index
       return Number(a.index - b.index)
     })
-    
+
     // Build the mapping while preserving the same order
     for (let i = 0; i < sortedUtxos.length; i++) {
       const utxo = sortedUtxos[i]!
@@ -361,13 +362,9 @@ export const executeEvaluation = (): Effect.Effect<
     // Step 4.5: Resolve deferred redeemers now that we have final input indices
     if (hasDeferredRedeemers) {
       yield* Effect.logDebug(`[Evaluation] Resolving ${state.deferredRedeemers.size} deferred redeemer(s)`)
-      
-      const resolvedDeferred = yield* resolveDeferredRedeemers(
-        state.deferredRedeemers,
-        sortedUtxos,
-        inputIndexMapping
-      )
-      
+
+      const resolvedDeferred = yield* resolveDeferredRedeemers(state.deferredRedeemers, sortedUtxos, inputIndexMapping)
+
       // Merge resolved deferred redeemers into state.redeemers
       yield* Ref.update(ctx, (s) => {
         const mergedRedeemers = new Map(s.redeemers)
@@ -380,7 +377,7 @@ export const executeEvaluation = (): Effect.Effect<
           deferredRedeemers: new Map() // Clear deferred after resolution
         }
       })
-      
+
       yield* Effect.logDebug(`[Evaluation] Resolved ${resolvedDeferred.size} deferred redeemer(s)`)
     }
 
@@ -394,7 +391,7 @@ export const executeEvaluation = (): Effect.Effect<
       const sortedPolicyIds = Array.from(updatedState.mint.map.keys())
         .map((pid) => PolicyId.toHex(pid))
         .sort()
-      
+
       for (let i = 0; i < sortedPolicyIds.length; i++) {
         mintIndexMapping.set(i, sortedPolicyIds[i]!)
         yield* Effect.logDebug(`[Evaluation] Mint ${i} maps to policy: ${sortedPolicyIds[i]}`)
@@ -426,13 +423,12 @@ export const executeEvaluation = (): Effect.Effect<
     // Withdrawals are sorted by credential hash for canonical ordering
     const withdrawalIndexMapping = new Map<number, string>()
     if (updatedState.withdrawals.size > 0) {
-      const sortedWithdrawals = Array.from(updatedState.withdrawals.entries())
-        .sort((a, b) => {
-          const aHex = Bytes.toHex(a[0].stakeCredential.hash)
-          const bHex = Bytes.toHex(b[0].stakeCredential.hash)
-          return aHex.localeCompare(bHex)
-        })
-      
+      const sortedWithdrawals = Array.from(updatedState.withdrawals.entries()).sort((a, b) => {
+        const aHex = Bytes.toHex(a[0].stakeCredential.hash)
+        const bHex = Bytes.toHex(b[0].stakeCredential.hash)
+        return aHex.localeCompare(bHex)
+      })
+
       for (let i = 0; i < sortedWithdrawals.length; i++) {
         const [rewardAccount] = sortedWithdrawals[i]!
         const credHex = Bytes.toHex(rewardAccount.stakeCredential.hash)
@@ -448,26 +444,30 @@ export const executeEvaluation = (): Effect.Effect<
     if (updatedState.votingProcedures) {
       const voters = Array.from(updatedState.votingProcedures.procedures.keys())
       const sortedVoterKeys: Array<string> = []
-      
+
       for (const voter of voters) {
         sortedVoterKeys.push(voterToKey(voter))
       }
-      
+
       sortedVoterKeys.sort()
-      
+
       for (let i = 0; i < sortedVoterKeys.length; i++) {
         voteIndexMapping.set(i, sortedVoterKeys[i]!)
         yield* Effect.logDebug(`[Evaluation] Vote ${i} maps to voter: ${sortedVoterKeys[i]}`)
       }
     }
-    
+
     const inputs = yield* buildTransactionInputs(sortedUtxos)
     const allOutputs = [...updatedState.outputs, ...buildCtx.changeOutputs]
     const transaction = yield* assembleTransaction(inputs, allOutputs, buildCtx.calculatedFee)
 
     // Debug: Log transaction details
-    yield* Effect.logDebug(`[Evaluation] Transaction has ${transaction.body.inputs.length} inputs, ${transaction.body.outputs.length} outputs`)
-    yield* Effect.logDebug(`[Evaluation] Transaction has ${transaction.body.referenceInputs?.length ?? 0} reference inputs`)
+    yield* Effect.logDebug(
+      `[Evaluation] Transaction has ${transaction.body.inputs.length} inputs, ${transaction.body.outputs.length} outputs`
+    )
+    yield* Effect.logDebug(
+      `[Evaluation] Transaction has ${transaction.body.referenceInputs?.length ?? 0} reference inputs`
+    )
     yield* Effect.logDebug(`[Evaluation] Has collateral return: ${!!transaction.body.collateralReturn}`)
     if (transaction.body.collateralReturn) {
       const assets = transaction.body.collateralReturn.assets
@@ -500,43 +500,34 @@ export const executeEvaluation = (): Effect.Effect<
     // Always pass additionalUtxos - provider-based evaluators ignore them by default
     // (they resolve UTxOs from chain). Custom evaluators (Aiken, Scalus) use them.
     // Use passAdditionalUtxos: true in BuildOptions to override for edge cases.
-    const additionalUtxos = [
-      ...Array.from(updatedState.selectedUtxos.values()),
-      ...updatedState.referenceInputs
-    ]
+    const additionalUtxos = [...Array.from(updatedState.selectedUtxos.values()), ...updatedState.referenceInputs]
 
-    const evalResults = yield* evaluator.evaluate(
-      transaction,
-      additionalUtxos,
-      evaluationContext
-    ).pipe(
-      Effect.mapError(
-        (evalError) => {
-          // Enrich failures with labels from builder state
-          // evalError.failures contains raw failures from evaluator (provider or aiken)
-          const enrichedFailures = enrichFailuresWithLabels(
-            evalError.failures ?? [],
-            updatedState.redeemers,
-            inputIndexMapping,
-            withdrawalIndexMapping,
-            mintIndexMapping,
-            certIndexMapping,
-            voteIndexMapping
-          )
+    const evalResults = yield* evaluator.evaluate(transaction, additionalUtxos, evaluationContext).pipe(
+      Effect.mapError((evalError) => {
+        // Enrich failures with labels from builder state
+        // evalError.failures contains raw failures from evaluator (provider or aiken)
+        const enrichedFailures = enrichFailuresWithLabels(
+          evalError.failures ?? [],
+          updatedState.redeemers,
+          inputIndexMapping,
+          withdrawalIndexMapping,
+          mintIndexMapping,
+          certIndexMapping,
+          voteIndexMapping
+        )
 
-          // Create enhanced evaluation error with enriched failures
-          const enhancedError = new EvaluationError({
-            message: "Script evaluation failed",
-            cause: evalError.cause,
-            failures: enrichedFailures
-          })
+        // Create enhanced evaluation error with enriched failures
+        const enhancedError = new EvaluationError({
+          message: "Script evaluation failed",
+          cause: evalError.cause,
+          failures: enrichedFailures
+        })
 
-          return new TransactionBuilderError({
-            message: `Script evaluation failed: ${evalError.message}`,
-            cause: enhancedError
-          })
-        }
-      )
+        return new TransactionBuilderError({
+          message: `Script evaluation failed: ${evalError.message}`,
+          cause: enhancedError
+        })
+      })
     )
 
     yield* Effect.logDebug(`[Evaluation] Received ${evalResults.length} evaluation result(s)`)
@@ -545,7 +536,7 @@ export const executeEvaluation = (): Effect.Effect<
     if (updatedState.redeemers.size > 0 && evalResults.length === 0) {
       yield* Effect.logError(
         `[Evaluation] Expected evaluation results for ${updatedState.redeemers.size} redeemer(s) but received 0 results. ` +
-        `This may indicate a provider schema parsing issue or network error.`
+          `This may indicate a provider schema parsing issue or network error.`
       )
       return yield* Effect.fail(
         new TransactionBuilderError({
@@ -562,7 +553,7 @@ export const executeEvaluation = (): Effect.Effect<
 
     // Build updated redeemers map with ExUnits from evaluation
     const evaluatedRedeemers = new Map(updatedState.redeemers)
-    
+
     for (const evalRedeemer of evalResults) {
       if (evalRedeemer.redeemer_tag === "spend") {
         // For spend redeemers, map input index to UTxO reference
@@ -587,17 +578,13 @@ export const executeEvaluation = (): Effect.Effect<
               `mem=${evalRedeemer.ex_units.mem}, steps=${evalRedeemer.ex_units.steps}`
           )
         } else {
-          yield* Effect.logWarning(
-            `[Evaluation] No redeemer found in state for UTxO ${utxoRef}`
-          )
+          yield* Effect.logWarning(`[Evaluation] No redeemer found in state for UTxO ${utxoRef}`)
         }
       } else if (evalRedeemer.redeemer_tag === "mint") {
         // For mint redeemers, map mint index to policy ID hex
         const policyIdHex = mintIndexMapping.get(evalRedeemer.redeemer_index)
         if (!policyIdHex) {
-          yield* Effect.logWarning(
-            `[Evaluation] Could not map mint index ${evalRedeemer.redeemer_index} to policy ID`
-          )
+          yield* Effect.logWarning(`[Evaluation] Could not map mint index ${evalRedeemer.redeemer_index} to policy ID`)
           continue
         }
 
@@ -614,17 +601,13 @@ export const executeEvaluation = (): Effect.Effect<
               `mem=${evalRedeemer.ex_units.mem}, steps=${evalRedeemer.ex_units.steps}`
           )
         } else {
-          yield* Effect.logWarning(
-            `[Evaluation] No redeemer found in state for policy ${policyIdHex}`
-          )
+          yield* Effect.logWarning(`[Evaluation] No redeemer found in state for policy ${policyIdHex}`)
         }
       } else if (evalRedeemer.redeemer_tag === "cert") {
         // For certificate redeemers, map index to credential key
         const certKey = certIndexMapping.get(evalRedeemer.redeemer_index)
         if (!certKey) {
-          yield* Effect.logWarning(
-            `[Evaluation] Could not map cert index ${evalRedeemer.redeemer_index} to credential`
-          )
+          yield* Effect.logWarning(`[Evaluation] Could not map cert index ${evalRedeemer.redeemer_index} to credential`)
           continue
         }
 
@@ -641,9 +624,7 @@ export const executeEvaluation = (): Effect.Effect<
               `mem=${evalRedeemer.ex_units.mem}, steps=${evalRedeemer.ex_units.steps}`
           )
         } else {
-          yield* Effect.logWarning(
-            `[Evaluation] No redeemer found in state for cert ${certKey}`
-          )
+          yield* Effect.logWarning(`[Evaluation] No redeemer found in state for cert ${certKey}`)
         }
       } else if (evalRedeemer.redeemer_tag === "reward") {
         // For withdrawal redeemers, map index to credential key
@@ -668,17 +649,13 @@ export const executeEvaluation = (): Effect.Effect<
               `mem=${evalRedeemer.ex_units.mem}, steps=${evalRedeemer.ex_units.steps}`
           )
         } else {
-          yield* Effect.logWarning(
-            `[Evaluation] No redeemer found in state for withdrawal ${rewardKey}`
-          )
+          yield* Effect.logWarning(`[Evaluation] No redeemer found in state for withdrawal ${rewardKey}`)
         }
       } else if (evalRedeemer.redeemer_tag === "vote") {
         // For vote redeemers, map index to voter key
         const voterKey = voteIndexMapping.get(evalRedeemer.redeemer_index)
         if (!voterKey) {
-          yield* Effect.logWarning(
-            `[Evaluation] Could not map vote index ${evalRedeemer.redeemer_index} to voter`
-          )
+          yield* Effect.logWarning(`[Evaluation] Could not map vote index ${evalRedeemer.redeemer_index} to voter`)
           continue
         }
 
@@ -698,9 +675,7 @@ export const executeEvaluation = (): Effect.Effect<
               `mem=${evalRedeemer.ex_units.mem}, steps=${evalRedeemer.ex_units.steps}`
           )
         } else {
-          yield* Effect.logWarning(
-            `[Evaluation] No redeemer found in state for vote ${voterKey}`
-          )
+          yield* Effect.logWarning(`[Evaluation] No redeemer found in state for vote ${voterKey}`)
         }
       } else {
         // Unknown redeemer type

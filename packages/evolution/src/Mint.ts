@@ -16,7 +16,7 @@ import * as PolicyId from "./PolicyId.js"
  */
 const mapEquals = <K, V>(a: Map<K, V>, b: Map<K, V>): boolean => {
   if (a.size !== b.size) return false
-  
+
   for (const [aKey, aValue] of a.entries()) {
     let found = false
     for (const [bKey, bValue] of b.entries()) {
@@ -32,7 +32,7 @@ const mapEquals = <K, V>(a: Map<K, V>, b: Map<K, V>): boolean => {
     }
     if (!found) return false
   }
-  
+
   return true
 }
 
@@ -383,7 +383,11 @@ export const has = (mint: Mint, policyId: PolicyId.PolicyId, assetName: AssetNam
  * @since 2.0.0
  * @category lookup
  */
-export const getByHex = (mint: Mint, policyIdHex: string, assetNameHex: string): NonZeroInt64.NonZeroInt64 | undefined => {
+export const getByHex = (
+  mint: Mint,
+  policyIdHex: string,
+  assetNameHex: string
+): NonZeroInt64.NonZeroInt64 | undefined => {
   const policyId = PolicyId.fromHex(policyIdHex)
   const assetName = AssetName.fromHex(assetNameHex)
   return get(mint, policyId, assetName)
@@ -396,15 +400,18 @@ export const getByHex = (mint: Mint, policyIdHex: string, assetNameHex: string):
  * @since 2.0.0
  * @category lookup
  */
-export const getAssetsByPolicyHex = (mint: Mint, policyIdHex: string): Map<AssetName.AssetName, NonZeroInt64.NonZeroInt64> | undefined => {
+export const getAssetsByPolicyHex = (
+  mint: Mint,
+  policyIdHex: string
+): Map<AssetName.AssetName, NonZeroInt64.NonZeroInt64> | undefined => {
   const policyId = PolicyId.fromHex(policyIdHex)
-  
+
   for (const [key, value] of mint.map.entries()) {
     if (Equal.equals(key, policyId)) {
       return value
     }
   }
-  
+
   return undefined
 }
 

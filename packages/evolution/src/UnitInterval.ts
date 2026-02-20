@@ -66,9 +66,7 @@ export class UnitInterval extends Schema.Class<UnitInterval>("UnitInterval")({
    * @category equality
    */
   [Equal.symbol](that: unknown): boolean {
-    return (
-      that instanceof UnitInterval && this.numerator === that.numerator && this.denominator === that.denominator
-    )
+    return that instanceof UnitInterval && this.numerator === that.numerator && this.denominator === that.denominator
   }
 
   /**

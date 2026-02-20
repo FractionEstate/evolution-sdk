@@ -77,7 +77,7 @@ export class TransactionOutput extends Schema.TaggedClass<TransactionOutput>()("
 
 /**
  * Shelley-era transaction output CDDL format (array)
- * 
+ *
  * @since 2.0.0
  * @category schemas
  */
@@ -89,7 +89,7 @@ export const ShelleyTransactionOutputCDDL = Schema.Tuple(
 
 /**
  * Babbage-era transaction output CDDL format (map)
- * 
+ *
  * @since 2.0.0
  * @category schemas
  */
@@ -224,106 +224,101 @@ export const FromBabbageTransactionOutputCDDL = Schema.transformOrFail(
 
 /**
  * CDDL transformation schema for transaction outputs (supports both Shelley and Babbage formats)
- * 
+ *
  * Encoding logic:
  * - Uses Shelley format (array) when no scriptRef and either no datumOption or only DatumHash
  * - Uses Babbage format (map) when scriptRef is present or datumOption contains InlineDatum
- * 
+ *
  * Decoding: Accepts both formats
  *
  * @since 2.0.0
  * @category transformation
  */
-export const FromCDDL = Schema.transformOrFail(
-  CDDLSchema,
-  Schema.typeSchema(TransactionOutput),
-  {
-    strict: true,
-    encode: (toI) =>
-      E.gen(function* () {
-        // Determine if we can use Shelley format (more compact)
-        const canUseShelleyFormat =
-          toI.scriptRef === undefined &&
-          (toI.datumOption === undefined || toI.datumOption._tag === "DatumHash")
+export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(TransactionOutput), {
+  strict: true,
+  encode: (toI) =>
+    E.gen(function* () {
+      // Determine if we can use Shelley format (more compact)
+      const canUseShelleyFormat =
+        toI.scriptRef === undefined && (toI.datumOption === undefined || toI.datumOption._tag === "DatumHash")
 
-        if (canUseShelleyFormat) {
-          // Use Shelley format (array)
-          const addressBytes = yield* encAddress(toI.address)
-          const assetsBytes = yield* encAssets(toI.assets)
+      if (canUseShelleyFormat) {
+        // Use Shelley format (array)
+        const addressBytes = yield* encAddress(toI.address)
+        const assetsBytes = yield* encAssets(toI.assets)
 
-          if (toI.datumOption !== undefined && toI.datumOption._tag === "DatumHash") {
-            return [addressBytes, assetsBytes, toI.datumOption.hash] as const
-          }
-
-          return [addressBytes, assetsBytes] as const
-        } else {
-          // Use Babbage format (map)
-          const outputMap = new Map<bigint, CBOR.CBOR>()
-          const addressBytes = yield* encAddress(toI.address)
-          const assetsBytes = yield* encAssets(toI.assets)
-          const datumOptionBytes = toI.datumOption !== undefined ? yield* encDatumOption(toI.datumOption) : undefined
-          const scriptRefBytes = toI.scriptRef !== undefined ? yield* encScriptRef(toI.scriptRef) : undefined
-
-          outputMap.set(0n, addressBytes)
-          outputMap.set(1n, assetsBytes)
-          if (datumOptionBytes !== undefined) {
-            outputMap.set(2n, datumOptionBytes)
-          }
-          if (scriptRefBytes !== undefined) {
-            outputMap.set(3n, scriptRefBytes)
-          }
-          return outputMap
+        if (toI.datumOption !== undefined && toI.datumOption._tag === "DatumHash") {
+          return [addressBytes, assetsBytes, toI.datumOption.hash] as const
         }
-      }),
-    decode: (fromI) =>
-      E.gen(function* () {
-        // Check if it's an array (Shelley) or map (Babbage)
-        if (Array.isArray(fromI)) {
-          // Shelley format
-          const [addressBytes, assetsBytes, datumHashBytes] = fromI
-          const address = yield* decAddress(addressBytes)
-          const assets = yield* decAssets(assetsBytes)
-          let datumOption: DatumOption.DatumOption | undefined
-          if (datumHashBytes !== undefined) {
-            const datumHash = yield* decDatumHash(datumHashBytes)
-            datumOption = datumHash
-          }
 
-          return new TransactionOutput(
-            {
-              address,
-              assets,
-              datumOption,
-              scriptRef: undefined
-            },
-            { disableValidation: true }
-          )
-        } else {
-          // Babbage format (map) - cast to Map type
-          const outputMap = fromI as ReadonlyMap<bigint, CBOR.CBOR>
-          const addressBytes = outputMap.get(0n)
-          const assetsBytes = outputMap.get(1n)
-          const datumOptionBytes = outputMap.get(2n)
-          const scriptRefBytes = outputMap.get(3n)
+        return [addressBytes, assetsBytes] as const
+      } else {
+        // Use Babbage format (map)
+        const outputMap = new Map<bigint, CBOR.CBOR>()
+        const addressBytes = yield* encAddress(toI.address)
+        const assetsBytes = yield* encAssets(toI.assets)
+        const datumOptionBytes = toI.datumOption !== undefined ? yield* encDatumOption(toI.datumOption) : undefined
+        const scriptRefBytes = toI.scriptRef !== undefined ? yield* encScriptRef(toI.scriptRef) : undefined
 
-          const address = yield* decAddress(addressBytes)
-          const assets = yield* decAssets(assetsBytes)
-          const datumOption = datumOptionBytes !== undefined ? yield* decDatumOption(datumOptionBytes) : undefined
-          const scriptRef = scriptRefBytes !== undefined ? yield* decScriptRef(scriptRefBytes) : undefined
-
-          return new TransactionOutput(
-            {
-              address,
-              assets,
-              datumOption,
-              scriptRef
-            },
-            { disableValidation: true }
-          )
+        outputMap.set(0n, addressBytes)
+        outputMap.set(1n, assetsBytes)
+        if (datumOptionBytes !== undefined) {
+          outputMap.set(2n, datumOptionBytes)
         }
-      })
-  }
-)
+        if (scriptRefBytes !== undefined) {
+          outputMap.set(3n, scriptRefBytes)
+        }
+        return outputMap
+      }
+    }),
+  decode: (fromI) =>
+    E.gen(function* () {
+      // Check if it's an array (Shelley) or map (Babbage)
+      if (Array.isArray(fromI)) {
+        // Shelley format
+        const [addressBytes, assetsBytes, datumHashBytes] = fromI
+        const address = yield* decAddress(addressBytes)
+        const assets = yield* decAssets(assetsBytes)
+        let datumOption: DatumOption.DatumOption | undefined
+        if (datumHashBytes !== undefined) {
+          const datumHash = yield* decDatumHash(datumHashBytes)
+          datumOption = datumHash
+        }
+
+        return new TransactionOutput(
+          {
+            address,
+            assets,
+            datumOption,
+            scriptRef: undefined
+          },
+          { disableValidation: true }
+        )
+      } else {
+        // Babbage format (map) - cast to Map type
+        const outputMap = fromI as ReadonlyMap<bigint, CBOR.CBOR>
+        const addressBytes = outputMap.get(0n)
+        const assetsBytes = outputMap.get(1n)
+        const datumOptionBytes = outputMap.get(2n)
+        const scriptRefBytes = outputMap.get(3n)
+
+        const address = yield* decAddress(addressBytes)
+        const assets = yield* decAssets(assetsBytes)
+        const datumOption = datumOptionBytes !== undefined ? yield* decDatumOption(datumOptionBytes) : undefined
+        const scriptRef = scriptRefBytes !== undefined ? yield* decScriptRef(scriptRefBytes) : undefined
+
+        return new TransactionOutput(
+          {
+            address,
+            assets,
+            datumOption,
+            scriptRef
+          },
+          { disableValidation: true }
+        )
+      }
+    })
+})
 
 /**
  * CBOR bytes transformation schema for TransactionOutput.

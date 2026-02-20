@@ -13,7 +13,6 @@
  * - extra: Custom user-defined PlutusData
  */
 
-
 import { Schema } from "effect"
 
 import * as Data from "../Data.js"
@@ -34,7 +33,7 @@ import * as TSchema from "../TSchema.js"
 export const CIP68Datum = TSchema.Struct({
   metadata: Schema.typeSchema(Data.DataSchema),
   version: TSchema.Integer,
-  extra: TSchema.Array(Schema.typeSchema(Data.DataSchema)),
+  extra: TSchema.Array(Schema.typeSchema(Data.DataSchema))
 })
 
 // Export codec with all conversion functions

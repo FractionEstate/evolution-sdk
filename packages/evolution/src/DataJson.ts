@@ -1,7 +1,6 @@
 import { pipe, Schema } from "effect"
 import type { ParseIssue } from "effect/ParseResult"
 
-
 /**
  * Plutus data types and schemas for serialization/deserialization between
  * TypeScript types and Cardano's Plutus data format

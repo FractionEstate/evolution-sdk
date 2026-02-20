@@ -47,8 +47,7 @@ const POLICY_ID = "a".repeat(56) // Valid policy ID length
 const ASSET_NAME_HEX = "544f4b454e" // "TOKEN" in hex
 
 describe.concurrent("TxBuilder - Unfrack MinUTxO", () => {
-  const baseConfig: TxBuilderConfig = {
-  }
+  const baseConfig: TxBuilderConfig = {}
 
   /**
    * Validates reselection triggers when leftover has native assets
@@ -66,7 +65,7 @@ describe.concurrent("TxBuilder - Unfrack MinUTxO", () => {
         [`${POLICY_ID}544f4b454e32`]: 1n, // TOKEN2
         [`${POLICY_ID}544f4b454e33`]: 1n, // TOKEN3
         [`${POLICY_ID}544f4b454e34`]: 1n, // TOKEN4
-        [`${POLICY_ID}544f4b454e35`]: 1n  // TOKEN5
+        [`${POLICY_ID}544f4b454e35`]: 1n // TOKEN5
       }
     })
 
@@ -77,17 +76,16 @@ describe.concurrent("TxBuilder - Unfrack MinUTxO", () => {
       lovelace: 1_500_000n // 1.5 ADA - provides additional lovelace for unfrack minUTxO
     })
 
-    const builder = makeTxBuilder(baseConfig)
-      .payToAddress({
-        address: Address.fromBech32(RECIPIENT_ADDRESS),
-        assets: CoreAssets.fromLovelace(2_000_000n) // 2.0 ADA only
-      })
+    const builder = makeTxBuilder(baseConfig).payToAddress({
+      address: Address.fromBech32(RECIPIENT_ADDRESS),
+      assets: CoreAssets.fromLovelace(2_000_000n) // 2.0 ADA only
+    })
 
     // Act: Build transaction with unfrack enabled
-    const signBuilder = await builder.build({ 
+    const signBuilder = await builder.build({
       changeAddress: Address.fromBech32(CHANGE_ADDRESS),
       availableUtxos: [utxo1, utxo2],
-      
+
       protocolParameters: PROTOCOL_PARAMS,
       unfrack: {
         tokens: {
@@ -99,20 +97,18 @@ describe.concurrent("TxBuilder - Unfrack MinUTxO", () => {
 
     // Assert: Should have payment + 1 unfrack bundle (5 tokens fit in bundleSize=10)
     expect(tx.body.outputs.length).toBeGreaterThanOrEqual(2) // Payment + at least 1 change
-    
+
     // Find change outputs (unfrack may create multiple)
-    const changeOutputs = tx.body.outputs.filter(
-      (out) => Address.toBech32(out.address) === CHANGE_ADDRESS
-    )
-    
+    const changeOutputs = tx.body.outputs.filter((out) => Address.toBech32(out.address) === CHANGE_ADDRESS)
+
     expect(changeOutputs.length).toBeGreaterThanOrEqual(1)
-    
+
     // Verify at least one change output has native assets
-    const hasNativeAssets = changeOutputs.some((out) => 
-      out.assets.multiAsset !== undefined && out.assets.multiAsset.map.size > 0
+    const hasNativeAssets = changeOutputs.some(
+      (out) => out.assets.multiAsset !== undefined && out.assets.multiAsset.map.size > 0
     )
     expect(hasNativeAssets).toBe(true)
-    
+
     // Verify total tokens across all change outputs
     let totalTokens = 0
     for (const out of changeOutputs) {
@@ -148,7 +144,7 @@ describe.concurrent("TxBuilder - Unfrack MinUTxO", () => {
         [`${POLICY_ID}544f4b454e34`]: 1n, // TOKEN4
         [`${POLICY_ID}544f4b454e35`]: 1n, // TOKEN5
         [`${POLICY_ID}544f4b454e36`]: 1n, // TOKEN6
-        [`${POLICY_ID}544f4b454e37`]: 1n  // TOKEN7
+        [`${POLICY_ID}544f4b454e37`]: 1n // TOKEN7
       }
     })
 
@@ -164,7 +160,7 @@ describe.concurrent("TxBuilder - Unfrack MinUTxO", () => {
         [`${POLICY_ID}544f4b454e42`]: 1n, // TOKENB
         [`${POLICY_ID}544f4b454e43`]: 1n, // TOKENC
         [`${POLICY_ID}544f4b454e44`]: 1n, // TOKEND
-        [`${POLICY_ID}544f4b454e45`]: 1n  // TOKENE
+        [`${POLICY_ID}544f4b454e45`]: 1n // TOKENE
       }
     })
 
@@ -175,17 +171,16 @@ describe.concurrent("TxBuilder - Unfrack MinUTxO", () => {
       lovelace: 2_000_000n // 2.0 ADA - Extra lovelace to satisfy 3-bundle minUTxO (15 tokens / bundleSize=5)
     })
 
-    const builder = makeTxBuilder(baseConfig)
-      .payToAddress({
-        address: Address.fromBech32(RECIPIENT_ADDRESS),
-        assets: CoreAssets.fromLovelace(2_000_000n)
-      })
+    const builder = makeTxBuilder(baseConfig).payToAddress({
+      address: Address.fromBech32(RECIPIENT_ADDRESS),
+      assets: CoreAssets.fromLovelace(2_000_000n)
+    })
 
     // Act: Build transaction with unfrack (bundleSize=5 → 3 bundles for 15 tokens)
-    const signBuilder = await builder.build({ 
+    const signBuilder = await builder.build({
       changeAddress: Address.fromBech32(CHANGE_ADDRESS),
       availableUtxos: [utxo1, utxo2, utxo3],
-      
+
       protocolParameters: PROTOCOL_PARAMS,
       unfrack: {
         tokens: {
@@ -196,32 +191,30 @@ describe.concurrent("TxBuilder - Unfrack MinUTxO", () => {
     const tx = await signBuilder.toTransaction()
 
     // Assert: Should have payment + 3 unfrack bundles (15 tokens with bundleSize=5)
-    const changeOutputs = tx.body.outputs.filter(
-      (out) => Address.toBech32(out.address) === CHANGE_ADDRESS
-    )
+    const changeOutputs = tx.body.outputs.filter((out) => Address.toBech32(out.address) === CHANGE_ADDRESS)
 
     expect(changeOutputs.length).toBeGreaterThanOrEqual(2) // At least 2 bundles (may merge some)
 
     // Count total native assets across all change outputs
     let totalTokens = 0
     let totalLovelace = 0n
-    
+
     for (const out of changeOutputs) {
       totalLovelace += out.assets.lovelace
-      
+
       if (out.assets.multiAsset !== undefined) {
         for (const [_policyId, assetNames] of out.assets.multiAsset.map) {
           totalTokens += assetNames.size
         }
       }
     }
-    
+
     expect(totalTokens).toBeGreaterThanOrEqual(8) // All tokens preserved (may merge some)
-    
+
     // With multiple bundles, total minUTxO requirement is higher
     // Each bundle needs ~450K, so multiple bundles need > 1.2M minimum
     expect(totalLovelace).toBeGreaterThanOrEqual(1_200_000n)
-    
+
     // Verify multiple UTxOs were selected to satisfy minUTxO requirements
     expect(tx.body.inputs.length).toBeGreaterThanOrEqual(2)
   })
@@ -240,28 +233,27 @@ describe.concurrent("TxBuilder - Unfrack MinUTxO", () => {
       }
     })
 
-    const builder = makeTxBuilder(baseConfig)
-      .payToAddress({
-        address: Address.fromBech32(RECIPIENT_ADDRESS),
-        assets: CoreAssets.fromLovelace(2_000_000n)
-      })
+    const builder = makeTxBuilder(baseConfig).payToAddress({
+      address: Address.fromBech32(RECIPIENT_ADDRESS),
+      assets: CoreAssets.fromLovelace(2_000_000n)
+    })
 
     // Build with drainTo option
-    const signBuilder = await builder.build({ 
+    const signBuilder = await builder.build({
       changeAddress: Address.fromBech32(CHANGE_ADDRESS),
       availableUtxos: [utxo],
-      
+
       protocolParameters: PROTOCOL_PARAMS,
       drainTo: 0 // Request drain into first output
     })
-    
+
     expect(signBuilder).toBeDefined()
-    
+
     const tx = await signBuilder.toTransaction()
-    
+
     // Should have payment + change output (native assets require change)
     expect(tx.body.outputs.length).toBeGreaterThanOrEqual(1)
-    
+
     // Verify native asset is preserved (either in payment or change)
     let totalAssets = 0
     for (const output of tx.body.outputs) {
@@ -287,22 +279,20 @@ describe.concurrent("TxBuilder - Unfrack MinUTxO", () => {
       }
     })
 
-    const builder = makeTxBuilder(baseConfig)
-      .payToAddress({
-        address: Address.fromBech32(RECIPIENT_ADDRESS),
-        assets: CoreAssets.fromLovelace(2_000_000n)
-      })
+    const builder = makeTxBuilder(baseConfig).payToAddress({
+      address: Address.fromBech32(RECIPIENT_ADDRESS),
+      assets: CoreAssets.fromLovelace(2_000_000n)
+    })
 
     // Try with burnAsFee - should fail because of native assets
     await expect(
-      builder.build({ 
+      builder.build({
         changeAddress: Address.fromBech32(CHANGE_ADDRESS),
         availableUtxos: [utxo],
-        
+
         protocolParameters: PROTOCOL_PARAMS,
         onInsufficientChange: "burn"
       })
     ).rejects.toThrow() // Should error about native assets
   })
 })
-

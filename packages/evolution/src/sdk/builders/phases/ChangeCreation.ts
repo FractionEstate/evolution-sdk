@@ -240,9 +240,7 @@ export const executeChangeCreation = (): Effect.Effect<
         changeOutputs: [sendAllOutput]
       }))
 
-      yield* Effect.logDebug(
-        `[ChangeCreation] SendAll: Created output with ${formatAssetsForLog(tentativeLeftover)}`
-      )
+      yield* Effect.logDebug(`[ChangeCreation] SendAll: Created output with ${formatAssetsForLog(tentativeLeftover)}`)
 
       return { next: "feeCalculation" as const }
     }
@@ -334,8 +332,7 @@ export const executeChangeCreation = (): Effect.Effect<
       }
 
       // CASE 2: ADA-only leftover - check if fallback strategies are configured
-      const hasFallbackStrategy =
-        buildOptions.drainTo !== undefined || buildOptions.onInsufficientChange === "burn"
+      const hasFallbackStrategy = buildOptions.drainTo !== undefined || buildOptions.onInsufficientChange === "burn"
 
       if (!hasFallbackStrategy) {
         // No fallback configured - fail with clear user-facing error

@@ -13,7 +13,6 @@ import * as Bytes from "../Bytes.js"
 import * as CBOR from "../CBOR.js"
 import * as Data from "../Data.js"
 
-
 /**
  * Error class for UPLC related operations.
  *
@@ -24,7 +23,6 @@ export class UPLCError extends EffectData.TaggedError("UPLCError")<{
   message?: string
   cause?: unknown
 }> {}
-
 
 /**
  * Semantic version for UPLC programs.
@@ -53,7 +51,6 @@ export const parseSemVer = (v: SemVer): { major: number; minor: number; patch: n
  */
 export const makeSemVer = (major: number, minor: number, patch: number): SemVer =>
   `${major}.${minor}.${patch}` as SemVer
-
 
 /**
  * All builtin functions supported in Plutus V3.
@@ -154,7 +151,6 @@ export const BuiltinFunctions = [
 
 export type BuiltinFunction = (typeof BuiltinFunctions)[number]
 
-
 /**
  * Primitive UPLC data types.
  *
@@ -189,7 +185,6 @@ export const DataTypeTags = {
   Data: 8
 } as const
 
-
 /**
  * Value types for UPLC constants.
  *
@@ -205,7 +200,6 @@ export type ConstantValue =
   | { readonly items: ReadonlyArray<ConstantValue> }
   | { readonly index: bigint; readonly fields: ReadonlyArray<ConstantValue> }
   | ReadonlyMap<ConstantValue, ConstantValue>
-
 
 /**
  * Term tags for flat encoding.
@@ -263,7 +257,6 @@ export type TermEncoded =
   | { readonly type: "Case"; readonly term: TermEncoded; readonly cases: ReadonlyArray<TermEncoded> }
   | { readonly type: "Error" }
 
-
 /**
  * UPLC Program - contains version and body term.
  *
@@ -308,7 +301,6 @@ export class Program extends Schema.Class<Program>("UPLC.Program")({
     return Hash.string(this.version) ^ termHash(this.body)
   }
 }
-
 
 const VarSchema = Schema.Struct({
   type: Schema.Literal("Var"),
@@ -396,7 +388,6 @@ export const TermSchema: Schema.Schema<Term, TermEncoded> = Schema.Union(
 ).annotations({
   identifier: "UPLC.Term"
 })
-
 
 interface DecodeState {
   readonly buffer: Uint8Array
@@ -1056,7 +1047,6 @@ const encodeProgram = (program: Program): Uint8Array => {
   return getBytes(state)
 }
 
-
 /**
  * Transform from flat-encoded bytes to Program.
  *
@@ -1094,7 +1084,6 @@ export const FromFlatHex = Schema.transform(Schema.Uint8ArrayFromHex, Schema.typ
   title: "UPLC Program from Flat Hex",
   description: "Transforms flat-encoded hex string to UPLC Program"
 })
-
 
 /**
  * Decode a UPLC program from flat-encoded bytes.
@@ -1139,7 +1128,6 @@ export const fromDoubleCborEncodedHex = (hex: string): Program => {
   const flatBytes = decodeDoubleCborHexToFlat(hex)
   return fromFlatBytes(flatBytes)
 }
-
 
 /**
  * Convert a term to JSON representation.
@@ -1261,7 +1249,6 @@ const termHash = (term: Term): number => {
   }
 }
 
-
 /**
  * Create a variable term.
  *
@@ -1346,7 +1333,6 @@ export const caseTerm = (term: Term, cases: ReadonlyArray<Term>): Term => ({ typ
  */
 export const errorTerm: Term = { type: "Error" }
 
-
 /**
  * FastCheck arbitrary for generating simple UPLC programs.
  *
@@ -1372,7 +1358,6 @@ export const arbitrary: FastCheck.Arbitrary<Program> = FastCheck.tuple(
   FastCheck.integer({ min: 0, max: 0 }),
   simpleTermArbitrary
 ).map(([major, minor, patch, body]) => new Program({ version: `${major}.${minor}.${patch}`, body }))
-
 
 /**
  * Check if a hex string is single CBOR encoded.
@@ -1462,7 +1447,6 @@ export const getCborEncodingLevel = (script: string): "double" | "single" | "non
   if (isSingleCborEncoded(script)) return "single"
   return "none"
 }
-
 
 /**
  * Decode a double CBOR-encoded script hex to flat bytes.

@@ -13,12 +13,7 @@ import { Effect, Ref } from "effect"
 import * as CoreAssets from "../../../Assets/index.js"
 import * as EvaluationStateManager from "../EvaluationStateManager.js"
 import { mintToAssets } from "../operations/Mint.js"
-import {
-  BuildOptionsTag,
-  PhaseContextTag,
-  TransactionBuilderError,
-  TxContext
-} from "../TransactionBuilder.js"
+import { BuildOptionsTag, PhaseContextTag, TransactionBuilderError, TxContext } from "../TransactionBuilder.js"
 import type { PhaseResult } from "./Phases.js"
 import { calculateCertificateBalance, calculateProposalDeposits, calculateWithdrawals } from "./utils.js"
 
@@ -131,7 +126,7 @@ export const executeBalance = (): Effect.Effect<
     // Step 3: Check if balanced (delta is empty) → complete or evaluate
     if (isBalanced) {
       yield* Effect.logDebug("[Balance] Transaction balanced!")
-      
+
       // Check if transaction has scripts that need evaluation
       // Route to evaluation if there are:
       // 1. Resolved redeemers WITHOUT exUnits, OR
@@ -140,7 +135,7 @@ export const executeBalance = (): Effect.Effect<
         yield* Effect.logDebug("[Balance] Unevaluated redeemers detected - routing to Evaluation phase")
         return { next: "evaluation" as const }
       }
-      
+
       // Balanced and evaluated - transaction is complete
       // Note: Collateral already ran earlier (before ChangeCreation)
       yield* Effect.logDebug("[Balance] Transaction balanced and evaluated - complete!")
@@ -188,7 +183,7 @@ export const executeBalance = (): Effect.Effect<
         // Merge delta into target output
         const targetOutput = outputs[drainToIndex]
         const newAssets = CoreAssets.addLovelace(targetOutput.assets, deltaLovelace)
-        
+
         // Create new TransactionOutput with updated assets
         const updatedOutput = new (targetOutput.constructor as any)({
           address: targetOutput.address,
@@ -231,13 +226,13 @@ export const executeBalance = (): Effect.Effect<
         // - Transaction rebuilt with 1 output has smaller fee
         // - Delta is the fee difference that should go into change
         // Solution: Route back to ChangeCreation to recreate change with updated fee
-        
+
         yield* Effect.logDebug(
           `[Balance] Positive delta detected: ${deltaLovelace} lovelace. ` +
-          `Likely from fee reduction after output count change. ` +
-          `Routing back to changeCreation for convergence.`
+            `Likely from fee reduction after output count change. ` +
+            `Routing back to changeCreation for convergence.`
         )
-        
+
         return { next: "changeCreation" as const }
       }
     }

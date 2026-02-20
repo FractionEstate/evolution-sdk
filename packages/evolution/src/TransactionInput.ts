@@ -43,10 +43,7 @@ export class TransactionInput extends Schema.TaggedClass<TransactionInput>()("Tr
   }
 
   [Hash.symbol](): number {
-    return Hash.cached(
-      this,
-      Hash.combine(Hash.hash(this.transactionId))(Hash.number(Number(this.index)))
-    )
+    return Hash.cached(this, Hash.combine(Hash.hash(this.transactionId))(Hash.number(Number(this.index))))
   }
 }
 

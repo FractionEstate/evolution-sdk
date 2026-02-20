@@ -56,4 +56,3 @@ export const fromVariableHex = Schema.decodeSync(VariableBytesFromHex)
  * @category encoding
  */
 export const toVariableHex = Schema.encodeSync(VariableBytesFromHex)
-

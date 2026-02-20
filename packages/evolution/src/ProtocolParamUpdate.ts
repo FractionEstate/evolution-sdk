@@ -256,10 +256,7 @@ export class ProtocolParamUpdate extends Schema.TaggedClass<ProtocolParamUpdate>
     // Only hash 1-2 most frequently changing fields for performance
     // This allows hash collisions to trigger full equality check
     // Most common updates are fee-related parameters and cost models
-    return Hash.cached(
-      this,
-      Hash.combine(Hash.hash(this.minfeeA))(Hash.hash(this.costModels))
-    )
+    return Hash.cached(this, Hash.combine(Hash.hash(this.minfeeA))(Hash.hash(this.costModels)))
   }
 }
 
@@ -586,7 +583,10 @@ export const arbitrary: FastCheck.Arbitrary<ProtocolParamUpdate> = FastCheck.rec
       UnitInterval.arbitrary,
       UnitInterval.arbitrary,
       UnitInterval.arbitrary
-    ).map(([t1, t2, t3, t4, t5, t6, t7, t8, t9, t10]) => new DRepVotingThresholds({ t1, t2, t3, t4, t5, t6, t7, t8, t9, t10 })),
+    ).map(
+      ([t1, t2, t3, t4, t5, t6, t7, t8, t9, t10]) =>
+        new DRepVotingThresholds({ t1, t2, t3, t4, t5, t6, t7, t8, t9, t10 })
+    ),
     { nil: undefined }
   ),
   minCommitteeSize: FastCheck.option(Numeric.Uint16Arbitrary, { nil: undefined }),

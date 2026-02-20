@@ -86,7 +86,7 @@ describe("Plutus Value", () => {
       const assetsMap = new Map([
         [Text.toBytes("TokenA"), 50n],
         [Text.toBytes("TokenB"), 100n],
-        [Text.toBytes("TokenC"), 150n],
+        [Text.toBytes("TokenC"), 150n]
       ])
       const value = new Map([[policyId, assetsMap]])
 
@@ -103,7 +103,7 @@ describe("Plutus Value", () => {
 
       const value = new Map([
         [policy1, assetsMap1],
-        [policy2, assetsMap2],
+        [policy2, assetsMap2]
       ])
 
       const data = Value.Codec.toData(value)
@@ -133,16 +133,16 @@ describe("Plutus Value", () => {
 
       const assetsMap1 = new Map([
         [new Uint8Array(), 1000n], // empty asset name (ADA-like)
-        [Text.toBytes("TokenA"), 50n],
+        [Text.toBytes("TokenA"), 50n]
       ])
       const assetsMap2 = new Map([
         [Text.toBytes("TokenB"), 100n],
-        [Text.toBytes("TokenC"), 150n],
+        [Text.toBytes("TokenC"), 150n]
       ])
 
       const value = new Map([
         [policy1, assetsMap1],
-        [policy2, assetsMap2],
+        [policy2, assetsMap2]
       ])
 
       const encoded = Value.Codec.toCBORHex(value)

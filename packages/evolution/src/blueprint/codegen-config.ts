@@ -1,6 +1,6 @@
 /**
  * Code generation configuration
- * 
+ *
  * @since 2.0.0
  * @category blueprint
  */
@@ -8,31 +8,31 @@
 /**
  * Configuration for how to generate optional types `(Option<T>)`
  */
-export type OptionStyle = 
-  | "NullOr"      // TSchema.NullOr(T)
+export type OptionStyle =
+  | "NullOr" // TSchema.NullOr(T)
   | "UndefinedOr" // TSchema.UndefinedOr(T)
-  | "Union"       // Keep as Union of TaggedStruct("Some", ...) | TaggedStruct("None", ...)
+  | "Union" // Keep as Union of TaggedStruct("Some", ...) | TaggedStruct("None", ...)
 
 /**
  * Configuration for how to generate union types with named constructors
  */
 export type UnionStyle =
-  | "Variant"       // TSchema.Variant({ Tag1: { ... }, Tag2: { ... } })
-  | "TaggedStruct"  // TSchema.Union(TaggedStruct("Tag1", ...), TaggedStruct("Tag2", ...))
+  | "Variant" // TSchema.Variant({ Tag1: { ... }, Tag2: { ... } })
+  | "TaggedStruct" // TSchema.Union(TaggedStruct("Tag1", ...), TaggedStruct("Tag2", ...))
 
 /**
  * Configuration for how to generate empty constructors
  */
 export type EmptyConstructorStyle =
-  | "Literal"  // TSchema.Literal("Unit" as const)
-  | "Struct"   // TSchema.Struct({})
+  | "Literal" // TSchema.Literal("Unit" as const)
+  | "Struct" // TSchema.Struct({})
 
 /**
  * Module organization strategy
  */
 export type ModuleStrategy =
-  | "flat"        // Current: CardanoAddressCredential
-  | "namespaced"  // Nested namespaces: Cardano.Address.Credential
+  | "flat" // Current: CardanoAddressCredential
+  | "namespaced" // Nested namespaces: Cardano.Address.Credential
 
 /**
  * Configuration for field naming in constructors without explicit field names
@@ -78,7 +78,7 @@ export interface CodegenConfig {
   /**
    * Custom field names for Variant constructors when Blueprint has unnamed fields
    * Map from "TypeTitle.ConstructorTitle" to array of field names
-   * Example: 
+   * Example:
    * ```
    * { "Credential.VerificationKey": ["hash"], "Credential.Script": ["hash"] }
    * ```
@@ -167,9 +167,7 @@ export const DEFAULT_CODEGEN_CONFIG: CodegenConfig = {
 /**
  * Create a custom codegen configuration by merging with defaults
  */
-export function createCodegenConfig(
-  config: Partial<CodegenConfig> = {}
-): CodegenConfig {
+export function createCodegenConfig(config: Partial<CodegenConfig> = {}): CodegenConfig {
   return {
     ...DEFAULT_CODEGEN_CONFIG,
     ...config,

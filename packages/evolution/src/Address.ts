@@ -52,9 +52,9 @@ export class Address extends Schema.Class<Address>("AddressStructure")({
   [Hash.symbol](): number {
     return Hash.cached(
       this,
-      Hash.combine(
-        Hash.combine(Hash.number(this.networkId))(Hash.hash(this.paymentCredential))
-      )(Hash.hash(this.stakingCredential))
+      Hash.combine(Hash.combine(Hash.number(this.networkId))(Hash.hash(this.paymentCredential)))(
+        Hash.hash(this.stakingCredential)
+      )
     )
   }
 }
@@ -293,7 +293,7 @@ export const getAddressDetails = (address: string): AddressDetails | undefined =
       paymentCredential: parsed.paymentCredential,
       stakingCredential: parsed.stakingCredential
     }
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
   } catch (_bech32Error) {
     try {
       // Try hex
@@ -308,7 +308,7 @@ export const getAddressDetails = (address: string): AddressDetails | undefined =
         paymentCredential: parsed.paymentCredential,
         stakingCredential: parsed.stakingCredential
       }
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
     } catch (_hexError) {
       return undefined
     }

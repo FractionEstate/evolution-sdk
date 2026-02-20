@@ -1097,10 +1097,7 @@ export const match = <R>(
     UpdateCommitteeAction: (
       govActionId: GovActionId | null,
       membersToRemove: ReadonlyArray<typeof CommiteeColdCredential.CommitteeColdCredential.Credential.Type>,
-      membersToAdd: ReadonlyMap<
-        typeof CommiteeColdCredential.CommitteeColdCredential.Credential.Type,
-        EpochNo.EpochNo
-      >,
+      membersToAdd: ReadonlyMap<typeof CommiteeColdCredential.CommitteeColdCredential.Credential.Type, EpochNo.EpochNo>,
       threshold: UnitInterval.UnitInterval
     ) => R
     NewConstitutionAction: (govActionId: GovActionId | null, constitution: Constituion.Constitution) => R

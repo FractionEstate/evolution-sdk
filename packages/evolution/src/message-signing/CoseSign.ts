@@ -64,10 +64,7 @@ export class COSESignature extends Schema.Class<COSESignature>("COSESignature")(
  * @since 2.0.0
  * @category Constructors
  */
-export const coseSignatureNew = (
-  headers: Headers,
-  signature: Ed25519Signature.Ed25519Signature
-): COSESignature =>
+export const coseSignatureNew = (headers: Headers, signature: Ed25519Signature.Ed25519Signature): COSESignature =>
   new COSESignature({ headers, signature }, { disableValidation: true })
 
 /**
@@ -77,56 +74,46 @@ export const coseSignatureNew = (
  * @category Schemas
  */
 export const COSESignatureFromCBORBytes = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
-  Schema.transformOrFail(
-    CBOR.FromBytes(options),
-    Schema.typeSchema(COSESignature),
-    {
-      strict: true,
-      decode: (cbor, _, ast) => {
-        if (!Array.isArray(cbor) || cbor.length !== 3) {
-          return ParseResult.fail(new ParseResult.Type(ast, cbor))
-        }
-        const [protectedBytes, unprotectedMap, signatureBytes] = cbor
-        
-        if (!(protectedBytes instanceof Uint8Array)) {
-          return ParseResult.fail(new ParseResult.Type(ast, protectedBytes))
-        }
-        if (!(unprotectedMap instanceof Map)) {
-          return ParseResult.fail(new ParseResult.Type(ast, unprotectedMap))
-        }
-        if (!(signatureBytes instanceof Uint8Array)) {
-          return ParseResult.fail(new ParseResult.Type(ast, signatureBytes))
-        }
-
-        const protectedDecoded = Schema.decodeSync(HeaderMapFromCBORBytes(options))(protectedBytes)
-        const unprotectedDecoded = Schema.decodeSync(HeaderMapFromCBORBytes(options))(
-          Schema.encodeSync(CBOR.FromBytes(options))(unprotectedMap)
-        )
-        const headers = headersNew(protectedDecoded, unprotectedDecoded)
-        const signature = Ed25519Signature.Ed25519Signature.make({ bytes: signatureBytes })
-
-        return ParseResult.succeed(new COSESignature({ headers, signature }, { disableValidation: true }))
-      },
-      encode: (coseSignature) => {
-        const protectedCbor = new Map(
-          Array.from(coseSignature.headers.protected.headers.entries()).map(([label, value]) => [
-            label.value,
-            value
-          ])
-        )
-        const protectedBytes = Schema.encodeSync(CBOR.FromBytes(options))(protectedCbor)
-
-        const unprotectedCbor = new Map(
-          Array.from(coseSignature.headers.unprotected.headers.entries()).map(([label, value]) => [
-            label.value,
-            value
-          ])
-        )
-
-        return ParseResult.succeed([protectedBytes, unprotectedCbor, coseSignature.signature.bytes])
+  Schema.transformOrFail(CBOR.FromBytes(options), Schema.typeSchema(COSESignature), {
+    strict: true,
+    decode: (cbor, _, ast) => {
+      if (!Array.isArray(cbor) || cbor.length !== 3) {
+        return ParseResult.fail(new ParseResult.Type(ast, cbor))
       }
+      const [protectedBytes, unprotectedMap, signatureBytes] = cbor
+
+      if (!(protectedBytes instanceof Uint8Array)) {
+        return ParseResult.fail(new ParseResult.Type(ast, protectedBytes))
+      }
+      if (!(unprotectedMap instanceof Map)) {
+        return ParseResult.fail(new ParseResult.Type(ast, unprotectedMap))
+      }
+      if (!(signatureBytes instanceof Uint8Array)) {
+        return ParseResult.fail(new ParseResult.Type(ast, signatureBytes))
+      }
+
+      const protectedDecoded = Schema.decodeSync(HeaderMapFromCBORBytes(options))(protectedBytes)
+      const unprotectedDecoded = Schema.decodeSync(HeaderMapFromCBORBytes(options))(
+        Schema.encodeSync(CBOR.FromBytes(options))(unprotectedMap)
+      )
+      const headers = headersNew(protectedDecoded, unprotectedDecoded)
+      const signature = Ed25519Signature.Ed25519Signature.make({ bytes: signatureBytes })
+
+      return ParseResult.succeed(new COSESignature({ headers, signature }, { disableValidation: true }))
+    },
+    encode: (coseSignature) => {
+      const protectedCbor = new Map(
+        Array.from(coseSignature.headers.protected.headers.entries()).map(([label, value]) => [label.value, value])
+      )
+      const protectedBytes = Schema.encodeSync(CBOR.FromBytes(options))(protectedCbor)
+
+      const unprotectedCbor = new Map(
+        Array.from(coseSignature.headers.unprotected.headers.entries()).map(([label, value]) => [label.value, value])
+      )
+
+      return ParseResult.succeed([protectedBytes, unprotectedCbor, coseSignature.signature.bytes])
     }
-  ).annotations({ identifier: "COSESignatureFromCBORBytes" })
+  }).annotations({ identifier: "COSESignatureFromCBORBytes" })
 
 // ============================================================================
 // COSESign
@@ -148,7 +135,7 @@ export class COSESign extends Schema.Class<COSESign>("COSESign")({
       _tag: "COSESign" as const,
       headers: this.headers.toJSON(),
       payload: this.payload !== undefined ? Bytes.toHex(this.payload) : undefined,
-      signatures: this.signatures.map(sig => sig.toJSON())
+      signatures: this.signatures.map((sig) => sig.toJSON())
     }
   }
 
@@ -170,9 +157,7 @@ export class COSESign extends Schema.Class<COSESign>("COSESign")({
   }
 
   [Hash.symbol](): number {
-    return Hash.combine(
-      Hash.combine(Hash.hash(this.headers))(Hash.hash(this.payload))
-    )(Hash.hash(this.signatures))
+    return Hash.combine(Hash.combine(Hash.hash(this.headers))(Hash.hash(this.payload)))(Hash.hash(this.signatures))
   }
 }
 
@@ -186,8 +171,7 @@ export const coseSignNew = (
   headers: Headers,
   payload: Uint8Array | undefined,
   signatures: ReadonlyArray<COSESignature>
-): COSESign =>
-  new COSESign({ headers, payload, signatures: [...signatures] }, { disableValidation: true })
+): COSESign => new COSESign({ headers, payload, signatures: [...signatures] }, { disableValidation: true })
 
 /**
  * CBOR bytes transformation schema for COSESign.
@@ -196,71 +180,57 @@ export const coseSignNew = (
  * @category Schemas
  */
 export const COSESignFromCBORBytes = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
-  Schema.transformOrFail(
-    CBOR.FromBytes(options),
-    Schema.typeSchema(COSESign),
-    {
-      strict: true,
-      decode: (cbor, _, ast) => {
-        if (!Array.isArray(cbor) || cbor.length !== 4) {
-          return ParseResult.fail(new ParseResult.Type(ast, cbor))
-        }
-        const [protectedBytes, unprotectedMap, payloadOrNull, signaturesArray] = cbor
-
-        if (!(protectedBytes instanceof Uint8Array)) {
-          return ParseResult.fail(new ParseResult.Type(ast, protectedBytes))
-        }
-        if (!(unprotectedMap instanceof Map)) {
-          return ParseResult.fail(new ParseResult.Type(ast, unprotectedMap))
-        }
-        if (!Array.isArray(signaturesArray)) {
-          return ParseResult.fail(new ParseResult.Type(ast, signaturesArray))
-        }
-
-        const protectedDecoded = Schema.decodeSync(HeaderMapFromCBORBytes(options))(protectedBytes)
-        const unprotectedDecoded = Schema.decodeSync(HeaderMapFromCBORBytes(options))(
-          Schema.encodeSync(CBOR.FromBytes(options))(unprotectedMap)
-        )
-        const headers = headersNew(protectedDecoded, unprotectedDecoded)
-
-        const payload = payloadOrNull === null || payloadOrNull === undefined ? undefined : payloadOrNull as Uint8Array
-
-        const signatures = signaturesArray.map(sigCbor => 
-          Schema.decodeSync(COSESignatureFromCBORBytes(options))(
-            Schema.encodeSync(CBOR.FromBytes(options))(sigCbor)
-          )
-        )
-
-        return ParseResult.succeed(new COSESign({ headers, payload, signatures }, { disableValidation: true }))
-      },
-      encode: (coseSign) => {
-        const protectedCbor = new Map(
-          Array.from(coseSign.headers.protected.headers.entries()).map(([label, value]) => [
-            label.value,
-            value
-          ])
-        )
-        const protectedBytes = Schema.encodeSync(CBOR.FromBytes(options))(protectedCbor)
-
-        const unprotectedCbor = new Map(
-          Array.from(coseSign.headers.unprotected.headers.entries()).map(([label, value]) => [
-            label.value,
-            value
-          ])
-        )
-
-        const payloadOrNull = coseSign.payload === undefined ? null : coseSign.payload
-
-        const signaturesEncoded = coseSign.signatures.map(sig =>
-          Schema.decodeSync(CBOR.FromBytes(options))(
-            Schema.encodeSync(COSESignatureFromCBORBytes(options))(sig)
-          )
-        )
-
-        return ParseResult.succeed([protectedBytes, unprotectedCbor, payloadOrNull, signaturesEncoded])
+  Schema.transformOrFail(CBOR.FromBytes(options), Schema.typeSchema(COSESign), {
+    strict: true,
+    decode: (cbor, _, ast) => {
+      if (!Array.isArray(cbor) || cbor.length !== 4) {
+        return ParseResult.fail(new ParseResult.Type(ast, cbor))
       }
+      const [protectedBytes, unprotectedMap, payloadOrNull, signaturesArray] = cbor
+
+      if (!(protectedBytes instanceof Uint8Array)) {
+        return ParseResult.fail(new ParseResult.Type(ast, protectedBytes))
+      }
+      if (!(unprotectedMap instanceof Map)) {
+        return ParseResult.fail(new ParseResult.Type(ast, unprotectedMap))
+      }
+      if (!Array.isArray(signaturesArray)) {
+        return ParseResult.fail(new ParseResult.Type(ast, signaturesArray))
+      }
+
+      const protectedDecoded = Schema.decodeSync(HeaderMapFromCBORBytes(options))(protectedBytes)
+      const unprotectedDecoded = Schema.decodeSync(HeaderMapFromCBORBytes(options))(
+        Schema.encodeSync(CBOR.FromBytes(options))(unprotectedMap)
+      )
+      const headers = headersNew(protectedDecoded, unprotectedDecoded)
+
+      const payload = payloadOrNull === null || payloadOrNull === undefined ? undefined : (payloadOrNull as Uint8Array)
+
+      const signatures = signaturesArray.map((sigCbor) =>
+        Schema.decodeSync(COSESignatureFromCBORBytes(options))(Schema.encodeSync(CBOR.FromBytes(options))(sigCbor))
+      )
+
+      return ParseResult.succeed(new COSESign({ headers, payload, signatures }, { disableValidation: true }))
+    },
+    encode: (coseSign) => {
+      const protectedCbor = new Map(
+        Array.from(coseSign.headers.protected.headers.entries()).map(([label, value]) => [label.value, value])
+      )
+      const protectedBytes = Schema.encodeSync(CBOR.FromBytes(options))(protectedCbor)
+
+      const unprotectedCbor = new Map(
+        Array.from(coseSign.headers.unprotected.headers.entries()).map(([label, value]) => [label.value, value])
+      )
+
+      const payloadOrNull = coseSign.payload === undefined ? null : coseSign.payload
+
+      const signaturesEncoded = coseSign.signatures.map((sig) =>
+        Schema.decodeSync(CBOR.FromBytes(options))(Schema.encodeSync(COSESignatureFromCBORBytes(options))(sig))
+      )
+
+      return ParseResult.succeed([protectedBytes, unprotectedCbor, payloadOrNull, signaturesEncoded])
     }
-  ).annotations({ identifier: "COSESignFromCBORBytes" })
+  }).annotations({ identifier: "COSESignFromCBORBytes" })
 
 /**
  * CBOR hex transformation schema for COSESign.
@@ -317,9 +287,9 @@ export class COSESignBuilder extends Schema.Class<COSESignBuilder>("COSESignBuil
    */
   hashPayloadWith224(): this {
     if (!this.hashPayload) return this
-    
+
     const hashedPayload = blake2b(this.payload, { dkLen: 28 })
-    
+
     return new COSESignBuilder(
       {
         headers: this.headers,

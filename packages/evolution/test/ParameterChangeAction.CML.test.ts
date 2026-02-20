@@ -84,7 +84,12 @@ describe("ParameterChangeAction CML Compatibility", () => {
         ppuArb,
         govArb,
         (deposit, rewardAccount, anchor, ppu, gov) => {
-          const evoProcedure = new ProposalProcedure.ProposalProcedure({ deposit, rewardAccount, governanceAction: gov, anchor })
+          const evoProcedure = new ProposalProcedure.ProposalProcedure({
+            deposit,
+            rewardAccount,
+            governanceAction: gov,
+            anchor
+          })
           const evoHex = ProposalProcedure.toCBORHex(evoProcedure)
           const cmlParsed = CML.ProposalProcedure.from_cbor_hex(evoHex)
           const cmlHex = cmlParsed.to_cbor_hex()

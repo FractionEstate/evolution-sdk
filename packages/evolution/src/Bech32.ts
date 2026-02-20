@@ -1,7 +1,6 @@
 import { bech32 } from "@scure/base"
 import { Effect, ParseResult, Schema } from "effect"
 
-
 export const Bech32Schema = Schema.String
 export type Bech32 = typeof Bech32Schema.Type
 

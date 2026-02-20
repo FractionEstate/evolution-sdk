@@ -268,7 +268,7 @@ export function walletFromPrivateKey(
 ): Effect.Effect<SeedDerivationResult, DerivationError> {
   return Effect.gen(function* () {
     const { stakeKeyBech32, addressType = stakeKeyBech32 ? "Base" : "Enterprise", network = "Mainnet" } = options
-    
+
     // Use the Effect-based Either API from PrivateKey module - can yield directly on Either
     const paymentKey = yield* Effect.mapError(
       // PrivateKey.Either.fromBech32(paymentKeyBech32),
@@ -278,11 +278,11 @@ export function walletFromPrivateKey(
     const paymentKeyHash = KeyHash.fromPrivateKey(paymentKey)
 
     const networkId = network === "Mainnet" ? 1 : 0
-    
+
     let address: CoreAddress.Address
     let stakeKey: PrivateKey.PrivateKey | undefined
     let stakeKeyHash: KeyHash.KeyHash | undefined
-    
+
     if (addressType === "Base") {
       if (!stakeKeyBech32) {
         return yield* Effect.fail(new DerivationError({ message: "stakeKeyBech32 required for Base address" }))

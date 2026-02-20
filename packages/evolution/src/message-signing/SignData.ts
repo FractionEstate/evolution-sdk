@@ -53,11 +53,7 @@ export type SignedMessage = {
  * @since 2.0.0
  * @category API
  */
-export const signData = (
-  addressHex: string,
-  payload: Payload,
-  privateKey: PrivateKey.PrivateKey
-): SignedMessage => {
+export const signData = (addressHex: string, payload: Payload, privateKey: PrivateKey.PrivateKey): SignedMessage => {
   // Create headers with algorithm and address in protected headers
   const protectedHeaders = headerMapNew()
     .setAlgorithmId(AlgorithmId.EdDSA)
@@ -140,7 +136,7 @@ export const verifyData = (
 
     // Decode COSEKey and extract public key
     const coseKey = Schema.decodeSync(COSEKeyFromCBORBytes())(signedMessage.key)
-    
+
     // Extract public key from COSEKey headers (parameter -2)
     const pubKeyLabel = labelFromInt(-2n)
     let publicKeyBytes: Uint8Array | undefined
@@ -151,7 +147,7 @@ export const verifyData = (
       }
     }
     if (publicKeyBytes === undefined) return false
-    
+
     const publicKey = VKey.fromBytes(publicKeyBytes)
     const publicKeyHash = KeyHash.fromVKey(publicKey)
     if (KeyHash.toHex(publicKeyHash) !== keyHash) return false

@@ -326,7 +326,9 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Val
           const assetMap = new Map<AssetName.AssetName, PositiveCoin.PositiveCoin>()
           for (const [assetNameBytes, amount] of assetMapCddl.entries()) {
             const assetName = yield* ParseResult.decode(AssetName.FromBytes)(assetNameBytes)
-            const positiveCoin = yield* ParseResult.decodeUnknown(Schema.typeSchema(PositiveCoin.PositiveCoinSchema))(amount)
+            const positiveCoin = yield* ParseResult.decodeUnknown(Schema.typeSchema(PositiveCoin.PositiveCoinSchema))(
+              amount
+            )
             assetMap.set(assetName, positiveCoin)
           }
 

@@ -1,5 +1,5 @@
-import WalletConnect from "./WalletConnect";
-import TransactionBuilder from "./TransactionBuilder";
+import WalletConnect from "./WalletConnect"
+import TransactionBuilder from "./TransactionBuilder"
 
 export default function Main() {
   return (
@@ -22,5 +22,5 @@ export default function Main() {
         </div>
       </div>
     </div>
-  );
+  )
 }

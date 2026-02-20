@@ -9,11 +9,7 @@ import { Equal, Hash, Inspectable, ParseResult, Schema } from "effect"
 
 import * as CBOR from "../CBOR.js"
 import type { AlgorithmId } from "./Label.js"
-import {
-  Label,
-  labelFromInt,
-  labelFromText
-} from "./Label.js"
+import { Label, labelFromInt, labelFromText } from "./Label.js"
 
 // ============================================================================
 // HeaderMap
@@ -99,7 +95,10 @@ export class HeaderMap extends Schema.Class<HeaderMap>("HeaderMap")({
   setCriticality(labels: ReadonlyArray<Label>): this {
     const newHeaders = new Map(this.headers)
     // Store as array of label values
-    newHeaders.set(labelFromInt(2n), labels.map(l => l.value))
+    newHeaders.set(
+      labelFromInt(2n),
+      labels.map((l) => l.value)
+    )
     return new HeaderMap({ headers: newHeaders }, { disableValidation: true }) as this
   }
 
@@ -114,7 +113,7 @@ export class HeaderMap extends Schema.Class<HeaderMap>("HeaderMap")({
     for (const [label, value] of this.headers.entries()) {
       if (Equal.equals(label, targetLabel)) {
         if (Array.isArray(value)) {
-          return value.map(v => {
+          return value.map((v) => {
             if (typeof v === "bigint") return labelFromInt(v)
             if (typeof v === "string") return labelFromText(v)
             return labelFromInt(BigInt(v))
@@ -289,38 +288,34 @@ export const headerMapNew = (): HeaderMap =>
  * @category Schemas
  */
 export const HeaderMapFromCBORBytes = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
-  Schema.transformOrFail(
-    CBOR.FromBytes(options),
-    Schema.typeSchema(HeaderMap),
-    {
-      strict: true,
-      decode: (cbor, _, ast) => {
-        if (!(cbor instanceof Map)) {
-          return ParseResult.fail(new ParseResult.Type(ast, cbor))
-        }
-        const headers = new Map<Label, CBOR.CBOR>()
-        for (const [key, value] of cbor.entries()) {
-          let label: Label
-          if (typeof key === "bigint") {
-            label = labelFromInt(key)
-          } else if (typeof key === "string") {
-            label = labelFromText(key)
-          } else {
-            return ParseResult.fail(new ParseResult.Type(ast, key))
-          }
-          headers.set(label, value)
-        }
-        return ParseResult.succeed(new HeaderMap({ headers }, { disableValidation: true }))
-      },
-      encode: (headerMap) => {
-        const cborMap = new Map<CBOR.CBOR, CBOR.CBOR>()
-        for (const [label, value] of headerMap.headers.entries()) {
-          cborMap.set(label.value, value)
-        }
-        return ParseResult.succeed(cborMap)
+  Schema.transformOrFail(CBOR.FromBytes(options), Schema.typeSchema(HeaderMap), {
+    strict: true,
+    decode: (cbor, _, ast) => {
+      if (!(cbor instanceof Map)) {
+        return ParseResult.fail(new ParseResult.Type(ast, cbor))
       }
+      const headers = new Map<Label, CBOR.CBOR>()
+      for (const [key, value] of cbor.entries()) {
+        let label: Label
+        if (typeof key === "bigint") {
+          label = labelFromInt(key)
+        } else if (typeof key === "string") {
+          label = labelFromText(key)
+        } else {
+          return ParseResult.fail(new ParseResult.Type(ast, key))
+        }
+        headers.set(label, value)
+      }
+      return ParseResult.succeed(new HeaderMap({ headers }, { disableValidation: true }))
+    },
+    encode: (headerMap) => {
+      const cborMap = new Map<CBOR.CBOR, CBOR.CBOR>()
+      for (const [label, value] of headerMap.headers.entries()) {
+        cborMap.set(label.value, value)
+      }
+      return ParseResult.succeed(cborMap)
     }
-  ).annotations({
+  }).annotations({
     identifier: "HeaderMap.FromCBORBytes",
     description: "Transforms CBOR bytes to HeaderMap"
   })
@@ -405,7 +400,9 @@ export class Headers extends Schema.Class<Headers>("Headers")({
 
   [Equal.symbol](that: unknown): boolean {
     return (
-      that instanceof Headers && Equal.equals(this.protected, that.protected) && Equal.equals(this.unprotected, that.unprotected)
+      that instanceof Headers &&
+      Equal.equals(this.protected, that.protected) &&
+      Equal.equals(this.unprotected, that.unprotected)
     )
   }
 

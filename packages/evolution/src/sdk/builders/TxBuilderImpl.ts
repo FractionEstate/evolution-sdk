@@ -36,7 +36,7 @@ import * as Withdrawals from "../../Withdrawals.js"
 // Internal imports
 import { voterToKey } from "./phases/utils.js"
 import type { UnfrackOptions } from "./TransactionBuilder.js"
-import { BuildOptionsTag, TransactionBuilderError, TxBuilderConfigTag,TxContext } from "./TransactionBuilder.js"
+import { BuildOptionsTag, TransactionBuilderError, TxBuilderConfigTag, TxContext } from "./TransactionBuilder.js"
 import * as Unfrack from "./Unfrack.js"
 
 // ============================================================================
@@ -126,22 +126,27 @@ export const filterScriptUtxos = (
  * @category helpers
  */
 export const calculateTotalAssets = (utxos: ReadonlyArray<CoreUTxO.UTxO> | Set<CoreUTxO.UTxO>): CoreAssets.Assets => {
-  const utxoArray = (globalThis.Array.isArray(utxos) ? utxos : globalThis.Array.from(utxos)) as ReadonlyArray<CoreUTxO.UTxO>
-  return utxoArray.reduce((total: CoreAssets.Assets, utxo: CoreUTxO.UTxO) => CoreAssets.merge(total, utxo.assets), CoreAssets.zero)
+  const utxoArray = (
+    globalThis.Array.isArray(utxos) ? utxos : globalThis.Array.from(utxos)
+  ) as ReadonlyArray<CoreUTxO.UTxO>
+  return utxoArray.reduce(
+    (total: CoreAssets.Assets, utxo: CoreUTxO.UTxO) => CoreAssets.merge(total, utxo.assets),
+    CoreAssets.zero
+  )
 }
 
 /**
  * Calculate reference script fees using tiered pricing.
- * 
+ *
  * Reference scripts stored on-chain incur additional fees based on their size:
  * - First 25KB:  15 lovelace/byte
  * - Next 25KB:   25 lovelace/byte
  * - Next 150KB: 100 lovelace/byte
  * - Maximum: 200KB total
- * 
+ *
  * @param referenceInputs - UTxOs containing reference scripts
  * @returns Total reference script fee in lovelace
- * 
+ *
  * @since 2.0.0
  * @category helpers
  */
@@ -152,7 +157,7 @@ export const calculateReferenceScriptFee = (
     // Calculate total reference script size in bytes (both native and Plutus)
     // Per ADR 2024-08-14_009: "Native scripts that are used as reference scripts also contribute their size to this calculation"
     let totalScriptSize = 0
-    
+
     for (const utxo of referenceInputs) {
       if (utxo.scriptRef) {
         const scriptBytes = CoreScript.toCBOR(utxo.scriptRef).length
@@ -161,14 +166,14 @@ export const calculateReferenceScriptFee = (
         yield* Effect.logDebug(`[RefScriptFee] ${scriptType} script in ref input: ${scriptBytes} bytes`)
       }
     }
-    
+
     // No reference scripts = no tiered fee
     if (totalScriptSize === 0) {
       return 0n
     }
-    
+
     yield* Effect.logDebug(`[RefScriptFee] Total reference script size: ${totalScriptSize} bytes`)
-    
+
     // Check maximum size limit (200KB)
     if (totalScriptSize > 200_000) {
       return yield* Effect.fail(
@@ -177,42 +182,44 @@ export const calculateReferenceScriptFee = (
         })
       )
     }
-    
+
     // Calculate tiered fees for all reference scripts
     let fee = 0n
     let remainingSize = totalScriptSize
     let tierIndex = 0
     const tierPrices = [15, 25, 100] // lovelace per byte for each tier
     const tierSize = 25_000 // 25KB per tier
-    
+
     while (remainingSize > 0 && tierIndex < 3) {
       const bytesInThisTier = Math.min(remainingSize, tierSize)
       const tierFee = BigInt(Math.ceil(bytesInThisTier * tierPrices[tierIndex]!))
       fee += tierFee
-      yield* Effect.logDebug(`[RefScriptFee] Tier ${tierIndex + 1}: ${bytesInThisTier} bytes × ${tierPrices[tierIndex]} lovelace/byte = ${tierFee} lovelace`)
-      
+      yield* Effect.logDebug(
+        `[RefScriptFee] Tier ${tierIndex + 1}: ${bytesInThisTier} bytes × ${tierPrices[tierIndex]} lovelace/byte = ${tierFee} lovelace`
+      )
+
       remainingSize -= tierSize
       tierIndex++
     }
-    
+
     yield* Effect.logDebug(`[RefScriptFee] Total tiered fee (Plutus only): ${fee} lovelace`)
-    
+
     return fee
   })
 
-// ============================================================================
-// Helper Functions - Output Construction
-// ============================================================================
+    // ============================================================================
+    // Helper Functions - Output Construction
+    // ============================================================================
 
-.pipe(
-    Effect.mapError(
-      (error) =>
-        new TransactionBuilderError({
-          message: `Failed to parse datum: ${error.message}`,
-          cause: error
-        })
+    .pipe(
+      Effect.mapError(
+        (error) =>
+          new TransactionBuilderError({
+            message: `Failed to parse datum: ${error.message}`,
+            cause: error
+          })
+      )
     )
-  )
 
 /**
  * Create a TransactionOutput from user-friendly parameters.
@@ -425,7 +432,9 @@ export const assembleTransaction = (
       )
 
       // Collateral phase guarantees at least one input for script transactions
-      collateralInputs = (yield* buildTransactionInputs(state.collateral.inputs)) as Array.NonEmptyReadonlyArray<TransactionInput.TransactionInput>
+      collateralInputs = (yield* buildTransactionInputs(
+        state.collateral.inputs
+      )) as Array.NonEmptyReadonlyArray<TransactionInput.TransactionInput>
       totalCollateral = state.collateral.totalAmount
 
       // Collateral return is already a Core TransactionOutput
@@ -445,7 +454,7 @@ export const assembleTransaction = (
       const refInputs = yield* buildTransactionInputs(state.referenceInputs)
       referenceInputs = refInputs as readonly [
         TransactionInput.TransactionInput,
-        ...Array<TransactionInput.TransactionInput>,
+        ...Array<TransactionInput.TransactionInput>
       ]
     }
 
@@ -498,7 +507,7 @@ export const assembleTransaction = (
       const sortedPolicyIds = globalThis.Array.from(state.mint.map.keys())
         .map((pid) => PolicyId.toHex(pid))
         .sort()
-      
+
       for (let i = 0; i < sortedPolicyIds.length; i++) {
         mintIndexMap.set(sortedPolicyIds[i]!, i)
         yield* Effect.logDebug(`[Assembly] Mint policy ${i}: ${sortedPolicyIds[i]}`)
@@ -508,12 +517,12 @@ export const assembleTransaction = (
     // Build redeemers with correct indices
     // For cert/reward redeemers, we need to find their index in the certificates/withdrawals arrays
     // Keys are stored as `cert:{hex}` and `reward:{hex}` in state.redeemers
-    
+
     for (const [key, redeemerData] of state.redeemers) {
       yield* Effect.logDebug(`[Assembly] Processing redeemer for key: ${key}, tag: ${redeemerData.tag}`)
 
       let redeemerIndex: number | undefined
-      
+
       if (redeemerData.tag === "mint") {
         // For mint redeemers, look up in mint index map
         redeemerIndex = mintIndexMap.get(key)
@@ -553,12 +562,11 @@ export const assembleTransaction = (
         // Key format: `reward:{credentialHex}`
         const credentialHex = key.slice(7) // Remove "reward:" prefix
         // Withdrawals must be in sorted order for redeemer indices
-        const sortedWithdrawals = globalThis.Array.from(state.withdrawals.entries())
-          .sort((a, b) => {
-            const aHex = Bytes.toHex(a[0].stakeCredential.hash)
-            const bHex = Bytes.toHex(b[0].stakeCredential.hash)
-            return aHex.localeCompare(bHex)
-          })
+        const sortedWithdrawals = globalThis.Array.from(state.withdrawals.entries()).sort((a, b) => {
+          const aHex = Bytes.toHex(a[0].stakeCredential.hash)
+          const bHex = Bytes.toHex(b[0].stakeCredential.hash)
+          return aHex.localeCompare(bHex)
+        })
         for (let i = 0; i < sortedWithdrawals.length; i++) {
           const [rewardAccount] = sortedWithdrawals[i]!
           const rewardCredHex = Bytes.toHex(rewardAccount.stakeCredential.hash)
@@ -574,21 +582,21 @@ export const assembleTransaction = (
       } else if (redeemerData.tag === "vote") {
         // For vote redeemers, find matching voter in votingProcedures (sorted order)
         // Key format: `drep:{credentialHex}` | `cc:{credentialHex}` | `pool:{poolKeyHashHex}`
-        
+
         if (!state.votingProcedures) {
           yield* Effect.logWarning(`[Assembly] Vote redeemer found but no votingProcedures in state`)
           continue
         }
-        
+
         // Build sorted voter keys from votingProcedures using shared utility
         const sortedVoterKeys: Array<string> = []
         for (const voter of state.votingProcedures.procedures.keys()) {
           sortedVoterKeys.push(voterToKey(voter))
         }
-        
+
         // Sort keys lexicographically (as per Cardano ledger rules)
         sortedVoterKeys.sort()
-        
+
         // Find the index of our voter key
         for (let i = 0; i < sortedVoterKeys.length; i++) {
           if (sortedVoterKeys[i] === key) {
@@ -652,7 +660,8 @@ export const assembleTransaction = (
 
       if (!config.provider) {
         throw new TransactionBuilderError({
-          message: "Script transactions require a provider to fetch full protocol parameters for scriptDataHash calculation",
+          message:
+            "Script transactions require a provider to fetch full protocol parameters for scriptDataHash calculation",
           cause: { redeemerCount: redeemers.length }
         })
       }
@@ -674,7 +683,7 @@ export const assembleTransaction = (
       let hasPlutusV1 = plutusV1Scripts.length > 0
       let hasPlutusV2 = plutusV2Scripts.length > 0
       let hasPlutusV3 = plutusV3Scripts.length > 0
-      
+
       // Also check reference inputs for Plutus scripts
       for (const refUtxo of state.referenceInputs) {
         if (refUtxo.scriptRef) {
@@ -713,8 +722,15 @@ export const assembleTransaction = (
       // Compute the hash of script data (redeemers + optional datums + cost models)
       const buildOpts = yield* BuildOptionsTag
       const scriptDataFmt = buildOpts.scriptDataFormat ?? "array"
-      scriptDataHash = hashScriptData(redeemers, costModels, plutusDataArray.length > 0 ? plutusDataArray : undefined, scriptDataFmt)
-      yield* Effect.logDebug(`[Assembly] Computed scriptDataHash (format=${scriptDataFmt}): ${scriptDataHash.hash.toString()}`)
+      scriptDataHash = hashScriptData(
+        redeemers,
+        costModels,
+        plutusDataArray.length > 0 ? plutusDataArray : undefined,
+        scriptDataFmt
+      )
+      yield* Effect.logDebug(
+        `[Assembly] Computed scriptDataHash (format=${scriptDataFmt}): ${scriptDataHash.hash.toString()}`
+      )
     }
 
     yield* Effect.logDebug(`[Assembly] WitnessSet populated:`)
@@ -727,7 +743,9 @@ export const assembleTransaction = (
     // Create TransactionBody with calculated fee and scriptDataHash
     // Build certificates array (NonEmptyArray or undefined)
     const certificates =
-      state.certificates.length > 0 ? (state.certificates as [Certificate.Certificate, ...Array<Certificate.Certificate>]) : undefined
+      state.certificates.length > 0
+        ? (state.certificates as [Certificate.Certificate, ...Array<Certificate.Certificate>])
+        : undefined
 
     // Build withdrawals (Withdrawals object or undefined)
     const withdrawals =
@@ -739,10 +757,10 @@ export const assembleTransaction = (
     // Use resolved slot config from BuildOptionsTag (respects BuildOptions > TxBuilderConfig > network default priority)
     const buildOptions = yield* BuildOptionsTag
     const slotConfig = buildOptions.slotConfig!
-    
+
     let ttl: bigint | undefined
     let validityIntervalStart: bigint | undefined
-    
+
     if (state.validity?.to !== undefined) {
       ttl = Time.unixTimeToSlot(state.validity.to, slotConfig)
       yield* Effect.logDebug(`[Assembly] Validity TTL: ${ttl} (from unix ${state.validity.to})`)
@@ -1006,10 +1024,10 @@ export const buildFakeWitnessSet = (
       for (let i = 0; i < requiredSigners; i++) {
         const dummyKeyHash = new Uint8Array(28)
         // Fill with unique pattern: 0xFF prefix + counter to distinguish from real keys
-        dummyKeyHash[0] = 0xFF
-        dummyKeyHash[1] = (keyHashesSet.size + i) & 0xFF
+        dummyKeyHash[0] = 0xff
+        dummyKeyHash[1] = (keyHashesSet.size + i) & 0xff
         const dummyHashHex = Bytes.toHex(dummyKeyHash)
-        
+
         // Only add if not already in the set
         if (!keyHashesSet.has(dummyHashHex)) {
           keyHashesSet.add(dummyHashHex)
@@ -1059,7 +1077,7 @@ export const buildFakeWitnessSet = (
     // Certificates like RegCert, UnregCert, StakeDelegation etc. require the stake key to sign
     for (const cert of state.certificates) {
       let credentialHash: Uint8Array | undefined
-      
+
       // Extract credential from certificate types that require signing
       if ("stakeCredential" in cert && cert.stakeCredential._tag === "KeyHash") {
         credentialHash = cert.stakeCredential.hash
@@ -1106,7 +1124,7 @@ export const buildFakeWitnessSet = (
     for (const [_key, redeemerData] of state.redeemers) {
       // Use placeholder exUnits if not yet evaluated (will be updated after UPLC evaluation)
       const exUnits = redeemerData.exUnits ?? { mem: 0n, steps: 0n }
-      
+
       // Create a redeemer with index 0 - the actual index will be computed in assembly
       // For fee calculation, we just need accurate CBOR size estimation
       fakeRedeemers.push(
@@ -1167,24 +1185,22 @@ export const calculateFeeIteratively = (
     // Get state to access mint field and collateral
     const stateRef = yield* TxContext
     const state = yield* Ref.get(stateRef)
-    
+
     // Include collateral UTxOs in witness estimation - they require VKey witnesses too!
-    const allUtxosForWitnesses = state.collateral 
-      ? [...inputUtxos, ...state.collateral.inputs]
-      : inputUtxos
-    
+    const allUtxosForWitnesses = state.collateral ? [...inputUtxos, ...state.collateral.inputs] : inputUtxos
+
     // Build fake witness set once for accurate size estimation
     const fakeWitnessSet = yield* buildFakeWitnessSet(allUtxosForWitnesses)
 
     // Outputs are already Core TransactionOutputs
     const transactionOutputs = outputs as Array<TxOut.TransactionOutput>
-    
+
     // Get mint field from state (if present)
     const mint = state.mint && state.mint.map.size > 0 ? state.mint : undefined
 
     // Get collateral from state (for script transactions)
     let collateralInputs: Array.NonEmptyReadonlyArray<TransactionInput.TransactionInput> | undefined
-    let collateralReturn: TxOut.TransactionOutput | undefined  
+    let collateralReturn: TxOut.TransactionOutput | undefined
     let totalCollateral: bigint | undefined
     if (state.collateral) {
       const builtCollateralInputs = yield* buildTransactionInputs(state.collateral.inputs)
@@ -1197,7 +1213,7 @@ export const calculateFeeIteratively = (
     }
 
     // Check if Plutus scripts are present (need scriptDataHash for accurate size)
-    const hasPlutusScripts = 
+    const hasPlutusScripts =
       (fakeWitnessSet.plutusV1Scripts && fakeWitnessSet.plutusV1Scripts.length > 0) ||
       (fakeWitnessSet.plutusV2Scripts && fakeWitnessSet.plutusV2Scripts.length > 0) ||
       (fakeWitnessSet.plutusV3Scripts && fakeWitnessSet.plutusV3Scripts.length > 0)
@@ -1205,16 +1221,14 @@ export const calculateFeeIteratively = (
     // Create placeholder scriptDataHash if Plutus scripts are present
     // This is needed for accurate size estimation (32 bytes + CBOR overhead)
     const placeholderScriptDataHash = hasPlutusScripts
-      ? new ScriptDataHash.ScriptDataHash({ 
+      ? new ScriptDataHash.ScriptDataHash({
           hash: new Uint8Array(32) // Placeholder hash for size calculation
         })
       : undefined
 
     // Create placeholder auxiliaryDataHash if auxiliary data is present
     // This is needed for accurate size estimation (32 bytes + CBOR overhead)
-    const placeholderAuxiliaryDataHash = state.auxiliaryData
-      ? hashAuxiliaryData(state.auxiliaryData)
-      : undefined
+    const placeholderAuxiliaryDataHash = state.auxiliaryData ? hashAuxiliaryData(state.auxiliaryData) : undefined
 
     let currentFee = 0n
     let previousSize = 0
@@ -1223,19 +1237,20 @@ export const calculateFeeIteratively = (
     const maxIterations = 10 // Increase to ensure convergence
 
     // Build certificates array for size estimation (NonEmptyArray or undefined)
-    const certificates = state.certificates.length > 0 
-      ? (state.certificates as [Certificate.Certificate, ...Array<Certificate.Certificate>])
-      : undefined
+    const certificates =
+      state.certificates.length > 0
+        ? (state.certificates as [Certificate.Certificate, ...Array<Certificate.Certificate>])
+        : undefined
 
     // Build withdrawals for size estimation
-    const withdrawals = state.withdrawals.size > 0 
-      ? new Withdrawals.Withdrawals({ withdrawals: state.withdrawals })
-      : undefined
+    const withdrawals =
+      state.withdrawals.size > 0 ? new Withdrawals.Withdrawals({ withdrawals: state.withdrawals }) : undefined
 
     // Build requiredSigners for size estimation (NonEmptyArray or undefined)
-    const requiredSigners = state.requiredSigners.length > 0
-      ? (state.requiredSigners as [KeyHash.KeyHash, ...Array<KeyHash.KeyHash>])
-      : undefined
+    const requiredSigners =
+      state.requiredSigners.length > 0
+        ? (state.requiredSigners as [KeyHash.KeyHash, ...Array<KeyHash.KeyHash>])
+        : undefined
 
     // Build referenceInputs for size estimation
     // Reference inputs add to transaction size and must be included in fee calculation
@@ -1246,7 +1261,7 @@ export const calculateFeeIteratively = (
       const refInputs = yield* buildTransactionInputs(state.referenceInputs)
       referenceInputsForFee = refInputs as readonly [
         TransactionInput.TransactionInput,
-        ...Array<TransactionInput.TransactionInput>,
+        ...Array<TransactionInput.TransactionInput>
       ]
     }
 
@@ -1294,7 +1309,7 @@ export const calculateFeeIteratively = (
 
       // Calculate size
       const size = yield* calculateTransactionSize(transaction)
-      
+
       // Add reference script sizes to transaction size for base fee calculation
       // Despite ADR docs, actual node behavior includes ref scripts in tx size for base fee
       let refScriptSize = 0
@@ -1375,22 +1390,13 @@ export const verifyTransactionBalance = (
   fee: bigint
 ): { sufficient: boolean; shortfall: bigint; change: bigint } => {
   // Sum all input assets using Core Assets
-  const totalInputAssets = selectedUtxos.reduce(
-    (acc, utxo) => CoreAssets.merge(acc, utxo.assets),
-    CoreAssets.zero
-  )
+  const totalInputAssets = selectedUtxos.reduce((acc, utxo) => CoreAssets.merge(acc, utxo.assets), CoreAssets.zero)
 
   // Sum all output assets using Core Assets
-  const totalOutputAssets = outputs.reduce(
-    (acc, output) => CoreAssets.merge(acc, output.assets),
-    CoreAssets.zero
-  )
+  const totalOutputAssets = outputs.reduce((acc, output) => CoreAssets.merge(acc, output.assets), CoreAssets.zero)
 
   // Add fee to required lovelace
-  const requiredAssets = CoreAssets.withLovelace(
-    totalOutputAssets,
-    totalOutputAssets.lovelace + fee
-  )
+  const requiredAssets = CoreAssets.withLovelace(totalOutputAssets, totalOutputAssets.lovelace + fee)
 
   // Calculate balance for ALL assets: inputs - (outputs + fee)
   const balance = CoreAssets.subtract(totalInputAssets, requiredAssets)
@@ -1448,10 +1454,7 @@ export const validateTransactionBalance = (params: {
     const { fee, totalInputAssets, totalOutputAssets } = params
 
     // Calculate total outputs including fee (outputs + fee)
-    const totalRequired = CoreAssets.withLovelace(
-      totalOutputAssets,
-      totalOutputAssets.lovelace + fee
-    )
+    const totalRequired = CoreAssets.withLovelace(totalOutputAssets, totalOutputAssets.lovelace + fee)
 
     // Check each asset using Core Assets helpers
     for (const unit of CoreAssets.getUnits(totalRequired)) {

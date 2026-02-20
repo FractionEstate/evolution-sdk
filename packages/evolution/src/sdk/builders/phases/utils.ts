@@ -125,10 +125,7 @@ export function calculateProposalDeposits(
     return 0n
   }
 
-  return proposalProcedures.procedures.reduce(
-    (total, procedure) => total + procedure.deposit,
-    0n
-  )
+  return proposalProcedures.procedures.reduce((total, procedure) => total + procedure.deposit, 0n)
 }
 
 /**
@@ -155,18 +152,16 @@ export function calculateProposalDeposits(
  * @since 2.0.0
  * @category utilities
  */
-export function voterToKey(
-  voter: {
-    readonly _tag: "ConstitutionalCommitteeVoter" | "DRepVoter" | "StakePoolVoter"
-    readonly credential?: { readonly hash: Uint8Array }
-    readonly drep?: {
-      readonly _tag: "KeyHashDRep" | "ScriptHashDRep" | "AlwaysAbstainDRep" | "AlwaysNoConfidenceDRep"
-      readonly keyHash?: { readonly hash: Uint8Array }
-      readonly scriptHash?: { readonly hash: Uint8Array }
-    }
-    readonly poolKeyHash?: { readonly hash: Uint8Array }
+export function voterToKey(voter: {
+  readonly _tag: "ConstitutionalCommitteeVoter" | "DRepVoter" | "StakePoolVoter"
+  readonly credential?: { readonly hash: Uint8Array }
+  readonly drep?: {
+    readonly _tag: "KeyHashDRep" | "ScriptHashDRep" | "AlwaysAbstainDRep" | "AlwaysNoConfidenceDRep"
+    readonly keyHash?: { readonly hash: Uint8Array }
+    readonly scriptHash?: { readonly hash: Uint8Array }
   }
-): string {
+  readonly poolKeyHash?: { readonly hash: Uint8Array }
+}): string {
   switch (voter._tag) {
     case "ConstitutionalCommitteeVoter":
       return `cc:${Bytes.toHex(voter.credential!.hash)}`

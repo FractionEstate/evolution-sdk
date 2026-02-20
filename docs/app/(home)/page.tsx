@@ -10,7 +10,7 @@ const packageManagers = [
   { id: "npm", name: "npm", icon: SiNpm, color: "#CB3837", command: "npm install @evolution-sdk/evolution" },
   { id: "pnpm", name: "pnpm", icon: SiPnpm, color: "#F69220", command: "pnpm add @evolution-sdk/evolution" },
   { id: "yarn", name: "yarn", icon: SiYarn, color: "#2C8EBB", command: "yarn add @evolution-sdk/evolution" },
-  { id: "bun", name: "bun", icon: SiBun, color: "#FBF0DF", command: "bun add @evolution-sdk/evolution" },
+  { id: "bun", name: "bun", icon: SiBun, color: "#FBF0DF", command: "bun add @evolution-sdk/evolution" }
 ]
 
 const quickStartCode = `import { Address, Assets, createClient } from "@evolution-sdk/evolution"
@@ -37,38 +37,32 @@ const features: Array<{ icon: ComponentType<LucideProps>; title: string; descrip
   {
     icon: Globe,
     title: "Works Everywhere",
-    description:
-      "Pure TypeScript, no WASM, no native binaries. Runs in Node, Bun, Deno, browsers, and edge functions."
+    description: "Pure TypeScript, no WASM, no native binaries. Runs in Node, Bun, Deno, browsers, and edge functions."
   },
   {
     icon: Package,
     title: "Tiny Bundle Size",
-    description:
-      "No WASM bloat. Tree-shakeable modules mean you ship only what you use."
+    description: "No WASM bloat. Tree-shakeable modules mean you ship only what you use."
   },
   {
     icon: RefreshCw,
     title: "Bidirectional Serialization",
-    description:
-      "Full CDDL spec coverage. Encode and decode all Cardano types with round-trip CBOR support."
+    description: "Full CDDL spec coverage. Encode and decode all Cardano types with round-trip CBOR support."
   },
   {
     icon: Landmark,
     title: "Conway Ready",
-    description:
-      "Full governance support. DReps, treasury actions, constitutional committee, and voting."
+    description: "Full governance support. DReps, treasury actions, constitutional committee, and voting."
   },
   {
     icon: ShieldCheck,
     title: "Type-Safe by Default",
-    description:
-      "Full TypeScript inference from transaction building to submission. If it compiles, it works."
+    description: "Full TypeScript inference from transaction building to submission. If it compiles, it works."
   },
   {
     icon: Zap,
     title: "Effect-Powered",
-    description:
-      "Built on Effect for composable, testable, and maintainable code with proper error handling."
+    description: "Built on Effect for composable, testable, and maintainable code with proper error handling."
   }
 ]
 
@@ -84,9 +78,9 @@ const runtimes = [
 function PackageManagerTabs() {
   const [selected, setSelected] = useState("npm")
   const [copied, setCopied] = useState(false)
-  
-  const selectedPm = packageManagers.find(pm => pm.id === selected) ?? packageManagers[0]
-  
+
+  const selectedPm = packageManagers.find((pm) => pm.id === selected) ?? packageManagers[0]
+
   const copyToClipboard = async () => {
     try {
       if (navigator?.clipboard?.writeText) {
@@ -98,7 +92,7 @@ function PackageManagerTabs() {
       // Clipboard API not available
     }
   }
-  
+
   return (
     <div className="rounded-xl border border-fd-border bg-fd-card overflow-hidden">
       {/* Tabs */}
@@ -121,7 +115,7 @@ function PackageManagerTabs() {
           )
         })}
       </div>
-      
+
       {/* Command */}
       <div className="flex items-center justify-between px-4 py-3">
         <code className="text-sm font-mono text-fd-foreground">{selectedPm.command}</code>
@@ -140,7 +134,12 @@ function PackageManagerTabs() {
           ) : (
             <>
               <svg className="w-4 h-4" aria-hidden="true" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"
+                />
               </svg>
               Copy
             </>
@@ -157,17 +156,15 @@ export default function HomePage() {
       {/* Hero Section */}
       <section className="relative overflow-hidden px-6 py-24 sm:py-32 lg:px-8">
         <div className="mx-auto max-w-4xl text-center">
-          <p className="text-sm font-semibold text-fd-primary mb-4">
-            Cardano SDK for TypeScript
-          </p>
+          <p className="text-sm font-semibold text-fd-primary mb-4">Cardano SDK for TypeScript</p>
           <h1 className="text-4xl font-bold tracking-tight sm:text-6xl bg-gradient-to-r from-fd-foreground to-fd-muted-foreground bg-clip-text text-transparent">
             Build Cardano Apps
             <br />
             <span className="text-fd-primary">Without the Pain</span>
           </h1>
           <p className="mt-6 text-lg leading-8 text-fd-muted-foreground max-w-2xl mx-auto">
-            Pure TypeScript. No WASM. No CML. No CSL. No libsodium. Built by No Witness Labs
-            for the modern Cardano ecosystem.
+            Pure TypeScript. No WASM. No CML. No CSL. No libsodium. Built by No Witness Labs for the modern Cardano
+            ecosystem.
           </p>
           <div className="mt-10 flex items-center justify-center gap-x-4">
             <Link
@@ -183,21 +180,13 @@ export default function HomePage() {
               View on GitHub →
             </Link>
           </div>
-          <p className="mt-4 text-xs text-fd-muted-foreground font-mono">
-            npm install @evolution-sdk/evolution
-          </p>
+          <p className="mt-4 text-xs text-fd-muted-foreground font-mono">npm install @evolution-sdk/evolution</p>
 
           {/* Key Differentiators */}
           <div className="mt-8 flex flex-wrap items-center justify-center gap-2">
-            <span className="rounded-full bg-fd-muted px-3 py-1 text-xs font-medium">
-              Pure TypeScript
-            </span>
-            <span className="rounded-full bg-fd-muted px-3 py-1 text-xs font-medium">
-              Zero WASM
-            </span>
-            <span className="rounded-full bg-fd-muted px-3 py-1 text-xs font-medium">
-              Conway Era
-            </span>
+            <span className="rounded-full bg-fd-muted px-3 py-1 text-xs font-medium">Pure TypeScript</span>
+            <span className="rounded-full bg-fd-muted px-3 py-1 text-xs font-medium">Zero WASM</span>
+            <span className="rounded-full bg-fd-muted px-3 py-1 text-xs font-medium">Conway Era</span>
             <span className="rounded-full bg-fd-primary/10 text-fd-primary px-3 py-1 text-xs font-medium">
               No Witness Labs
             </span>
@@ -209,9 +198,7 @@ export default function HomePage() {
       <section className="px-6 py-16 lg:px-8 border-t border-fd-border">
         <div className="mx-auto max-w-2xl text-center">
           <h2 className="text-2xl font-bold mb-2">Quick Start</h2>
-          <p className="text-fd-muted-foreground mb-8">
-            Create, build, sign, and submit — that's it
-          </p>
+          <p className="text-fd-muted-foreground mb-8">Create, build, sign, and submit — that's it</p>
           <div className="rounded-xl border border-fd-border bg-fd-card overflow-hidden text-left">
             <DynamicCodeBlock lang="ts" code={quickStartCode} />
           </div>
@@ -226,9 +213,7 @@ export default function HomePage() {
       {/* Module Packages */}
       <section className="px-6 py-16 lg:px-8 border-t border-fd-border bg-fd-muted/30">
         <div className="mx-auto max-w-3xl">
-          <h2 className="text-center text-2xl font-bold mb-2">
-            Modular by Design
-          </h2>
+          <h2 className="text-center text-2xl font-bold mb-2">Modular by Design</h2>
           <p className="text-center text-fd-muted-foreground mb-10">
             Import only what you need. Tree-shakeable for minimal bundle size.
           </p>
@@ -261,12 +246,8 @@ export default function HomePage() {
       {/* Features Grid */}
       <section className="px-6 py-16 lg:px-8 border-t border-fd-border">
         <div className="mx-auto max-w-5xl">
-          <h2 className="text-center text-2xl font-bold mb-2">
-            Everything You Need
-          </h2>
-          <p className="text-center text-fd-muted-foreground mb-10">
-            Batteries included, zero configuration required
-          </p>
+          <h2 className="text-center text-2xl font-bold mb-2">Everything You Need</h2>
+          <p className="text-center text-fd-muted-foreground mb-10">Batteries included, zero configuration required</p>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {features.map((feature) => {
@@ -278,9 +259,7 @@ export default function HomePage() {
                 >
                   <Icon className="w-6 h-6 text-fd-primary mb-3" />
                   <h3 className="font-semibold">{feature.title}</h3>
-                  <p className="mt-2 text-sm text-fd-muted-foreground">
-                    {feature.description}
-                  </p>
+                  <p className="mt-2 text-sm text-fd-muted-foreground">{feature.description}</p>
                 </div>
               )
             })}
@@ -291,12 +270,8 @@ export default function HomePage() {
       {/* Works Everywhere */}
       <section className="px-6 py-16 lg:px-8 border-t border-fd-border">
         <div className="mx-auto max-w-3xl">
-          <h2 className="text-center text-2xl font-bold mb-2">
-            Works Everywhere
-          </h2>
-          <p className="text-center text-fd-muted-foreground mb-10">
-            No native compilation. No platform restrictions.
-          </p>
+          <h2 className="text-center text-2xl font-bold mb-2">Works Everywhere</h2>
+          <p className="text-center text-fd-muted-foreground mb-10">No native compilation. No platform restrictions.</p>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-4">
             {runtimes.map((runtime) => (
@@ -316,9 +291,7 @@ export default function HomePage() {
       <section className="px-6 py-16 lg:px-8 border-t border-fd-border bg-fd-muted/30">
         <div className="mx-auto max-w-3xl text-center">
           <h2 className="text-2xl font-bold mb-2">Get Started in Seconds</h2>
-          <p className="text-fd-muted-foreground mb-8">
-            Install the package and start building
-          </p>
+          <p className="text-fd-muted-foreground mb-8">Install the package and start building</p>
 
           <PackageManagerTabs />
 
@@ -336,12 +309,9 @@ export default function HomePage() {
       {/* Resources */}
       <section className="px-6 py-16 border-t border-fd-border">
         <div className="mx-auto max-w-5xl text-center">
-          <h2 className="text-2xl font-bold text-fd-foreground mb-4">
-            Resources
-          </h2>
+          <h2 className="text-2xl font-bold text-fd-foreground mb-4">Resources</h2>
           <p className="text-fd-muted-foreground mb-8">
-            Get started with guides, explore the source, or try the interactive
-            playground.
+            Get started with guides, explore the source, or try the interactive playground.
           </p>
           <div className="flex flex-wrap justify-center gap-4">
             <Link
@@ -377,17 +347,11 @@ export default function HomePage() {
         <div className="mx-auto max-w-5xl flex flex-col sm:flex-row items-center justify-between gap-4">
           <p className="text-sm text-fd-muted-foreground">
             MIT Licensed • Built by{" "}
-            <a
-              href="https://github.com/no-witness-labs/"
-              className="text-fd-foreground hover:text-fd-primary"
-            >
+            <a href="https://github.com/no-witness-labs/" className="text-fd-foreground hover:text-fd-primary">
               No Witness Labs
-            </a>
-            {" "}under{" "}
-            <a
-              href="https://intersectmbo.org/"
-              className="text-fd-foreground hover:text-fd-primary"
-            >
+            </a>{" "}
+            under{" "}
+            <a href="https://intersectmbo.org/" className="text-fd-foreground hover:text-fd-primary">
               Intersect MBO
             </a>
           </p>

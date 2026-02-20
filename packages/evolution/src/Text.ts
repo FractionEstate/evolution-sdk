@@ -1,6 +1,5 @@
 import { FastCheck, Schema } from "effect"
 
-
 export const Text = Schema.String
 
 // Shared transform options for text conversions

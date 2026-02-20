@@ -274,7 +274,7 @@ describe("TxBuilder NativeScript (Devnet Submit)", () => {
 
   it("should handle time-locked native script (invalidHereafter)", { timeout: 60_000 }, async () => {
     if (!devnetCluster) throw new Error("Cluster not initialized")
-    
+
     const client = createTestClient(0)
     const myAddress = await client.address()
 
@@ -287,11 +287,11 @@ describe("TxBuilder NativeScript (Devnet Submit)", () => {
     const slotConfig = Cluster.getSlotConfig(devnetCluster)
     const currentTime = now()
     const currentSlot = unixTimeToSlot(currentTime, slotConfig)
-    
+
     // Set future slot 1000 slots ahead (20 seconds at 0.02s/slot)
     const futureSlot = currentSlot + 1000n
     const futureUnixTime = slotToUnixTime(futureSlot, slotConfig)
-    
+
     // Create time-locked script: signature required AND must be before futureSlot
     const sigScript = NativeScripts.makeScriptPubKey(paymentCredential.hash)
     const timeScript = NativeScripts.makeInvalidHereafter(futureSlot)
@@ -332,7 +332,7 @@ describe("TxBuilder NativeScript (Devnet Submit)", () => {
 
   it("should handle complex nested native script (sig AND (any of time conditions))", { timeout: 60_000 }, async () => {
     if (!devnetCluster) throw new Error("Cluster not initialized")
-    
+
     const client = createTestClient(0)
     const myAddress = await client.address()
 
@@ -345,7 +345,7 @@ describe("TxBuilder NativeScript (Devnet Submit)", () => {
     const slotConfig = Cluster.getSlotConfig(devnetCluster)
     const currentTime = now()
     const currentSlot = unixTimeToSlot(currentTime, slotConfig)
-    
+
     // beforeSlot: 2000 slots ahead (~40 seconds) - InvalidHereafter will be satisfied
     // afterSlot: 10000 slots ahead (~200 seconds) - InvalidBefore will NOT be satisfied yet
     const beforeSlot = currentSlot + 2000n
@@ -361,7 +361,7 @@ describe("TxBuilder NativeScript (Devnet Submit)", () => {
     const sigScript = NativeScripts.makeScriptPubKey(paymentCredential.hash)
     const beforeSlotScript = NativeScripts.makeInvalidHereafter(beforeSlot)
     const afterSlotScript = NativeScripts.makeInvalidBefore(afterSlot)
-    
+
     const timeOptionsScript = NativeScripts.makeScriptAny([beforeSlotScript.script, afterSlotScript.script])
     const complexScript = NativeScripts.makeScriptAll([sigScript.script, timeOptionsScript.script])
 
@@ -438,7 +438,7 @@ describe("TxBuilder NativeScript (Devnet Submit)", () => {
 
     const fundSubmitBuilder = await fundSignBuilder.sign()
     const fundTxHash = await fundSubmitBuilder.submit()
-    
+
     await client1.awaitTx(fundTxHash, 1000)
     await new Promise((resolve) => setTimeout(resolve, 2_000))
 
@@ -446,9 +446,7 @@ describe("TxBuilder NativeScript (Devnet Submit)", () => {
     const scriptUtxos = await client1.getUtxos(scriptAddress)
     expect(scriptUtxos.length).toBeGreaterThan(0)
 
-    const scriptUtxo = scriptUtxos.find(
-      (u) => UTxO.toOutRefString(u).startsWith(TransactionHash.toHex(fundTxHash))
-    )
+    const scriptUtxo = scriptUtxos.find((u) => UTxO.toOutRefString(u).startsWith(TransactionHash.toHex(fundTxHash)))
     expect(scriptUtxo).toBeDefined()
 
     // Spend from multi-sig script - requires both signatures
@@ -653,7 +651,7 @@ describe("TxBuilder NativeScript (Devnet Submit)", () => {
 
     const spendSubmitBuilder = await spendSignBuilder.assemble([witness1, witness2])
     const spendTxHash = await spendSubmitBuilder.submit()
-    
+
     expect(TransactionHash.toHex(spendTxHash).length).toBe(64)
     const spendConfirmed = await client1.awaitTx(spendTxHash, 1000)
     expect(spendConfirmed).toBe(true)

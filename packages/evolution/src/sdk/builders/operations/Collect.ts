@@ -35,7 +35,9 @@ import type { CollectFromParams } from "./Operations.js"
  * @since 2.0.0
  * @category programs
  */
-export const createCollectFromProgram = (params: CollectFromParams): Effect.Effect<void, TransactionBuilderError, TxContext> =>
+export const createCollectFromProgram = (
+  params: CollectFromParams
+): Effect.Effect<void, TransactionBuilderError, TxContext> =>
   Effect.gen(function* () {
     const ctx = yield* TxContext
     const state = yield* Ref.get(ctx)
@@ -58,22 +60,22 @@ export const createCollectFromProgram = (params: CollectFromParams): Effect.Effe
     const plutusScriptUtxos = scriptUtxos.filter((utxo) => {
       const credential = utxo.address.paymentCredential
       if (credential?._tag !== "ScriptHash") return false
-      
+
       const scriptHashHex = ScriptHash.toHex(credential)
-      
+
       // Check 1: Script attached via attachScript()
       const attachedScript = state.scripts.get(scriptHashHex)
       if (attachedScript?._tag === "NativeScript") return false
-      
+
       // Check 2: Script inline in the UTxO being spent
       if (utxo.scriptRef?._tag === "NativeScript") return false
-      
+
       // Check 3: Script available via reference input
-      const refScript = state.referenceInputs.find((ref) => 
-        ref.scriptRef && ScriptHash.toHex(ScriptHash.fromScript(ref.scriptRef)) === scriptHashHex
+      const refScript = state.referenceInputs.find(
+        (ref) => ref.scriptRef && ScriptHash.toHex(ScriptHash.fromScript(ref.scriptRef)) === scriptHashHex
       )
       if (refScript?.scriptRef?._tag === "NativeScript") return false
-      
+
       // Otherwise it's a Plutus script (or script not found)
       return true
     })

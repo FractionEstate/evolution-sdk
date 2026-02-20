@@ -53,12 +53,12 @@ describe("TxBuilder Re-selection Loop", () => {
     params: { minFeeCoefficient: bigint; minFeeConstant: bigint }
   ) => {
     const validation = FeeValidation.validateTransactionFee(txWithFakeWitnesses, params)
-    
+
     expect(validation.isValid).toBe(true)
     expect(validation.difference).toBe(0n)
-    
+
     return validation
-  }  // ============================================================================
+  } // ============================================================================
   // Basic Re-selection Tests
   // ============================================================================
 

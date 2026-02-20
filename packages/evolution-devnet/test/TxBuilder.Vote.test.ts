@@ -49,15 +49,15 @@ describe("TxBuilder Vote Operations (script-free)", () => {
 
   beforeAll(async () => {
     // Create clients for multiple test accounts
-    const accounts = [0, 1, 2, 3].map(accountIndex =>
+    const accounts = [0, 1, 2, 3].map((accountIndex) =>
       createClient({
         network: 0,
         wallet: { type: "seed", mnemonic: TEST_MNEMONIC, accountIndex, addressType: "Base" }
       })
     )
 
-    const addresses = await Promise.all(accounts.map(client => client.address()))
-    const addressHexes = addresses.map(addr => Address.toHex(addr))
+    const addresses = await Promise.all(accounts.map((client) => client.address()))
+    const addressHexes = addresses.map((addr) => Address.toHex(addr))
 
     genesisConfig = {
       ...Config.DEFAULT_SHELLEY_GENESIS,
@@ -102,7 +102,10 @@ describe("TxBuilder Vote Operations (script-free)", () => {
   }, 60_000)
 
   // Helper to create anchor for governance actions
-  const createAnchor = (path: string, hashHex: string = "1111111111111111111111111111111111111111111111111111111111111111") =>
+  const createAnchor = (
+    path: string,
+    hashHex: string = "1111111111111111111111111111111111111111111111111111111111111111"
+  ) =>
     new Anchor.Anchor({
       anchorUrl: new Url.Url({ href: `https://example.com/${path}` }),
       anchorDataHash: Bytes32.fromHex(hashHex)
@@ -123,7 +126,10 @@ describe("TxBuilder Vote Operations (script-free)", () => {
     const proposerCredential = proposerAddress.paymentCredential
 
     // Step 1: Register key-based DRep (proposer)
-    const proposerAnchor = createAnchor("proposer-drep.json", "0000000000000000000000000000000000000000000000000000000000000000")
+    const proposerAnchor = createAnchor(
+      "proposer-drep.json",
+      "0000000000000000000000000000000000000000000000000000000000000000"
+    )
 
     try {
       const registerProposerTxHash = await proposerClient
@@ -135,8 +141,7 @@ describe("TxBuilder Vote Operations (script-free)", () => {
 
       expect(await proposerClient.awaitTx(registerProposerTxHash, 1000)).toBe(true)
     } catch (error: any) {
-      if (error.message?.includes("already known delegate representative") ||
-          error.message?.includes("re-register")) {
+      if (error.message?.includes("already known delegate representative") || error.message?.includes("re-register")) {
         // DRep already registered, continue
       } else {
         throw error
@@ -147,7 +152,7 @@ describe("TxBuilder Vote Operations (script-free)", () => {
     if (!proposerAddress.stakingCredential) {
       throw new Error("Proposer address must have staking credential for reward account")
     }
-    
+
     try {
       const registerStakeTxHash = await proposerClient
         .newTx()
@@ -171,7 +176,10 @@ describe("TxBuilder Vote Operations (script-free)", () => {
     })
 
     const infoAction = new GovernanceAction.InfoAction({})
-    const proposalAnchor = createAnchor("proposal.json", "2222222222222222222222222222222222222222222222222222222222222222")
+    const proposalAnchor = createAnchor(
+      "proposal.json",
+      "2222222222222222222222222222222222222222222222222222222222222222"
+    )
 
     const proposeTxHash = await proposerClient
       .newTx()
@@ -218,7 +226,7 @@ describe("TxBuilder Vote Operations (script-free)", () => {
   it("creates InfoAction proposal (type 6)", { timeout: 60_000 }, async () => {
     const client = createTestClient(0)
     const address = await client.address()
-    
+
     if (!address.stakingCredential) {
       throw new Error("Address must have staking credential")
     }
@@ -294,7 +302,7 @@ describe("TxBuilder Vote Operations (script-free)", () => {
   it("creates NoConfidenceAction proposal (type 3)", { timeout: 60_000 }, async () => {
     const client = createTestClient(0)
     const address = await client.address()
-    
+
     if (!address.stakingCredential) {
       throw new Error("Address must have staking credential")
     }
@@ -319,7 +327,7 @@ describe("TxBuilder Vote Operations (script-free)", () => {
       .then((b) => b.submit())
 
     expect(await client.awaitTx(txHash, 1000)).toBe(true)
-    
+
     // --- Now vote on the newly created NoConfidenceAction proposal ---
     const govActionIdLocal = new GovernanceAction.GovActionId({
       transactionId: txHash,
@@ -337,7 +345,10 @@ describe("TxBuilder Vote Operations (script-free)", () => {
     try {
       await voterClient
         .newTx()
-        .registerDRep({ drepCredential: voterAddress.paymentCredential, anchor: createAnchor("no-confidence-voter-drep.json") })
+        .registerDRep({
+          drepCredential: voterAddress.paymentCredential,
+          anchor: createAnchor("no-confidence-voter-drep.json")
+        })
         .build({ availableUtxos: [voterUtxo] })
         .then((b) => b.sign())
         .then((b) => b.submit())
@@ -372,7 +383,7 @@ describe("TxBuilder Vote Operations (script-free)", () => {
   it("creates HardForkInitiationAction proposal (type 1)", { timeout: 60_000 }, async () => {
     const client = createTestClient(0)
     const address = await client.address()
-    
+
     if (!address.stakingCredential) {
       throw new Error("Address must have staking credential")
     }
@@ -416,7 +427,10 @@ describe("TxBuilder Vote Operations (script-free)", () => {
     try {
       await voterClient
         .newTx()
-        .registerDRep({ drepCredential: voterAddress.paymentCredential, anchor: createAnchor("hardfork-voter-drep.json") })
+        .registerDRep({
+          drepCredential: voterAddress.paymentCredential,
+          anchor: createAnchor("hardfork-voter-drep.json")
+        })
         .build({ availableUtxos: [voterUtxo] })
         .then((b) => b.sign())
         .then((b) => b.submit())
@@ -451,7 +465,7 @@ describe("TxBuilder Vote Operations (script-free)", () => {
   it("creates TreasuryWithdrawalsAction proposal (type 2)", { timeout: 60_000 }, async () => {
     const client = createTestClient(0)
     const address = await client.address()
-    
+
     if (!address.stakingCredential) {
       throw new Error("Address must have staking credential")
     }
@@ -498,7 +512,10 @@ describe("TxBuilder Vote Operations (script-free)", () => {
     try {
       await voterClient
         .newTx()
-        .registerDRep({ drepCredential: voterAddress.paymentCredential, anchor: createAnchor("treasury-voter-drep.json") })
+        .registerDRep({
+          drepCredential: voterAddress.paymentCredential,
+          anchor: createAnchor("treasury-voter-drep.json")
+        })
         .build({ availableUtxos: [voterUtxo] })
         .then((b) => b.sign())
         .then((b) => b.submit())
@@ -533,7 +550,7 @@ describe("TxBuilder Vote Operations (script-free)", () => {
   it("creates UpdateCommitteeAction proposal (type 4)", { timeout: 60_000 }, async () => {
     const client = createTestClient(0)
     const address = await client.address()
-    
+
     if (!address.stakingCredential) {
       throw new Error("Address must have staking credential")
     }
@@ -579,7 +596,10 @@ describe("TxBuilder Vote Operations (script-free)", () => {
     try {
       await voterClient
         .newTx()
-        .registerDRep({ drepCredential: voterAddress.paymentCredential, anchor: createAnchor("update-committee-voter-drep.json") })
+        .registerDRep({
+          drepCredential: voterAddress.paymentCredential,
+          anchor: createAnchor("update-committee-voter-drep.json")
+        })
         .build({ availableUtxos: [voterUtxo] })
         .then((b) => b.sign())
         .then((b) => b.submit())
@@ -614,7 +634,7 @@ describe("TxBuilder Vote Operations (script-free)", () => {
   it("creates NewConstitutionAction proposal (type 5)", { timeout: 60_000 }, async () => {
     const client = createTestClient(0)
     const address = await client.address()
-    
+
     if (!address.stakingCredential) {
       throw new Error("Address must have staking credential")
     }
@@ -623,7 +643,10 @@ describe("TxBuilder Vote Operations (script-free)", () => {
       stakeCredential: address.stakingCredential
     })
 
-    const constitutionAnchor = createAnchor("constitution.json", "3333333333333333333333333333333333333333333333333333333333333333")
+    const constitutionAnchor = createAnchor(
+      "constitution.json",
+      "3333333333333333333333333333333333333333333333333333333333333333"
+    )
     const constitution = new Constitution.Constitution({
       anchor: constitutionAnchor,
       scriptHash: null
@@ -664,7 +687,10 @@ describe("TxBuilder Vote Operations (script-free)", () => {
     try {
       await voterClient
         .newTx()
-        .registerDRep({ drepCredential: voterAddress.paymentCredential, anchor: createAnchor("constitution-voter-drep.json") })
+        .registerDRep({
+          drepCredential: voterAddress.paymentCredential,
+          anchor: createAnchor("constitution-voter-drep.json")
+        })
         .build({ availableUtxos: [voterUtxo] })
         .then((b) => b.sign())
         .then((b) => b.submit())
@@ -699,7 +725,7 @@ describe("TxBuilder Vote Operations (script-free)", () => {
   it("creates ParameterChangeAction proposal (type 0)", { timeout: 60_000 }, async () => {
     const client = createTestClient(0)
     const address = await client.address()
-    
+
     if (!address.stakingCredential) {
       throw new Error("Address must have staking credential")
     }

@@ -159,13 +159,15 @@ export const JsonwspOgmiosEvaluationResponse = Schema.Struct({
   servicename: Schema.optional(Schema.String),
   methodname: Schema.optional(Schema.String),
   result: Schema.Struct({
-    EvaluationResult: Schema.optional(Schema.Record({
-      key: Schema.String, // "spend:0", "mint:1", etc.
-      value: Schema.Struct({
-        memory: Schema.Number,
-        steps: Schema.Number
+    EvaluationResult: Schema.optional(
+      Schema.Record({
+        key: Schema.String, // "spend:0", "mint:1", etc.
+        value: Schema.Struct({
+          memory: Schema.Number,
+          steps: Schema.Number
+        })
       })
-    })),
+    ),
     EvaluationFailure: Schema.optional(Schema.Unknown)
   }),
   reflection: Schema.optional(Schema.Unknown)
@@ -214,7 +216,7 @@ export const transformProtocolParameters = (
 export const transformAmounts = (amounts: ReadonlyArray<BlockfrostAmount>): CoreAssets.Assets => {
   let lovelace = 0n
   const multiAssetEntries: Array<[string, bigint]> = []
-  
+
   for (const amount of amounts) {
     if (amount.unit === "lovelace") {
       lovelace = BigInt(amount.quantity)
@@ -222,10 +224,10 @@ export const transformAmounts = (amounts: ReadonlyArray<BlockfrostAmount>): Core
       multiAssetEntries.push([amount.unit, BigInt(amount.quantity)])
     }
   }
-  
+
   // Build Core Assets starting with lovelace
   let assets = CoreAssets.fromLovelace(lovelace)
-  
+
   // Add multi-assets if any using hex strings
   for (const [unit, qty] of multiAssetEntries) {
     // Parse unit - policyId is first 56 chars, assetName is remainder
@@ -233,7 +235,7 @@ export const transformAmounts = (amounts: ReadonlyArray<BlockfrostAmount>): Core
     const assetNameHex = unit.slice(56)
     assets = CoreAssets.addByHex(assets, policyIdHex, assetNameHex, qty)
   }
-  
+
   return assets
 }
 
@@ -262,20 +264,20 @@ export const transformJsonwspOgmiosEvaluationResult = (
     const failure = jsonwspResponse.result.EvaluationFailure
     throw new Error(`Script evaluation failed: ${JSON.stringify(failure)}`)
   }
-  
+
   // Handle success case
   const evaluationResult = jsonwspResponse.result.EvaluationResult
   if (!evaluationResult) {
     throw new Error("No evaluation result returned from Blockfrost")
   }
-  
+
   const result: Array<EvalRedeemer> = []
-  
+
   for (const [key, budget] of Object.entries(evaluationResult)) {
     // Parse "spend:0", "mint:1", etc.
     const [tag, indexStr] = key.split(":")
     const index = parseInt(indexStr, 10)
-    
+
     result.push({
       ex_units: new Redeemer.ExUnits({
         mem: BigInt(budget.memory),
@@ -285,6 +287,6 @@ export const transformJsonwspOgmiosEvaluationResult = (
       redeemer_tag: tag as any
     })
   }
-  
+
   return result
 }

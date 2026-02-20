@@ -51,15 +51,15 @@ describe("TxBuilder Stake Operations", () => {
 
   beforeAll(async () => {
     // Create clients for each account we'll use in tests
-    const accounts = [0, 1, 2, 3, 4, 5, 6, 7, 8].map(accountIndex =>
+    const accounts = [0, 1, 2, 3, 4, 5, 6, 7, 8].map((accountIndex) =>
       createClient({
         network: 0,
         wallet: { type: "seed", mnemonic: TEST_MNEMONIC, accountIndex, addressType: "Base" }
       })
     )
 
-    const addresses = await Promise.all(accounts.map(client => client.address()))
-    const addressHexes = addresses.map(addr => Address.toHex(addr))
+    const addresses = await Promise.all(accounts.map((client) => client.address()))
+    const addressHexes = addresses.map((addr) => Address.toHex(addr))
 
     // Fund each account independently so tests don't share UTxOs
     genesisConfig = {
@@ -76,13 +76,13 @@ describe("TxBuilder Stake Operations", () => {
         [addressHexes[5]]: 300_000_000_000, // Test 6: Combined register+delegate both (StakeVoteRegDelegCert)
         [addressHexes[6]]: 300_000_000_000, // Test 7: NEW API - delegateToPool
         [addressHexes[7]]: 300_000_000_000, // Test 8: NEW API - delegateToDRep
-        [addressHexes[8]]: 300_000_000_000  // Test 9: NEW API - delegateToPoolAndDRep
+        [addressHexes[8]]: 300_000_000_000 // Test 9: NEW API - delegateToPoolAndDRep
       }
     }
 
     // Pre-calculate genesis UTxOs and map by account
     const genesisUtxos = await Genesis.calculateUtxosFromConfig(genesisConfig)
-    
+
     for (let i = 0; i < addresses.length; i++) {
       const utxo = genesisUtxos.find((u) => Address.toBech32(u.address) === Address.toBech32(addresses[i]))
       if (utxo) genesisUtxosByAccount.set(i, utxo)
@@ -120,7 +120,7 @@ describe("TxBuilder Stake Operations", () => {
     // Extract stake credential from wallet address
     // The wallet address should be a base address with a stake component
     const addressStruct = walletAddress
-    
+
     if (!("stakingCredential" in addressStruct) || !addressStruct.stakingCredential) {
       throw new Error(`Expected BaseAddress with stakingCredential, got: ${JSON.stringify(addressStruct)}`)
     }
@@ -144,10 +144,7 @@ describe("TxBuilder Stake Operations", () => {
     const poolKeyHash = PoolKeyHash.fromHex(DEVNET_POOL_ID)
     const drep = new DRep.AlwaysAbstainDRep({})
 
-    const delegateSignBuilder = await client
-      .newTx()
-      .delegateTo({ stakeCredential, poolKeyHash, drep })
-      .build()
+    const delegateSignBuilder = await client.newTx().delegateTo({ stakeCredential, poolKeyHash, drep }).build()
 
     const delegateSubmitBuilder = await delegateSignBuilder.sign()
     const delegateTxHash = await delegateSubmitBuilder.submit()
@@ -157,10 +154,7 @@ describe("TxBuilder Stake Operations", () => {
     await new Promise((resolve) => setTimeout(resolve, 2000))
 
     // Step 3: Withdraw rewards (0 since none accumulated)
-    const withdrawSignBuilder = await client
-      .newTx()
-      .withdraw({ stakeCredential, amount: 0n })
-      .build()
+    const withdrawSignBuilder = await client.newTx().withdraw({ stakeCredential, amount: 0n }).build()
 
     const withdrawSubmitBuilder = await withdrawSignBuilder.sign()
     const withdrawTxHash = await withdrawSubmitBuilder.submit()
@@ -170,10 +164,7 @@ describe("TxBuilder Stake Operations", () => {
     await new Promise((resolve) => setTimeout(resolve, 2000))
 
     // Step 4: Deregister the stake credential (returns deposit)
-    const deregisterSignBuilder = await client
-      .newTx()
-      .deregisterStake({ stakeCredential })
-      .build()
+    const deregisterSignBuilder = await client.newTx().deregisterStake({ stakeCredential }).build()
 
     const deregisterSubmitBuilder = await deregisterSignBuilder.sign()
     const deregisterTxHash = await deregisterSubmitBuilder.submit()
@@ -359,45 +350,49 @@ describe("TxBuilder Stake Operations", () => {
     expect(await client.awaitTx(deregisterTxHash, 1000)).toBe(true)
   })
 
-  it("registers and delegates to both pool+DRep in one cert (StakeVoteRegDelegCert)", { timeout: 180_000 }, async () => {
-    const ACCOUNT_INDEX = 5
-    const genesisUtxo = genesisUtxosByAccount.get(ACCOUNT_INDEX)
-    if (!genesisUtxo) {
-      throw new Error(`Genesis UTxO not found for account ${ACCOUNT_INDEX}`)
+  it(
+    "registers and delegates to both pool+DRep in one cert (StakeVoteRegDelegCert)",
+    { timeout: 180_000 },
+    async () => {
+      const ACCOUNT_INDEX = 5
+      const genesisUtxo = genesisUtxosByAccount.get(ACCOUNT_INDEX)
+      if (!genesisUtxo) {
+        throw new Error(`Genesis UTxO not found for account ${ACCOUNT_INDEX}`)
+      }
+
+      const client = createTestClient(ACCOUNT_INDEX)
+      const walletAddress = await client.address()
+      const addressStruct = walletAddress
+
+      if (!("stakingCredential" in addressStruct) || !addressStruct.stakingCredential) {
+        throw new Error(`Expected BaseAddress with stakingCredential`)
+      }
+
+      const stakeCredential = addressStruct.stakingCredential
+
+      // Step 1: Register AND delegate to both pool+DRep in single cert (StakeVoteRegDelegCert)
+      const poolKeyHash = PoolKeyHash.fromHex(DEVNET_POOL_ID)
+      const drep = new DRep.AlwaysAbstainDRep({})
+      const registerDelegateTxHash = await client
+        .newTx()
+        .registerAndDelegateTo({ stakeCredential, poolKeyHash, drep })
+        .build({ availableUtxos: [genesisUtxo] })
+        .then((b) => b.sign())
+        .then((b) => b.submit())
+      expect(await client.awaitTx(registerDelegateTxHash, 1000)).toBe(true)
+
+      await new Promise((resolve) => setTimeout(resolve, 2000))
+
+      // Step 2: Deregister
+      const deregisterTxHash = await client
+        .newTx()
+        .deregisterStake({ stakeCredential })
+        .build()
+        .then((b) => b.sign())
+        .then((b) => b.submit())
+      expect(await client.awaitTx(deregisterTxHash, 1000)).toBe(true)
     }
-
-    const client = createTestClient(ACCOUNT_INDEX)
-    const walletAddress = await client.address()
-    const addressStruct = walletAddress
-
-    if (!("stakingCredential" in addressStruct) || !addressStruct.stakingCredential) {
-      throw new Error(`Expected BaseAddress with stakingCredential`)
-    }
-
-    const stakeCredential = addressStruct.stakingCredential
-
-    // Step 1: Register AND delegate to both pool+DRep in single cert (StakeVoteRegDelegCert)
-    const poolKeyHash = PoolKeyHash.fromHex(DEVNET_POOL_ID)
-    const drep = new DRep.AlwaysAbstainDRep({})
-    const registerDelegateTxHash = await client
-      .newTx()
-      .registerAndDelegateTo({ stakeCredential, poolKeyHash, drep })
-      .build({ availableUtxos: [genesisUtxo] })
-      .then((b) => b.sign())
-      .then((b) => b.submit())
-    expect(await client.awaitTx(registerDelegateTxHash, 1000)).toBe(true)
-
-    await new Promise((resolve) => setTimeout(resolve, 2000))
-
-    // Step 2: Deregister
-    const deregisterTxHash = await client
-      .newTx()
-      .deregisterStake({ stakeCredential })
-      .build()
-      .then((b) => b.sign())
-      .then((b) => b.submit())
-    expect(await client.awaitTx(deregisterTxHash, 1000)).toBe(true)
-  })
+  )
 
   // ============================================================================
   // New Explicit Delegation API Tests

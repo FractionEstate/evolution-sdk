@@ -28,7 +28,9 @@ import type { ValidityParams } from "./Operations.js"
  * @since 2.0.0
  * @category programs
  */
-export const createSetValidityProgram = (params: ValidityParams): Effect.Effect<void, TransactionBuilderError, TxContext> =>
+export const createSetValidityProgram = (
+  params: ValidityParams
+): Effect.Effect<void, TransactionBuilderError, TxContext> =>
   Effect.gen(function* () {
     const ctx = yield* TxContext
 

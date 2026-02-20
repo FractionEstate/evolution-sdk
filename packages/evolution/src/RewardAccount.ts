@@ -62,40 +62,44 @@ export class RewardAccount extends Schema.TaggedClass<RewardAccount>("RewardAcco
   }
 }
 
-export const FromBytes = Schema.transformOrFail(Schema.typeSchema(Bytes29.BytesFromHex), Schema.typeSchema(RewardAccount), {
-  strict: true,
-  encode: (_, __, ___, toA) =>
-    Eff.gen(function* () {
-      const stakingBit = toA.stakeCredential._tag === "KeyHash" ? 0 : 1
-      const header = (0b111 << 5) | (stakingBit << 4) | (toA.networkId & 0b00001111)
-      const result = new Uint8Array(29)
-      result[0] = header
-      const stakeCredentialBytes = toA.stakeCredential.hash
-      result.set(stakeCredentialBytes, 1)
-      return yield* ParseResult.succeed(result)
-    }),
-  decode: (_, __, ___, fromA) =>
-    Eff.gen(function* () {
-      const header = fromA[0]
-      // Extract network ID from the lower 4 bits
-      const networkId = header & 0b00001111
-      // Extract address type from the upper 4 bits (bits 4-7)
-      const addressType = header >> 4
+export const FromBytes = Schema.transformOrFail(
+  Schema.typeSchema(Bytes29.BytesFromHex),
+  Schema.typeSchema(RewardAccount),
+  {
+    strict: true,
+    encode: (_, __, ___, toA) =>
+      Eff.gen(function* () {
+        const stakingBit = toA.stakeCredential._tag === "KeyHash" ? 0 : 1
+        const header = (0b111 << 5) | (stakingBit << 4) | (toA.networkId & 0b00001111)
+        const result = new Uint8Array(29)
+        result[0] = header
+        const stakeCredentialBytes = toA.stakeCredential.hash
+        result.set(stakeCredentialBytes, 1)
+        return yield* ParseResult.succeed(result)
+      }),
+    decode: (_, __, ___, fromA) =>
+      Eff.gen(function* () {
+        const header = fromA[0]
+        // Extract network ID from the lower 4 bits
+        const networkId = header & 0b00001111
+        // Extract address type from the upper 4 bits (bits 4-7)
+        const addressType = header >> 4
 
-      const isStakeKey = (addressType & 0b0001) === 0
-      const stakeCredential: Credential.Credential = isStakeKey
-        ? new KeyHash.KeyHash({
-            hash: fromA.slice(1, 29)
-          })
-        : new ScriptHash.ScriptHash({
-            hash: fromA.slice(1, 29)
-          })
-      return RewardAccount.make({
-        networkId,
-        stakeCredential
+        const isStakeKey = (addressType & 0b0001) === 0
+        const stakeCredential: Credential.Credential = isStakeKey
+          ? new KeyHash.KeyHash({
+              hash: fromA.slice(1, 29)
+            })
+          : new ScriptHash.ScriptHash({
+              hash: fromA.slice(1, 29)
+            })
+        return RewardAccount.make({
+          networkId,
+          stakeCredential
+        })
       })
-    })
-}).annotations({
+  }
+).annotations({
   identifier: "RewardAccount.FromBytes",
   description: "Transforms raw bytes to RewardAccount"
 })
@@ -205,4 +209,3 @@ export const toHex = (data: RewardAccount) => Schema.encodeSync(FromHex)(data)
  * @category encoding
  */
 export const toBech32 = (data: RewardAccount) => Schema.encodeSync(FromBech32)(data)
-

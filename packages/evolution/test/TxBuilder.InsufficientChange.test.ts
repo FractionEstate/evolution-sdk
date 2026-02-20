@@ -73,35 +73,43 @@ const assertFeeValid = async (
 const createSufficientUtxo = (lovelace: bigint = 100_000_000n): CoreUTxO.UTxO =>
   createCoreTestUtxo({ transactionId: "a".repeat(64), index: 0, address: CHANGE_ADDRESS, lovelace })
 
-const baseConfig: TxBuilderConfig = {
-}
+const baseConfig: TxBuilderConfig = {}
 
 describe("Fallback Tier 3: onInsufficientChange Strategy", () => {
   it("should throw error by default when change is insufficient (safe default)", async () => {
     // Arrange: UTxO with insufficient leftover for change output
     const utxo = createMinimalUtxo()
-    const builder = makeTxBuilder(baseConfig)
-      .payToAddress({
-        address: Address.fromBech32(RECIPIENT_ADDRESS),
-        assets: CoreAssets.fromLovelace(2_000_000n)
-      })
+    const builder = makeTxBuilder(baseConfig).payToAddress({
+      address: Address.fromBech32(RECIPIENT_ADDRESS),
+      assets: CoreAssets.fromLovelace(2_000_000n)
+    })
 
     // Act & Assert: Should fail with default 'error' strategy
     // This is the SAFE default - prevents accidental fund loss
-    await expect(builder.build({ changeAddress: Address.fromBech32(CHANGE_ADDRESS), availableUtxos: [utxo], protocolParameters: PROTOCOL_PARAMS })).rejects.toThrow()
+    await expect(
+      builder.build({
+        changeAddress: Address.fromBech32(CHANGE_ADDRESS),
+        availableUtxos: [utxo],
+        protocolParameters: PROTOCOL_PARAMS
+      })
+    ).rejects.toThrow()
   })
 
   it("should burn leftover as extra fee when onInsufficientChange='burn'", async () => {
     // Arrange: Same insufficient leftover scenario
     const utxo = createMinimalUtxo()
-    const builder = makeTxBuilder(baseConfig)
-      .payToAddress({
-        address: Address.fromBech32(RECIPIENT_ADDRESS),
-        assets: CoreAssets.fromLovelace(2_000_000n)
-      })
+    const builder = makeTxBuilder(baseConfig).payToAddress({
+      address: Address.fromBech32(RECIPIENT_ADDRESS),
+      assets: CoreAssets.fromLovelace(2_000_000n)
+    })
 
     // Act: Explicitly consent to burning leftover
-    const signBuilder = await builder.build({ changeAddress: Address.fromBech32(CHANGE_ADDRESS), availableUtxos: [utxo], onInsufficientChange: "burn", protocolParameters: PROTOCOL_PARAMS })
+    const signBuilder = await builder.build({
+      changeAddress: Address.fromBech32(CHANGE_ADDRESS),
+      availableUtxos: [utxo],
+      onInsufficientChange: "burn",
+      protocolParameters: PROTOCOL_PARAMS
+    })
     const tx = await signBuilder.toTransaction()
     const txWithFakeWitnesses = await signBuilder.toTransactionWithFakeWitnesses()
 
@@ -129,11 +137,10 @@ describe("Fallback Precedence: drainTo before onInsufficientChange", () => {
   it("should use drainTo (Fallback #1) before checking onInsufficientChange (Fallback #2)", async () => {
     // Arrange: Insufficient change + both fallbacks configured
     const utxo = createMinimalUtxo()
-    const builder = makeTxBuilder(baseConfig)
-      .payToAddress({
-        address: Address.fromBech32(RECIPIENT_ADDRESS),
-        assets: CoreAssets.fromLovelace(2_000_000n)
-      })
+    const builder = makeTxBuilder(baseConfig).payToAddress({
+      address: Address.fromBech32(RECIPIENT_ADDRESS),
+      assets: CoreAssets.fromLovelace(2_000_000n)
+    })
 
     // Act: Configure both drainTo and onInsufficientChange='error'
     // drainTo should take precedence (Fallback #1 before #2)
@@ -167,11 +174,10 @@ describe("Normal Path: Sufficient Change (No Fallbacks)", () => {
   it("should create change output when sufficient funds available", async () => {
     // Arrange: UTxO with plenty of ADA
     const utxo = createSufficientUtxo(100_000_000n) // 100 ADA
-    const builder = makeTxBuilder(baseConfig)
-      .payToAddress({
-        address: Address.fromBech32(RECIPIENT_ADDRESS),
-        assets: CoreAssets.fromLovelace(10_000_000n) // 10 ADA payment
-      })
+    const builder = makeTxBuilder(baseConfig).payToAddress({
+      address: Address.fromBech32(RECIPIENT_ADDRESS),
+      assets: CoreAssets.fromLovelace(10_000_000n) // 10 ADA payment
+    })
 
     // Act: Build with fallback configured (shouldn't be needed)
     const signBuilder = await builder.build({
@@ -205,14 +211,18 @@ describe("Normal Path: Sufficient Change (No Fallbacks)", () => {
   it("should handle exact amount with drainTo without triggering fallbacks", async () => {
     // Arrange: UTxO with exact amount needed
     const utxo = createMinimalUtxo()
-    const builder = makeTxBuilder(baseConfig)
-      .payToAddress({
-        address: Address.fromBech32(RECIPIENT_ADDRESS),
-        assets: CoreAssets.fromLovelace(2_000_000n)
-      })
+    const builder = makeTxBuilder(baseConfig).payToAddress({
+      address: Address.fromBech32(RECIPIENT_ADDRESS),
+      assets: CoreAssets.fromLovelace(2_000_000n)
+    })
 
     // Act: Use drainTo for exact amount scenarios
-    const signBuilder = await builder.build({ changeAddress: Address.fromBech32(CHANGE_ADDRESS), availableUtxos: [utxo], drainTo: 0, protocolParameters: PROTOCOL_PARAMS })
+    const signBuilder = await builder.build({
+      changeAddress: Address.fromBech32(CHANGE_ADDRESS),
+      availableUtxos: [utxo],
+      drainTo: 0,
+      protocolParameters: PROTOCOL_PARAMS
+    })
     const tx = await signBuilder.toTransaction()
     const txWithFakeWitnesses = await signBuilder.toTransactionWithFakeWitnesses()
 
@@ -249,15 +259,19 @@ describe("Edge Cases", () => {
       })
     ]
 
-    const builder = makeTxBuilder(baseConfig)
-      .payToAddress({
-        address: Address.fromBech32(RECIPIENT_ADDRESS),
-        assets: CoreAssets.fromLovelace(2_000_000n)
-      })
+    const builder = makeTxBuilder(baseConfig).payToAddress({
+      address: Address.fromBech32(RECIPIENT_ADDRESS),
+      assets: CoreAssets.fromLovelace(2_000_000n)
+    })
 
     // Act: Build with drainTo to merge leftover into payment
     // Total: 2.2 ADA - 2.0 payment - 0.17 fee = 0.03 ADA leftover (insufficient for change)
-    const signBuilder = await builder.build({ changeAddress: Address.fromBech32(CHANGE_ADDRESS), availableUtxos: utxos, drainTo: 0, protocolParameters: PROTOCOL_PARAMS })
+    const signBuilder = await builder.build({
+      changeAddress: Address.fromBech32(CHANGE_ADDRESS),
+      availableUtxos: utxos,
+      drainTo: 0,
+      protocolParameters: PROTOCOL_PARAMS
+    })
     const tx = await signBuilder.toTransaction()
     const txWithFakeWitnesses = await signBuilder.toTransactionWithFakeWitnesses()
 
@@ -278,14 +292,18 @@ describe("Edge Cases", () => {
     // Arrange: Use the standard minimal UTxO (sufficient for tests)
     const utxo = createMinimalUtxo()
 
-    const builder = makeTxBuilder(baseConfig)
-      .payToAddress({
-        address: Address.fromBech32(RECIPIENT_ADDRESS),
-        assets: CoreAssets.fromLovelace(2_000_000n)
-      })
+    const builder = makeTxBuilder(baseConfig).payToAddress({
+      address: Address.fromBech32(RECIPIENT_ADDRESS),
+      assets: CoreAssets.fromLovelace(2_000_000n)
+    })
 
     // Act: Burn small leftover
-    const signBuilder = await builder.build({ changeAddress: Address.fromBech32(CHANGE_ADDRESS), availableUtxos: [utxo], onInsufficientChange: "burn", protocolParameters: PROTOCOL_PARAMS })
+    const signBuilder = await builder.build({
+      changeAddress: Address.fromBech32(CHANGE_ADDRESS),
+      availableUtxos: [utxo],
+      onInsufficientChange: "burn",
+      protocolParameters: PROTOCOL_PARAMS
+    })
     const tx = await signBuilder.toTransaction()
     const txWithFakeWitnesses = await signBuilder.toTransactionWithFakeWitnesses()
 
@@ -339,14 +357,17 @@ describe("Multi-Asset minUTxO Calculation", () => {
 
     // Send most lovelace but keep all native assets
     // This creates leftover with: small lovelace + 10 assets
-    const builder = makeTxBuilder(baseConfig)
-      .payToAddress({
-        address: Address.fromBech32(RECIPIENT_ADDRESS),
-        assets: CoreAssets.fromLovelace(2_500_000n) // Send 2.5 ADA only
-      })
+    const builder = makeTxBuilder(baseConfig).payToAddress({
+      address: Address.fromBech32(RECIPIENT_ADDRESS),
+      assets: CoreAssets.fromLovelace(2_500_000n) // Send 2.5 ADA only
+    })
 
     // Act: Build transaction
-    const signBuilder = await builder.build({ changeAddress: Address.fromBech32(CHANGE_ADDRESS), availableUtxos: [multiAssetUtxoWithTokens], protocolParameters: PROTOCOL_PARAMS })
+    const signBuilder = await builder.build({
+      changeAddress: Address.fromBech32(CHANGE_ADDRESS),
+      availableUtxos: [multiAssetUtxoWithTokens],
+      protocolParameters: PROTOCOL_PARAMS
+    })
     const tx = await signBuilder.toTransaction()
     const txWithFakeWitnesses = await signBuilder.toTransactionWithFakeWitnesses()
 
@@ -402,7 +423,7 @@ describe("Fee Validation: Multiple Witnesses Edge Case", () => {
     })
 
     // Create one UTxO per unique address
-    const utxos: Array<CoreUTxO.UTxO> = uniqueAddresses.map((address, i) => 
+    const utxos: Array<CoreUTxO.UTxO> = uniqueAddresses.map((address, i) =>
       createCoreTestUtxo({
         transactionId: i.toString().repeat(64).substring(0, 64),
         index: i,
@@ -412,14 +433,17 @@ describe("Fee Validation: Multiple Witnesses Edge Case", () => {
     )
 
     // Build transaction that will select all 10 inputs
-    const builder = makeTxBuilder(baseConfig)
-      .payToAddress({
-        address: Address.fromBech32(RECIPIENT_ADDRESS),
-        assets: CoreAssets.fromLovelace(45_000_000n) // 45 ADA
-      })
+    const builder = makeTxBuilder(baseConfig).payToAddress({
+      address: Address.fromBech32(RECIPIENT_ADDRESS),
+      assets: CoreAssets.fromLovelace(45_000_000n) // 45 ADA
+    })
 
     // Act: Build transaction
-    const signBuilder = await builder.build({ changeAddress: Address.fromBech32(CHANGE_ADDRESS), availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })
+    const signBuilder = await builder.build({
+      changeAddress: Address.fromBech32(CHANGE_ADDRESS),
+      availableUtxos: utxos,
+      protocolParameters: PROTOCOL_PARAMS
+    })
     const tx = await signBuilder.toTransaction()
     const txWithFakeWitnesses = await signBuilder.toTransactionWithFakeWitnesses()
 
@@ -464,14 +488,17 @@ describe("Fee Validation: Multiple Witnesses Edge Case", () => {
       )
     }
 
-    const builder = makeTxBuilder(baseConfig)
-      .payToAddress({
-        address: Address.fromBech32(RECIPIENT_ADDRESS),
-        assets: CoreAssets.fromLovelace(45_000_000n)
-      })
+    const builder = makeTxBuilder(baseConfig).payToAddress({
+      address: Address.fromBech32(RECIPIENT_ADDRESS),
+      assets: CoreAssets.fromLovelace(45_000_000n)
+    })
 
     // Act
-    const signBuilder = await builder.build({ changeAddress: Address.fromBech32(CHANGE_ADDRESS), availableUtxos: utxos, protocolParameters: PROTOCOL_PARAMS })
+    const signBuilder = await builder.build({
+      changeAddress: Address.fromBech32(CHANGE_ADDRESS),
+      availableUtxos: utxos,
+      protocolParameters: PROTOCOL_PARAMS
+    })
     const tx = await signBuilder.toTransaction()
     const txWithFakeWitnesses = await signBuilder.toTransactionWithFakeWitnesses()
 

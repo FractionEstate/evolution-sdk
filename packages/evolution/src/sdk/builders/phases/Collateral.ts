@@ -59,9 +59,7 @@ const isPureAda = (utxo: UTxO.UTxO): boolean => {
  * @since 2.0.0
  * @category helpers
  */
-const sortCollateralCandidates = (
-  utxos: ReadonlyArray<UTxO.UTxO>
-): Array<UTxO.UTxO> => {
+const sortCollateralCandidates = (utxos: ReadonlyArray<UTxO.UTxO>): Array<UTxO.UTxO> => {
   return [...utxos].sort((a, b) => {
     const aIsPure = isPureAda(a)
     const bIsPure = isPureAda(b)
@@ -123,11 +121,7 @@ const sortCollateralCandidates = (
 export const executeCollateral = (): Effect.Effect<
   PhaseResult,
   TransactionBuilderError,
-  | TxContext
-  | AvailableUtxosTag
-  | ChangeAddressTag
-  | ProtocolParametersTag
-  | BuildOptionsTag
+  TxContext | AvailableUtxosTag | ChangeAddressTag | ProtocolParametersTag | BuildOptionsTag
 > =>
   Effect.gen(function* () {
     // Get contexts
@@ -230,9 +224,7 @@ export const executeCollateral = (): Effect.Effect<
     // This provides predictable collateral requirements regardless of transaction complexity.
     const totalCollateral = targetCollateral
 
-    yield* Effect.logDebug(
-      `[Collateral] Total collateral: ${totalCollateral} lovelace (fixed target amount)`
-    )
+    yield* Effect.logDebug(`[Collateral] Total collateral: ${totalCollateral} lovelace (fixed target amount)`)
 
     // ═══════════════════════════════════════════════════════════
     // STEP 6: Calculate Return Amount and Assets
@@ -240,9 +232,7 @@ export const executeCollateral = (): Effect.Effect<
     const returnLovelace = totalLovelace - totalCollateral
     const hasTokens = CoreAssets.hasMultiAsset(totalAssets)
 
-    yield* Effect.logDebug(
-      `[Collateral] Return amount: ${returnLovelace} lovelace${hasTokens ? " + tokens" : ""}`
-    )
+    yield* Effect.logDebug(`[Collateral] Return amount: ${returnLovelace} lovelace${hasTokens ? " + tokens" : ""}`)
 
     // Collateral return is only needed if there are leftover assets
     // (either lovelace or tokens)
@@ -250,7 +240,7 @@ export const executeCollateral = (): Effect.Effect<
 
     if (!needsReturn) {
       yield* Effect.logDebug("[Collateral] No collateral return needed (exact match)")
-      
+
       // Update state with collateral data (no return output)
       yield* Ref.update(stateRef, (currentState) => ({
         ...currentState,
@@ -274,7 +264,7 @@ export const executeCollateral = (): Effect.Effect<
     // STEP 7: Validate MinUTxO for Return Output
     // ═══════════════════════════════════════════════════════════
     const returnAssets = CoreAssets.withLovelace(totalAssets, returnLovelace)
-    
+
     yield* Effect.logDebug(`[Collateral] Return assets: ${returnAssets.toString()}`)
 
     const minUtxo = yield* calculateMinimumUtxoLovelace({
@@ -311,7 +301,7 @@ export const executeCollateral = (): Effect.Effect<
     // ═══════════════════════════════════════════════════════════
     // STEP 10: Update State
     // ═══════════════════════════════════════════════════════════
-    
+
     // Update state with collateral data
     yield* Ref.update(stateRef, (currentState) => ({
       ...currentState,

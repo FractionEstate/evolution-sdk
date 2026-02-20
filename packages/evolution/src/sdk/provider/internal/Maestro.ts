@@ -24,54 +24,54 @@ export const MaestroProtocolParameters = Schema.Struct({
   min_fee_coefficient: Schema.String,
   min_fee_constant: Schema.Struct({
     ada: Schema.Struct({
-      lovelace: Schema.String,
-    }),
+      lovelace: Schema.String
+    })
   }),
   max_transaction_size: Schema.Struct({
-    bytes: Schema.String,
+    bytes: Schema.String
   }),
   max_value_size: Schema.Struct({
-    bytes: Schema.String,
+    bytes: Schema.String
   }),
   stake_credential_deposit: Schema.Struct({
     ada: Schema.Struct({
-      lovelace: Schema.String,
-    }),
+      lovelace: Schema.String
+    })
   }),
   stake_pool_deposit: Schema.Struct({
     ada: Schema.Struct({
-      lovelace: Schema.String,
-    }),
+      lovelace: Schema.String
+    })
   }),
   delegate_representative_deposit: Schema.Struct({
     ada: Schema.Struct({
-      lovelace: Schema.String,
-    }),
+      lovelace: Schema.String
+    })
   }),
   governance_action_deposit: Schema.Struct({
     ada: Schema.Struct({
-      lovelace: Schema.String,
-    }),
+      lovelace: Schema.String
+    })
   }),
   script_execution_prices: Schema.Struct({
     memory: Schema.String, // rational format "numerator/denominator"
-    cpu: Schema.String, // rational format "numerator/denominator"
+    cpu: Schema.String // rational format "numerator/denominator"
   }),
   max_execution_units_per_transaction: Schema.Struct({
     memory: Schema.String,
-    cpu: Schema.String,
+    cpu: Schema.String
   }),
   min_utxo_deposit_coefficient: Schema.String,
   collateral_percentage: Schema.String,
   max_collateral_inputs: Schema.String,
   min_fee_reference_scripts: Schema.Struct({
-    base: Schema.String,
+    base: Schema.String
   }),
   plutus_cost_models: Schema.Struct({
     plutus_v1: Schema.Array(Schema.Number),
     plutus_v2: Schema.Array(Schema.Number),
-    plutus_v3: Schema.Array(Schema.Number),
-  }),
+    plutus_v3: Schema.Array(Schema.Number)
+  })
 })
 
 /**
@@ -79,7 +79,7 @@ export const MaestroProtocolParameters = Schema.Struct({
  */
 export const MaestroAsset = Schema.Struct({
   unit: Schema.String,
-  amount: Schema.String,
+  amount: Schema.String
 })
 
 /**
@@ -89,7 +89,7 @@ export const MaestroDatumOption = Schema.Struct({
   type: Schema.Literal("hash", "inline"),
   hash: Schema.String,
   bytes: Schema.NullOr(Schema.String),
-  json: Schema.NullOr(Schema.Unknown),
+  json: Schema.NullOr(Schema.Unknown)
 })
 
 /**
@@ -99,7 +99,7 @@ export const MaestroScript = Schema.Struct({
   hash: Schema.String,
   type: Schema.Literal("native", "plutusv1", "plutusv2", "plutusv3"),
   bytes: Schema.NullOr(Schema.String),
-  json: Schema.NullOr(Schema.Unknown),
+  json: Schema.NullOr(Schema.Unknown)
 })
 
 /**
@@ -111,7 +111,7 @@ export const MaestroUTxO = Schema.Struct({
   assets: Schema.Array(MaestroAsset),
   address: Schema.String,
   datum: Schema.NullOr(MaestroDatumOption),
-  reference_script: Schema.NullOr(MaestroScript),
+  reference_script: Schema.NullOr(MaestroScript)
 })
 
 /**
@@ -119,7 +119,7 @@ export const MaestroUTxO = Schema.Struct({
  */
 export const MaestroDelegation = Schema.Struct({
   delegated_pool: Schema.NullOr(Schema.String),
-  rewards_available: Schema.String,
+  rewards_available: Schema.String
 })
 
 /**
@@ -131,8 +131,8 @@ export const MaestroTimestampedResponse = <A>(dataSchema: Schema.Schema<A>) =>
     last_updated: Schema.Struct({
       timestamp: Schema.String,
       block_slot: Schema.Number,
-      block_hash: Schema.String,
-    }),
+      block_hash: Schema.String
+    })
   })
 
 /**
@@ -145,8 +145,8 @@ export const MaestroPaginatedResponse = <A>(dataSchema: Schema.Schema<A>) =>
     last_updated: Schema.Struct({
       timestamp: Schema.String,
       block_slot: Schema.Number,
-      block_hash: Schema.String,
-    }),
+      block_hash: Schema.String
+    })
   })
 
 /**
@@ -198,21 +198,15 @@ export const transformProtocolParameters = (
     minFeeRefScriptCostPerByte: parseInt(maestroParams.min_fee_reference_scripts.base),
     costModels: {
       PlutusV1: Object.fromEntries(
-        maestroParams.plutus_cost_models.plutus_v1.map(
-          (value: number, index: number) => [index.toString(), value]
-        )
+        maestroParams.plutus_cost_models.plutus_v1.map((value: number, index: number) => [index.toString(), value])
       ),
       PlutusV2: Object.fromEntries(
-        maestroParams.plutus_cost_models.plutus_v2.map(
-          (value: number, index: number) => [index.toString(), value]
-        )
+        maestroParams.plutus_cost_models.plutus_v2.map((value: number, index: number) => [index.toString(), value])
       ),
       PlutusV3: Object.fromEntries(
-        maestroParams.plutus_cost_models.plutus_v3.map(
-          (value: number, index: number) => [index.toString(), value]
-        )
-      ),
-    },
+        maestroParams.plutus_cost_models.plutus_v3.map((value: number, index: number) => [index.toString(), value])
+      )
+    }
   }
 }
 
@@ -252,7 +246,7 @@ export const transformAssets = (
 
   // Build Core Assets starting with lovelace
   let assets = CoreAssets.fromLovelace(lovelace)
-  
+
   // Add multi-assets using hex strings
   for (const [unit, qty] of multiAssetEntries) {
     // Parse unit - policyId is first 56 chars, assetName is remainder
@@ -268,9 +262,7 @@ export const transformAssets = (
  * Transform Maestro script reference to Evolution SDK format
  * TODO: Convert to Core script type when available
  */
-export const transformScriptRef = (
-  _maestroScript?: Schema.Schema.Type<typeof MaestroScript> | null
-) => {
+export const transformScriptRef = (_maestroScript?: Schema.Schema.Type<typeof MaestroScript> | null) => {
   // TODO: Handle script ref when Core types support it
   return undefined
 }
@@ -278,9 +270,7 @@ export const transformScriptRef = (
 /**
  * Transform Maestro UTxO to Core UTxO format
  */
-export const transformUTxO = (
-  maestroUtxo: Schema.Schema.Type<typeof MaestroUTxO>
-): CoreUTxO.UTxO => {
+export const transformUTxO = (maestroUtxo: Schema.Schema.Type<typeof MaestroUTxO>): CoreUTxO.UTxO => {
   const assets = transformAssets(maestroUtxo.assets)
   const address = CoreAddress.fromBech32(maestroUtxo.address)
   const transactionId = TransactionHash.fromHex(maestroUtxo.tx_hash)
@@ -304,7 +294,7 @@ export const transformDelegation = (
   maestroDelegation: Schema.Schema.Type<typeof MaestroDelegation>
 ): Provider.Delegation => {
   return {
-    poolId: maestroDelegation.delegated_pool 
+    poolId: maestroDelegation.delegated_pool
       ? Schema.decodeSync(PoolKeyHash.FromHex)(maestroDelegation.delegated_pool)
       : null,
     rewards: BigInt(maestroDelegation.rewards_available)

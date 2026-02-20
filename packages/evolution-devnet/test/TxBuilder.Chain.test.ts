@@ -82,7 +82,7 @@ describe("TxBuilder.chainResult", () => {
     // Build chained transactions using build() + chainResult
     let available = [...genesisUtxos]
     const txs: Array<SignBuilder> = []
-    
+
     for (let i = 0; i < TX_COUNT; i++) {
       const tx = await client
         .newTx()

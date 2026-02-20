@@ -29,11 +29,11 @@ export class UTxO extends Schema.TaggedClass<UTxO>()("UTxO", {
   scriptRef: Schema.optional(Script.Script)
 }) {
   toJSON() {
-    // Serialize Script to hex representation  
+    // Serialize Script to hex representation
     const scriptRefJson = this.scriptRef
       ? { _tag: this.scriptRef._tag, cbor: Script.toCBORHex(this.scriptRef) }
       : undefined
-    
+
     return {
       _tag: this._tag,
       transactionId: this.transactionId.toJSON(),
@@ -157,8 +157,7 @@ export const difference = (a: UTxOSet, b: UTxOSet): UTxOSet => HashSet.differenc
  * @since 2.0.0
  * @category combinators
  */
-export const filter = (set: UTxOSet, predicate: (utxo: UTxO) => boolean): UTxOSet =>
-  HashSet.filter(set, predicate)
+export const filter = (set: UTxOSet, predicate: (utxo: UTxO) => boolean): UTxOSet => HashSet.filter(set, predicate)
 
 /**
  * Get the number of UTxOs in the set.
@@ -190,5 +189,4 @@ export const toArray = (set: UTxOSet): Array<UTxO> => Array.from(set)
  * @since 2.0.0
  * @category getters
  */
-export const toOutRefString = (utxo: UTxO): string =>
-  `${TransactionHash.toHex(utxo.transactionId)}#${utxo.index}`
+export const toOutRefString = (utxo: UTxO): string => `${TransactionHash.toHex(utxo.transactionId)}#${utxo.index}`

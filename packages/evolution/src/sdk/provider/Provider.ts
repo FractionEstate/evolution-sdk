@@ -83,7 +83,9 @@ export interface ProviderEffect {
   /**
    * Query UTxOs at a given address or by credential.
    */
-  readonly getUtxos: (addressOrCredential: CoreAddress.Address | Credential.Credential) => Effect.Effect<Array<CoreUTxO.UTxO>, ProviderError>
+  readonly getUtxos: (
+    addressOrCredential: CoreAddress.Address | Credential.Credential
+  ) => Effect.Effect<Array<CoreUTxO.UTxO>, ProviderError>
   /**
    * Query UTxOs at a given address or credential filtered by specific unit.
    */
@@ -99,13 +101,13 @@ export interface ProviderEffect {
   /**
    * Query UTxOs by their transaction inputs (output references).
    */
-  readonly getUtxosByOutRef: (inputs: ReadonlyArray<TransactionInput.TransactionInput>) => Effect.Effect<Array<CoreUTxO.UTxO>, ProviderError>
+  readonly getUtxosByOutRef: (
+    inputs: ReadonlyArray<TransactionInput.TransactionInput>
+  ) => Effect.Effect<Array<CoreUTxO.UTxO>, ProviderError>
   /**
    * Query delegation info for a reward address.
    */
-  readonly getDelegation: (
-    rewardAddress: RewardAddress.RewardAddress
-  ) => Effect.Effect<Delegation, ProviderError>
+  readonly getDelegation: (rewardAddress: RewardAddress.RewardAddress) => Effect.Effect<Delegation, ProviderError>
   /**
    * Query a datum by its hash.
    * Returns the parsed PlutusData structure.
@@ -114,7 +116,10 @@ export interface ProviderEffect {
   /**
    * Wait for a transaction to be confirmed on the blockchain.
    */
-  readonly awaitTx: (txHash: TransactionHash.TransactionHash, checkInterval?: number) => Effect.Effect<boolean, ProviderError>
+  readonly awaitTx: (
+    txHash: TransactionHash.TransactionHash,
+    checkInterval?: number
+  ) => Effect.Effect<boolean, ProviderError>
   /**
    * Submit a signed transaction to the blockchain.
    * @param tx - Signed transaction to submit
@@ -126,7 +131,10 @@ export interface ProviderEffect {
    * @param tx - Transaction to evaluate
    * @param additionalUTxOs - Additional UTxOs to include in evaluation context
    */
-  readonly evaluateTx: (tx: Transaction.Transaction, additionalUTxOs?: Array<CoreUTxO.UTxO>) => Effect.Effect<Array<EvalRedeemer>, ProviderError>
+  readonly evaluateTx: (
+    tx: Transaction.Transaction,
+    additionalUTxOs?: Array<CoreUTxO.UTxO>
+  ) => Effect.Effect<Array<EvalRedeemer>, ProviderError>
 }
 
 /**

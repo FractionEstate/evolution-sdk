@@ -90,9 +90,11 @@ export class ProposalProcedure extends Schema.Class<ProposalProcedure>("Proposal
   [Hash.symbol](): number {
     return Hash.cached(
       this,
-      Hash.combine(Hash.combine(Hash.combine(Hash.hash(this.deposit))(Hash.hash(this.rewardAccount)))(Hash.hash(this.governanceAction)))(
-        Hash.hash(this.anchor)
-      )
+      Hash.combine(
+        Hash.combine(Hash.combine(Hash.hash(this.deposit))(Hash.hash(this.rewardAccount)))(
+          Hash.hash(this.governanceAction)
+        )
+      )(Hash.hash(this.anchor))
     )
   }
 }

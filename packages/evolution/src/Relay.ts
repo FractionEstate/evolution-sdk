@@ -115,8 +115,7 @@ export const fromCBORHex = (hex: string, options?: CBOR.CodecOptions) => Schema.
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORBytes = (data: Relay, options?: CBOR.CodecOptions) =>
-  Schema.encodeSync(FromCBORBytes(options))(data)
+export const toCBORBytes = (data: Relay, options?: CBOR.CodecOptions) => Schema.encodeSync(FromCBORBytes(options))(data)
 
 /**
  * Convert Relay to CBOR hex.

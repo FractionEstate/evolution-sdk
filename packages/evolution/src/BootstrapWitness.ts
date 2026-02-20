@@ -167,8 +167,10 @@ export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTION
  * @since 2.0.0
  * @category parsing
  */
-export const fromCBORBytes = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): BootstrapWitness =>
-  Schema.decodeSync(FromCBORBytes(options))(bytes)
+export const fromCBORBytes = (
+  bytes: Uint8Array,
+  options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS
+): BootstrapWitness => Schema.decodeSync(FromCBORBytes(options))(bytes)
 
 /**
  * Parse BootstrapWitness from CBOR hex string.
@@ -185,8 +187,10 @@ export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.CML_D
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORBytes = (witness: BootstrapWitness, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): Uint8Array =>
-  Schema.encodeSync(FromCBORBytes(options))(witness)
+export const toCBORBytes = (
+  witness: BootstrapWitness,
+  options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS
+): Uint8Array => Schema.encodeSync(FromCBORBytes(options))(witness)
 
 /**
  * Encode BootstrapWitness to CBOR hex string.

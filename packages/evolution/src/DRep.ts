@@ -275,7 +275,11 @@ export const FromBytes = Schema.transformOrFail(Schema.Uint8ArrayFromSelf, Schem
       const keyType = (header >> 4) & 0x0f
       if (keyType !== 0x02) {
         return yield* ParseResult.fail(
-          new ParseResult.Type(ast, fromA, `Invalid key type in header: expected 0x02 (DRep), got 0x0${keyType.toString(16)}`)
+          new ParseResult.Type(
+            ast,
+            fromA,
+            `Invalid key type in header: expected 0x02 (DRep), got 0x0${keyType.toString(16)}`
+          )
         )
       }
 
@@ -293,7 +297,11 @@ export const FromBytes = Schema.transformOrFail(Schema.Uint8ArrayFromSelf, Schem
       }
 
       return yield* ParseResult.fail(
-        new ParseResult.Type(ast, fromA, `Invalid credential type in header: expected 0x02 or 0x03, got 0x0${credType.toString(16)}`)
+        new ParseResult.Type(
+          ast,
+          fromA,
+          `Invalid credential type in header: expected 0x02 or 0x03, got 0x0${credType.toString(16)}`
+        )
       )
     })
 }).annotations({

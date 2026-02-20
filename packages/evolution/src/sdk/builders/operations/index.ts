@@ -13,4 +13,3 @@ export * from "./SendAll.js"
 export * from "./Stake.js"
 export * from "./Validity.js"
 export * from "./Vote.js"
-

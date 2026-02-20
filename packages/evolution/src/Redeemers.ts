@@ -26,7 +26,6 @@ const arrayHash = <A>(arr: ReadonlyArray<A>): number => {
   return hash
 }
 
-
 /**
  * Encoding format for redeemers collection.
  *
@@ -47,7 +46,6 @@ const arrayHash = <A>(arr: ReadonlyArray<A>): number => {
  * @category model
  */
 export type Format = "array" | "map"
-
 
 /**
  * Redeemers collection based on Conway CDDL specification.
@@ -84,7 +82,6 @@ export class Redeemers extends Schema.TaggedClass<Redeemers>()("Redeemers", {
   }
 }
 
-
 /**
  * CDDL schema for Redeemers in array format.
  *
@@ -110,7 +107,6 @@ export const FromArrayCDDL = Schema.transformOrFail(ArrayCDDLSchema, Schema.type
       return new Redeemers({ values })
     })
 })
-
 
 /**
  * Map key schema: `[tag, index]`
@@ -160,7 +156,10 @@ export const FromMapCDDL = Schema.transformOrFail(MapCDDLSchema, Schema.typeSche
       for (const r of toA.values) {
         const tagInteger = Redeemer.tagToInteger(r.tag)
         const dataCBOR = yield* ParseResult.encode(Data.FromCDDL)(r.data)
-        entries.push([[tagInteger, r.index], [dataCBOR, [r.exUnits.mem, r.exUnits.steps]]])
+        entries.push([
+          [tagInteger, r.index],
+          [dataCBOR, [r.exUnits.mem, r.exUnits.steps]]
+        ])
       }
       return new Map(entries)
     }),
@@ -175,7 +174,6 @@ export const FromMapCDDL = Schema.transformOrFail(MapCDDLSchema, Schema.typeSche
       return new Redeemers({ values })
     })
 })
-
 
 /**
  * Default CDDL schema for Redeemers (array format).
@@ -192,7 +190,6 @@ export const CDDLSchema = ArrayCDDLSchema
  * @category schemas
  */
 export const FromCDDL = FromArrayCDDL
-
 
 /**
  * CBOR bytes transformation schema for Redeemers (array format).

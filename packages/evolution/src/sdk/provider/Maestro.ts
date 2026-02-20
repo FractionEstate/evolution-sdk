@@ -44,8 +44,7 @@ export class MaestroProvider implements Provider {
     unit: Parameters<Provider["getUtxosWithUnit"]>[1]
   ) => Effect.runPromise(this.Effect.getUtxosWithUnit(addressOrCredential, unit))
 
-  getUtxoByUnit = (unit: Parameters<Provider["getUtxoByUnit"]>[0]) =>
-    Effect.runPromise(this.Effect.getUtxoByUnit(unit))
+  getUtxoByUnit = (unit: Parameters<Provider["getUtxoByUnit"]>[0]) => Effect.runPromise(this.Effect.getUtxoByUnit(unit))
 
   getUtxosByOutRef = (outRefs: Parameters<Provider["getUtxosByOutRef"]>[0]) =>
     Effect.runPromise(this.Effect.getUtxosByOutRef(outRefs))
@@ -53,14 +52,12 @@ export class MaestroProvider implements Provider {
   getDelegation = (rewardAddress: Parameters<Provider["getDelegation"]>[0]) =>
     Effect.runPromise(this.Effect.getDelegation(rewardAddress))
 
-  getDatum = (datumHash: Parameters<Provider["getDatum"]>[0]) =>
-    Effect.runPromise(this.Effect.getDatum(datumHash))
+  getDatum = (datumHash: Parameters<Provider["getDatum"]>[0]) => Effect.runPromise(this.Effect.getDatum(datumHash))
 
   awaitTx = (txHash: Parameters<Provider["awaitTx"]>[0], checkInterval?: Parameters<Provider["awaitTx"]>[1]) =>
     Effect.runPromise(this.Effect.awaitTx(txHash, checkInterval))
 
-  submitTx = (cbor: Parameters<Provider["submitTx"]>[0]) =>
-    Effect.runPromise(this.Effect.submitTx(cbor))
+  submitTx = (cbor: Parameters<Provider["submitTx"]>[0]) => Effect.runPromise(this.Effect.submitTx(cbor))
 
   evaluateTx = (tx: Parameters<Provider["evaluateTx"]>[0], additionalUTxOs?: Parameters<Provider["evaluateTx"]>[1]) =>
     Effect.runPromise(this.Effect.evaluateTx(tx, additionalUTxOs))
@@ -92,4 +89,3 @@ export const preprod = (apiKey: string, turboSubmit: boolean = false): MaestroPr
  */
 export const preview = (apiKey: string, turboSubmit: boolean = false): MaestroProvider =>
   new MaestroProvider("https://preview.api.maestro.org/v1", apiKey, turboSubmit)
-

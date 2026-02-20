@@ -67,10 +67,7 @@ export class ShelleyTransactionOutput extends Schema.TaggedClass<ShelleyTransact
   }
 
   [Hash.symbol](): number {
-    return Hash.cached(
-      this,
-      Hash.hash(this.address) ^ Hash.hash(this.amount) ^ Hash.hash(this.datumHash)
-    )
+    return Hash.cached(this, Hash.hash(this.address) ^ Hash.hash(this.amount) ^ Hash.hash(this.datumHash))
   }
 }
 
@@ -126,10 +123,7 @@ export class BabbageTransactionOutput extends Schema.TaggedClass<BabbageTransact
   [Hash.symbol](): number {
     return Hash.cached(
       this,
-      Hash.hash(this.address) ^
-        Hash.hash(this.amount) ^
-        Hash.hash(this.datumOption) ^
-        Hash.hash(this.scriptRef)
+      Hash.hash(this.address) ^ Hash.hash(this.amount) ^ Hash.hash(this.datumOption) ^ Hash.hash(this.scriptRef)
     )
   }
 }

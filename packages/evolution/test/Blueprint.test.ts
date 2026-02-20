@@ -33,9 +33,7 @@ describe("Blueprint", () => {
       const result = Schema.decodeUnknownSync(PlutusBlueprint)(blueprintJson)
 
       // Find the mint_policy.spend validator
-      const spendValidator = result.validators.find(
-        (v) => v.title === "mint.mint_policy.spend"
-      )
+      const spendValidator = result.validators.find((v) => v.title === "mint.mint_policy.spend")
 
       expect(spendValidator).toBeDefined()
       expect(spendValidator?.datum).toBeDefined()
@@ -44,7 +42,7 @@ describe("Blueprint", () => {
       // Verify datum schema reference
       expect(spendValidator?.datum?.schema).toHaveProperty("$ref")
 
-      // Verify redeemer schema reference  
+      // Verify redeemer schema reference
       expect(spendValidator?.redeemer?.schema).toHaveProperty("$ref")
     })
 
@@ -53,10 +51,10 @@ describe("Blueprint", () => {
         preamble: {
           title: "test",
           version: "1.0.0",
-          plutusVersion: "invalid-version", // Invalid enum value
+          plutusVersion: "invalid-version" // Invalid enum value
         },
         validators: [],
-        definitions: {},
+        definitions: {}
       }
 
       // Should throw ParseError for invalid data
@@ -70,10 +68,10 @@ describe("Blueprint", () => {
         preamble: {
           // Missing required 'title' field
           version: "1.0.0",
-          plutusVersion: "v3",
+          plutusVersion: "v3"
         },
         validators: [],
-        definitions: {},
+        definitions: {}
       }
 
       // Should throw ParseError for missing required fields
@@ -105,9 +103,7 @@ describe("Blueprint", () => {
       // Should match
       expect(reDecoded.preamble.title).toBe(decoded.preamble.title)
       expect(reDecoded.validators.length).toBe(decoded.validators.length)
-      expect(Object.keys(reDecoded.definitions).length).toBe(
-        Object.keys(decoded.definitions).length
-      )
+      expect(Object.keys(reDecoded.definitions).length).toBe(Object.keys(decoded.definitions).length)
     })
   })
 

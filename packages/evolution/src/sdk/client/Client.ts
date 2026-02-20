@@ -4,7 +4,13 @@ import type * as CoreUTxO from "../../UTxO.js"
 import type { ReadOnlyTransactionBuilder, SigningTransactionBuilder } from "../builders/TransactionBuilder.js"
 import type * as Provider from "../provider/Provider.js"
 import type { EffectToPromiseAPI } from "../Type.js"
-import type { ApiWalletEffect, ReadOnlyWalletEffect, SigningWalletEffect, WalletApi, WalletError } from "../wallet/WalletNew.js"
+import type {
+  ApiWalletEffect,
+  ReadOnlyWalletEffect,
+  SigningWalletEffect,
+  WalletApi,
+  WalletError
+} from "../wallet/WalletNew.js"
 
 /**
  * Error class for provider-related operations.
@@ -327,4 +333,3 @@ export interface ApiWalletConfig {
  * @category model
  */
 export type WalletConfig = SeedWalletConfig | PrivateKeyWalletConfig | ReadOnlyWalletConfig | ApiWalletConfig
-

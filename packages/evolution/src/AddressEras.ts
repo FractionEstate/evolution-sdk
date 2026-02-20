@@ -260,4 +260,3 @@ export const toHex = Schema.encodeSync(FromHex)
  * @category encoding
  */
 export const toBech32 = Schema.encodeSync(FromBech32)
-

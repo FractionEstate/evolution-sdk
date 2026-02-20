@@ -59,9 +59,7 @@ export class OperationalCert extends Schema.TaggedClass<OperationalCert>()("Oper
     return Hash.cached(
       this,
       Hash.combine(Hash.hash(this.hotVkey))(
-        Hash.combine(Hash.hash(this.sequenceNumber))(
-          Hash.combine(Hash.hash(this.kesPeriod))(Hash.hash(this.sigma))
-        )
+        Hash.combine(Hash.hash(this.sequenceNumber))(Hash.combine(Hash.hash(this.kesPeriod))(Hash.hash(this.sigma)))
       )
     )
   }

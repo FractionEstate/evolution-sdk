@@ -49,7 +49,7 @@ export class ProposalProcedures extends Schema.TaggedClass<ProposalProcedures>()
   toJSON() {
     return {
       _tag: "ProposalProcedures" as const,
-      procedures: this.procedures.map(p => p.toJSON())
+      procedures: this.procedures.map((p) => p.toJSON())
     }
   }
 
@@ -62,10 +62,7 @@ export class ProposalProcedures extends Schema.TaggedClass<ProposalProcedures>()
   }
 
   [Equal.symbol](that: unknown): boolean {
-    return (
-      that instanceof ProposalProcedures &&
-      arrayEquals(this.procedures, that.procedures)
-    )
+    return that instanceof ProposalProcedures && arrayEquals(this.procedures, that.procedures)
   }
 
   [Hash.symbol](): number {

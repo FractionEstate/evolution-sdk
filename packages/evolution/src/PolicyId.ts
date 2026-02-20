@@ -117,4 +117,3 @@ export const toBytes = Schema.encodeSync(FromBytes)
  * @category encoding
  */
 export const toHex = Schema.encodeSync(FromHex)
-

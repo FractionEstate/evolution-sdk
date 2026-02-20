@@ -88,17 +88,24 @@ export const createVoteProgram = (params: VoteParams): Effect.Effect<void, Trans
     // 5. Update state: merge voting procedures and track redeemers
     yield* Ref.update(ctx, (state) => {
       // Merge voting procedures
-      let mergedVotingProcedures = state.votingProcedures || new VotingProcedures.VotingProcedures({
-        procedures: new Map()
-      })
+      let mergedVotingProcedures =
+        state.votingProcedures ||
+        new VotingProcedures.VotingProcedures({
+          procedures: new Map()
+        })
 
       // Merge new procedures into existing
-      const mergedMap = new Map<VotingProcedures.Voter, Map<GovernanceAction.GovActionId, VotingProcedures.VotingProcedure>>(mergedVotingProcedures.procedures)
+      const mergedMap = new Map<
+        VotingProcedures.Voter,
+        Map<GovernanceAction.GovActionId, VotingProcedures.VotingProcedure>
+      >(mergedVotingProcedures.procedures)
       for (const [voter, govActionMap] of params.votingProcedures.procedures.entries()) {
         const existingGovActionMap = mergedMap.get(voter)
         if (existingGovActionMap) {
           // Merge gov action maps for this voter
-          const mergedGovActionMap = new Map<GovernanceAction.GovActionId, VotingProcedures.VotingProcedure>(existingGovActionMap)
+          const mergedGovActionMap = new Map<GovernanceAction.GovActionId, VotingProcedures.VotingProcedure>(
+            existingGovActionMap
+          )
           for (const [govActionId, votingProcedure] of govActionMap.entries()) {
             mergedGovActionMap.set(govActionId, votingProcedure)
           }

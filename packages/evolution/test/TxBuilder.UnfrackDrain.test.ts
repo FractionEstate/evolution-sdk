@@ -130,8 +130,7 @@ const createSimpleAdaWallet = (): Array<CoreUTxO.UTxO> => [
 // ============================================================================
 
 describe("TxBuilder Unfrack + DrainTo Integration", () => {
-  const baseConfig: TxBuilderConfig = {
-  }
+  const baseConfig: TxBuilderConfig = {}
 
   // ==========================================================================
   // Basic Combination Tests
@@ -143,11 +142,10 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
       // Arrange: Simple ADA-only wallet
       const utxos = createSimpleAdaWallet()
 
-      const builder = makeTxBuilder(baseConfig)
-        .payToAddress({
-          address: CoreAddress.fromBech32(DESTINATION_ADDRESS),
-          assets: CoreAssets.fromLovelace(1_000_000n) // 1 ADA minimum payment
-        })
+      const builder = makeTxBuilder(baseConfig).payToAddress({
+        address: CoreAddress.fromBech32(DESTINATION_ADDRESS),
+        assets: CoreAssets.fromLovelace(1_000_000n) // 1 ADA minimum payment
+      })
 
       // Act: Drain to output 0 with ADA subdivision
       const signBuilder = await builder.build({
@@ -160,7 +158,7 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
             subdivideThreshold: 100_000_000n, // 100 ADA
             subdividePercentages: [50, 30, 20] // Split into 3 outputs
           }
-        },
+        }
       })
 
       const tx = await signBuilder.toTransaction()
@@ -169,7 +167,7 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
       expect(tx.body.inputs.length).toBe(1)
       expect(tx.body.outputs.length).toBe(4) // Exact: 1 payment + 3 subdivided change outputs
       expect(tx.body.fee).toBe(173_861n) // Exact deterministic fee (420 bytes * 44 + 155_381, 4 outputs save 8 bytes)
-      
+
       // Verify exact output amounts (from 200 ADA input - 1 ADA payment - fee)
       expect(tx.body.outputs[0].assets.lovelace).toBe(1_000_000n) // Payment
       expect(tx.body.outputs[1].assets.lovelace).toBe(99_413_069n) // 50% of 198,826,139 change
@@ -199,11 +197,10 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
         })
       ]
 
-      const builder = makeTxBuilder(baseConfig)
-        .payToAddress({
-          address: CoreAddress.fromBech32(DESTINATION_ADDRESS),
-          assets: CoreAssets.fromLovelace(1_000_000n)
-        })
+      const builder = makeTxBuilder(baseConfig).payToAddress({
+        address: CoreAddress.fromBech32(DESTINATION_ADDRESS),
+        assets: CoreAssets.fromLovelace(1_000_000n)
+      })
 
       // Act: Drain with subdivision threshold of 100 ADA (total is 80 ADA, below threshold)
       const signBuilder = await builder.build({
@@ -215,7 +212,7 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
           ada: {
             subdivideThreshold: 100_000_000n // 100 ADA threshold
           }
-        },
+        }
       })
 
       const tx = await signBuilder.toTransaction()
@@ -224,11 +221,11 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
       expect(tx.body.inputs.length).toBe(1)
       expect(tx.body.outputs.length).toBe(2) // Exact: 1 payment + 1 change (no subdivision)
       expect(tx.body.fee).toBe(168_141n) // Exact deterministic fee (290 bytes * 44 + 155_381, 2 outputs save 4 bytes)
-      
+
       // Verify exact output amounts (from 50 ADA input - 1 ADA payment - fee)
       expect(tx.body.outputs[0].assets.lovelace).toBe(1_000_000n) // Payment
       expect(tx.body.outputs[1].assets.lovelace).toBe(48_831_859n) // Change (50M - 1M - fee)
-      
+
       // All outputs should be ADA-only
       tx.body.outputs.forEach((output) => {
         expect(output.assets.multiAsset).toBeUndefined()
@@ -265,7 +262,7 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
           ada: {
             subdivideThreshold: 100_000_000n // 100 ADA
           }
-        },
+        }
       })
 
       const tx = await signBuilder.toTransaction()
@@ -276,9 +273,7 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
       expect(tx.body.fee).toBe(213_769n) // Exact deterministic fee (1327 bytes * 44 + 155_381, 12 outputs save 24 bytes)
 
       // Verify we have both token outputs and ADA-only outputs
-      const tokenOutputs = tx.body.outputs.filter(
-        (output) => output.assets.multiAsset !== undefined
-      )
+      const tokenOutputs = tx.body.outputs.filter((output) => output.assets.multiAsset !== undefined)
       expect(tokenOutputs.length).toBe(4) // Exact: 4 token bundle outputs
     })
 
@@ -307,7 +302,7 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
           ada: {
             subdivideThreshold: 100_000_000n
           }
-        },
+        }
       })
 
       const tx = await signBuilder.toTransaction()
@@ -318,9 +313,7 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
       expect(tx.body.fee).toBe(213_769n) // Exact deterministic fee (1327 bytes * 44 + 155_381, 12 outputs save 24 bytes)
 
       // Verify separate outputs for fungibles vs NFTs
-      const tokenOutputs = tx.body.outputs.filter(
-        (output) => output.assets.multiAsset !== undefined
-      )
+      const tokenOutputs = tx.body.outputs.filter((output) => output.assets.multiAsset !== undefined)
       expect(tokenOutputs.length).toBe(4) // Exact: 4 token bundle outputs
     })
 
@@ -349,7 +342,7 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
           ada: {
             subdivideThreshold: 100_000_000n
           }
-        },
+        }
       })
 
       const tx = await signBuilder.toTransaction()
@@ -360,9 +353,7 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
       expect(tx.body.fee).toBe(213_769n) // Exact deterministic fee (1327 bytes * 44 + 155_381, 12 outputs save 24 bytes)
 
       // NFTs from the same policy should be in the same output
-      const tokenOutputs = tx.body.outputs.filter(
-        (output) => output.assets.multiAsset !== undefined
-      )
+      const tokenOutputs = tx.body.outputs.filter((output) => output.assets.multiAsset !== undefined)
       expect(tokenOutputs.length).toBe(4) // Exact: 4 token bundle outputs
     })
 
@@ -393,7 +384,7 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
             subdivideThreshold: 100_000_000n,
             subdividePercentages: [40, 25, 15, 10, 10] // Flexible ADA distribution
           }
-        },
+        }
       })
 
       const tx = await signBuilder.toTransaction()
@@ -404,12 +395,8 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
       expect(tx.body.fee).toBe(208_049n) // Exact deterministic fee (1197 bytes * 44 + 155_381, 10 outputs save 20 bytes)
 
       // Count output types
-      const adaOnlyOutputs = tx.body.outputs.filter(
-        (output) => output.assets.multiAsset === undefined
-      )
-      const tokenOutputs = tx.body.outputs.filter(
-        (output) => output.assets.multiAsset !== undefined
-      )
+      const adaOnlyOutputs = tx.body.outputs.filter((output) => output.assets.multiAsset === undefined)
+      const tokenOutputs = tx.body.outputs.filter((output) => output.assets.multiAsset !== undefined)
 
       expect(adaOnlyOutputs.length).toBe(6) // Exact: 1 payment + 5 ADA subdivisions
       expect(tokenOutputs.length).toBe(4) // Exact: 4 token bundles
@@ -439,7 +426,7 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
         availableUtxos: utxos,
         drainTo: 0,
         // No unfrack options
-        protocolParameters: PROTOCOL_PARAMS,
+        protocolParameters: PROTOCOL_PARAMS
       })
 
       const tx = await signBuilder.toTransaction()
@@ -451,7 +438,7 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
 
       const totalInput = utxos.reduce((sum, utxo) => sum + utxo.assets.lovelace, 0n)
       const totalOutput = tx.body.outputs.reduce((sum, output) => sum + output.assets.lovelace, 0n)
-      
+
       // Verify balance: inputs = outputs + fee
       expect(totalInput).toBe(totalOutput + tx.body.fee)
 
@@ -486,7 +473,7 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
             subdivideThreshold: 100_000_000n,
             subdividePercentages: [60, 40]
           }
-        },
+        }
       })
 
       const tx = await signBuilder.toTransaction()
@@ -536,7 +523,7 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
           ada: {
             subdivideThreshold: 100_000_000n // 100 ADA (leftover is ~5 ADA)
           }
-        },
+        }
       })
 
       const tx = await signBuilder.toTransaction()
@@ -547,10 +534,7 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
       expect(tx.body.fee).toBe(169_725n) // Exact deterministic fee (326 bytes * 44 + 155_381, 2 outputs save 4 bytes)
 
       // Verify exact total output
-      const totalOutput = tx.body.outputs.reduce(
-        (sum, output) => sum + output.assets.lovelace,
-        0n
-      )
+      const totalOutput = tx.body.outputs.reduce((sum, output) => sum + output.assets.lovelace, 0n)
       expect(totalOutput).toBe(14_830_275n) // 15M - fee (15,000,000 - 169,725)
     })
 
@@ -582,7 +566,7 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
           ada: {
             subdivideThreshold: 100_000_000n
           }
-        },
+        }
       })
 
       const tx = await signBuilder.toTransaction()
@@ -593,10 +577,7 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
       expect(tx.body.fee).toBe(216_629n) // Exact deterministic fee (1392 bytes * 44 + 155_381, 13 outputs save 26 bytes)
 
       // Verify exact total output
-      const totalOutput = tx.body.outputs.reduce(
-        (sum, output) => sum + output.assets.lovelace,
-        0n
-      )
+      const totalOutput = tx.body.outputs.reduce((sum, output) => sum + output.assets.lovelace, 0n)
       expect(totalOutput).toBe(539_783_371n) // 540M - fee (540,000,000 - 216,629)
     })
 
@@ -632,7 +613,7 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
             subdivideThreshold: 500_000n, // 0.5 ADA (very low threshold)
             subdividePercentages: [25, 25, 25, 25]
           }
-        },
+        }
       })
 
       const tx = await signBuilder.toTransaction()
@@ -641,10 +622,10 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
       expect(tx.body.inputs.length).toBe(1)
       expect(tx.body.outputs.length).toBe(5) // Exact: 1 payment + 4 subdivided outputs
       expect(tx.body.fee).toBe(176_721n) // Exact deterministic fee (485 bytes * 44 + 155_381, 5 outputs save 10 bytes)
-      
+
       // Calculate actual minimum UTxO for ADA-only output
       const actualMinUtxo = 172_400n
-      
+
       // All outputs should meet minimum
       tx.body.outputs.forEach((output) => {
         expect(output.assets.lovelace).toBeGreaterThanOrEqual(actualMinUtxo)
@@ -685,7 +666,7 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
             subdivideThreshold: 50_000_000n, // 50 ADA threshold (lower for smaller wallets)
             subdividePercentages: [50, 25, 15, 10] // 4-way split
           }
-        },
+        }
       })
 
       const tx = await signBuilder.toTransaction()
@@ -697,9 +678,7 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
 
       // Verify we have a good mix of outputs
       const adaOnly = tx.body.outputs.filter((o) => o.assets.multiAsset === undefined)
-      const withTokens = tx.body.outputs.filter(
-        (o) => o.assets.multiAsset !== undefined
-      )
+      const withTokens = tx.body.outputs.filter((o) => o.assets.multiAsset !== undefined)
 
       expect(adaOnly.length).toBe(5) // Exact: 1 payment + 4 ADA subdivisions
       expect(withTokens.length).toBe(4) // Exact: 4 token bundles
@@ -732,22 +711,19 @@ describe("TxBuilder Unfrack + DrainTo Integration", () => {
             subdivideThreshold: 100_000_000n,
             subdividePercentages: [35, 25, 20, 10, 10] // 5-way split for flexibility
           }
-        },
+        }
       })
 
       const tx = await signBuilder.toTransaction()
 
       // Strict deterministic expectations - wallet migration with full optimization
       expect(tx.body.inputs.length).toBe(6) // All source UTxOs
-      expect(tx.body.outputs.length).toBe(10) // Exact: 1 payment + 9 change outputs  
+      expect(tx.body.outputs.length).toBe(10) // Exact: 1 payment + 9 change outputs
       expect(tx.body.fee).toBe(208_049n) // Exact deterministic fee (1197 bytes * 44 + 155_381, 10 outputs save 20 bytes)
 
-            // Verify balance: total input (540M ADA) = outputs + fee
-      const totalOutput = tx.body.outputs.reduce(
-        (sum, output) => sum + output.assets.lovelace,
-        0n
-      )
-      
+      // Verify balance: total input (540M ADA) = outputs + fee
+      const totalOutput = tx.body.outputs.reduce((sum, output) => sum + output.assets.lovelace, 0n)
+
       // Expected: 540M total input = total output + fee
       expect(totalOutput + tx.body.fee).toBe(540_000_000n) // Exact balance: inputs = outputs + fee
     })

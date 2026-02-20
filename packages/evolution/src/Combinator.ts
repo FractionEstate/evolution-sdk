@@ -1,6 +1,5 @@
 import { pipe, Schema } from "effect"
 
-
 /**
  * Regular expression that matches valid hexadecimal strings.
  * Validates that a string:

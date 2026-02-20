@@ -29,7 +29,9 @@ import type { AttachMetadataParams } from "./Operations.js"
  * @since 2.0.0
  * @category programs
  */
-export const createAttachMetadataProgram = (params: AttachMetadataParams): Effect.Effect<void, TransactionBuilderError, TxContext> =>
+export const createAttachMetadataProgram = (
+  params: AttachMetadataParams
+): Effect.Effect<void, TransactionBuilderError, TxContext> =>
   Effect.gen(function* () {
     const ctx = yield* TxContext
 
@@ -50,9 +52,7 @@ export const createAttachMetadataProgram = (params: AttachMetadataParams): Effec
     }
 
     // Create new metadata map with the new entry
-    const newMetadata: Map<bigint, TransactionMetadatum.TransactionMetadatum> = new Map(
-      existingMetadata
-    )
+    const newMetadata: Map<bigint, TransactionMetadatum.TransactionMetadatum> = new Map(existingMetadata)
     newMetadata.set(params.label, params.metadata)
 
     // Create or update ConwayAuxiliaryData, preserving existing scripts if from Conway era

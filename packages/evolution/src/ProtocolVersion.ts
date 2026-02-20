@@ -42,8 +42,8 @@ export class ProtocolVersion extends Schema.TaggedClass<ProtocolVersion>()("Prot
  * @since 2.0.0
  * @category testing
  */
-export const arbitrary = FastCheck.tuple(Numeric.Uint32Arbitrary, Numeric.Uint32Arbitrary).map(([major, minor]) =>
-  new ProtocolVersion({ major, minor })
+export const arbitrary = FastCheck.tuple(Numeric.Uint32Arbitrary, Numeric.Uint32Arbitrary).map(
+  ([major, minor]) => new ProtocolVersion({ major, minor })
 )
 
 export const CDDLSchema = Schema.Tuple(
@@ -132,8 +132,7 @@ export const fromCBORHex: {
   (hex: string, options?: CBOR.CodecOptions): ProtocolVersion
 } = Function.dual(
   (args) => args.length >= 1 && typeof args[0] === "string",
-  (hex: string, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
-    Schema.decodeSync(FromCBORHex(options))(hex)
+  (hex: string, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) => Schema.decodeSync(FromCBORHex(options))(hex)
 )
 
 /**

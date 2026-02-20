@@ -19,10 +19,10 @@ export type { SlotConfig } from "./SlotConfig.js"
 export type { UnixTime } from "./UnixTime.js"
 
 // Re-export slot config
-export { getSlotConfig,SLOT_CONFIG_NETWORK } from "./SlotConfig.js"
+export { getSlotConfig, SLOT_CONFIG_NETWORK } from "./SlotConfig.js"
 
 // Re-export UnixTime utilities
-export { fromDate, fromSeconds,now, toDate, toSeconds } from "./UnixTime.js"
+export { fromDate, fromSeconds, now, toDate, toSeconds } from "./UnixTime.js"
 
 /**
  * Convert a slot number to Unix time (in milliseconds).

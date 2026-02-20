@@ -42,9 +42,7 @@ export class Constitution extends Schema.TaggedClass<Constitution>()("Constituti
   [Hash.symbol](): number {
     return Hash.cached(
       this,
-      Hash.combine(Hash.hash("Constitution"))(
-        Hash.combine(Hash.hash(this.anchor))(Hash.hash(this.scriptHash))
-      )
+      Hash.combine(Hash.hash("Constitution"))(Hash.combine(Hash.hash(this.anchor))(Hash.hash(this.scriptHash)))
     )
   }
 }

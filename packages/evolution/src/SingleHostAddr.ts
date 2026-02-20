@@ -207,12 +207,13 @@ export const arbitrary = FastCheck.record({
   port: FastCheck.option(Port.arbitrary),
   ipv4: FastCheck.option(IPv4.arbitrary),
   ipv6: FastCheck.option(IPv6.arbitrary)
-}).map(({ ipv4, ipv6, port }) =>
-  new SingleHostAddr({
-    port: port === null ? undefined : port,
-    ipv4: ipv4 === null ? undefined : ipv4,
-    ipv6: ipv6 === null ? undefined : ipv6
-  })
+}).map(
+  ({ ipv4, ipv6, port }) =>
+    new SingleHostAddr({
+      port: port === null ? undefined : port,
+      ipv4: ipv4 === null ? undefined : ipv4,
+      ipv6: ipv6 === null ? undefined : ipv6
+    })
 )
 
 /**

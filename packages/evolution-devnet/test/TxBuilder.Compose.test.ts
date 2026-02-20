@@ -122,7 +122,7 @@ describe("TxBuilder compose (Devnet Submit)", () => {
   it("should compose multiple payment builders to different addresses", { timeout: 60_000 }, async () => {
     const client1 = createTestClient(0)
     const client2 = createTestClient(1)
-    
+
     const address1 = await client1.address()
     const address2 = await client2.address()
 
@@ -143,12 +143,7 @@ describe("TxBuilder compose (Devnet Submit)", () => {
     })
 
     // Compose all payments into single transaction
-    const signBuilder = await client1
-      .newTx()
-      .compose(payment1)
-      .compose(payment2)
-      .compose(payment3)
-      .build()
+    const signBuilder = await client1.newTx().compose(payment1).compose(payment2).compose(payment3).build()
 
     const tx = await signBuilder.toTransaction()
 
@@ -176,12 +171,12 @@ describe("TxBuilder compose (Devnet Submit)", () => {
 
     // Create modular builders
     const signerBuilder = client.newTx().addSigner({ keyHash: paymentCredential })
-    
+
     const metadataBuilder = client.newTx().attachMetadata({
       label: 674n,
       metadata: "Multi-sig transaction"
     })
-    
+
     const paymentBuilder = client.newTx().payToAddress({
       address: myAddress,
       assets: Cardano.Assets.fromLovelace(6_000_000n)
@@ -224,12 +219,12 @@ describe("TxBuilder compose (Devnet Submit)", () => {
 
     // Create separate builders for each operation
     const stakeBuilder = client.newTx().registerStake({ stakeCredential })
-    
+
     const paymentBuilder = client.newTx().payToAddress({
       address: myAddress,
       assets: Cardano.Assets.fromLovelace(10_000_000n)
     })
-    
+
     const metadataBuilder = client.newTx().attachMetadata({
       label: 674n,
       metadata: "Stake registration transaction"
@@ -300,7 +295,7 @@ describe("TxBuilder compose (Devnet Submit)", () => {
   it("should compose builders created from different clients", { timeout: 60_000 }, async () => {
     const client1 = createTestClient(0)
     const client2 = createTestClient(1)
-    
+
     const address1 = await client1.address()
     const address2 = await client2.address()
 

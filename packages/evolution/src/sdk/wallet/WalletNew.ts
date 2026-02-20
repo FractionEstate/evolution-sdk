@@ -146,7 +146,9 @@ export interface ApiWalletEffect extends ReadOnlyWalletEffect {
    * Submit transaction directly through the wallet API.
    * API wallets can submit without requiring a separate provider.
    */
-  readonly submitTx: (tx: Transaction.Transaction | string) => Effect.Effect<TransactionHash.TransactionHash, WalletError>
+  readonly submitTx: (
+    tx: Transaction.Transaction | string
+  ) => Effect.Effect<TransactionHash.TransactionHash, WalletError>
 }
 
 /**
@@ -186,10 +188,7 @@ export declare function makeWalletFromSeed(
  * @since 2.0.0
  * @category constructors
  */
-export declare function makeWalletFromPrivateKey(
-  network: Network,
-  privateKeyBech32: string
-): SigningWallet
+export declare function makeWalletFromPrivateKey(network: Network, privateKeyBech32: string): SigningWallet
 
 /**
  * Create an API wallet from a CIP-30 wallet extension.
@@ -207,7 +206,4 @@ export declare function makeWalletFromAPI(api: WalletApi): ApiWallet
  * @since 2.0.0
  * @category constructors
  */
-export declare function makeWalletFromAddress(
-  network: Network,
-  address: CoreAddress.Address
-): ReadOnlyWallet
+export declare function makeWalletFromAddress(network: Network, address: CoreAddress.Address): ReadOnlyWallet

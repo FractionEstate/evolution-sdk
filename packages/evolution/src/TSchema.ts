@@ -19,11 +19,12 @@ const getLiteralFieldValue = (schema: Schema.Schema.Any, fieldName: string): any
   const ast = schema.ast
 
   // Extract TypeLiteral from either direct TypeLiteral or Transformation to TypeLiteral
-  const typeLiteral = ast._tag === "TypeLiteral" 
-    ? ast 
-    : ast._tag === "Transformation" && (ast as any).to._tag === "TypeLiteral"
-      ? (ast as any).to
-      : undefined
+  const typeLiteral =
+    ast._tag === "TypeLiteral"
+      ? ast
+      : ast._tag === "Transformation" && (ast as any).to._tag === "TypeLiteral"
+        ? (ast as any).to
+        : undefined
 
   if (!typeLiteral) return undefined
 
@@ -76,6 +77,19 @@ export interface Integer extends Schema.SchemaClass<bigint, bigint, never> {}
  */
 export const Integer: Integer = Schema.typeSchema(Data.IntSchema)
 
+export interface PlutusData extends Schema.Schema<Data.Data, Data.Data, never> {}
+
+/**
+ * Opaque PlutusData schema for use inside TSchema combinators.
+ * Represents an arbitrary PlutusData value that passes through encoding unchanged.
+ *
+ * Use this when a field can hold any PlutusData without a specific schema.
+ *
+ * @since 2.0.0
+ * @category schemas
+ */
+export const PlutusData: PlutusData = Schema.typeSchema(Data.DataSchema)
+
 export interface Literal<Literals extends NonEmptyReadonlyArray<SchemaAST.LiteralValue>>
   extends Schema.transform<Schema.SchemaClass<Data.Constr, Data.Constr, never>, Schema.Literal<[...Literals]>> {}
 
@@ -115,14 +129,11 @@ export const Literal: {
 ): Literal<Literals> => {
   // Check if last argument is options object
   const lastArg = args[args.length - 1]
-  const hasOptions = 
-    lastArg !== null &&
-    typeof lastArg === "object" &&
-    ("index" in lastArg || "flatInUnion" in lastArg)
-  
+  const hasOptions = lastArg !== null && typeof lastArg === "object" && ("index" in lastArg || "flatInUnion" in lastArg)
+
   const self = (hasOptions ? args.slice(0, -1) : args) as unknown as Literals
   const options: LiteralOptions = hasOptions ? (lastArg as LiteralOptions) : {}
-  
+
   return Schema.transform(Schema.typeSchema(Data.Constr), Schema.Literal(...self), {
     strict: true,
     encode: (value) => {
@@ -140,7 +151,7 @@ export const Literal: {
     }
   }).annotations({
     "TSchema.customIndex": options.index,
-    "TSchema.flatInUnion": options.flatInUnion ?? (options.index !== undefined)
+    "TSchema.flatInUnion": options.flatInUnion ?? options.index !== undefined
   }) as Literal<Literals>
 }
 
@@ -242,7 +253,9 @@ export const Boolean: Boolean = Schema.transform(
       boolean ? new Data.Constr({ index: 1n, fields: [] }) : new Data.Constr({ index: 0n, fields: [] }),
     decode: ({ fields, index }) => {
       if ((index !== 0n && index !== 1n) || fields.length !== 0) {
-        throw new Error(`Expected constructor with index 0 or 1 and no fields, got index ${index} with ${fields.length} fields`)
+        throw new Error(
+          `Expected constructor with index 0 or 1 and no fields, got index ${index} with ${fields.length} fields`
+        )
       }
       return index === 1n
     }
@@ -324,11 +337,11 @@ export const Struct = <Fields extends Schema.Struct.Fields>(
       for (const knownTag of KNOWN_TAG_FIELDS) {
         const fieldSchema = (fields as any)[knownTag]
         if (!fieldSchema) continue
-        
+
         const ast = fieldSchema.ast
-        const isLiteral = ast._tag === "Literal" || 
-          (ast._tag === "Transformation" && (ast as any).to._tag === "Literal")
-        
+        const isLiteral =
+          ast._tag === "Literal" || (ast._tag === "Transformation" && (ast as any).to._tag === "Literal")
+
         if (isLiteral) {
           detectedTagField = knownTag
           break
@@ -345,7 +358,9 @@ export const Struct = <Fields extends Schema.Struct.Fields>(
       // Use Object.keys(fields) to preserve schema definition order
       // rather than Object.entries(encodedStruct) which would use runtime object order
       const orderedKeys = Object.keys(fields).filter((key) => key !== detectedTagField)
-      const fieldValues = orderedKeys.map((key) => encodedStruct[key as keyof typeof encodedStruct]) as ReadonlyArray<Data.Data>
+      const fieldValues = orderedKeys.map(
+        (key) => encodedStruct[key as keyof typeof encodedStruct]
+      ) as ReadonlyArray<Data.Data>
 
       // Check if any field values are Constrs with flatFields:true in their schema annotations
       // If so, spread their fields into this Struct's field array
@@ -355,10 +370,10 @@ export const Struct = <Fields extends Schema.Struct.Fields>(
         const key = orderedKeys[i]
         const fieldValue = fieldValues[i]
         const fieldSchema = (fields as any)[key]
-        
+
         // Check if this field schema has flatFields annotation
         const hasFlatFields = fieldSchema?.ast?.annotations?.["TSchema.flatFields"] === true
-        
+
         if (fieldValue instanceof Data.Constr && hasFlatFields) {
           // Spread its fields into the parent
           finalFields.push(...fieldValue.fields)
@@ -552,11 +567,11 @@ export const Union = <Members extends ReadonlyArray<Schema.Schema.Any>>(...membe
 
   // Build index usage map for efficient collision detection
   const indexUsage = new globalThis.Map<number, { position: number; isFlat: boolean }>()
-  
+
   memberInfos.forEach((member, position) => {
     const memberIndex = member.isFlat ? (member.customIndex ?? member.position) : member.position
     const existing = indexUsage.get(memberIndex)
-    
+
     if (existing) {
       // Collision detected
       const type = existing.isFlat && member.isFlat ? "flat-to-flat" : "flat-to-nested"
@@ -569,7 +584,7 @@ export const Union = <Members extends ReadonlyArray<Schema.Schema.Any>>(...membe
     } else if (member.isFlat) {
       // Only track flat members and their indices for collision detection
       indexUsage.set(memberIndex, { position, isFlat: member.isFlat })
-      
+
       // Also check if this flat member's index collides with any nested member's position
       if (memberIndex < memberInfos.length && !memberInfos[memberIndex].isFlat) {
         collisions.push({

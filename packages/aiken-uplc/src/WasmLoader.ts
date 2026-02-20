@@ -1,6 +1,6 @@
 /**
  * Type definitions for WASM module interface
- * 
+ *
  * @packageDocumentation
  */
 

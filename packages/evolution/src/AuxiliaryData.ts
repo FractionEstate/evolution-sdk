@@ -137,11 +137,13 @@ export class ConwayAuxiliaryData extends Schema.TaggedClass<ConwayAuxiliaryData>
    */
   [Equal.symbol](that: unknown): boolean {
     if (!(that instanceof ConwayAuxiliaryData)) return false
-    return metadataMapEquals(this.metadata, that.metadata) &&
-           arrayEquals(this.nativeScripts, that.nativeScripts) &&
-           arrayEquals(this.plutusV1Scripts, that.plutusV1Scripts) &&
-           arrayEquals(this.plutusV2Scripts, that.plutusV2Scripts) &&
-           arrayEquals(this.plutusV3Scripts, that.plutusV3Scripts)
+    return (
+      metadataMapEquals(this.metadata, that.metadata) &&
+      arrayEquals(this.nativeScripts, that.nativeScripts) &&
+      arrayEquals(this.plutusV1Scripts, that.plutusV1Scripts) &&
+      arrayEquals(this.plutusV2Scripts, that.plutusV2Scripts) &&
+      arrayEquals(this.plutusV3Scripts, that.plutusV3Scripts)
+    )
   }
 
   /**
@@ -153,9 +155,9 @@ export class ConwayAuxiliaryData extends Schema.TaggedClass<ConwayAuxiliaryData>
       this,
       Hash.combine(
         Hash.combine(
-          Hash.combine(
-            Hash.combine(hashMetadataMap(this.metadata))(hashArray(this.nativeScripts))
-          )(hashArray(this.plutusV1Scripts))
+          Hash.combine(Hash.combine(hashMetadataMap(this.metadata))(hashArray(this.nativeScripts)))(
+            hashArray(this.plutusV1Scripts)
+          )
         )(hashArray(this.plutusV2Scripts))
       )(hashArray(this.plutusV3Scripts))
     )
@@ -210,8 +212,7 @@ export class ShelleyMAAuxiliaryData extends Schema.TaggedClass<ShelleyMAAuxiliar
    */
   [Equal.symbol](that: unknown): boolean {
     if (!(that instanceof ShelleyMAAuxiliaryData)) return false
-    return metadataMapEquals(this.metadata, that.metadata) &&
-           arrayEquals(this.nativeScripts, that.nativeScripts)
+    return metadataMapEquals(this.metadata, that.metadata) && arrayEquals(this.nativeScripts, that.nativeScripts)
   }
 
   /**
@@ -637,4 +638,3 @@ export const toCBORBytes = (data: AuxiliaryData, options: CBOR.CodecOptions = CB
  */
 export const toCBORHex = (data: AuxiliaryData, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.encodeSync(FromCBORHex(options))(data)
-

@@ -43,15 +43,15 @@ describe("TxBuilder Governance Operations", () => {
 
   beforeAll(async () => {
     // Create clients for governance tests
-    const accounts = [0, 1, 2, 3, 4].map(accountIndex =>
+    const accounts = [0, 1, 2, 3, 4].map((accountIndex) =>
       createClient({
         network: 0,
         wallet: { type: "seed", mnemonic: TEST_MNEMONIC, accountIndex, addressType: "Base" }
       })
     )
 
-    const addresses = await Promise.all(accounts.map(client => client.address()))
-    const addressHexes = addresses.map(addr => Address.toHex(addr))
+    const addresses = await Promise.all(accounts.map((client) => client.address()))
+    const addressHexes = addresses.map((addr) => Address.toHex(addr))
 
     // Extract committee member key hashes from payment credentials
     const committeeKeyHash3 = Bytes.toHex(addresses[3].paymentCredential.hash)
@@ -70,7 +70,7 @@ describe("TxBuilder Governance Operations", () => {
         [addressHexes[4]]: 300_000_000_000
       }
     }
-    
+
     conwayGenesis = {
       ...Config.DEFAULT_CONWAY_GENESIS,
       committee: {
@@ -83,7 +83,7 @@ describe("TxBuilder Governance Operations", () => {
     }
 
     const genesisUtxos = await Genesis.calculateUtxosFromConfig(genesisConfig)
-    
+
     for (let i = 0; i < addresses.length; i++) {
       const utxo = genesisUtxos.find((u) => Address.toBech32(u.address) === Address.toBech32(addresses[i]))
       if (utxo) genesisUtxosByAccount.set(i, utxo)
@@ -130,7 +130,7 @@ describe("TxBuilder Governance Operations", () => {
       .build({ availableUtxos: [genesisUtxo] })
       .then((b) => b.sign())
       .then((b) => b.submit())
-    
+
     expect(await client.awaitTx(registerTxHash, 1000)).toBe(true)
   })
 
@@ -157,7 +157,7 @@ describe("TxBuilder Governance Operations", () => {
       .build({ availableUtxos: [genesisUtxo] })
       .then((b) => b.sign())
       .then((b) => b.submit())
-    
+
     expect(await client.awaitTx(registerTxHash, 1000)).toBe(true)
 
     // Update DRep anchor
@@ -172,7 +172,7 @@ describe("TxBuilder Governance Operations", () => {
       .build()
       .then((b) => b.sign())
       .then((b) => b.submit())
-    
+
     expect(await client.awaitTx(updateTxHash, 1000)).toBe(true)
   })
 
@@ -194,7 +194,7 @@ describe("TxBuilder Governance Operations", () => {
       .build({ availableUtxos: [genesisUtxo] })
       .then((b) => b.sign())
       .then((b) => b.submit())
-    
+
     expect(await client.awaitTx(registerTxHash, 1000)).toBe(true)
 
     // Deregister DRep
@@ -204,7 +204,7 @@ describe("TxBuilder Governance Operations", () => {
       .build()
       .then((b) => b.sign())
       .then((b) => b.submit())
-    
+
     expect(await client.awaitTx(deregisterTxHash, 1000)).toBe(true)
   })
 
@@ -218,7 +218,7 @@ describe("TxBuilder Governance Operations", () => {
     const client = createTestClient(ACCOUNT_INDEX)
     const walletAddress = await client.address()
     const coldCredential = walletAddress.paymentCredential
-    
+
     const hotKeyHashBytes = KeyHash.fromHex("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa")
     const hotCredential = Credential.makeKeyHash(hotKeyHashBytes.hash)
     const authTxHash = await client
@@ -227,7 +227,7 @@ describe("TxBuilder Governance Operations", () => {
       .build({ availableUtxos: [genesisUtxo] })
       .then((b) => b.sign())
       .then((b) => b.submit())
-    
+
     expect(await client.awaitTx(authTxHash, 1000)).toBe(true)
   })
 
@@ -252,7 +252,7 @@ describe("TxBuilder Governance Operations", () => {
       .build({ availableUtxos: [genesisUtxo] })
       .then((b) => b.sign())
       .then((b) => b.submit())
-    
+
     expect(await client.awaitTx(resignTxHash, 1000)).toBe(true)
   })
 })

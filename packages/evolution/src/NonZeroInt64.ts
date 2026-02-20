@@ -62,7 +62,6 @@ export const NonZeroInt64 = Schema.Union(NegInt64Schema, PosInt64Schema).annotat
  */
 export type NonZeroInt64 = typeof NonZeroInt64.Type
 
-
 /**
  * Check if a value is a valid NonZeroInt64.
  *

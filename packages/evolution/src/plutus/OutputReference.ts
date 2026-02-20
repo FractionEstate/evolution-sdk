@@ -11,7 +11,7 @@ export const TransactionId = TSchema.ByteArray
  */
 export const OutputReference = TSchema.Struct({
   transaction_id: TransactionId,
-  output_index: TSchema.Integer,
+  output_index: TSchema.Integer
 })
 
 // Export codec objects with all conversion functions

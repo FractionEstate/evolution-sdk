@@ -1,9 +1,9 @@
 import { TransactionDecoder } from "./transaction-decoder"
-import type { Metadata } from 'next'
+import type { Metadata } from "next"
 
 export const metadata: Metadata = {
-  title: 'Transaction Decoder | Evolution SDK',
-  description: 'Decode Cardano transactions from CBOR hex format',
+  title: "Transaction Decoder | Evolution SDK",
+  description: "Decode Cardano transactions from CBOR hex format"
 }
 
 export default function TransactionDecoderPage() {

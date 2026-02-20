@@ -103,7 +103,6 @@ export const toBytes = Schema.encodeSync(FromBytes)
  */
 export const toHex = Schema.encodeSync(FromHex)
 
-
 /**
  * FastCheck arbitrary for generating random ScriptHash instances.
  * Used for property-based testing to generate valid test data.
@@ -114,7 +113,6 @@ export const toHex = Schema.encodeSync(FromHex)
 export const arbitrary: FastCheck.Arbitrary<ScriptHash> = FastCheck.uint8Array({ minLength: 28, maxLength: 28 }).map(
   (bytes) => new ScriptHash({ hash: bytes }, { disableValidation: true })
 )
-
 
 /**
  * Compute a script hash (policy id) from any Script variant.

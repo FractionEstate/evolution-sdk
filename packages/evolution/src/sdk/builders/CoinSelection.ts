@@ -31,7 +31,7 @@ export type CoinSelectionFunction = (
 export type CoinSelectionAlgorithm = "largest-first" | "random-improve" | "optimal"
 
 // Factory functions for built-in algorithms
-export declare const randomImproveSelection: CoinSelectionFunction  
+export declare const randomImproveSelection: CoinSelectionFunction
 export declare const optimalSelection: CoinSelectionFunction
 
 // ============================================================================
@@ -40,27 +40,27 @@ export declare const optimalSelection: CoinSelectionFunction
 
 /**
  * Largest-first coin selection algorithm.
- * 
+ *
  * Strategy:
  * 1. Sort UTxOs by total lovelace value (descending)
  * 2. Select UTxOs one by one until all required assets are covered
  * 3. Return selected UTxOs
- * 
+ *
  * Advantages:
  * - Simple and predictable
  * - Minimizes number of inputs (uses largest UTxOs first)
  * - Fast execution
- * 
+ *
  * Disadvantages:
  * - May select more value than needed (more change)
  * - Doesn't optimize for minimum fee
  * - Doesn't consider UTxO fragmentation
- * 
+ *
  * Use cases:
  * - Default algorithm for simple transactions
  * - When minimizing input count is priority
  * - When speed is more important than optimization
- * 
+ *
  * @since 2.0.0
  * @category coin-selection
  */
@@ -74,24 +74,24 @@ export const largestFirstSelection: CoinSelectionFunction = (
     const bValue = CoreAssets.lovelaceOf(b.assets)
     return bValue > aValue ? 1 : bValue < aValue ? -1 : 0
   })
-  
+
   const selected: Array<UTxO.UTxO> = []
   let accumulated = CoreAssets.zero
-  
+
   // Select UTxOs until all requirements met
   for (const utxo of sortedUtxos) {
     // Check if we've met all requirements
     if (CoreAssets.covers(accumulated, requiredAssets)) {
       break
     }
-    
+
     // Add this UTxO to selection
     selected.push(utxo)
-    
+
     // Update accumulated assets using merge
     accumulated = CoreAssets.merge(accumulated, utxo.assets)
   }
-  
+
   // Verify we met all requirements
   for (const unit of CoreAssets.getUnits(requiredAssets)) {
     const have = CoreAssets.getByUnit(accumulated, unit)
@@ -108,6 +108,6 @@ export const largestFirstSelection: CoinSelectionFunction = (
       })
     }
   }
-  
+
   return { selectedUtxos: selected }
 }

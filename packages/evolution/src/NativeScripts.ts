@@ -645,7 +645,7 @@ export const countRequiredSigners = (script: NativeScriptVariants): number => {
  */
 export const extractKeyHashes = (script: NativeScriptVariants): ReadonlyArray<Uint8Array> => {
   const keyHashes: Array<Uint8Array> = []
-  
+
   const traverse = (s: NativeScriptVariants): void => {
     switch (s._tag) {
       case "ScriptPubKey":
@@ -664,7 +664,7 @@ export const extractKeyHashes = (script: NativeScriptVariants): ReadonlyArray<Ui
         break
     }
   }
-  
+
   traverse(script)
   return keyHashes
 }

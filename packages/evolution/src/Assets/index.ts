@@ -7,7 +7,6 @@ import * as Coin from "../Coin.js"
 import * as MultiAsset from "../MultiAsset.js"
 import * as PolicyId from "../PolicyId.js"
 
-
 /**
  * Assets representing both ADA and native tokens.
  *
@@ -96,27 +95,21 @@ export const fromAsset = (
  * @since 2.0.0
  * @category constructors
  */
-export const fromUnit = (
-  unit: string,
-  quantity: bigint,
-  lovelace: bigint = 0n
-): Eff.Effect<Assets, Error> =>
+export const fromUnit = (unit: string, quantity: bigint, lovelace: bigint = 0n): Eff.Effect<Assets, Error> =>
   Eff.gen(function* () {
     // Parse "policyId.assetName" or "policyId" (empty asset name)
     const dotIndex = unit.indexOf(".")
     const policyIdHex = dotIndex === -1 ? unit : unit.slice(0, dotIndex)
     const assetNameHex = dotIndex === -1 ? "" : unit.slice(dotIndex + 1)
-    
+
     // Decode policy ID from hex (28 bytes = 56 hex chars)
     const policyIdBytes = Bytes.fromHex(policyIdHex)
     const policyId = new PolicyId.PolicyId({ hash: policyIdBytes })
-    
+
     // Decode asset name from hex (empty string yields empty bytes)
-    const assetNameBytes = assetNameHex 
-      ? Bytes.fromHex(assetNameHex)
-      : new Uint8Array(0)
+    const assetNameBytes = assetNameHex ? Bytes.fromHex(assetNameHex) : new Uint8Array(0)
     const assetName = new AssetName.AssetName({ bytes: assetNameBytes })
-    
+
     return fromAsset(policyId, assetName, quantity, lovelace)
   })
 
@@ -136,18 +129,18 @@ export const fromHexStrings = (
   // Use schema-validated parsers (will throw on invalid hex/length)
   const policyId = PolicyId.fromHex(policyIdHex)
   const assetName = AssetName.fromHex(assetNameHex)
-  
+
   return fromAsset(policyId, assetName, quantity, lovelace)
 }
 
 /**
  * Create Assets from a record format (for convenience/testing).
- * 
+ *
  * Record format:
  * - `lovelace`: bigint for ADA amount
  * - `"<policyIdHex><assetNameHex>"`: bigint for native asset quantity
  *   where policyId is exactly 56 hex chars and assetName is remaining hex chars
- * 
+ *
  * @example
  * ```ts
  * const assets = fromRecord({
@@ -161,17 +154,17 @@ export const fromHexStrings = (
  */
 export const fromRecord = (record: Record<string, bigint>): Assets => {
   let result = fromLovelace(record.lovelace ?? 0n)
-  
+
   for (const [key, value] of Object.entries(record)) {
     if (key === "lovelace") continue
-    
+
     // First 56 chars are policyId, rest is assetName
     // Schema validation in addByHex will handle invalid inputs
     const policyIdHex = key.slice(0, 56)
     const assetNameHex = key.slice(56)
     result = addByHex(result, policyIdHex, assetNameHex, value)
   }
-  
+
   return result
 }
 
@@ -230,7 +223,7 @@ export const isZero = (assets: Assets): boolean => assets.lovelace === 0n && !ha
 export const allPositive = (assets: Assets): boolean => {
   // Lovelace must be non-negative
   if (assets.lovelace < 0n) return false
-  
+
   // All token quantities must be positive
   if (assets.multiAsset) {
     for (const [, assetMap] of assets.multiAsset.map.entries()) {
@@ -239,7 +232,7 @@ export const allPositive = (assets: Assets): boolean => {
       }
     }
   }
-  
+
   return true
 }
 
@@ -347,12 +340,7 @@ export const add = (
  * @since 2.0.0
  * @category combining
  */
-export const addByHex = (
-  assets: Assets,
-  policyIdHex: string,
-  assetNameHex: string,
-  quantity: bigint
-): Assets => {
+export const addByHex = (assets: Assets, policyIdHex: string, assetNameHex: string, quantity: bigint): Assets => {
   const toAdd = fromHexStrings(policyIdHex, assetNameHex, quantity, 0n)
   return merge(assets, toAdd)
 }
@@ -448,11 +436,11 @@ export const filter = (assets: Assets, predicate: (unit: string, amount: bigint)
   // Check if lovelace passes the filter
   const keepLovelace = predicate("lovelace", assets.lovelace)
   const newLovelace = keepLovelace ? assets.lovelace : 0n
-  
+
   if (!assets.multiAsset) {
     return new Assets({ lovelace: newLovelace })
   }
-  
+
   // Filter multiAsset
   const filteredMap = new Map<PolicyId.PolicyId, MultiAsset.AssetMap>()
   for (const [policyId, assetMap] of assets.multiAsset.map.entries()) {
@@ -469,11 +457,11 @@ export const filter = (assets: Assets, predicate: (unit: string, amount: bigint)
       filteredMap.set(policyId, filteredAssets)
     }
   }
-  
+
   if (filteredMap.size === 0) {
     return new Assets({ lovelace: newLovelace })
   }
-  
+
   return new Assets({
     lovelace: newLovelace,
     multiAsset: new MultiAsset.MultiAsset({ map: filteredMap })
@@ -489,7 +477,7 @@ export const filter = (assets: Assets, predicate: (unit: string, amount: bigint)
 export const isEmpty = (assets: Assets): boolean => {
   if (assets.lovelace !== 0n) return false
   if (!assets.multiAsset) return true
-  
+
   // Check if all token quantities are zero
   for (const [_, assetMap] of assets.multiAsset.map.entries()) {
     for (const [_, quantity] of assetMap.entries()) {
@@ -507,7 +495,7 @@ export const isEmpty = (assets: Assets): boolean => {
  */
 export const hasOnlyLovelace = (assets: Assets): boolean => {
   if (!assets.multiAsset) return true
-  
+
   // Check if any non-zero token quantities exist
   for (const [_, assetMap] of assets.multiAsset.map.entries()) {
     for (const [_, quantity] of assetMap.entries()) {
@@ -529,13 +517,13 @@ export const hasOnlyLovelace = (assets: Assets): boolean => {
  */
 export const getByUnit = (assets: Assets, unit: string): bigint => {
   if (unit === "lovelace") return assets.lovelace
-  
+
   // Parse unit: first 56 chars are policy ID, rest is asset name
   const policyIdHex = unit.slice(0, 56)
   const assetNameHex = unit.slice(56)
-  
+
   if (!assets.multiAsset) return 0n
-  
+
   // Find policy by hex comparison
   for (const [policyId, assetMap] of assets.multiAsset.map.entries()) {
     if (PolicyId.toHex(policyId) === policyIdHex) {
@@ -558,7 +546,7 @@ export const getByUnit = (assets: Assets, unit: string): bigint => {
  */
 export const getUnits = (assets: Assets): Array<string> => {
   const units: Array<string> = ["lovelace"]
-  
+
   if (assets.multiAsset) {
     for (const [policyId, assetMap] of assets.multiAsset.map.entries()) {
       const policyIdHex = PolicyId.toHex(policyId)
@@ -571,7 +559,7 @@ export const getUnits = (assets: Assets): Array<string> => {
       }
     }
   }
-  
+
   return units
 }
 
@@ -587,7 +575,7 @@ export const covers = (accumulated: Assets, required: Assets): boolean => {
   if (accumulated.lovelace < required.lovelace) {
     return false
   }
-  
+
   // Check all required tokens
   if (required.multiAsset) {
     for (const [policyId, requiredAssetMap] of required.multiAsset.map.entries()) {
@@ -599,7 +587,7 @@ export const covers = (accumulated: Assets, required: Assets): boolean => {
       }
     }
   }
-  
+
   return true
 }
 

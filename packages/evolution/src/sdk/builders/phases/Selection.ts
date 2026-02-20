@@ -112,14 +112,14 @@ const addUtxosToState = (selectedUtxos: ReadonlyArray<CoreUTxO.UTxO>): Effect.Ef
     // Update state with new UTxOs and input assets
     const state = yield* Ref.get(ctx)
     const hasRedeemers = state.redeemers.size > 0
-    
+
     yield* Ref.update(ctx, (state) => {
       // Invalidate redeemer exUnits when inputs change (immutable operation)
       // This ensures re-evaluation happens with the new transaction structure
       const updatedRedeemers = hasRedeemers
         ? EvaluationStateManager.invalidateExUnits(state.redeemers)
         : state.redeemers
-      
+
       return {
         ...state,
         selectedUtxos: [...state.selectedUtxos, ...selectedUtxos],
@@ -127,11 +127,9 @@ const addUtxosToState = (selectedUtxos: ReadonlyArray<CoreUTxO.UTxO>): Effect.Ef
         redeemers: updatedRedeemers
       }
     })
-    
+
     if (hasRedeemers) {
-      yield* Effect.logDebug(
-        "[Selection] Invalidated redeemer exUnits - re-evaluation required after input change"
-      )
+      yield* Effect.logDebug("[Selection] Invalidated redeemer exUnits - re-evaluation required after input change")
     }
   })
 
@@ -203,7 +201,11 @@ const performCoinSelectionUpdateState = (assetShortfalls: CoreAssets.Assets) =>
  * - Attempt counter resets at phase start, incremented at phase end
  * - Selection is deterministic (same inputs = same selection)
  */
-export const executeSelection = (): Effect.Effect<PhaseResult, TransactionBuilderError, PhaseContextTag | TxContext | AvailableUtxosTag | BuildOptionsTag> =>
+export const executeSelection = (): Effect.Effect<
+  PhaseResult,
+  TransactionBuilderError,
+  PhaseContextTag | TxContext | AvailableUtxosTag | BuildOptionsTag
+> =>
   Effect.gen(function* () {
     const ctx = yield* TxContext
     const buildCtxRef = yield* PhaseContextTag
@@ -231,8 +233,7 @@ export const executeSelection = (): Effect.Effect<PhaseResult, TransactionBuilde
         return yield* Effect.fail(
           new TransactionBuilderError({
             message:
-              "sendAll() cannot be used with collectFrom(). " +
-              "sendAll automatically collects all wallet UTxOs."
+              "sendAll() cannot be used with collectFrom(). " + "sendAll automatically collects all wallet UTxOs."
           })
         )
       }
@@ -315,10 +316,7 @@ export const executeSelection = (): Effect.Effect<PhaseResult, TransactionBuilde
     // Shortfall contains fee + any missing lovelace for change outputs
     // Mint assets are negated: positive mints reduce requirements, negative burns increase them
     const negatedMint = negatedMintAssets(state.mint)
-    const totalNeeded = CoreAssets.merge(
-      CoreAssets.addLovelace(outputAssets, buildCtx.shortfall),
-      negatedMint
-    )
+    const totalNeeded = CoreAssets.merge(CoreAssets.addLovelace(outputAssets, buildCtx.shortfall), negatedMint)
 
     // Step 4: Calculate asset delta & extract shortfalls
     const assetDelta = CoreAssets.subtract(totalNeeded, inputAssets)
@@ -368,14 +366,14 @@ export const executeSelection = (): Effect.Effect<PhaseResult, TransactionBuilde
       //TODO: double check if this is a good approach, it seems that this condition is only needed when refunds/withdrawals cover all costs
       const allAvailableUtxos = yield* AvailableUtxosTag
       const state = yield* Ref.get(ctx)
-      
+
       // Filter out reference inputs - they can't be used as transaction inputs
       const selectableUtxos = getAvailableUtxos(allAvailableUtxos, state.selectedUtxos, state.referenceInputs)
-      
+
       if (selectableUtxos.length === 0) {
         return yield* Effect.fail(
           new TransactionBuilderError({
-            message: 
+            message:
               "Cannot build transaction: no UTxOs available and no explicit inputs provided. " +
               "Cardano protocol requires at least one input to prevent transaction replay."
           })
@@ -389,7 +387,7 @@ export const executeSelection = (): Effect.Effect<PhaseResult, TransactionBuilde
 
       yield* Effect.logDebug(
         `[Selection] Enforcing minimum 1 input: selected smallest UTxO with ${CoreAssets.lovelaceOf(smallestUtxo.assets)} lovelace ` +
-        `(Cardano protocol requirement for replay protection)`
+          `(Cardano protocol requirement for replay protection)`
       )
 
       yield* addUtxosToState([smallestUtxo])

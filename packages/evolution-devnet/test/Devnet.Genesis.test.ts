@@ -15,8 +15,9 @@ describe("Devnet.Genesis", () => {
   let genesisConfig: Config.ShelleyGenesis
 
   beforeAll(async () => {
-    const testAddressHex = "00813c32c92aad21770ff8001de0918f598df8c06775f77f8e8839d2a0074a515f7f32bf31a4f41c7417a8136e8152bfb42f06d71b389a6896"
-    
+    const testAddressHex =
+      "00813c32c92aad21770ff8001de0918f598df8c06775f77f8e8839d2a0074a515f7f32bf31a4f41c7417a8136e8152bfb42f06d71b389a6896"
+
     genesisConfig = {
       ...Config.DEFAULT_SHELLEY_GENESIS,
       initialFunds: { [testAddressHex]: 900_000_000_000 }
@@ -50,7 +51,7 @@ describe("Devnet.Genesis", () => {
 
     expect(utxos).toBeDefined()
     expect(utxos.length).toBe(1)
-    
+
     const utxo = utxos[0]
     expect(utxo.transactionId).toBeDefined()
     expect(Cardano.TransactionHash.toHex(utxo.transactionId).length).toBe(64)
@@ -66,7 +67,7 @@ describe("Devnet.Genesis", () => {
 
     expect(utxos).toBeDefined()
     expect(utxos.length).toBe(1)
-    
+
     const utxo = utxos[0]
     expect(utxo.transactionId).toBeDefined()
     expect(Cardano.TransactionHash.toHex(utxo.transactionId).length).toBe(64)
@@ -84,7 +85,9 @@ describe("Devnet.Genesis", () => {
     expect(calculated.length).toBe(queried.length)
 
     for (let i = 0; i < calculated.length; i++) {
-      expect(Cardano.TransactionHash.toHex(calculated[i].transactionId)).toBe(Cardano.TransactionHash.toHex(queried[i].transactionId))
+      expect(Cardano.TransactionHash.toHex(calculated[i].transactionId)).toBe(
+        Cardano.TransactionHash.toHex(queried[i].transactionId)
+      )
       expect(calculated[i].index).toBe(queried[i].index)
       expect(CoreAddress.toBech32(calculated[i].address)).toBe(CoreAddress.toBech32(queried[i].address))
       expect(calculated[i].assets.lovelace).toEqual(queried[i].assets.lovelace)
@@ -113,7 +116,7 @@ describe("Devnet.Genesis", () => {
     const utxos = await Genesis.calculateUtxosFromConfig(multiConfig)
 
     expect(utxos.length).toBe(3)
-    
+
     // Each genesis UTxO has index 0n
     expect(utxos[0].index).toBe(0n)
     expect(utxos[1].index).toBe(0n)

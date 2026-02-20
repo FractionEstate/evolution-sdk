@@ -124,7 +124,7 @@ export const CML_DATA_DEFAULT_OPTIONS: CodecOptions = {
 
 /**
  * Aiken-compatible CBOR encoding options
- * 
+ *
  * Matches the encoding used by Aiken's cbor.serialise():
  * - Indefinite-length arrays (9f...ff)
  * - Maps encoded as arrays of pairs (not CBOR maps)

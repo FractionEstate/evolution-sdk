@@ -120,13 +120,7 @@ export const LabelFromHex = Schema.transformOrFail(
     decode: (label, _, ast) => {
       const num = fromLabel(label)
       if (num === undefined) {
-        return ParseResult.fail(
-          new ParseResult.Type(
-            ast,
-            label,
-            "Invalid label: checksum mismatch"
-          )
-        )
+        return ParseResult.fail(new ParseResult.Type(ast, label, "Invalid label: checksum mismatch"))
       }
       return ParseResult.succeed(num)
     },

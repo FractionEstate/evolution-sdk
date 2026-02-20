@@ -85,11 +85,11 @@ export const arbitraryPayload: FastCheck.Arbitrary<Payload> = FastCheck.uint8Arr
 export function fnv32a(bytes: Uint8Array): number {
   const FNV_PRIME = 0x01000193
   let hash = 0x811c9dc5 // FNV offset basis
-  
+
   for (let i = 0; i < bytes.length; i++) {
     hash ^= bytes[i]
     hash = Math.imul(hash, FNV_PRIME)
   }
-  
+
   return hash >>> 0 // Convert to unsigned 32-bit
 }

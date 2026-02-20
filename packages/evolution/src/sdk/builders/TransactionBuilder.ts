@@ -2036,9 +2036,9 @@ export interface TransactionBuilderBase {
    *     votingProcedures: VotingProcedures.singleVote(
    *       new VotingProcedures.DRepVoter({ credential: myDRepCred }),
    *       govActionId,
-   *       new VotingProcedures.VotingProcedure({ 
-   *         vote: Vote.yes(), 
-   *         anchor: null 
+   *       new VotingProcedures.VotingProcedure({
+   *         vote: Vote.yes(),
+   *         anchor: null
    *       })
    *     ),
    *     redeemer: Data.to(new Constr(0, [])) // for script DRep

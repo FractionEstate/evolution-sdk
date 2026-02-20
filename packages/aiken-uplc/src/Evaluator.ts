@@ -22,34 +22,32 @@ import type * as WasmLoader from "./WasmLoader.js"
 
 /**
  * Parse Aiken UPLC error string into ScriptFailure array.
- * 
+ *
  * Aiken errors come as strings like:
- * - "Spend(0): validation failed: ..." 
- * - "Mint(1): ..." 
+ * - "Spend(0): validation failed: ..."
+ * - "Mint(1): ..."
  * - "Withdraw(0): ..."
  * - "Publish(0): ..."
  */
 function parseAikenError(error: unknown): Array<TransactionBuilder.ScriptFailure> {
   const failures: Array<TransactionBuilder.ScriptFailure> = []
-  
+
   const errorMessage = error instanceof Error ? error.message : String(error)
-  
+
   // Pattern: Purpose(index): error message
   // Examples: "Spend(0): validation failed", "Mint(1): budget exceeded"
-  const pattern = /\b(Spend|Mint|Withdraw|Publish|Reward|Cert)\s*\(\s*(\d+)\s*\)\s*:\s*(.+?)(?=\b(?:Spend|Mint|Withdraw|Publish|Reward|Cert)\s*\(|$)/gi
-  
+  const pattern =
+    /\b(Spend|Mint|Withdraw|Publish|Reward|Cert)\s*\(\s*(\d+)\s*\)\s*:\s*(.+?)(?=\b(?:Spend|Mint|Withdraw|Publish|Reward|Cert)\s*\(|$)/gi
+
   let match
   while ((match = pattern.exec(errorMessage)) !== null) {
     const [, purposeRaw, indexStr, validationError] = match
     const purpose = purposeRaw!.toLowerCase()
     const index = parseInt(indexStr!, 10)
-    
+
     // Normalize purpose names
-    const normalizedPurpose = 
-      purpose === "reward" ? "withdraw" :
-      purpose === "cert" ? "publish" :
-      purpose
-    
+    const normalizedPurpose = purpose === "reward" ? "withdraw" : purpose === "cert" ? "publish" : purpose
+
     failures.push({
       purpose: normalizedPurpose,
       index,
@@ -57,7 +55,7 @@ function parseAikenError(error: unknown): Array<TransactionBuilder.ScriptFailure
       traces: []
     })
   }
-  
+
   // If no structured errors found, create a generic one
   if (failures.length === 0 && errorMessage) {
     failures.push({
@@ -67,7 +65,7 @@ function parseAikenError(error: unknown): Array<TransactionBuilder.ScriptFailure
       traces: []
     })
   }
-  
+
   return failures
 }
 

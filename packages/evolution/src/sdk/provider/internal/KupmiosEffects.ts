@@ -77,7 +77,10 @@ const toAssets = (value: Kupo.UTxO["value"]): CoreAssets.Assets => {
 
 const retrieveDatumEffect =
   (kupoUrl: string, kupoHeader?: Record<string, string>) =>
-  (datum_type: Kupo.UTxO["datum_type"], datum_hash: Kupo.UTxO["datum_hash"]): Effect.Effect<DatumOption.DatumOption | undefined, Provider.ProviderError> =>
+  (
+    datum_type: Kupo.UTxO["datum_type"],
+    datum_hash: Kupo.UTxO["datum_hash"]
+  ): Effect.Effect<DatumOption.DatumOption | undefined, Provider.ProviderError> =>
     Effect.gen(function* () {
       if (datum_type === "inline" && datum_hash) {
         const pattern = `${kupoUrl}/datums/${datum_hash}`
@@ -85,13 +88,11 @@ const retrieveDatumEffect =
         return yield* pipe(
           HttpUtils.get(pattern, schema, kupoHeader),
           Effect.flatMap(Effect.fromNullable),
-          Effect.map(
-            (result) => {
-              // Parse the datum hex string to PlutusData
-              const data = PlutusData.fromCBORHex(result.datum)
-              return new InlineDatum.InlineDatum({ data })
-            }
-          ),
+          Effect.map((result) => {
+            // Parse the datum hex string to PlutusData
+            const data = PlutusData.fromCBORHex(result.datum)
+            return new InlineDatum.InlineDatum({ data })
+          }),
           Effect.retry(Schedule.compose(Schedule.exponential(50), Schedule.recurs(5))),
           Effect.timeout(5_000),
           Effect.catchAll((cause) => new Provider.ProviderError({ cause, message: "Failed to retrieve datum" }))
@@ -105,7 +106,8 @@ const retrieveDatumEffect =
     })
 
 const getScriptEffect =
-  (kupoUrl: string, kupoHeader?: Record<string, string>) => (script_hash: Kupo.UTxO["script_hash"]): Effect.Effect<CoreScript.Script | undefined, Provider.ProviderError> =>
+  (kupoUrl: string, kupoHeader?: Record<string, string>) =>
+  (script_hash: Kupo.UTxO["script_hash"]): Effect.Effect<CoreScript.Script | undefined, Provider.ProviderError> =>
     Effect.gen(function* () {
       if (script_hash) {
         const pattern = `${kupoUrl}/scripts/${script_hash}`
@@ -118,7 +120,7 @@ const getScriptEffect =
           Effect.map(({ language, script }): CoreScript.Script => {
             // Convert script hex to bytes - Kupo returns scripts already properly encoded
             const scriptBytes = Bytes.fromHex(script)
-            
+
             // Create the proper Script type based on language
             switch (language) {
               case "native": {
@@ -146,7 +148,8 @@ const getScriptEffect =
     })
 
 const kupmiosUtxosToUtxos =
-  (kupoURL: string, kupoHeader?: Record<string, string>) => (utxos: ReadonlyArray<Kupo.UTxO>): Effect.Effect<Array<CoreUTxO.UTxO>, Provider.ProviderError> => {
+  (kupoURL: string, kupoHeader?: Record<string, string>) =>
+  (utxos: ReadonlyArray<Kupo.UTxO>): Effect.Effect<Array<CoreUTxO.UTxO>, Provider.ProviderError> => {
     const getDatum = retrieveDatumEffect(kupoURL, kupoHeader)
     const getScript = getScriptEffect(kupoURL, kupoHeader)
     return Effect.forEach(
@@ -154,20 +157,18 @@ const kupmiosUtxosToUtxos =
       (utxo) => {
         return pipe(
           Effect.all([getDatum(utxo.datum_type, utxo.datum_hash), getScript(utxo.script_hash)]),
-          Effect.map(
-            ([datumOption, scriptRef]): CoreUTxO.UTxO => {
-              const transactionId = TransactionHash.fromHex(utxo.transaction_id)
-              const address = CoreAddress.fromBech32(utxo.address)
-              return new CoreUTxO.UTxO({
-                transactionId,
-                index: BigInt(utxo.output_index),
-                address,
-                assets: toAssets(utxo.value),
-                datumOption,
-                scriptRef
-              })
-            }
-          )
+          Effect.map(([datumOption, scriptRef]): CoreUTxO.UTxO => {
+            const transactionId = TransactionHash.fromHex(utxo.transaction_id)
+            const address = CoreAddress.fromBech32(utxo.address)
+            return new CoreUTxO.UTxO({
+              transactionId,
+              index: BigInt(utxo.output_index),
+              address,
+              assets: toAssets(utxo.value),
+              datumOption,
+              scriptRef
+            })
+          })
         )
       },
       { concurrency: 10 }
@@ -190,9 +191,7 @@ export const getProtocolParametersEffect = Effect.fn("getProtocolParameters")(fu
   const { result } = yield* pipe(
     HttpUtils.postJson(ogmiosUrl, data, schema, headers?.ogmiosHeader),
     Effect.timeout(TIMEOUT),
-    Effect.catchAll((cause) =>
-      new Provider.ProviderError({ cause, message: "Failed to get protocol parameters" })
-    ),
+    Effect.catchAll((cause) => new Provider.ProviderError({ cause, message: "Failed to get protocol parameters" })),
     Effect.provide(FetchHttpClient.layer)
   )
   return toProtocolParameters(result)
@@ -278,9 +277,10 @@ export const getUtxosByOutRefEffect = (kupoUrl: string, headers?: { kupoHeader?:
     return _Array
       .flatten(utxos)
       .filter((utxo) =>
-        inputs.some((input) => 
-          TransactionHash.toHex(utxo.transactionId) === TransactionHash.toHex(input.transactionId) && 
-          Number(utxo.index) === Number(input.index)
+        inputs.some(
+          (input) =>
+            TransactionHash.toHex(utxo.transactionId) === TransactionHash.toHex(input.transactionId) &&
+            Number(utxo.index) === Number(input.index)
         )
       )
   })
@@ -315,11 +315,12 @@ export const submitTxEffect = (ogmiosUrl: string, headers?: { ogmiosHeader?: Rec
         // 1. Define an OgmiosError schema that captures the actual error response shape
         // 2. Use schema-validated error decoding instead of runtime duck-typing
         // 3. Apply consistent error extraction across all provider methods
-        const errorMessage = cause instanceof Error 
-          ? cause.message 
-          : typeof cause === 'object' && cause !== null && 'description' in cause
-            ? String((cause as { description: unknown }).description)
-            : "Failed to submit transaction"
+        const errorMessage =
+          cause instanceof Error
+            ? cause.message
+            : typeof cause === "object" && cause !== null && "description" in cause
+              ? String((cause as { description: unknown }).description)
+              : "Failed to submit transaction"
         return Effect.fail(new Provider.ProviderError({ cause, message: errorMessage }))
       }),
       Effect.provide(FetchHttpClient.layer)
@@ -330,7 +331,10 @@ export const submitTxEffect = (ogmiosUrl: string, headers?: { ogmiosHeader?: Rec
   })
 
 export const getUtxosWithUnitEffect = (kupoUrl: string, headers?: { kupoHeader?: Record<string, string> }) =>
-  Effect.fn("getUtxosWithUnit")(function* (addressOrCredential: CoreAddress.Address | Credential.Credential, unit: string) {
+  Effect.fn("getUtxosWithUnit")(function* (
+    addressOrCredential: CoreAddress.Address | Credential.Credential,
+    unit: string
+  ) {
     const isAddress = addressOrCredential instanceof CoreAddress.Address
     const queryPredicate = isAddress ? CoreAddress.toBech32(addressOrCredential) : addressOrCredential.hash
     const { assetName, policyId } = AssetsUnit.fromUnit(unit)
@@ -382,7 +386,7 @@ export const evaluateTxEffect = (ogmiosUrl: string, headers?: { ogmiosHeader?: R
       if (purpose === "publish") tag = "cert"
       else if (purpose === "withdraw") tag = "reward"
       else tag = purpose as Redeemer.RedeemerTag
-      
+
       return {
         ex_units: new Redeemer.ExUnits({
           mem: BigInt(item.budget.memory),

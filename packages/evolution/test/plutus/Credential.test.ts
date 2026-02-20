@@ -99,8 +99,8 @@ describe("Plutus Credential", () => {
       const hash = Bytes.fromHex("abcdef1234567890abcdef1234567890abcdef1234567890abcdef12")
       const stakeCred = {
         Inline: {
-          credential: { VerificationKey: { hash } },
-        },
+          credential: { VerificationKey: { hash } }
+        }
       }
       const data = Credential.StakeCredentialCodec.toData(stakeCred)
       expect(data.index).toBe(0n)
@@ -112,8 +112,8 @@ describe("Plutus Credential", () => {
         Pointer: {
           slot_number: 12345n,
           transaction_index: 2n,
-          certificate_index: 0n,
-        },
+          certificate_index: 0n
+        }
       }
       const data = Credential.StakeCredentialCodec.toData(stakeCred)
       expect(data.index).toBe(1n)
@@ -124,8 +124,8 @@ describe("Plutus Credential", () => {
       const hash = Bytes.fromHex("fedcba0987654321fedcba0987654321fedcba0987654321fedcba09")
       const stakeCred = {
         Inline: {
-          credential: { Script: { hash } },
-        },
+          credential: { Script: { hash } }
+        }
       }
       const encoded = Credential.StakeCredentialCodec.toCBORHex(stakeCred)
       const decoded = Credential.StakeCredentialCodec.fromCBORHex(encoded)
@@ -137,8 +137,8 @@ describe("Plutus Credential", () => {
         Pointer: {
           slot_number: 999999n,
           transaction_index: 42n,
-          certificate_index: 3n,
-        },
+          certificate_index: 3n
+        }
       }
       const encoded = Credential.StakeCredentialCodec.toCBORHex(stakeCred)
       const decoded = Credential.StakeCredentialCodec.fromCBORHex(encoded)

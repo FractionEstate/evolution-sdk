@@ -6,11 +6,8 @@ import { Effect, Schema } from "effect"
  * Filter responses to only allow 2xx status codes, otherwise fail with ResponseError
  */
 export const filterStatusOk = (
-  self: HttpClientResponse.HttpClientResponse,
-): Effect.Effect<
-  HttpClientResponse.HttpClientResponse,
-  HttpClientError.ResponseError
-> =>
+  self: HttpClientResponse.HttpClientResponse
+): Effect.Effect<HttpClientResponse.HttpClientResponse, HttpClientError.ResponseError> =>
   self.status >= 200 && self.status < 300
     ? Effect.succeed(self)
     : self.text.pipe(
@@ -20,10 +17,10 @@ export const filterStatusOk = (
               response: self,
               request: self.request,
               reason: "StatusCode",
-              description: `non 2xx status code : ${text}`,
-            }),
-          ),
-        ),
+              description: `non 2xx status code : ${text}`
+            })
+          )
+        )
       )
 
 /**

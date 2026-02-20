@@ -25,18 +25,16 @@ import type { TxBuilderState } from "./TransactionBuilder.js"
  * @since 2.0.0
  * @category state-management
  */
-export const invalidateExUnits = (
-  redeemers: TxBuilderState["redeemers"]
-): TxBuilderState["redeemers"] => {
+export const invalidateExUnits = (redeemers: TxBuilderState["redeemers"]): TxBuilderState["redeemers"] => {
   const invalidated = new Map<string, TxBuilderState["redeemers"] extends Map<string, infer V> ? V : never>()
-  
+
   for (const [key, redeemer] of redeemers.entries()) {
     invalidated.set(key, {
       ...redeemer,
       exUnits: { mem: 0n, steps: 0n }
     })
   }
-  
+
   return invalidated
 }
 
@@ -71,7 +69,7 @@ export const hasUnevaluatedRedeemers = (redeemers: TxBuilderState["redeemers"]):
  */
 export const allRedeemersEvaluated = (redeemers: TxBuilderState["redeemers"]): boolean => {
   if (redeemers.size === 0) return false
-  
+
   return Array.from(redeemers.values()).every(
     (redeemer) => redeemer.exUnits && redeemer.exUnits.mem > 0n && redeemer.exUnits.steps > 0n
   )

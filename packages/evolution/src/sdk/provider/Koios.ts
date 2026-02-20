@@ -45,8 +45,7 @@ export class Koios implements Provider {
     unit: Parameters<Provider["getUtxosWithUnit"]>[1]
   ) => Effect.runPromise(this.Effect.getUtxosWithUnit(addressOrCredential, unit))
 
-  getUtxoByUnit = (unit: Parameters<Provider["getUtxoByUnit"]>[0]) =>
-    Effect.runPromise(this.Effect.getUtxoByUnit(unit))
+  getUtxoByUnit = (unit: Parameters<Provider["getUtxoByUnit"]>[0]) => Effect.runPromise(this.Effect.getUtxoByUnit(unit))
 
   getUtxosByOutRef = (outRefs: Parameters<Provider["getUtxosByOutRef"]>[0]) =>
     Effect.runPromise(this.Effect.getUtxosByOutRef(outRefs))
@@ -54,14 +53,12 @@ export class Koios implements Provider {
   getDelegation = (rewardAddress: Parameters<Provider["getDelegation"]>[0]) =>
     Effect.runPromise(this.Effect.getDelegation(rewardAddress))
 
-  getDatum = (datumHash: Parameters<Provider["getDatum"]>[0]) =>
-    Effect.runPromise(this.Effect.getDatum(datumHash))
+  getDatum = (datumHash: Parameters<Provider["getDatum"]>[0]) => Effect.runPromise(this.Effect.getDatum(datumHash))
 
   awaitTx = (txHash: Parameters<Provider["awaitTx"]>[0], checkInterval?: Parameters<Provider["awaitTx"]>[1]) =>
     Effect.runPromise(this.Effect.awaitTx(txHash, checkInterval))
 
-  submitTx = (tx: Parameters<Provider["submitTx"]>[0]) =>
-    Effect.runPromise(this.Effect.submitTx(tx))
+  submitTx = (tx: Parameters<Provider["submitTx"]>[0]) => Effect.runPromise(this.Effect.submitTx(tx))
 
   evaluateTx = (tx: Parameters<Provider["evaluateTx"]>[0], additionalUTxOs?: Parameters<Provider["evaluateTx"]>[1]) =>
     Effect.runPromise(this.Effect.evaluateTx(tx, additionalUTxOs))

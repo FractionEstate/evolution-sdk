@@ -19,7 +19,7 @@ export class BlockfrostProvider implements Provider {
   constructor(baseUrl: string, projectId?: string) {
     this.baseUrl = baseUrl
     this.projectId = projectId
-    
+
     this.Effect = {
       getProtocolParameters: () => BlockfrostEffect.getProtocolParameters(baseUrl, projectId),
       getUtxos: BlockfrostEffect.getUtxos(baseUrl, projectId),
@@ -35,34 +35,31 @@ export class BlockfrostProvider implements Provider {
   }
 
   getProtocolParameters = () => Effect.runPromise(this.Effect.getProtocolParameters())
-  
-  getUtxos = (addressOrCredential: Parameters<Provider["getUtxos"]>[0]) => 
+
+  getUtxos = (addressOrCredential: Parameters<Provider["getUtxos"]>[0]) =>
     Effect.runPromise(this.Effect.getUtxos(addressOrCredential))
-  
+
   getUtxosWithUnit = (
     addressOrCredential: Parameters<Provider["getUtxosWithUnit"]>[0],
     unit: Parameters<Provider["getUtxosWithUnit"]>[1]
   ) => Effect.runPromise(this.Effect.getUtxosWithUnit(addressOrCredential, unit))
-  
-  getUtxoByUnit = (unit: Parameters<Provider["getUtxoByUnit"]>[0]) => 
-    Effect.runPromise(this.Effect.getUtxoByUnit(unit))
-  
-  getUtxosByOutRef = (outRefs: Parameters<Provider["getUtxosByOutRef"]>[0]) => 
+
+  getUtxoByUnit = (unit: Parameters<Provider["getUtxoByUnit"]>[0]) => Effect.runPromise(this.Effect.getUtxoByUnit(unit))
+
+  getUtxosByOutRef = (outRefs: Parameters<Provider["getUtxosByOutRef"]>[0]) =>
     Effect.runPromise(this.Effect.getUtxosByOutRef(outRefs))
-  
-  getDelegation = (rewardAddress: Parameters<Provider["getDelegation"]>[0]) => 
+
+  getDelegation = (rewardAddress: Parameters<Provider["getDelegation"]>[0]) =>
     Effect.runPromise(this.Effect.getDelegation(rewardAddress))
-  
-  getDatum = (datumHash: Parameters<Provider["getDatum"]>[0]) => 
-    Effect.runPromise(this.Effect.getDatum(datumHash))
-  
-  awaitTx = (txHash: Parameters<Provider["awaitTx"]>[0], checkInterval?: Parameters<Provider["awaitTx"]>[1]) => 
+
+  getDatum = (datumHash: Parameters<Provider["getDatum"]>[0]) => Effect.runPromise(this.Effect.getDatum(datumHash))
+
+  awaitTx = (txHash: Parameters<Provider["awaitTx"]>[0], checkInterval?: Parameters<Provider["awaitTx"]>[1]) =>
     Effect.runPromise(this.Effect.awaitTx(txHash, checkInterval))
-  
-  submitTx = (cbor: Parameters<Provider["submitTx"]>[0]) => 
-    Effect.runPromise(this.Effect.submitTx(cbor))
-  
-  evaluateTx = (tx: Parameters<Provider["evaluateTx"]>[0], additionalUTxOs?: Parameters<Provider["evaluateTx"]>[1]) => 
+
+  submitTx = (cbor: Parameters<Provider["submitTx"]>[0]) => Effect.runPromise(this.Effect.submitTx(cbor))
+
+  evaluateTx = (tx: Parameters<Provider["evaluateTx"]>[0], additionalUTxOs?: Parameters<Provider["evaluateTx"]>[1]) =>
     Effect.runPromise(this.Effect.evaluateTx(tx, additionalUTxOs))
 }
 

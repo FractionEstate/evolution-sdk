@@ -1,6 +1,6 @@
 /**
  * @fileoverview Devnet tests for Plutus script minting
- * 
+ *
  * Tests minting with PlutusV3 simple_mint script from the spec project.
  * Uses the simple_mint.simple_mint.mint validator which requires:
  * - MintRedeemer: Constr(0, [idx: Int]) where idx == 1 to succeed
@@ -33,24 +33,25 @@ describe("TxBuilder Plutus Minting (Devnet Submit)", () => {
   let genesisConfig: Config.ShelleyGenesis
   let genesisUtxos: ReadonlyArray<Cardano.UTxO.UTxO> = []
 
-  const TEST_MNEMONIC = "test test test test test test test test test test test test test test test test test test test test test test test sauce"
+  const TEST_MNEMONIC =
+    "test test test test test test test test test test test test test test test test test test test test test test test sauce"
 
   /**
    * simple_mint.simple_mint.mint validator from plutus.json
-   * 
+   *
    * This is a PlutusV3 minting policy that succeeds when:
    * - Redeemer is MintRedeemer { idx: 1 }
-   * 
+   *
    * Source: packages/evolution/test/spec/validators/simple_mint.ak
    */
-  const SIMPLE_MINT_COMPILED_CODE = "59012901010029800aba2aba1aab9faab9eaab9dab9a488888966002646465300130053754003370e90004c02000e601000491112cc004cdc3a400800913259800980218051baa002899192cc004c04000a266e3cdd7180798069baa0044890131008b201c375c601c00260166ea800a2c8048c030c028dd5002c56600266e1d200600489919912cc004c018c030dd500244c8c966002602400513371e6eb8c044c03cdd500324410131008b2020375c6020002601a6ea80122c8058dd698068009806980700098051baa0058acc004c00c012264b30013004300a37540051323259800980800144cdc39bad300f300d3754008900145900e1bad300e001300b37540051640246eb8c030c028dd5002c59008201040203007300800130070013003375400f149a26cac80081"
+  const SIMPLE_MINT_COMPILED_CODE =
+    "59012901010029800aba2aba1aab9faab9eaab9dab9a488888966002646465300130053754003370e90004c02000e601000491112cc004cdc3a400800913259800980218051baa002899192cc004c04000a266e3cdd7180798069baa0044890131008b201c375c601c00260166ea800a2c8048c030c028dd5002c56600266e1d200600489919912cc004c018c030dd500244c8c966002602400513371e6eb8c044c03cdd500324410131008b2020375c6020002601a6ea80122c8058dd698068009806980700098051baa0058acc004c00c012264b30013004300a37540051323259800980800144cdc39bad300f300d3754008900145900e1bad300e001300b37540051640246eb8c030c028dd5002c59008201040203007300800130070013003375400f149a26cac80081"
 
   // Hash from plutus.json - this is the policy ID
   const SIMPLE_MINT_POLICY_ID_HEX = "5cee358e512c8064024b140fcdb7bc35bb4694d11ccccb7acb182b5c"
 
   // Helper to create MintRedeemer PlutusData: Constr(0, [Int])
-  const makeMintRedeemer = (idx: bigint): Data.Data =>
-    Data.constr(0n, [Data.int(idx)])
+  const makeMintRedeemer = (idx: bigint): Data.Data => Data.constr(0n, [Data.int(idx)])
 
   // Create PlutusV3 script from compiled CBOR hex
   const makeSimpleMintScript = (): PlutusV3.PlutusV3 => {

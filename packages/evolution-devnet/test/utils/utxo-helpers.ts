@@ -62,21 +62,22 @@ export const createCoreTestUtxo = (options: CreateCoreTestUtxoOptions): CoreUTxO
     scriptRef,
     transactionId = "0".repeat(64)
   } = options
-  
+
   // Convert bigint to number if needed
   const index = typeof rawIndex === "bigint" ? Number(rawIndex) : rawIndex
 
   // Ensure transactionId is 64 hex characters
-  const paddedTxId = transactionId.length === 64 && /^[0-9a-fA-F]+$/.test(transactionId)
-    ? transactionId
-    : Array.from(transactionId)
-        .map(c => c.charCodeAt(0).toString(16).padStart(2, '0'))
-        .join('')
-        .padEnd(64, '0')
+  const paddedTxId =
+    transactionId.length === 64 && /^[0-9a-fA-F]+$/.test(transactionId)
+      ? transactionId
+      : Array.from(transactionId)
+          .map((c) => c.charCodeAt(0).toString(16).padStart(2, "0"))
+          .join("")
+          .padEnd(64, "0")
 
   // Build Core Assets
   let assets = CoreAssets.fromLovelace(lovelace)
-  
+
   if (nativeAssets) {
     for (const [unit, quantity] of Object.entries(nativeAssets)) {
       // Parse unit: first 56 chars are policy ID, rest is asset name

@@ -72,27 +72,25 @@ describe("TxBuilder Vote Validator (script DRep)", () => {
   const genesisUtxosByAccount: Map<number, Cardano.UTxO.UTxO> = new Map()
 
   beforeAll(async () => {
-    const accounts = [0, 1].map(accountIndex =>
+    const accounts = [0, 1].map((accountIndex) =>
       createClient({
         network: 0,
         wallet: { type: "seed", mnemonic: TEST_MNEMONIC, accountIndex, addressType: "Base" }
       })
     )
-    const addresses = await Promise.all(accounts.map(client => client.address()))
+    const addresses = await Promise.all(accounts.map((client) => client.address()))
 
     const genesisConfig: Config.ShelleyGenesis = {
       ...Config.DEFAULT_SHELLEY_GENESIS,
       slotLength: 0.02,
       epochLength: 50,
       activeSlotsCoeff: 1.0,
-      initialFunds: Object.fromEntries(
-        addresses.map(addr => [Address.toHex(addr), 500_000_000_000])
-      )
+      initialFunds: Object.fromEntries(addresses.map((addr) => [Address.toHex(addr), 500_000_000_000]))
     }
 
     const genesisUtxos = await Genesis.calculateUtxosFromConfig(genesisConfig)
     addresses.forEach((addr, i) => {
-      const utxo = genesisUtxos.find(u => Address.toBech32(u.address) === Address.toBech32(addr))
+      const utxo = genesisUtxos.find((u) => Address.toBech32(u.address) === Address.toBech32(addr))
       if (utxo) genesisUtxosByAccount.set(i, utxo)
     })
 
@@ -108,7 +106,7 @@ describe("TxBuilder Vote Validator (script DRep)", () => {
     slotConfig = Cluster.getSlotConfig(devnetCluster)
 
     await Cluster.start(devnetCluster)
-    await new Promise(r => setTimeout(r, 3_000))
+    await new Promise((r) => setTimeout(r, 3_000))
   }, 180_000)
 
   afterAll(async () => {
@@ -127,16 +125,16 @@ describe("TxBuilder Vote Validator (script DRep)", () => {
     const stakeRegTx = await client
       .newTx()
       .registerStake({ stakeCredential: address.stakingCredential })
-      .build({ availableUtxos: [genesisUtxosByAccount.get(0)!], })
-      .then(b => b.sign())
-      .then(b => b.submit())
+      .build({ availableUtxos: [genesisUtxosByAccount.get(0)!] })
+      .then((b) => b.sign())
+      .then((b) => b.submit())
     expect(await client.awaitTx(stakeRegTx, 1000)).toBe(true)
 
-    await new Promise(r => setTimeout(r, 2_000))
+    await new Promise((r) => setTimeout(r, 2_000))
 
     // Create vote validator
-    const voteScript = new PlutusV3.PlutusV3({ 
-      bytes: Bytes.fromHex(loadValidator("governance_voting.always_yes_drep.publish")) 
+    const voteScript = new PlutusV3.PlutusV3({
+      bytes: Bytes.fromHex(loadValidator("governance_voting.always_yes_drep.publish"))
     })
     const scriptHash = ScriptHash.fromScript(voteScript)
     const drepCredential = new ScriptHash.ScriptHash({ hash: scriptHash.hash })
@@ -148,11 +146,11 @@ describe("TxBuilder Vote Validator (script DRep)", () => {
       .registerDRep({ drepCredential, anchor: makeAnchor("https://example.com/drep.json"), redeemer })
       .attachScript({ script: voteScript })
       .build()
-      .then(b => b.sign())
-      .then(b => b.submit())
+      .then((b) => b.sign())
+      .then((b) => b.submit())
     expect(await client.awaitTx(drepRegTx, 1000)).toBe(true)
 
-    await new Promise(r => setTimeout(r, 2_000))
+    await new Promise((r) => setTimeout(r, 2_000))
 
     // Create proposal to vote on
     const rewardAccount = new RewardAccount.RewardAccount({
@@ -167,11 +165,11 @@ describe("TxBuilder Vote Validator (script DRep)", () => {
         anchor: makeAnchor("https://example.com/proposal.json")
       })
       .build()
-      .then(b => b.sign())
-      .then(b => b.submit())
+      .then((b) => b.sign())
+      .then((b) => b.submit())
     expect(await client.awaitTx(proposeTx, 1000)).toBe(true)
 
-    await new Promise(r => setTimeout(r, 2_000))
+    await new Promise((r) => setTimeout(r, 2_000))
 
     // Test Voting purpose - vote using script-controlled DRep
     const govActionId = new GovernanceAction.GovActionId({
@@ -190,8 +188,8 @@ describe("TxBuilder Vote Validator (script DRep)", () => {
       .vote({ votingProcedures, redeemer })
       .attachScript({ script: voteScript })
       .build()
-      .then(b => b.sign())
-      .then(b => b.submit())
+      .then((b) => b.sign())
+      .then((b) => b.submit())
     expect(await client.awaitTx(voteTx, 1000)).toBe(true)
   })
 
@@ -219,18 +217,18 @@ describe("TxBuilder Vote Validator (script DRep)", () => {
         .newTx()
         .registerStake({ stakeCredential: address0.stakingCredential })
         .build()
-        .then(b => b.sign())
-        .then(b => b.submit())
+        .then((b) => b.sign())
+        .then((b) => b.submit())
       await client0.awaitTx(stakeRegTx, 1000)
     } catch {
       // Already registered
     }
 
-    await new Promise(r => setTimeout(r, 2_000))
+    await new Promise((r) => setTimeout(r, 2_000))
 
     // Load governance_voting validator
-    const voteScript = new PlutusV3.PlutusV3({ 
-      bytes: Bytes.fromHex(loadValidator("governance_voting.governance_voting.vote")) 
+    const voteScript = new PlutusV3.PlutusV3({
+      bytes: Bytes.fromHex(loadValidator("governance_voting.governance_voting.vote"))
     })
     const scriptHash = ScriptHash.fromScript(voteScript)
     const drepCredential = new ScriptHash.ScriptHash({ hash: scriptHash.hash })
@@ -246,8 +244,8 @@ describe("TxBuilder Vote Validator (script DRep)", () => {
         })
         .attachScript({ script: voteScript })
         .build()
-        .then(b => b.sign())
-        .then(b => b.submit())
+        .then((b) => b.sign())
+        .then((b) => b.submit())
       await client0.awaitTx(drepRegTx, 1000)
     } catch (e: any) {
       if (!e?.message?.includes("3152") && !e?.message?.includes("already known delegate")) {
@@ -255,7 +253,7 @@ describe("TxBuilder Vote Validator (script DRep)", () => {
       }
     }
 
-    await new Promise(r => setTimeout(r, 2_000))
+    await new Promise((r) => setTimeout(r, 2_000))
 
     // Create proposal
     const rewardAccount = new RewardAccount.RewardAccount({
@@ -270,11 +268,11 @@ describe("TxBuilder Vote Validator (script DRep)", () => {
         anchor: makeAnchor("https://example.com/proposal.json")
       })
       .build()
-      .then(b => b.sign())
-      .then(b => b.submit())
+      .then((b) => b.sign())
+      .then((b) => b.submit())
     expect(await client0.awaitTx(proposeTx, 1000)).toBe(true)
 
-    await new Promise(r => setTimeout(r, 2_000))
+    await new Promise((r) => setTimeout(r, 2_000))
 
     // Create config UTxO with GovernanceConfig datum (no timelock)
     // GovernanceConfig { required_signers, quorum_threshold, vote_start_slot: None, vote_end_slot: None }
@@ -292,24 +290,23 @@ describe("TxBuilder Vote Validator (script DRep)", () => {
         datum: new InlineDatum.InlineDatum({ data: configDatum })
       })
       .build()
-      .then(b => b.sign())
-      .then(b => b.submit())
+      .then((b) => b.sign())
+      .then((b) => b.submit())
     expect(await client0.awaitTx(configTxHash, 1000)).toBe(true)
 
-    await new Promise(r => setTimeout(r, 2_000))
+    await new Promise((r) => setTimeout(r, 2_000))
 
     // Find config UTxO
     const allUtxos = await client0.getUtxos(address0)
-    const configUtxo = allUtxos.find(u => 
-      Cardano.UTxO.toOutRefString(u).startsWith(TransactionHash.toHex(configTxHash)) && 
-      u.assets.lovelace === 5_000_000n
+    const configUtxo = allUtxos.find(
+      (u) =>
+        Cardano.UTxO.toOutRefString(u).startsWith(TransactionHash.toHex(configTxHash)) &&
+        u.assets.lovelace === 5_000_000n
     )
     if (!configUtxo) throw new Error("Config UTxO not found")
 
     // Build vote with quorum validation
-    const voteRedeemer = Data.constr(0n, [
-      Data.list([pkh0.hash, pkh1.hash])
-    ])
+    const voteRedeemer = Data.constr(0n, [Data.list([pkh0.hash, pkh1.hash])])
     const govActionId = new GovernanceAction.GovActionId({
       transactionId: proposeTx,
       govActionIndex: 0n
@@ -358,8 +355,8 @@ describe("TxBuilder Vote Validator (script DRep)", () => {
     }
 
     // Load governance_voting validator
-    const voteScript = new PlutusV3.PlutusV3({ 
-      bytes: Bytes.fromHex(loadValidator("governance_voting.governance_voting.vote")) 
+    const voteScript = new PlutusV3.PlutusV3({
+      bytes: Bytes.fromHex(loadValidator("governance_voting.governance_voting.vote"))
     })
     const scriptHash = ScriptHash.fromScript(voteScript)
     const drepCredential = new ScriptHash.ScriptHash({ hash: scriptHash.hash })
@@ -375,14 +372,14 @@ describe("TxBuilder Vote Validator (script DRep)", () => {
         })
         .attachScript({ script: voteScript })
         .build()
-        .then(b => b.sign())
-        .then(b => b.submit())
+        .then((b) => b.sign())
+        .then((b) => b.submit())
       await client0.awaitTx(drepRegTx, 1000)
     } catch {
       // Already registered
     }
 
-    await new Promise(r => setTimeout(r, 2_000))
+    await new Promise((r) => setTimeout(r, 2_000))
 
     // Create proposal for this test
     const rewardAccount = new RewardAccount.RewardAccount({
@@ -397,24 +394,24 @@ describe("TxBuilder Vote Validator (script DRep)", () => {
         anchor: makeAnchor("https://example.com/timelock-proposal.json")
       })
       .build()
-      .then(b => b.sign())
-      .then(b => b.submit())
+      .then((b) => b.sign())
+      .then((b) => b.submit())
     expect(await client0.awaitTx(proposeTx, 1000)).toBe(true)
 
-    await new Promise(r => setTimeout(r, 2_000))
+    await new Promise((r) => setTimeout(r, 2_000))
 
     // Configure timelock window using POSIX timestamps (milliseconds)
     // Cardano validity ranges use POSIX time, so the config must match
     const now = Time.now()
-    const startTime = now - 30_000n   // 30 seconds ago
-    const endTime = now + 120_000n    // 2 minutes from now
+    const startTime = now - 30_000n // 30 seconds ago
+    const endTime = now + 120_000n // 2 minutes from now
 
     // GovernanceConfig: { required_signers, quorum_threshold, vote_start_time, vote_end_time }
     const configDatum = Data.constr(0n, [
       Data.list([pkh0.hash, pkh1.hash]),
       Data.int(2n), // quorum_threshold
       Data.constr(0n, [Data.int(startTime)]), // Some(start_time)
-      Data.constr(0n, [Data.int(endTime)])     // Some(end_time)
+      Data.constr(0n, [Data.int(endTime)]) // Some(end_time)
     ])
 
     // Create config UTxO
@@ -426,17 +423,18 @@ describe("TxBuilder Vote Validator (script DRep)", () => {
         datum: new InlineDatum.InlineDatum({ data: configDatum })
       })
       .build()
-      .then(b => b.sign())
-      .then(b => b.submit())
+      .then((b) => b.sign())
+      .then((b) => b.submit())
     expect(await client0.awaitTx(configTxHash, 1000)).toBe(true)
 
-    await new Promise(r => setTimeout(r, 2_000))
+    await new Promise((r) => setTimeout(r, 2_000))
 
     // Find config UTxO
     const allUtxos = await client0.getUtxos(address0)
-    const configUtxo = allUtxos.find(u => 
-      Cardano.UTxO.toOutRefString(u).startsWith(TransactionHash.toHex(configTxHash)) && 
-      u.assets.lovelace === 5_000_000n
+    const configUtxo = allUtxos.find(
+      (u) =>
+        Cardano.UTxO.toOutRefString(u).startsWith(TransactionHash.toHex(configTxHash)) &&
+        u.assets.lovelace === 5_000_000n
     )
     if (!configUtxo) throw new Error("Config UTxO not found")
 
@@ -444,9 +442,7 @@ describe("TxBuilder Vote Validator (script DRep)", () => {
     const validFrom = Time.now()
     const validTo = validFrom + 30_000n
 
-    const voteRedeemer = Data.constr(0n, [
-      Data.list([pkh0.hash, pkh1.hash])
-    ])
+    const voteRedeemer = Data.constr(0n, [Data.list([pkh0.hash, pkh1.hash])])
     const govActionId = new GovernanceAction.GovActionId({
       transactionId: proposeTx,
       govActionIndex: 0n

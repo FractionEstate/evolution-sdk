@@ -58,14 +58,14 @@ let uniqueAddressCounter = 0
 
 /**
  * Creates a test UTxO with the specified parameters.
- * 
+ *
  * @example
  * ```typescript
  * import { createTestUtxo } from "../test/utils/utxo-helpers.js"
- * 
+ *
  * // Simple UTxO with only lovelace
  * const utxo = createTestUtxo({ lovelace: 5_000_000n })
- * 
+ *
  * // UTxO with native assets
  * const utxoWithAssets = createTestUtxo({
  *   lovelace: 2_000_000n,
@@ -73,7 +73,7 @@ let uniqueAddressCounter = 0
  *     "a0028f350aaabe0545fdcb56b039bfb08e4bb4d8c4d7c3c7d481c235484f534b59": 1000n
  *   }
  * })
- * 
+ *
  * // UTxO with custom address and transaction details
  * const customUtxo = createTestUtxo({
  *   lovelace: 10_000_000n,
@@ -82,7 +82,7 @@ let uniqueAddressCounter = 0
  *   outputIndex: 5
  * })
  * ```
- * 
+ *
  * @since 2.0.0
  * @category test-utils
  */
@@ -100,16 +100,15 @@ export const createTestUtxo = (options: CreateTestUtxoOptions): UTxO.UTxO => {
   // Ensure txHash is 64 hex characters (convert short IDs to valid hex)
   // For test simplicity, hash the input string to generate a deterministic 64-char hex
   // This matches the original test helper behavior from EdgeCases.P0.test.ts
-  const paddedTxHash = txHash.length === 64 && /^[0-9a-fA-F]+$/.test(txHash)
-    ? txHash
-    : Array.from(txHash)
-        .map(c => c.charCodeAt(0).toString(16).padStart(2, '0'))
-        .join('')
-        .padEnd(64, '0')
+  const paddedTxHash =
+    txHash.length === 64 && /^[0-9a-fA-F]+$/.test(txHash)
+      ? txHash
+      : Array.from(txHash)
+          .map((c) => c.charCodeAt(0).toString(16).padStart(2, "0"))
+          .join("")
+          .padEnd(64, "0")
 
-  const assets: Assets.Assets = nativeAssets
-    ? { lovelace, ...nativeAssets }
-    : { lovelace }
+  const assets: Assets.Assets = nativeAssets ? { lovelace, ...nativeAssets } : { lovelace }
 
   return {
     address,
@@ -124,14 +123,14 @@ export const createTestUtxo = (options: CreateTestUtxoOptions): UTxO.UTxO => {
 /**
  * Creates multiple test UTxOs with the same base parameters.
  * Each UTxO will have a unique outputIndex starting from 0.
- * 
+ *
  * @example
  * ```typescript
  * import { createTestUtxos } from "../test/utils/utxo-helpers.js"
- * 
+ *
  * // Create 5 UTxOs each with 10 ADA
  * const utxos = createTestUtxos(5, { lovelace: 10_000_000n })
- * 
+ *
  * // Create 3 UTxOs with custom parameters
  * const customUtxos = createTestUtxos(3, {
  *   lovelace: 5_000_000n,
@@ -139,17 +138,12 @@ export const createTestUtxo = (options: CreateTestUtxoOptions): UTxO.UTxO => {
  *   txHash: "abc123..."
  * })
  * ```
- * 
+ *
  * @since 2.0.0
  * @category test-utils
  */
-export const createTestUtxos = (
-  count: number,
-  options: CreateTestUtxoOptions
-): Array<UTxO.UTxO> => {
-  return Array.from({ length: count }, (_, index) =>
-    createTestUtxo({ ...options, outputIndex: index })
-  )
+export const createTestUtxos = (count: number, options: CreateTestUtxoOptions): Array<UTxO.UTxO> => {
+  return Array.from({ length: count }, (_, index) => createTestUtxo({ ...options, outputIndex: index }))
 }
 
 /**
@@ -157,16 +151,16 @@ export const createTestUtxos = (
  * Each call generates a new unique address by appending an incrementing counter
  * to the base test address. This is useful for testing scenarios where UTxOs
  * must belong to different addresses.
- * 
+ *
  * @example
  * ```typescript
  * import { createUniqueAddressUtxo } from "../test/utils/utxo-helpers.js"
- * 
+ *
  * // Create UTxOs with unique addresses
  * const utxo1 = createUniqueAddressUtxo({ lovelace: 5_000_000n })
  * const utxo2 = createUniqueAddressUtxo({ lovelace: 10_000_000n })
  * // utxo1.address !== utxo2.address
- * 
+ *
  * // With native assets
  * const utxo3 = createUniqueAddressUtxo({
  *   lovelace: 2_000_000n,
@@ -175,13 +169,11 @@ export const createTestUtxos = (
  *   }
  * })
  * ```
- * 
+ *
  * @since 2.0.0
  * @category test-utils
  */
-export const createUniqueAddressUtxo = (
-  options: Omit<CreateTestUtxoOptions, "address">
-): UTxO.UTxO => {
+export const createUniqueAddressUtxo = (options: Omit<CreateTestUtxoOptions, "address">): UTxO.UTxO => {
   const uniqueAddress = `${DEFAULT_TEST_ADDRESS}_${uniqueAddressCounter++}`
   return createTestUtxo({ ...options, address: uniqueAddress })
 }
@@ -189,16 +181,16 @@ export const createUniqueAddressUtxo = (
 /**
  * Creates multiple test UTxOs, each with a unique address.
  * Combines the functionality of createTestUtxos and createUniqueAddressUtxo.
- * 
+ *
  * @example
  * ```typescript
  * import { createUniqueAddressUtxos } from "../test/utils/utxo-helpers.js"
- * 
+ *
  * // Create 5 UTxOs, each with unique address and 10 ADA
  * const utxos = createUniqueAddressUtxos(5, { lovelace: 10_000_000n })
  * // All utxos have different addresses
  * ```
- * 
+ *
  * @since 2.0.0
  * @category test-utils
  */
@@ -212,16 +204,16 @@ export const createUniqueAddressUtxos = (
 /**
  * Resets the unique address counter.
  * Useful for ensuring consistent addresses across test runs.
- * 
+ *
  * @example
  * ```typescript
  * import { resetUniqueAddressCounter, createUniqueAddressUtxo } from "../test/utils/utxo-helpers.js"
- * 
+ *
  * beforeEach(() => {
  *   resetUniqueAddressCounter()
  * })
  * ```
- * 
+ *
  * @since 2.0.0
  * @category test-utils
  */
@@ -265,14 +257,14 @@ export type CreateCoreTestUtxoOptions = {
 
 /**
  * Creates a Core UTxO with the specified parameters.
- * 
+ *
  * @example
  * ```typescript
  * import { createCoreTestUtxo } from "../test/utils/utxo-helpers.js"
- * 
+ *
  * // Simple UTxO with only lovelace
  * const utxo = createCoreTestUtxo({ lovelace: 5_000_000n })
- * 
+ *
  * // UTxO with native assets (policyId + assetName concatenated)
  * const utxoWithAssets = createCoreTestUtxo({
  *   lovelace: 2_000_000n,
@@ -281,7 +273,7 @@ export type CreateCoreTestUtxoOptions = {
  *   }
  * })
  * ```
- * 
+ *
  * @since 2.0.0
  * @category test-utils
  */
@@ -293,21 +285,22 @@ export const createCoreTestUtxo = (options: CreateCoreTestUtxoOptions): CoreUTxO
     nativeAssets,
     transactionId = "0".repeat(64)
   } = options
-  
+
   // Convert bigint to number if needed
   const index = typeof rawIndex === "bigint" ? Number(rawIndex) : rawIndex
 
   // Ensure transactionId is 64 hex characters
-  const paddedTxId = transactionId.length === 64 && /^[0-9a-fA-F]+$/.test(transactionId)
-    ? transactionId
-    : Array.from(transactionId)
-        .map(c => c.charCodeAt(0).toString(16).padStart(2, '0'))
-        .join('')
-        .padEnd(64, '0')
+  const paddedTxId =
+    transactionId.length === 64 && /^[0-9a-fA-F]+$/.test(transactionId)
+      ? transactionId
+      : Array.from(transactionId)
+          .map((c) => c.charCodeAt(0).toString(16).padStart(2, "0"))
+          .join("")
+          .padEnd(64, "0")
 
   // Build Core Assets
   let assets = CoreAssets.fromLovelace(lovelace)
-  
+
   if (nativeAssets) {
     for (const [unit, quantity] of Object.entries(nativeAssets)) {
       // Parse unit: first 56 chars are policy ID, rest is asset name
@@ -328,15 +321,10 @@ export const createCoreTestUtxo = (options: CreateCoreTestUtxoOptions): CoreUTxO
 /**
  * Creates multiple Core test UTxOs with the same base parameters.
  * Each UTxO will have a unique index starting from 0.
- * 
+ *
  * @since 2.0.0
  * @category test-utils
  */
-export const createCoreTestUtxos = (
-  count: number,
-  options: CreateCoreTestUtxoOptions
-): Array<CoreUTxO.UTxO> => {
-  return Array.from({ length: count }, (_, idx) =>
-    createCoreTestUtxo({ ...options, index: idx })
-  )
+export const createCoreTestUtxos = (count: number, options: CreateCoreTestUtxoOptions): Array<CoreUTxO.UTxO> => {
+  return Array.from({ length: count }, (_, idx) => createCoreTestUtxo({ ...options, index: idx }))
 }

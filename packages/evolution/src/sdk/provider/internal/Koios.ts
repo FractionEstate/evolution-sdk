@@ -277,14 +277,14 @@ export const toUTxO = (koiosUTxO: UTxO, addressStr: string): CoreUTxO.UTxO => {
   // Build Core Assets
   const lovelace = BigInt(koiosUTxO.value)
   let assets = CoreAssets.fromLovelace(lovelace)
-  
+
   if (koiosUTxO.asset_list) {
     for (const am of koiosUTxO.asset_list) {
       // policy_id is hex (56 chars), asset_name is hex
       assets = CoreAssets.addByHex(assets, am.policy_id, am.asset_name || "", BigInt(am.quantity))
     }
   }
-  
+
   const address = CoreAddress.fromBech32(addressStr)
   const transactionId = TransactionHash.fromHex(koiosUTxO.tx_hash)
 

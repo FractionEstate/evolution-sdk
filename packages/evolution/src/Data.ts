@@ -942,7 +942,10 @@ export const withSchema = <A, I extends Data>(
  * const bytesHash = Data.hashData(bytes)
  * ```
  */
-export const hashData = (data: Data, options: CBOR.CodecOptions = CBOR.CML_DATA_DEFAULT_OPTIONS): DatumHash.DatumHash => {
+export const hashData = (
+  data: Data,
+  options: CBOR.CodecOptions = CBOR.CML_DATA_DEFAULT_OPTIONS
+): DatumHash.DatumHash => {
   const bytes = toCBORBytes(data, options)
   const digest = blake2b(bytes, { dkLen: 32 })
   return new DatumHash.DatumHash({ hash: digest })

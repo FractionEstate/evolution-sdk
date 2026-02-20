@@ -98,22 +98,22 @@ export class TransactionBody extends Schema.TaggedClass<TransactionBody>()("Tran
   toJSON() {
     return {
       _tag: this._tag,
-      inputs: this.inputs.map(i => i.toJSON()),
-      outputs: this.outputs.map(o => o.toJSON()),
+      inputs: this.inputs.map((i) => i.toJSON()),
+      outputs: this.outputs.map((o) => o.toJSON()),
       fee: this.fee.toString(),
       ttl: this.ttl?.toString(),
-      certificates: this.certificates?.map(c => c.toJSON()),
+      certificates: this.certificates?.map((c) => c.toJSON()),
       withdrawals: this.withdrawals?.toJSON(),
       auxiliaryDataHash: this.auxiliaryDataHash?.toJSON(),
       validityIntervalStart: this.validityIntervalStart?.toString(),
       mint: this.mint?.toJSON(),
       scriptDataHash: this.scriptDataHash?.toJSON(),
-      collateralInputs: this.collateralInputs?.map(i => i.toJSON()),
+      collateralInputs: this.collateralInputs?.map((i) => i.toJSON()),
       requiredSigners: this.requiredSigners,
       networkId: this.networkId,
       collateralReturn: this.collateralReturn?.toJSON(),
       totalCollateral: this.totalCollateral?.toString(),
-      referenceInputs: this.referenceInputs?.map(i => i.toJSON()),
+      referenceInputs: this.referenceInputs?.map((i) => i.toJSON()),
       votingProcedures: this.votingProcedures?.toJSON(),
       proposalProcedures: this.proposalProcedures?.toJSON(),
       currentTreasuryValue: this.currentTreasuryValue?.toString(),
@@ -167,9 +167,7 @@ export class TransactionBody extends Schema.TaggedClass<TransactionBody>()("Tran
     // inputs, outputs, and fee are the most common changes
     return Hash.cached(
       this,
-      Hash.combine(
-        Hash.combine(Hash.hash(this.fee))(arrayHash(this.inputs))
-      )(arrayHash(this.outputs))
+      Hash.combine(Hash.combine(Hash.hash(this.fee))(arrayHash(this.inputs)))(arrayHash(this.outputs))
     )
   }
 }

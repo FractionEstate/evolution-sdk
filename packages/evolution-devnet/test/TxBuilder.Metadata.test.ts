@@ -101,12 +101,12 @@ describe("TxBuilder attachMetadata (Devnet Submit)", () => {
 
     // Verify auxiliary data contains metadata
     expect(tx.auxiliaryData).toBeDefined()
-    
+
     if (tx.auxiliaryData && tx.auxiliaryData._tag === "ConwayAuxiliaryData") {
       expect(tx.auxiliaryData.metadata).toBeDefined()
       expect(tx.auxiliaryData.metadata?.size).toBe(1)
       expect(tx.auxiliaryData.metadata?.has(674n)).toBe(true)
-      
+
       const metadatum = tx.auxiliaryData.metadata?.get(674n)
       expect(metadatum).toBe("Hello from Evolution SDK!")
     }
@@ -149,16 +149,16 @@ describe("TxBuilder attachMetadata (Devnet Submit)", () => {
 
     // Verify auxiliary data contains all metadata entries
     expect(tx.auxiliaryData).toBeDefined()
-    
+
     if (tx.auxiliaryData && tx.auxiliaryData._tag === "ConwayAuxiliaryData") {
       expect(tx.auxiliaryData.metadata?.size).toBe(3)
       expect(tx.auxiliaryData.metadata?.has(674n)).toBe(true)
       expect(tx.auxiliaryData.metadata?.has(1n)).toBe(true)
       expect(tx.auxiliaryData.metadata?.has(2n)).toBe(true)
-      
+
       expect(tx.auxiliaryData.metadata?.get(674n)).toBe("Transaction comment")
       expect(tx.auxiliaryData.metadata?.get(1n)).toBe(42n)
-      
+
       const bytesMetadata = tx.auxiliaryData.metadata?.get(2n) as Uint8Array
       expect(bytesMetadata).toBeInstanceOf(Uint8Array)
       expect(Array.from(bytesMetadata)).toEqual([1, 2, 3, 4])
@@ -218,14 +218,14 @@ describe("TxBuilder attachMetadata (Devnet Submit)", () => {
     if (tx.auxiliaryData && tx.auxiliaryData._tag === "ConwayAuxiliaryData") {
       expect(tx.auxiliaryData.metadata?.size).toBe(1)
       expect(tx.auxiliaryData.metadata?.has(721n)).toBe(true)
-      
+
       const metadata = tx.auxiliaryData.metadata?.get(721n)
       expect(metadata).toBeInstanceOf(Map)
-      
+
       if (metadata instanceof Map) {
         expect(metadata.get("name")).toBe("Evolution SDK Test NFT")
         expect(metadata.get("image")).toBe("ipfs://QmTestHash123")
-        
+
         const attributes = metadata.get("attributes")
         expect(Array.isArray(attributes)).toBe(true)
         if (Array.isArray(attributes)) {

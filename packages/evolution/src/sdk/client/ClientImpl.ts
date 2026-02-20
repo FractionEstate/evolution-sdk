@@ -349,7 +349,10 @@ const createSigningWallet = (network: WalletNew.Network, config: SeedWalletConfi
   const effectInterface: WalletNew.SigningWalletEffect = {
     address: () => Effect.map(derivationEffect, (d) => d.address),
     rewardAddress: () => Effect.map(derivationEffect, (d) => d.rewardAddress ?? null),
-    signTx: (txOrHex: Transaction.Transaction | string, context?: { utxos?: ReadonlyArray<CoreUTxO.UTxO>; referenceUtxos?: ReadonlyArray<CoreUTxO.UTxO> }) =>
+    signTx: (
+      txOrHex: Transaction.Transaction | string,
+      context?: { utxos?: ReadonlyArray<CoreUTxO.UTxO>; referenceUtxos?: ReadonlyArray<CoreUTxO.UTxO> }
+    ) =>
       Effect.gen(function* () {
         const derivation = yield* derivationEffect
 
@@ -435,7 +438,10 @@ const createPrivateKeyWallet = (
   const effectInterface: WalletNew.SigningWalletEffect = {
     address: () => Effect.map(derivationEffect, (d) => d.address),
     rewardAddress: () => Effect.map(derivationEffect, (d) => d.rewardAddress ?? null),
-    signTx: (txOrHex: Transaction.Transaction | string, context?: { utxos?: ReadonlyArray<CoreUTxO.UTxO>; referenceUtxos?: ReadonlyArray<CoreUTxO.UTxO> }) =>
+    signTx: (
+      txOrHex: Transaction.Transaction | string,
+      context?: { utxos?: ReadonlyArray<CoreUTxO.UTxO>; referenceUtxos?: ReadonlyArray<CoreUTxO.UTxO> }
+    ) =>
       Effect.gen(function* () {
         const derivation = yield* derivationEffect
 
@@ -695,7 +701,9 @@ const createSigningClient = (
       if (tx.body.referenceInputs && tx.body.referenceInputs.length > 0) {
         // Fetch reference UTxOs from the provider
         referenceUtxos = yield* provider.Effect.getUtxosByOutRef(tx.body.referenceInputs).pipe(
-          Effect.mapError((e) => new WalletNew.WalletError({ message: `Failed to fetch reference UTxOs: ${e.message}`, cause: e }))
+          Effect.mapError(
+            (e) => new WalletNew.WalletError({ message: `Failed to fetch reference UTxOs: ${e.message}`, cause: e })
+          )
         )
       }
 
@@ -709,7 +717,8 @@ const createSigningClient = (
     signTx: signTxWithAutoFetch,
     getWalletUtxos: () => Effect.flatMap(wallet.Effect.address(), (addr) => provider.Effect.getUtxos(addr)),
     getWalletDelegation: () =>
-      Effect.flatMap(wallet.Effect.rewardAddress(), (rewardAddr) => {        if (!rewardAddr)
+      Effect.flatMap(wallet.Effect.rewardAddress(), (rewardAddr) => {
+        if (!rewardAddr)
           return Effect.fail(new Provider.ProviderError({ message: "No reward address configured", cause: null }))
         const coreRewardAddr = Schema.decodeSync(CoreRewardAddress.RewardAddress)(rewardAddr)
         return provider.Effect.getDelegation(coreRewardAddr)
@@ -724,8 +733,10 @@ const createSigningClient = (
     ...provider,
     ...wallet,
     // Override signTx with auto-fetch capability (must come after ...wallet to override)
-    signTx: (txOrHex: Transaction.Transaction | string, context?: { utxos?: ReadonlyArray<CoreUTxO.UTxO>; referenceUtxos?: ReadonlyArray<CoreUTxO.UTxO> }) =>
-      Effect.runPromise(signTxWithAutoFetch(txOrHex, context)),
+    signTx: (
+      txOrHex: Transaction.Transaction | string,
+      context?: { utxos?: ReadonlyArray<CoreUTxO.UTxO>; referenceUtxos?: ReadonlyArray<CoreUTxO.UTxO> }
+    ) => Effect.runPromise(signTxWithAutoFetch(txOrHex, context)),
     // Promise methods call Effect implementations
     getWalletUtxos,
     getWalletDelegation: () => Effect.runPromise(effectInterface.getWalletDelegation()),

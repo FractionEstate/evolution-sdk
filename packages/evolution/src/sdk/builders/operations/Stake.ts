@@ -12,7 +12,16 @@ import * as Certificate from "../../../Certificate.js"
 import * as RewardAccount from "../../../RewardAccount.js"
 import * as RedeemerBuilder from "../RedeemerBuilder.js"
 import { TransactionBuilderError, type TxBuilderConfig, TxBuilderConfigTag, TxContext } from "../TransactionBuilder.js"
-import type { DelegateToDRepParams, DelegateToParams, DelegateToPoolAndDRepParams, DelegateToPoolParams, DeregisterStakeParams, RegisterAndDelegateToParams, RegisterStakeParams, WithdrawParams } from "./Operations.js"
+import type {
+  DelegateToDRepParams,
+  DelegateToParams,
+  DelegateToPoolAndDRepParams,
+  DelegateToPoolParams,
+  DeregisterStakeParams,
+  RegisterAndDelegateToParams,
+  RegisterStakeParams,
+  WithdrawParams
+} from "./Operations.js"
 
 /**
  * Creates a ProgramStep for registerStake operation.
@@ -22,7 +31,9 @@ import type { DelegateToDRepParams, DelegateToParams, DelegateToPoolAndDRepParam
  * @since 2.0.0
  * @category programs
  */
-export const createRegisterStakeProgram = (params: RegisterStakeParams): Effect.Effect<void, TransactionBuilderError, TxContext | TxBuilderConfigTag> =>
+export const createRegisterStakeProgram = (
+  params: RegisterStakeParams
+): Effect.Effect<void, TransactionBuilderError, TxContext | TxBuilderConfigTag> =>
   Effect.gen(function* () {
     const ctx = yield* TxContext
     const config = yield* TxBuilderConfigTag
@@ -48,9 +59,12 @@ export const createRegisterStakeProgram = (params: RegisterStakeParams): Effect.
     }
 
     const protocolParams = yield* config.provider.Effect.getProtocolParameters().pipe(
-      Effect.mapError((err) => new TransactionBuilderError({
-        message: `Failed to fetch protocol parameters: ${err.message}`
-      }))
+      Effect.mapError(
+        (err) =>
+          new TransactionBuilderError({
+            message: `Failed to fetch protocol parameters: ${err.message}`
+          })
+      )
     )
     const keyDeposit = protocolParams.keyDeposit
 
@@ -113,7 +127,9 @@ export const createRegisterStakeProgram = (params: RegisterStakeParams): Effect.
  * @since 2.0.0
  * @category programs
  */
-export const createDelegateToProgram = (params: DelegateToParams): Effect.Effect<void, TransactionBuilderError, TxContext | TxBuilderConfigTag> =>
+export const createDelegateToProgram = (
+  params: DelegateToParams
+): Effect.Effect<void, TransactionBuilderError, TxContext | TxBuilderConfigTag> =>
   Effect.gen(function* () {
     const ctx = yield* TxContext
 
@@ -197,11 +213,12 @@ export const createDelegateToProgram = (params: DelegateToParams): Effect.Effect
       }
     })
 
-    const delegationType = params.poolKeyHash && params.drep
-      ? "StakeVoteDelegCert (pool + DRep)"
-      : params.poolKeyHash
-        ? "StakeDelegation (pool)"
-        : "VoteDelegCert (DRep)"
+    const delegationType =
+      params.poolKeyHash && params.drep
+        ? "StakeVoteDelegCert (pool + DRep)"
+        : params.poolKeyHash
+          ? "StakeDelegation (pool)"
+          : "VoteDelegCert (DRep)"
 
     yield* Effect.logDebug(`[DelegateTo] Added ${delegationType} certificate`)
   })
@@ -215,7 +232,9 @@ export const createDelegateToProgram = (params: DelegateToParams): Effect.Effect
  * @since 2.0.0
  * @category programs
  */
-export const createDelegateToPoolProgram = (params: DelegateToPoolParams): Effect.Effect<void, TransactionBuilderError, TxContext> =>
+export const createDelegateToPoolProgram = (
+  params: DelegateToPoolParams
+): Effect.Effect<void, TransactionBuilderError, TxContext> =>
   Effect.gen(function* () {
     const ctx = yield* TxContext
 
@@ -284,7 +303,9 @@ export const createDelegateToPoolProgram = (params: DelegateToPoolParams): Effec
  * @since 2.0.0
  * @category programs
  */
-export const createDelegateToDRepProgram = (params: DelegateToDRepParams): Effect.Effect<void, TransactionBuilderError, TxContext> =>
+export const createDelegateToDRepProgram = (
+  params: DelegateToDRepParams
+): Effect.Effect<void, TransactionBuilderError, TxContext> =>
   Effect.gen(function* () {
     const ctx = yield* TxContext
 
@@ -353,7 +374,9 @@ export const createDelegateToDRepProgram = (params: DelegateToDRepParams): Effec
  * @since 2.0.0
  * @category programs
  */
-export const createDelegateToPoolAndDRepProgram = (params: DelegateToPoolAndDRepParams): Effect.Effect<void, TransactionBuilderError, TxContext> =>
+export const createDelegateToPoolAndDRepProgram = (
+  params: DelegateToPoolAndDRepParams
+): Effect.Effect<void, TransactionBuilderError, TxContext> =>
   Effect.gen(function* () {
     const ctx = yield* TxContext
 
@@ -428,7 +451,9 @@ export const createDelegateToPoolAndDRepProgram = (params: DelegateToPoolAndDRep
  * @since 2.0.0
  * @category programs
  */
-export const createRegisterAndDelegateToProgram = (params: RegisterAndDelegateToParams): Effect.Effect<void, TransactionBuilderError, TxContext | TxBuilderConfigTag> =>
+export const createRegisterAndDelegateToProgram = (
+  params: RegisterAndDelegateToParams
+): Effect.Effect<void, TransactionBuilderError, TxContext | TxBuilderConfigTag> =>
   Effect.gen(function* () {
     const ctx = yield* TxContext
     const config = yield* TxBuilderConfigTag
@@ -452,9 +477,12 @@ export const createRegisterAndDelegateToProgram = (params: RegisterAndDelegateTo
     }
 
     const protocolParams = yield* config.provider.Effect.getProtocolParameters().pipe(
-      Effect.mapError((err) => new TransactionBuilderError({
-        message: `Failed to fetch protocol parameters: ${err.message}`
-      }))
+      Effect.mapError(
+        (err) =>
+          new TransactionBuilderError({
+            message: `Failed to fetch protocol parameters: ${err.message}`
+          })
+      )
     )
     const keyDeposit = protocolParams.keyDeposit
 
@@ -532,11 +560,12 @@ export const createRegisterAndDelegateToProgram = (params: RegisterAndDelegateTo
       }
     })
 
-    const delegationType = params.poolKeyHash && params.drep
-      ? "StakeVoteRegDelegCert (pool + DRep)"
-      : params.poolKeyHash
-        ? "StakeRegDelegCert (pool)"
-        : "VoteRegDelegCert (DRep)"
+    const delegationType =
+      params.poolKeyHash && params.drep
+        ? "StakeVoteRegDelegCert (pool + DRep)"
+        : params.poolKeyHash
+          ? "StakeRegDelegCert (pool)"
+          : "VoteRegDelegCert (DRep)"
 
     yield* Effect.logDebug(`[RegisterAndDelegateTo] Added ${delegationType} certificate with deposit ${keyDeposit}`)
   })
@@ -551,7 +580,9 @@ export const createRegisterAndDelegateToProgram = (params: RegisterAndDelegateTo
  * @since 2.0.0
  * @category programs
  */
-export const createDeregisterStakeProgram = (params: DeregisterStakeParams): Effect.Effect<void, TransactionBuilderError, TxContext | TxBuilderConfigTag> =>
+export const createDeregisterStakeProgram = (
+  params: DeregisterStakeParams
+): Effect.Effect<void, TransactionBuilderError, TxContext | TxBuilderConfigTag> =>
   Effect.gen(function* () {
     const ctx = yield* TxContext
     const config = yield* TxBuilderConfigTag
@@ -577,9 +608,12 @@ export const createDeregisterStakeProgram = (params: DeregisterStakeParams): Eff
     }
 
     const protocolParams = yield* config.provider.Effect.getProtocolParameters().pipe(
-      Effect.mapError((err) => new TransactionBuilderError({
-        message: `Failed to fetch protocol parameters: ${err.message}`
-      }))
+      Effect.mapError(
+        (err) =>
+          new TransactionBuilderError({
+            message: `Failed to fetch protocol parameters: ${err.message}`
+          })
+      )
     )
     const keyDeposit = protocolParams.keyDeposit
 
@@ -639,7 +673,10 @@ export const createDeregisterStakeProgram = (params: DeregisterStakeParams): Eff
  * @since 2.0.0
  * @category programs
  */
-export const createWithdrawProgram = (params: WithdrawParams, config: TxBuilderConfig): Effect.Effect<void, TransactionBuilderError, TxContext> =>
+export const createWithdrawProgram = (
+  params: WithdrawParams,
+  config: TxBuilderConfig
+): Effect.Effect<void, TransactionBuilderError, TxContext> =>
   Effect.gen(function* () {
     const ctx = yield* TxContext
 

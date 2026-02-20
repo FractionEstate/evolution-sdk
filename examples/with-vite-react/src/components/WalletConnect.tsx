@@ -1,25 +1,15 @@
-import { useCardano } from "@cardano-foundation/cardano-connect-with-wallet";
-import { NetworkType } from "@cardano-foundation/cardano-connect-with-wallet-core";
-import { useState } from "react";
+import { useCardano } from "@cardano-foundation/cardano-connect-with-wallet"
+import { NetworkType } from "@cardano-foundation/cardano-connect-with-wallet-core"
+import { useState } from "react"
 
 export default function WalletConnect() {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false)
 
-  const network =
-    import.meta.env.MODE === "development"
-      ? NetworkType.TESTNET
-      : NetworkType.MAINNET;
+  const network = import.meta.env.MODE === "development" ? NetworkType.TESTNET : NetworkType.MAINNET
 
-  const {
-    accountBalance,
-    connect,
-    disconnect,
-    installedExtensions,
-    isConnected,
-    stakeAddress,
-  } = useCardano({
-    limitNetwork: network,
-  });
+  const { accountBalance, connect, disconnect, installedExtensions, isConnected, stakeAddress } = useCardano({
+    limitNetwork: network
+  })
 
   return (
     <div className="w-full">
@@ -35,9 +25,7 @@ export default function WalletConnect() {
               </div>
 
               <div className="text-xs font-medium text-zinc-400">Balance</div>
-              <div className="text-xs font-mono text-zinc-200 text-right">
-                {accountBalance} ₳
-              </div>
+              <div className="text-xs font-mono text-zinc-200 text-right">{accountBalance} ₳</div>
             </div>
 
             <button
@@ -63,9 +51,7 @@ export default function WalletConnect() {
         <div className="fixed inset-0 bg-black/70 backdrop-blur-sm flex items-center justify-center z-50">
           <div className="bg-zinc-900 border border-zinc-800/80 rounded-lg shadow-lg max-w-sm w-full overflow-hidden">
             <div className="px-5 py-3.5 border-b border-zinc-800/60">
-              <h2 className="text-sm font-medium text-zinc-100">
-                Select Wallet
-              </h2>
+              <h2 className="text-sm font-medium text-zinc-100">Select Wallet</h2>
             </div>
 
             <div className="p-5 space-y-3">
@@ -75,13 +61,11 @@ export default function WalletConnect() {
                     key={provider}
                     className="w-full px-4 py-2.5 bg-zinc-800/80 hover:bg-zinc-700 text-zinc-200 rounded-md border border-zinc-700/50 flex items-center justify-between transition-all text-xs font-medium focus:outline-none focus:ring-1 focus:ring-zinc-500/30"
                     onClick={() => {
-                      connect(provider);
-                      setIsModalOpen(false);
+                      connect(provider)
+                      setIsModalOpen(false)
                     }}
                   >
-                    <span className="capitalize">
-                      {provider.charAt(0).toUpperCase() + provider.slice(1)}
-                    </span>
+                    <span className="capitalize">{provider.charAt(0).toUpperCase() + provider.slice(1)}</span>
                   </button>
                 ))}
               </div>
@@ -97,5 +81,5 @@ export default function WalletConnect() {
         </div>
       )}
     </div>
-  );
+  )
 }

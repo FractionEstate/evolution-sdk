@@ -57,9 +57,7 @@ export class NonnegativeInterval extends Schema.Class<NonnegativeInterval>("Nonn
    */
   [Equal.symbol](that: unknown): boolean {
     return (
-      that instanceof NonnegativeInterval &&
-      this.numerator === that.numerator &&
-      this.denominator === that.denominator
+      that instanceof NonnegativeInterval && this.numerator === that.numerator && this.denominator === that.denominator
     )
   }
 

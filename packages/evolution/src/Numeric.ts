@@ -246,4 +246,3 @@ export const NonNegativeInteger = Schema.BigInt.pipe(
     description: "A non-negative integer (0 or greater)"
   })
 )
-
