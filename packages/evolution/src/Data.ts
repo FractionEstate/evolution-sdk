@@ -542,13 +542,15 @@ export const plutusDataToCBORValue = (data: Data): CBOR.CBOR => {
       return value
     },
     Bytes: (bytes): CBOR.CBOR => {
-      // Bytes are already Uint8Array, return as is
-      return bytes
+      // Conway CDDL: bounded_bytes = bytes .size (0..64)
+      // BoundedBytes enforces the chunking rule at the CBOR node level,
+      // independent of codec options. See CBOR.BoundedBytes.
+      return CBOR.BoundedBytes.make(bytes)
     },
     Constr: (constr): CBOR.CBOR => {
       // PlutusData Constr -> CBOR tags based on index
       const cborFields = constr.fields.map(plutusDataToCBORValue)
-      const fieldsArray = cborFields // Now just a raw array
+      const fieldsArray = cborFields
 
       if (constr.index >= 0n && constr.index <= 6n) {
         // Direct encoding for constructor indices 0-6 (tags 121-127)

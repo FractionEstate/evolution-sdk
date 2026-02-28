@@ -6,6 +6,7 @@ import * as Bytes from "@evolution-sdk/evolution/Bytes"
 import * as Data from "@evolution-sdk/evolution/Data"
 import * as InlineDatum from "@evolution-sdk/evolution/InlineDatum"
 import * as PlutusV2 from "@evolution-sdk/evolution/PlutusV2"
+import * as PlutusV3 from "@evolution-sdk/evolution/PlutusV3"
 import * as ScriptHash from "@evolution-sdk/evolution/ScriptHash"
 import type { TxBuilderConfig } from "@evolution-sdk/evolution/sdk/builders/TransactionBuilder"
 import { makeTxBuilder } from "@evolution-sdk/evolution/sdk/builders/TransactionBuilder"
@@ -13,6 +14,7 @@ import { KupmiosProvider } from "@evolution-sdk/evolution/sdk/provider/Kupmios"
 import { createScalusEvaluator } from "@evolution-sdk/scalus-uplc"
 import { Schema } from "effect"
 
+import plutusJson from "../../evolution/test/spec/plutus.json"
 import * as Cluster from "../src/Cluster.js"
 import { createCoreTestUtxo } from "./utils/utxo-helpers.js"
 
@@ -1265,5 +1267,57 @@ describe("TxBuilder Script Handling", () => {
         protocolParameters: PROTOCOL_PARAMS
       })
     ).rejects.toThrow(/Insufficient collateral available.*Need 5000000.*but only found 4500000/i)
+  })
+
+  it("should build a transaction with a >64-byte redeemer field using bounded_bytes encoding", async () => {
+    const alwaysSucceedValidator = plutusJson.validators.find(
+      (v) => v.title === "always_succeed.always_succeed.spend"
+    )!
+    const alwaysSucceedV3 = new PlutusV3.PlutusV3({ bytes: Bytes.fromHex(alwaysSucceedValidator.compiledCode) })
+    const scriptHash = ScriptHash.fromScript(alwaysSucceedV3)
+    const scriptAddress = Schema.encodeSync(CoreAddress.FromBech32)(
+      CoreAddress.Address.make({ networkId: 0, paymentCredential: scriptHash })
+    )
+
+    const scriptUtxo = createCoreTestUtxo({
+      transactionId: "a".repeat(64),
+      index: 0,
+      address: scriptAddress,
+      lovelace: 5_000_000n,
+      datumOption: new InlineDatum.InlineDatum({ data: Data.constr(0n, []) })
+    })
+
+    const fundingUtxo = createCoreTestUtxo({
+      transactionId: "b".repeat(64),
+      index: 0,
+      address: CHANGE_ADDRESS,
+      lovelace: 10_000_000n
+    })
+
+    // 100-byte payload — exceeds the 64-byte bounded_bytes chunk size
+    const largePayload = new Uint8Array(100).fill(0xaa)
+
+    const signBuilder = await makeTxBuilder(baseConfig)
+      .collectFrom({ inputs: [scriptUtxo], redeemer: Data.constr(0n, [largePayload]) })
+      .attachScript({ script: alwaysSucceedV3 })
+      .payToAddress({
+        address: CoreAddress.fromBech32(RECEIVER_ADDRESS),
+        assets: CoreAssets.fromLovelace(4_000_000n)
+      })
+      .build({
+        changeAddress: CoreAddress.fromBech32(CHANGE_ADDRESS),
+        availableUtxos: [fundingUtxo],
+        protocolParameters: PROTOCOL_PARAMS,
+        passAdditionalUtxos: true
+      })
+
+    const tx = await signBuilder.toTransaction()
+
+    expect(tx.witnessSet.redeemers).toBeDefined()
+    expect(tx.witnessSet.redeemers!.length).toBe(1)
+    const redeemer = tx.witnessSet.redeemers![0]
+    expect(redeemer.tag).toBe("spend")
+    expect(redeemer.exUnits.mem).toBeGreaterThan(0n)
+    expect(redeemer.exUnits.steps).toBeGreaterThan(0n)
   })
 })

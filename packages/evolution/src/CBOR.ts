@@ -107,7 +107,11 @@ export const CML_DEFAULT_OPTIONS: CodecOptions = {
 } as const
 
 /**
- * Default CBOR encoding option for Data
+ * Default CBOR encoding options for PlutusData.
+ *
+ * Uses indefinite-length arrays and maps. The `bounded_bytes` constraint
+ * (Conway CDDL: byte strings ≤ 64 bytes) is enforced at the data-type layer
+ * via the `BoundedBytes` CBOR node, independent of these codec options.
  *
  * @since 1.0.0
  * @category constants
@@ -123,13 +127,16 @@ export const CML_DATA_DEFAULT_OPTIONS: CodecOptions = {
 } as const
 
 /**
- * Aiken-compatible CBOR encoding options
+ * Aiken-compatible CBOR encoding options.
  *
- * Matches the encoding used by Aiken's cbor.serialise():
- * - Indefinite-length arrays (9f...ff)
+ * Matches the encoding produced by `cbor.serialise()` in Aiken:
+ * - Indefinite-length arrays (`9f...ff`)
  * - Maps encoded as arrays of pairs (not CBOR maps)
- * - Strings as bytearrays (major type 2, not 3)
- * - Constructor tags: 121-127 for indices 0-6, then 1280+ for 7+
+ * - Strings as byte arrays (major type 2, not 3)
+ * - Constructor tags: 121–127 for indices 0–6, then 1280+ for 7+
+ *
+ * PlutusData byte strings are chunked per the Conway `bounded_bytes` rule
+ * via the `BoundedBytes` CBOR node, independent of these codec options.
  *
  * @since 2.0.0
  * @category constants
@@ -333,6 +340,7 @@ export type CBOR =
   | null // null value
   | undefined // undefined value
   | number // floating point numbers
+  | { _tag: "BoundedBytes"; bytes: Uint8Array } // PlutusData bounded byte strings (Conway CDDL bounded_bytes = bytes .size (0..64))
 
 /**
  * **Record vs Map Key Ordering**
@@ -484,6 +492,7 @@ export const match = <R>(
     null: () => R
     undefined: () => R
     float: (value: number) => R
+    boundedBytes: (value: Uint8Array) => R
   }
 ): R => {
   if (typeof value === "bigint") {
@@ -503,6 +512,9 @@ export const match = <R>(
   }
   if (isTag(value)) {
     return patterns.tag(value.tag, value.value)
+  }
+  if (BoundedBytes.is(value)) {
+    return patterns.boundedBytes(value.bytes)
   }
   if (
     typeof value === "object" &&
@@ -736,6 +748,15 @@ export const internalEncodeSync = (value: CBOR, options: CodecOptions = CML_DEFA
   if (Array.isArray(value)) return encodeArraySync(value, options)
   if (value instanceof Map) return encodeMapSync(value, options)
   if (isTag(value)) return encodeTagSync(value.tag, value.value, options)
+  // BoundedBytes: PlutusData byte strings, encoded per Conway CDDL bounded_bytes = bytes .size (0..64)
+  if (
+    typeof value === "object" &&
+    value !== null &&
+    "_tag" in value &&
+    (value as { _tag: unknown })._tag === "BoundedBytes"
+  ) {
+    return encodeBoundedBytesSync((value as { _tag: "BoundedBytes"; bytes: Uint8Array }).bytes)
+  }
   if (
     typeof value === "object" &&
     value !== null &&
@@ -828,6 +849,79 @@ const encodeNintSync = (value: bigint, options: CodecOptions): Uint8Array => {
   }
 }
 
+/** Byte-string chunk header size for a given chunk length (CBOR major type 2). */
+const chunkHeaderSize = (len: number): number => {
+  if (len < 24) return 1
+  if (len < 256) return 2
+  if (len < 65536) return 3
+  return 5
+}
+
+/** Write a definite-length byte-string header for a chunk into `buf` at `pos`. Returns new position. */
+const writeChunkHeader = (buf: Uint8Array, pos: number, len: number): number => {
+  if (len < 24) {
+    buf[pos++] = 0x40 + len
+  } else if (len < 256) {
+    buf[pos++] = 0x58
+    buf[pos++] = len
+  } else if (len < 65536) {
+    buf[pos++] = 0x59
+    buf[pos++] = (len >> 8) & 0xff
+    buf[pos++] = len & 0xff
+  } else {
+    buf[pos++] = 0x5a
+    buf[pos++] = (len >> 24) & 0xff
+    buf[pos++] = (len >> 16) & 0xff
+    buf[pos++] = (len >> 8) & 0xff
+    buf[pos++] = len & 0xff
+  }
+  return pos
+}
+
+/**
+ * Encodes a byte string under the Conway `bounded_bytes` rule:
+ * - ≤ 64 bytes → definite-length CBOR bytes
+ * - > 64 bytes → indefinite-length byte string (`0x5f` + 64-byte chunks + `0xff`)
+ *
+ * Called unconditionally by the `BoundedBytes` CBOR node handler. Does not
+ * depend on `CodecOptions` — the rule is always applied.
+ */
+const BOUNDED_BYTES_CHUNK_SIZE = 64
+const encodeBoundedBytesSync = (value: Uint8Array): Uint8Array => {
+  const length = value.length
+  if (length === 0) return new Uint8Array([0x40])
+  if (length <= BOUNDED_BYTES_CHUNK_SIZE) {
+    // Definite-length encoding
+    let headerLen: number
+    if (length < 24) headerLen = 1
+    else if (length < 256) headerLen = 2
+    else headerLen = 3
+    const out = new Uint8Array(headerLen + length)
+    if (length < 24) out[0] = 0x40 + length
+    else if (length < 256) { out[0] = 0x58; out[1] = length }
+    else { out[0] = 0x59; out[1] = length >> 8; out[2] = length & 0xff }
+    out.set(value, headerLen)
+    return out
+  }
+  // Indefinite-length chunked byte string for > 64 bytes
+  let totalSize = 2 // 0x5f + 0xff
+  for (let offset = 0; offset < length; offset += BOUNDED_BYTES_CHUNK_SIZE) {
+    const chunkLen = Math.min(BOUNDED_BYTES_CHUNK_SIZE, length - offset)
+    totalSize += chunkHeaderSize(chunkLen) + chunkLen
+  }
+  const result = new Uint8Array(totalSize)
+  let pos = 0
+  result[pos++] = 0x5f
+  for (let offset = 0; offset < length; offset += BOUNDED_BYTES_CHUNK_SIZE) {
+    const chunkLen = Math.min(BOUNDED_BYTES_CHUNK_SIZE, length - offset)
+    pos = writeChunkHeader(result, pos, chunkLen)
+    result.set(value.subarray(offset, offset + BOUNDED_BYTES_CHUNK_SIZE), pos)
+    pos += chunkLen
+  }
+  result[pos] = 0xff
+  return result
+}
+
 const encodeBytesSync = (value: Uint8Array, options: CodecOptions): Uint8Array => {
   const length = value.length
   const useMinimal = options.mode === "canonical" || (options.mode === "custom" && options.useMinimalEncoding)
@@ -837,7 +931,7 @@ const encodeBytesSync = (value: Uint8Array, options: CodecOptions): Uint8Array =
     return new Uint8Array([0x40])
   }
 
-  // Optimize header encoding with direct buffer creation
+  // Standard definite-length encoding
   let headerBytes: Uint8Array
   if (length < 24) {
     headerBytes = new Uint8Array([0x40 + length])
@@ -862,6 +956,30 @@ const encodeBytesSync = (value: Uint8Array, options: CodecOptions): Uint8Array =
   result.set(value, headerBytes.length)
   return result
 }
+
+/**
+ * `BoundedBytes` CBOR node — represents a PlutusData byte string that must comply
+ * with the Conway CDDL constraint `bounded_bytes = bytes .size (0..64)`.
+ *
+ * The encoding rule is unconditional and options-independent:
+ * - ≤ 64 bytes → definite-length CBOR bytes
+ * - > 64 bytes → indefinite-length 64-byte chunked byte string (`0x5f` + chunks + `0xff`)
+ *
+ * Use `BoundedBytes.make` to construct the node; the encoder handles the rest.
+ *
+ * @since 2.0.0
+ * @category model
+ */
+export const BoundedBytes = {
+  /** Construct a BoundedBytes CBOR node from a raw byte array. */
+  make: (bytes: Uint8Array): CBOR => ({ _tag: "BoundedBytes" as const, bytes }),
+  /** Type guard for BoundedBytes CBOR nodes. */
+  is: (value: CBOR): value is { _tag: "BoundedBytes"; bytes: Uint8Array } =>
+    typeof value === "object" &&
+    value !== null &&
+    "_tag" in value &&
+    (value as { _tag: unknown })._tag === "BoundedBytes"
+} as const
 
 const encodeTextSync = (value: string, options: CodecOptions): Uint8Array => {
   // Fast path for empty strings

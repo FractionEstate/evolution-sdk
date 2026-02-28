@@ -550,3 +550,19 @@ test encode_address_payment_script_stake_pointer() {
     }
   cbor.serialise(address) == #"d8799fd87a9f581b1234567890abcdef1234567890abcdef1234567890abcdef1234abffd8799fd87a9f1903e80502ffffff"
 }
+
+// bounded_bytes: byte strings > 64 bytes must be chunked (Conway CDDL constraint)
+
+test encode_bytearray_bounded_65() {
+  // 65 bytes: must be chunked as indefinite-length (bounded_bytes = bytes .size (0..64))
+  cbor.serialise(
+    #"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  ) == #"5f5840aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa41aaff"
+}
+
+test encode_bytearray_exactly_64() {
+  // 64 bytes: stays definite-length (not chunked)
+  cbor.serialise(
+    #"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  ) == #"5840bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+}

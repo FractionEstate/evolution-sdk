@@ -747,4 +747,22 @@ describe("Aiken CBOR Encoding Compatibility", () => {
       "d8799fd8799f581cff0185c80386d7ff02a2042efd97fbe6012dac0102751cfcc14507a6ffd8799fd8799fd8799f581c64ff0185c80386d7ff02a2042efd97fbe6012dac0102751cfcc14507ffffffff"
     )
   })
+
+  // encode_bytearray_bounded_65: 65 bytes must be chunked (bounded_bytes = bytes .size (0..64))
+  it("encode_bytearray_bounded_65: should chunk bytearray exceeding 64 bytes", () => {
+    const value = new Uint8Array(65).fill(0xaa)
+    const encoded = Data.toCBORHex(value, CBOR.AIKEN_DEFAULT_OPTIONS)
+    expect(encoded).toBe(
+      "5f5840aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa41aaff"
+    )
+  })
+
+  // encode_bytearray_exactly_64: 64 bytes stays definite-length (no chunking)
+  it("encode_bytearray_exactly_64: should NOT chunk a 64-byte bytearray", () => {
+    const value = new Uint8Array(64).fill(0xbb)
+    const encoded = Data.toCBORHex(value, CBOR.AIKEN_DEFAULT_OPTIONS)
+    expect(encoded).toBe(
+      "5840bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+    )
+  })
 })
