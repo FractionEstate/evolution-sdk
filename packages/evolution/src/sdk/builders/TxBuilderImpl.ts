@@ -1504,8 +1504,33 @@ export const calculateLeftoverAssets = (params: {
 }
 
 /**
+ * Constant overhead in bytes for a UTxO entry in the ledger state.
+ * Accounts for the transaction hash (32 bytes) and output index that are
+ * part of the UTxO key but not serialized in the transaction output itself.
+ *
+ * @see Babbage ledger spec: utxoEntrySizeWithoutVal = 160
+ * @since 2.0.0
+ * @category constants
+ */
+const UTXO_ENTRY_OVERHEAD_BYTES = 160n
+
+/**
+ * Maximum iterations for exact min-UTxO fixed-point solving.
+ * In practice this converges in 1-3 iterations because only lovelace CBOR
+ * width changes can affect output size.
+ *
+ * @since 2.0.0
+ * @category constants
+ */
+const MAX_MIN_UTXO_ITERATIONS = 10
+
+/**
  * Calculate minimum ADA required for a UTxO based on its actual CBOR size.
- * Uses the Babbage-era formula: coinsPerUtxoByte * utxoSize.
+ * Uses the Babbage/Conway-era formula: coinsPerUtxoByte * (160 + serializedOutputSize).
+ *
+ * The 160-byte constant accounts for the UTxO entry overhead in the ledger state
+ * (transaction hash + index). A lovelace placeholder is used during CBOR encoding
+ * to ensure the coin field width matches the final result.
  *
  * This function creates a temporary TransactionOutput, encodes it to CBOR,
  * and calculates the exact size to determine the minimum lovelace required.
@@ -1521,26 +1546,45 @@ export const calculateMinimumUtxoLovelace = (params: {
   coinsPerUtxoByte: bigint
 }): Effect.Effect<bigint, TransactionBuilderError> =>
   Effect.gen(function* () {
-    // Create a temporary TransactionOutput to calculate its CBOR size
-    const tempOutput = yield* txOutputToTransactionOutput({
-      address: params.address,
-      assets: params.assets,
-      datum: params.datum,
-      scriptRef: params.scriptRef
-    })
+    const calculateRequiredLovelace = (
+      lovelace: bigint
+    ): Effect.Effect<bigint, TransactionBuilderError> =>
+      Effect.gen(function* () {
+        const assetsForSizing = CoreAssets.withLovelace(params.assets, lovelace)
 
-    // Encode to CBOR bytes to get the actual size
-    const cborBytes = yield* Effect.try({
-      try: () => TxOut.toCBORBytes(tempOutput),
-      catch: (error) =>
-        new TransactionBuilderError({
-          message: "Failed to encode output to CBOR for min UTxO calculation",
-          cause: error
+        const tempOutput = yield* txOutputToTransactionOutput({
+          address: params.address,
+          assets: assetsForSizing,
+          datum: params.datum,
+          scriptRef: params.scriptRef
         })
-    })
 
-    // Calculate minimum lovelace: coinsPerUtxoByte * size
-    return params.coinsPerUtxoByte * BigInt(cborBytes.length)
+        const cborBytes = yield* Effect.try({
+          try: () => TxOut.toCBORBytes(tempOutput),
+          catch: (error) =>
+            new TransactionBuilderError({
+              message: "Failed to encode output to CBOR for min UTxO calculation",
+              cause: error
+            })
+        })
+
+        return params.coinsPerUtxoByte * (UTXO_ENTRY_OVERHEAD_BYTES + BigInt(cborBytes.length))
+      })
+
+    // Exact fixed-point solve for minUTxO:
+    // required = f(lovelace), where f uses serialized size that depends on lovelace.
+    // We iterate until required value stabilizes.
+    let currentLovelace = 0n
+
+    for (let i = 0; i < MAX_MIN_UTXO_ITERATIONS; i++) {
+      const requiredLovelace = yield* calculateRequiredLovelace(currentLovelace)
+      if (requiredLovelace === currentLovelace) {
+        return requiredLovelace
+      }
+      currentLovelace = requiredLovelace
+    }
+
+    return currentLovelace
   })
 
 /**
