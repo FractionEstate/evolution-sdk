@@ -35,7 +35,7 @@
   "scripts": {
     "build:wasm": "rm -rf src/browser src/node && cd rust && wasm-pack build --target bundler --out-dir ../src/browser && wasm-pack build --target nodejs --out-dir ../src/node && pnpm clean-wasm",
     "clean-wasm": "rm -f src/browser/.gitignore src/browser/package.json src/node/.gitignore src/node/package.json",
-    "build": "tsc -b tsconfig.build.json && cp -r src/node dist/node && cp -r src/browser dist/browser",
+    "build": "tsc -b tsconfig.build.json && cp -r src/node/. dist/node && cp -r src/browser/. dist/browser",
     "dev": "tsc -b tsconfig.build.json --watch",
     "type-check": "tsc --noEmit",
     "lint": "eslint \"src/**/*.{ts,mjs}\"",
