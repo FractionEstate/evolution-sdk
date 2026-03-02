@@ -13,6 +13,7 @@ docs/.twoslash
 .tsbuildinfo/
 
 .github/instructions/
+.github/skills/
 
 # Ignore debug
 debug/
