@@ -652,6 +652,11 @@ export const evaluateTx =
               txOut.datumHash = utxo.datumHash
             }
 
+            // Add script if present (required for reference script UTxOs)
+            if (utxo.script) {
+              txOut.script = utxo.script
+            }
+
             return [txIn, txOut]
           })
         : []
