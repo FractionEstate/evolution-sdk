@@ -138,43 +138,71 @@ export const calculateTotalAssets = (utxos: ReadonlyArray<CoreUTxO.UTxO> | Set<C
 /**
  * Calculate reference script fees using tiered pricing.
  *
- * Reference scripts stored on-chain incur additional fees based on their size:
- * - First 25KB:  15 lovelace/byte
- * - Next 25KB:   25 lovelace/byte
- * - Next 150KB: 100 lovelace/byte
- * - Maximum: 200KB total
+ * Direct port of the Cardano ledger's `tierRefScriptFee` function.
+ * Each `sizeIncrement`-byte chunk is priced at `curTierPrice` per byte,
+ * then `curTierPrice *= multiplier` for the next chunk. Final result: `floor(total)`.
  *
- * @param referenceInputs - UTxOs containing reference scripts
+ * @since 2.0.0
+ * @category helpers
+ */
+export const tierRefScriptFee = (multiplier: number, sizeIncrement: number, baseFee: number, totalSize: number): bigint => {
+  let acc = 0
+  let curTierPrice = baseFee
+  let remaining = totalSize
+
+  while (remaining >= sizeIncrement) {
+    acc += sizeIncrement * curTierPrice
+    curTierPrice *= multiplier
+    remaining -= sizeIncrement
+  }
+  acc += remaining * curTierPrice
+
+  return BigInt(Math.floor(acc))
+}
+
+/**
+ * Calculate reference script fees using tiered pricing.
+ *
+ * Matches the Cardano node's `tierRefScriptFee` from Conway ledger:
+ * - Stride: 25,600 bytes (hardcoded, becomes a protocol param post-Conway)
+ * - Multiplier: 1.2× per tier (hardcoded, becomes a protocol param post-Conway)
+ * - Base cost: `minFeeRefScriptCostPerByte` protocol parameter
+ *
+ * For each 25,600-byte chunk the price per byte increases by 1.2×.
+ * The final (partial) chunk is charged proportionally. Result is `floor(total)`.
+ *
+ * The Cardano node sums scriptRef sizes from both spent inputs and reference
+ * inputs (`txNonDistinctRefScriptsSize`), so callers must pass both.
+ *
+ * @param utxos - All UTxOs (spent inputs + reference inputs) to scan for scriptRefs
+ * @param costPerByte - The minFeeRefScriptCostPerByte protocol parameter
  * @returns Total reference script fee in lovelace
  *
  * @since 2.0.0
  * @category helpers
  */
 export const calculateReferenceScriptFee = (
-  referenceInputs: ReadonlyArray<CoreUTxO.UTxO>
+  utxos: ReadonlyArray<CoreUTxO.UTxO>,
+  costPerByte: number
 ): Effect.Effect<bigint, TransactionBuilderError> =>
   Effect.gen(function* () {
-    // Calculate total reference script size in bytes (both native and Plutus)
-    // Per ADR 2024-08-14_009: "Native scripts that are used as reference scripts also contribute their size to this calculation"
     let totalScriptSize = 0
 
-    for (const utxo of referenceInputs) {
+    for (const utxo of utxos) {
       if (utxo.scriptRef) {
         const scriptBytes = CoreScript.toCBOR(utxo.scriptRef).length
         totalScriptSize += scriptBytes
         const scriptType = utxo.scriptRef._tag === "NativeScript" ? "Native" : "Plutus"
-        yield* Effect.logDebug(`[RefScriptFee] ${scriptType} script in ref input: ${scriptBytes} bytes`)
+        yield* Effect.logDebug(`[RefScriptFee] ${scriptType} script: ${scriptBytes} bytes`)
       }
     }
 
-    // No reference scripts = no tiered fee
     if (totalScriptSize === 0) {
       return 0n
     }
 
     yield* Effect.logDebug(`[RefScriptFee] Total reference script size: ${totalScriptSize} bytes`)
 
-    // Check maximum size limit (200KB)
     if (totalScriptSize > 200_000) {
       return yield* Effect.fail(
         new TransactionBuilderError({
@@ -183,26 +211,8 @@ export const calculateReferenceScriptFee = (
       )
     }
 
-    // Calculate tiered fees for all reference scripts
-    let fee = 0n
-    let remainingSize = totalScriptSize
-    let tierIndex = 0
-    const tierPrices = [15, 25, 100] // lovelace per byte for each tier
-    const tierSize = 25_000 // 25KB per tier
-
-    while (remainingSize > 0 && tierIndex < 3) {
-      const bytesInThisTier = Math.min(remainingSize, tierSize)
-      const tierFee = BigInt(Math.ceil(bytesInThisTier * tierPrices[tierIndex]!))
-      fee += tierFee
-      yield* Effect.logDebug(
-        `[RefScriptFee] Tier ${tierIndex + 1}: ${bytesInThisTier} bytes × ${tierPrices[tierIndex]} lovelace/byte = ${tierFee} lovelace`
-      )
-
-      remainingSize -= tierSize
-      tierIndex++
-    }
-
-    yield* Effect.logDebug(`[RefScriptFee] Total tiered fee (Plutus only): ${fee} lovelace`)
+    const fee = tierRefScriptFee(1.2, 25_600, costPerByte, totalScriptSize)
+    yield* Effect.logDebug(`[RefScriptFee] Tiered fee: ${fee} lovelace`)
 
     return fee
   })
@@ -679,7 +689,8 @@ export const assembleTransaction = (
 
       // Only include cost models for Plutus versions actually used in the transaction
       // The scriptDataHash must use the same languages as the node will compute
-      // Check both witness set scripts AND reference scripts
+      // Check: 1) witness set scripts (attachScript), 2) reference inputs (readFrom),
+      // 3) spent UTxO scriptRefs (inline scripts on inputs being consumed)
       let hasPlutusV1 = plutusV1Scripts.length > 0
       let hasPlutusV2 = plutusV2Scripts.length > 0
       let hasPlutusV3 = plutusV3Scripts.length > 0
@@ -688,6 +699,25 @@ export const assembleTransaction = (
       for (const refUtxo of state.referenceInputs) {
         if (refUtxo.scriptRef) {
           switch (refUtxo.scriptRef._tag) {
+            case "PlutusV1":
+              hasPlutusV1 = true
+              break
+            case "PlutusV2":
+              hasPlutusV2 = true
+              break
+            case "PlutusV3":
+              hasPlutusV3 = true
+              break
+          }
+        }
+      }
+
+      // Also check spent UTxOs for inline scriptRef (scripts embedded in the UTxO itself)
+      // When a script-locked UTxO carries its own script as scriptRef, the node uses that
+      // script for validation. The SDK must include the corresponding language's cost model.
+      for (const utxo of state.selectedUtxos) {
+        if (utxo.scriptRef) {
+          switch (utxo.scriptRef._tag) {
             case "PlutusV1":
               hasPlutusV1 = true
               break
@@ -1213,10 +1243,12 @@ export const calculateFeeIteratively = (
     }
 
     // Check if Plutus scripts are present (need scriptDataHash for accurate size)
+    // Must check: witness set scripts, redeemers (covers scriptRef spending), and reference input scripts
     const hasPlutusScripts =
       (fakeWitnessSet.plutusV1Scripts && fakeWitnessSet.plutusV1Scripts.length > 0) ||
       (fakeWitnessSet.plutusV2Scripts && fakeWitnessSet.plutusV2Scripts.length > 0) ||
-      (fakeWitnessSet.plutusV3Scripts && fakeWitnessSet.plutusV3Scripts.length > 0)
+      (fakeWitnessSet.plutusV3Scripts && fakeWitnessSet.plutusV3Scripts.length > 0) ||
+      state.redeemers.size > 0
 
     // Create placeholder scriptDataHash if Plutus scripts are present
     // This is needed for accurate size estimation (32 bytes + CBOR overhead)
@@ -1310,19 +1342,9 @@ export const calculateFeeIteratively = (
       // Calculate size
       const size = yield* calculateTransactionSize(transaction)
 
-      // Add reference script sizes to transaction size for base fee calculation
-      // Despite ADR docs, actual node behavior includes ref scripts in tx size for base fee
-      let refScriptSize = 0
-      for (const utxo of state.referenceInputs) {
-        if (utxo.scriptRef) {
-          const scriptBytes = CoreScript.toCBOR(utxo.scriptRef).length
-          refScriptSize += scriptBytes
-        }
-      }
-      const sizeWithRefScripts = size + refScriptSize
-
-      // Calculate base fee based on size including reference scripts
-      const baseFee = calculateMinimumFee(sizeWithRefScripts, {
+      // Calculate base fee from serialized transaction size
+      // Note: reference script fees are a separate additive component, NOT included in base fee
+      const baseFee = calculateMinimumFee(size, {
         minFeeCoefficient: protocolParams.minFeeCoefficient,
         minFeeConstant: protocolParams.minFeeConstant
       })
