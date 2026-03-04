@@ -203,7 +203,8 @@ const resolveProtocolParameters = (
         coinsPerUtxoByte: params.coinsPerUtxoByte,
         maxTxSize: params.maxTxSize,
         priceMem: params.priceMem,
-        priceStep: params.priceStep
+        priceStep: params.priceStep,
+        minFeeRefScriptCostPerByte: params.minFeeRefScriptCostPerByte
       })
     )
   }
@@ -1195,6 +1196,9 @@ export interface ProtocolParameters {
 
   /** Price per CPU step for script execution (optional, for ExUnits cost calculation) */
   priceStep?: number
+
+  /** Cost per byte for reference scripts (Conway-era, default 44) */
+  minFeeRefScriptCostPerByte?: number
 
   // Future fields for advanced features:
   // maxBlockHeaderSize?: number
