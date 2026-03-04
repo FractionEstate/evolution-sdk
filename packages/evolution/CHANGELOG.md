@@ -1,5 +1,11 @@
 # @evolution-sdk/evolution
 
+## 0.3.21
+
+### Patch Changes
+
+- [#175](https://github.com/IntersectMBO/evolution-sdk/pull/175) [`38a460f`](https://github.com/IntersectMBO/evolution-sdk/commit/38a460f7a58212a42c720e3d165456bdee9ce505) Thanks [@solidsnakedev](https://github.com/solidsnakedev)! - Fix scriptDataHash integrity mismatch when spending UTxOs carrying inline scriptRef (e.g. PlutusV3) via `collectFrom()` without `attachScript()` or `readFrom()`. Also correct tiered reference-script fee calculation to match the Conway ledger formula (stride 25,600 bytes, 1.2× multiplier per tier, `minFeeRefScriptCostPerByte` protocol parameter).
+
 ## 0.3.20
 
 ### Patch Changes
