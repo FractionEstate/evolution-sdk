@@ -318,10 +318,14 @@ const MapValueCDDLSchema = Schema.Tuple(Data.CDDLSchema, Schema.Tuple(CBOR.Integ
 /**
  * CDDL schema for map format: `{ + [tag, index] => [data, ex_units] }`
  *
+ * Uses `MapFromSelf` (not `Map`) so the Encoded type is a JS Map — matching
+ * how `CBOR.FromBytes` represents CBOR major-type-5 maps at runtime.
+ * This is the same pattern used by Withdrawals, Mint, MultiAsset, CostModel.
+ *
  * @since 2.0.0
  * @category schemas
  */
-export const MapCDDLSchema = Schema.Map({
+export const MapCDDLSchema = Schema.MapFromSelf({
   key: MapKeyCDDLSchema,
   value: MapValueCDDLSchema
 })

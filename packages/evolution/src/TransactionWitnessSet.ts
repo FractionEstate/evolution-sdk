@@ -509,10 +509,9 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Tra
       if (redeemersRaw !== undefined) {
         if (redeemersRaw instanceof Map) {
           // Map format (Conway recommended)
-          // Schema.Map expects array-of-pairs as encoded input, so convert Map → entries array
-          const entries = Array.from((redeemersRaw as Map<CBOR.CBOR, CBOR.CBOR>).entries())
+          // MapCDDLSchema uses MapFromSelf so it expects a JS Map directly
           const redeemersCollection = yield* ParseResult.decode(Redeemers.FromMapCDDL)(
-            entries as unknown as Schema.Schema.Encoded<typeof Redeemers.FromMapCDDL>
+            redeemersRaw as unknown as Schema.Schema.Encoded<typeof Redeemers.FromMapCDDL>
           )
           witnessSet.redeemers = redeemersCollection
         } else {
