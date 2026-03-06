@@ -156,13 +156,19 @@ export class RedeemerMap extends Schema.TaggedClass<RedeemerMap>()("RedeemerMap"
   [Equal.symbol](that: unknown): boolean {
     if (!(that instanceof RedeemerMap)) return false
     if (this.value.size !== that.value.size) return false
-    const thisArr = this.toArray()
-    const thatArr = that.toArray()
-    return arrayEquals(thisArr, thatArr)
+    // Order-insensitive: sort both by [tag, index] then compare Redeemer objects
+    // (Redeemer is a TaggedClass with proper Equal support, unlike raw Data.Data)
+    const sortKey = (r: Redeemer.Redeemer) => `${r.tag}:${r.index}`
+    const sortedThis = [...this.toArray()].sort((a, b) => sortKey(a).localeCompare(sortKey(b)))
+    const sortedThat = [...that.toArray()].sort((a, b) => sortKey(a).localeCompare(sortKey(b)))
+    return arrayEquals(sortedThis, sortedThat)
   }
 
   [Hash.symbol](): number {
-    return Hash.cached(this, arrayHash(this.toArray()))
+    // Order-insensitive: sort by key then hash the sorted array
+    const sortKey = (r: Redeemer.Redeemer) => `${r.tag}:${r.index}`
+    const sorted = [...this.toArray()].sort((a, b) => sortKey(a).localeCompare(sortKey(b)))
+    return Hash.cached(this, arrayHash(sorted))
   }
 }
 
@@ -173,11 +179,18 @@ export class RedeemerMap extends Schema.TaggedClass<RedeemerMap>()("RedeemerMap"
  * @category constructors
  */
 export const makeRedeemerMap = (redeemers: ReadonlyArray<Redeemer.Redeemer>): RedeemerMap => {
-  const entries: Array<readonly [RedeemerKey, RedeemerValue]> = redeemers.map((r) => [
-    [r.tag, r.index] as const,
-    new RedeemerValue({ data: r.data, exUnits: r.exUnits })
-  ])
-  return new RedeemerMap({ value: new Map(entries) })
+  const map = new Map<RedeemerKey, RedeemerValue>()
+  for (const r of redeemers) {
+    const key: RedeemerKey = [r.tag, r.index]
+    // Detect semantic duplicates (same tag + index)
+    for (const [existingKey] of map) {
+      if (existingKey[0] === key[0] && existingKey[1] === key[1]) {
+        throw new Error(`Duplicate redeemer key: [${key[0]}, ${key[1]}]`)
+      }
+    }
+    map.set(key, new RedeemerValue({ data: r.data, exUnits: r.exUnits }))
+  }
+  return new RedeemerMap({ value: map })
 }
 
 /**

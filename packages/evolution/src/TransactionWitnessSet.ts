@@ -391,7 +391,11 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Tra
       // with key order + entries rebuild guard for when keys change
       const enc = CBOR.getEncoding(toA)
       if (enc !== undefined) {
-        if (enc.keyOrder && enc.keyOrder.length !== record.size) {
+        const keySetChanged = enc.keyOrder && (
+          enc.keyOrder.length !== record.size ||
+          !enc.keyOrder.every((k) => record.has(k as bigint))
+        )
+        if (keySetChanged) {
           // Key set changed — rebuild keyOrder and entries to match new map
           const newKeyOrder: Array<CBOR.CBOR> = []
           const newEntries: Array<readonly [CBOR.CBOREncoding | undefined, CBOR.CBOREncoding | undefined]> = []

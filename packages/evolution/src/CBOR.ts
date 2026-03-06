@@ -843,16 +843,47 @@ export const toCBORHex = (value: CBOR, options: CodecOptions = PRESERVE_OPTIONS)
 
 // Encode (sync)
 
-/** Encode a CBOR header: major type (0-7) + value with specific ByteSize width. */
+/** Encode an integer with minimal CBOR width (fallback when metadata width is too small). */
+const encodeIntMinimal = (majorType: number, value: bigint): Uint8Array => {
+  const mt = majorType << 5
+  if (value < 24n) return new Uint8Array([mt | Number(value)])
+  if (value < 256n) return new Uint8Array([mt | 24, Number(value)])
+  if (value < 65536n) {
+    const n = Number(value)
+    return new Uint8Array([mt | 25, (n >> 8) & 0xff, n & 0xff])
+  }
+  if (value < 4294967296n) {
+    const n = Number(value)
+    return new Uint8Array([mt | 26, (n >> 24) & 0xff, (n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff])
+  }
+  const low = Number(value & 0xffffffffn)
+  const high = Number(value >> 32n)
+  return new Uint8Array([
+    mt | 27,
+    (high >> 24) & 0xff, (high >> 16) & 0xff, (high >> 8) & 0xff, high & 0xff,
+    (low >> 24) & 0xff, (low >> 16) & 0xff, (low >> 8) & 0xff, low & 0xff
+  ])
+}
+
+/** Encode a CBOR header: major type (0-7) + value with specific ByteSize width.
+ *  Falls back to minimal encoding if the value no longer fits the recorded width. */
 const encodeIntHeader = (majorType: number, value: bigint, byteSize: ByteSize): Uint8Array => {
   const mt = majorType << 5
-  if (byteSize === 0) return new Uint8Array([mt | Number(value)])
-  if (byteSize === 1) return new Uint8Array([mt | 24, Number(value)])
+  if (byteSize === 0) {
+    if (value >= 24n) return encodeIntMinimal(majorType, value)
+    return new Uint8Array([mt | Number(value)])
+  }
+  if (byteSize === 1) {
+    if (value >= 256n) return encodeIntMinimal(majorType, value)
+    return new Uint8Array([mt | 24, Number(value)])
+  }
   if (byteSize === 2) {
+    if (value >= 65536n) return encodeIntMinimal(majorType, value)
     const n = Number(value)
     return new Uint8Array([mt | 25, (n >> 8) & 0xff, n & 0xff])
   }
   if (byteSize === 4) {
+    if (value >= 4294967296n) return encodeIntMinimal(majorType, value)
     const n = Number(value)
     return new Uint8Array([mt | 26, (n >> 24) & 0xff, (n >> 16) & 0xff, (n >> 8) & 0xff, n & 0xff])
   }
@@ -1456,7 +1487,15 @@ const mapGetCBOR = (map: ReadonlyMap<CBOR, CBOR>, key: CBOR): CBOR | undefined =
 const encodeMapSync = (value: ReadonlyMap<CBOR, CBOR>, options: CodecOptions, encoding?: CBOREncoding): Uint8Array => {
   // Use keyOrder from encoding to replay original insertion order
   if (encoding?.keyOrder) {
-    const pairs: Array<[CBOR, CBOR]> = encoding.keyOrder.map((key) => [key, mapGetCBOR(value, key) as CBOR])
+    const pairs: Array<[CBOR, CBOR]> = []
+    for (const key of encoding.keyOrder) {
+      const mapped = mapGetCBOR(value, key)
+      if (mapped === undefined) {
+        // Key no longer exists — keyOrder is stale, fall back to current entries
+        return encodeMapEntriesSync(Array.from(value.entries()), options, encoding)
+      }
+      pairs.push([key, mapped])
+    }
     return encodeMapEntriesSync(pairs, options, encoding)
   }
   return encodeMapEntriesSync(Array.from(value.entries()), options, encoding)
