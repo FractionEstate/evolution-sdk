@@ -135,7 +135,7 @@ describe("TxBuilder Spend ScriptRef (Devnet Submit)", () => {
 
       const spendTx = await spendSignBuilder.toTransaction()
       expect(spendTx.body.scriptDataHash).toBeDefined()
-      expect(spendTx.witnessSet.redeemers?.length).toBe(1)
+      expect(spendTx.witnessSet.redeemers?.size).toBe(1)
 
       const spendTxHash = await (await spendSignBuilder.sign()).submit()
 

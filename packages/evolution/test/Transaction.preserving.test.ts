@@ -228,12 +228,12 @@ describe("addVKeyWitnessesBytes", () => {
 // Issue 1 & 2 proof tests (regression)
 // ---------------------------------------------------------------------------
 
-describe("Issue 1: body bytes not preserved on standard round-trip", () => {
-  it("standard round-trip changes body bytes for non-canonical CBOR", () => {
+describe("Issue 1: body bytes preserved on standard round-trip", () => {
+  it("standard round-trip preserves body bytes for non-canonical CBOR", () => {
     const nonCanonicalHex = "84a300d90102800180021800a0f5f6"
     const tx = Transaction.fromCBORHex(nonCanonicalHex)
     const standardHex = Transaction.toCBORHex(tx)
-    expect(standardHex).not.toBe(nonCanonicalHex)
+    expect(standardHex).toBe(nonCanonicalHex)
   })
 
   it("addVKeyWitnessesHex preserves non-canonical body", () => {
@@ -265,8 +265,8 @@ describe("Issue 2: map-format redeemers dropped on decode", () => {
 
     const decoded = Transaction.fromCBORBytes(fullBytes)
     expect(decoded.witnessSet.redeemers).toBeDefined()
-    expect(decoded.witnessSet.redeemers!.length).toBe(1)
-    expect(decoded.witnessSet.redeemers![0].tag).toBe("spend")
+    expect(decoded.witnessSet.redeemers!.size).toBe(1)
+    expect(decoded.witnessSet.redeemers!.toArray()[0].tag).toBe("spend")
   })
 })
 
@@ -282,10 +282,10 @@ describe("Conway map-format redeemers", () => {
 
     const ws = TransactionWitnessSet.fromCBORBytes(witnessBytes)
     expect(ws.redeemers).toBeDefined()
-    expect(ws.redeemers!.length).toBe(1)
-    expect(ws.redeemers![0].tag).toBe("spend")
-    expect((ws as any)._redeemersFormat).toBe("map")
+    expect(ws.redeemers!.size).toBe(1)
+    expect(ws.redeemers!.toArray()[0].tag).toBe("spend")
 
+    // Verify map format is preserved via round-trip (encoding metadata carries the format)
     const reEncodedBytes = TransactionWitnessSet.toCBORBytes(ws)
     const reDecodedCBOR = CBOR.fromCBORBytes(reEncodedBytes) as Map<bigint, CBOR.CBOR>
     expect(reDecodedCBOR.get(5n)).toBeInstanceOf(Map)
@@ -293,7 +293,7 @@ describe("Conway map-format redeemers", () => {
 
   it("still decodes array-format redeemers correctly", () => {
     const redeemer = Redeemer.spend(0n, PlutusData.constr(0n, []), new Redeemer.ExUnits({ mem: 100n, steps: 200n }))
-    const redeemersCollection = new Redeemers.Redeemers({ values: [redeemer] })
+    const redeemersCollection = new Redeemers.RedeemerArray({ value: [redeemer] })
     const arrayFormatBytes = Redeemers.toCBORBytes(redeemersCollection)
     const arrayFormatCBOR = CBOR.fromCBORBytes(arrayFormatBytes)
     const witnessMap = new Map<CBOR.CBOR, CBOR.CBOR>()
@@ -302,9 +302,9 @@ describe("Conway map-format redeemers", () => {
 
     const ws = TransactionWitnessSet.fromCBORBytes(witnessBytes)
     expect(ws.redeemers).toBeDefined()
-    expect(ws.redeemers!.length).toBe(1)
-    expect((ws as any)._redeemersFormat).toBe("array")
+    expect(ws.redeemers!.size).toBe(1)
 
+    // Verify array format is preserved via round-trip (no map encoding metadata)
     const reEncodedBytes = TransactionWitnessSet.toCBORBytes(ws)
     const reDecodedCBOR = CBOR.fromCBORBytes(reEncodedBytes) as Map<bigint, CBOR.CBOR>
     expect(Array.isArray(reDecodedCBOR.get(5n))).toBe(true)
