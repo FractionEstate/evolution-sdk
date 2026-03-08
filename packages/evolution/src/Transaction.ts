@@ -63,16 +63,10 @@ export class Transaction extends Schema.TaggedClass<Transaction>()("Transaction"
  *
  * CDDL: transaction = [transaction_body, transaction_witness_set, bool, auxiliary_data / nil]
  */
-export const CDDLSchema = Schema.Tuple(
-  TransactionBody.CDDLSchema.annotations({ identifier: "TransactionBodyCDDL", description: "Transaction body" }),
-  TransactionWitnessSet.CDDLSchema.annotations({
-    identifier: "TransactionWitnessSetCDDL",
-    description: "Transaction witness set"
-  }),
-  Schema.Boolean,
-  // Auxiliary data is a CBOR value; CBOR schema already includes null in its domain
-  CBOR.CBORSchema.annotations({ identifier: "AuxiliaryDataCDDL", description: "Auxiliary data as raw CBOR" })
-).annotations({ identifier: "TransactionCDDL", description: "Transaction tuple structure" })
+export const CDDLSchema = Schema.declare(
+  (input: unknown): input is readonly [Map<bigint, CBOR.CBOR>, Map<bigint, CBOR.CBOR>, boolean, CBOR.CBOR | null] =>
+    Array.isArray(input)
+).annotations({ identifier: "Transaction.CDDLSchema", description: "Transaction tuple structure" })
 
 /**
  * Transform between CDDL tuple and Transaction class.
@@ -89,7 +83,8 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Tra
       const isValid = tx.isValid
       const auxiliaryData =
         tx.auxiliaryData === null ? null : yield* ParseResult.encode(AuxiliaryData.FromCDDL)(tx.auxiliaryData)
-      return [body, witnessSet, isValid, auxiliaryData] as const
+      const result = [body, witnessSet, isValid, auxiliaryData] as const
+      return result
     }),
   decode: (tuple) =>
     Eff.gen(function* () {
@@ -129,11 +124,71 @@ export const fromCBORBytes = (bytes: Uint8Array, options: CBOR.CodecOptions = CB
 export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.decodeSync(FromCBORHex(options))(hex)
 
+/**
+ * Parse a Transaction from CBOR bytes and return the root format tree.
+ *
+ * @since 2.0.0
+ * @category parsing
+ */
+export const fromCBORBytesWithFormat = (
+  bytes: Uint8Array
+): CBOR.DecodedWithFormat<Transaction> => {
+  const decoded = CBOR.fromCBORBytesWithFormat(bytes)
+  const value = Schema.decodeSync(FromCDDL)(
+    decoded.value as readonly [Map<bigint, CBOR.CBOR>, Map<bigint, CBOR.CBOR>, boolean, CBOR.CBOR | null]
+  )
+  return { value, format: decoded.format }
+}
+
+/**
+ * Parse a Transaction from CBOR hex string and return the root format tree.
+ *
+ * @since 2.0.0
+ * @category parsing
+ */
+export const fromCBORHexWithFormat = (
+  hex: string
+): CBOR.DecodedWithFormat<Transaction> => {
+  const decoded = CBOR.fromCBORHexWithFormat(hex)
+  const value = Schema.decodeSync(FromCDDL)(
+    decoded.value as readonly [Map<bigint, CBOR.CBOR>, Map<bigint, CBOR.CBOR>, boolean, CBOR.CBOR | null]
+  )
+  return { value, format: decoded.format }
+}
+
 export const toCBORBytes = (data: Transaction, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.encodeSync(FromCBORBytes(options))(data)
 
 export const toCBORHex = (data: Transaction, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.encodeSync(FromCBORHex(options))(data)
+
+/**
+ * Convert a Transaction to CBOR bytes using an explicit root format tree.
+ *
+ * @since 2.0.0
+ * @category encoding
+ */
+export const toCBORBytesWithFormat = (
+  data: Transaction,
+  format: CBOR.CBORFormat
+): Uint8Array => {
+  const cborTuple = Schema.encodeSync(FromCDDL)(data)
+  return CBOR.toCBORBytesWithFormat(cborTuple as unknown as CBOR.CBOR, format)
+}
+
+/**
+ * Convert a Transaction to CBOR hex string using an explicit root format tree.
+ *
+ * @since 2.0.0
+ * @category encoding
+ */
+export const toCBORHexWithFormat = (
+  data: Transaction,
+  format: CBOR.CBORFormat
+): string => {
+  const cborTuple = Schema.encodeSync(FromCDDL)(data)
+  return CBOR.toCBORHexWithFormat(cborTuple as unknown as CBOR.CBOR, format)
+}
 
 // ============================================================================
 // Byte-level witness merging (CML-like approach)
@@ -297,6 +352,39 @@ export const addVKeyWitnessesHex = (
   const wsBytes = Schema.decodeSync(Schema.Uint8ArrayFromHex)(walletWitnessSetHex)
   const result = addVKeyWitnessesBytes(txBytes, wsBytes, options)
   return Schema.encodeSync(Schema.Uint8ArrayFromHex)(result)
+}
+
+// ============================================================================
+// Domain-level witness addition
+// ============================================================================
+
+/**
+ * Add VKey witnesses to a transaction at the domain level.
+ *
+ * This creates a new Transaction with the additional witnesses merged in.
+ * All encoding metadata (body bytes, redeemers format, witness map structure)
+ * is preserved so that txId and scriptDataHash remain stable.
+ *
+ * @since 2.0.0
+ * @category encoding
+ */
+export const addVKeyWitnesses = (
+  tx: Transaction,
+  witnesses: ReadonlyArray<TransactionWitnessSet.VKeyWitness>
+): Transaction => {
+  if (witnesses.length === 0) return tx
+  const oldWs = tx.witnessSet
+  const newWs = new TransactionWitnessSet.TransactionWitnessSet(
+    {
+      ...oldWs,
+      vkeyWitnesses: [...(oldWs.vkeyWitnesses ?? []), ...witnesses]
+    },
+    { disableValidation: true }
+  )
+  return new Transaction(
+    { body: tx.body, witnessSet: newWs, isValid: tx.isValid, auxiliaryData: tx.auxiliaryData },
+    { disableValidation: true }
+  )
 }
 
 // ============================================================================

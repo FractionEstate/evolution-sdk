@@ -199,10 +199,9 @@ const decodeInputs = ParseResult.decodeUnknownEither(CBOR.tag(258, Schema.Array(
  * @since 2.0.0
  * @category schemas
  */
-export const CDDLSchema = Schema.MapFromSelf({
-  key: CBOR.Integer,
-  value: CBOR.CBORSchema
-})
+export const CDDLSchema = Schema.declare(
+  (input: unknown): input is Map<bigint, CBOR.CBOR> => input instanceof Map
+).annotations({ identifier: "TransactionBody.CDDLSchema" })
 
 type CDDLSchema = typeof CDDLSchema.Type
 
@@ -449,7 +448,7 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Tra
       const currentTreasuryValue = fromA.get(21n) as Coin.Coin | undefined
       const donation = fromA.get(22n) as Coin.Coin | undefined
 
-      return new TransactionBody(
+      const result = new TransactionBody(
         {
           inputs,
           outputs,
@@ -474,6 +473,7 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Tra
         },
         { disableValidation: true }
       )
+      return result
     })
 })
 
@@ -542,6 +542,62 @@ export const toCBORBytes = (data: TransactionBody, options: CBOR.CodecOptions = 
  */
 export const toCBORHex = (data: TransactionBody, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.encodeSync(FromCBORHex(options))(data)
+
+/**
+ * Parse a TransactionBody from CBOR bytes and return the root format tree.
+ *
+ * @since 2.0.0
+ * @category conversion
+ */
+export const fromCBORBytesWithFormat = (
+  bytes: Uint8Array
+): CBOR.DecodedWithFormat<TransactionBody> => {
+  const decoded = CBOR.fromCBORBytesWithFormat(bytes)
+  const value = Schema.decodeSync(FromCDDL)(decoded.value as Map<bigint, CBOR.CBOR>)
+  return { value, format: decoded.format }
+}
+
+/**
+ * Parse a TransactionBody from CBOR hex string and return the root format tree.
+ *
+ * @since 2.0.0
+ * @category conversion
+ */
+export const fromCBORHexWithFormat = (
+  hex: string
+): CBOR.DecodedWithFormat<TransactionBody> => {
+  const decoded = CBOR.fromCBORHexWithFormat(hex)
+  const value = Schema.decodeSync(FromCDDL)(decoded.value as Map<bigint, CBOR.CBOR>)
+  return { value, format: decoded.format }
+}
+
+/**
+ * Convert a TransactionBody to CBOR bytes using an explicit root format tree.
+ *
+ * @since 2.0.0
+ * @category conversion
+ */
+export const toCBORBytesWithFormat = (
+  data: TransactionBody,
+  format: CBOR.CBORFormat
+): Uint8Array => {
+  const cborMap = Schema.encodeSync(FromCDDL)(data)
+  return CBOR.toCBORBytesWithFormat(cborMap, format)
+}
+
+/**
+ * Convert a TransactionBody to CBOR hex string using an explicit root format tree.
+ *
+ * @since 2.0.0
+ * @category conversion
+ */
+export const toCBORHexWithFormat = (
+  data: TransactionBody,
+  format: CBOR.CBORFormat
+): string => {
+  const cborMap = Schema.encodeSync(FromCDDL)(data)
+  return CBOR.toCBORHexWithFormat(cborMap, format)
+}
 
 // ============================================================================
 // FastCheck Arbitrary

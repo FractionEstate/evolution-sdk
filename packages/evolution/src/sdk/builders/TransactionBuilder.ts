@@ -1059,12 +1059,9 @@ export interface BuildOptions {
   /**
    * Format for encoding redeemers in the script data hash.
    *
-   * - `"array"` (DEFAULT): Conway-era format, redeemers encoded as array
-   * - `"map"`: Babbage-era format, redeemers encoded as map
+   * @deprecated Redeemer format is now determined by the concrete `Redeemers` type
+   * (`RedeemerMap` or `RedeemerArray`). This option is ignored.
    *
-   * Use `"map"` for Babbage compatibility or debugging.
-   *
-   * @default "array"
    * @since 2.0.0
    */
   readonly scriptDataFormat?: "array" | "map"

@@ -123,15 +123,10 @@ const concatBytes = (...arrays: ReadonlyArray<Uint8Array>): Uint8Array => {
 }
 
 /**
- * Format for encoding redeemers in the script data hash.
- *
- * - "array": Legacy format `[ + redeemer ]` (Shelley-Babbage)
- * - "map": Conway format `{ + [tag, index] => [data, ex_units] }`
- */
-export type RedeemersFormat = "array" | "map"
-
-/**
  * Compute script_data_hash using standard module encoders.
+ *
+ * Accepts the concrete `Redeemers` union type — encoding format is determined
+ * by `_tag` (`RedeemerMap` → map CBOR, `RedeemerArray` → array CBOR).
  *
  * The payload format per CDDL spec is raw concatenation (not a CBOR structure):
  * ```
@@ -139,10 +134,9 @@ export type RedeemersFormat = "array" | "map"
  * ```
  */
 export const hashScriptData = (
-  redeemers: ReadonlyArray<Redeemer.Redeemer>,
+  redeemers: Redeemers.Redeemers,
   costModels: CostModel.CostModels,
   datums?: ReadonlyArray<Data.Data>,
-  format: RedeemersFormat = "array",
   options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS
 ): ScriptDataHash.ScriptDataHash => {
   const hasDatums = Array.isArray(datums) && datums.length > 0
@@ -152,7 +146,7 @@ export const hashScriptData = (
 
   let payload: Uint8Array
 
-  if (hasDatums && redeemers.length === 0) {
+  if (hasDatums && redeemers.size === 0) {
     // Special case (CDDL): [ A0 | tag(258) datums | A0 ]
     const datumsBytes = encodeDatumsTaggedSet(datums)
     payload = concatBytes(
@@ -161,12 +155,11 @@ export const hashScriptData = (
       new Uint8Array([0xa0]) // Empty map
     )
   } else {
-    // Normal case: [ redeemers | datums | language_views ]
-    const redeemersCollection = new Redeemers.Redeemers({ values: [...redeemers] })
+    // Encode redeemers based on concrete type
     const redeemersBytes =
-      format === "map"
-        ? Redeemers.toCBORBytesMap(redeemersCollection, options)
-        : Redeemers.toCBORBytes(redeemersCollection, options)
+      redeemers._tag === "RedeemerMap"
+        ? Redeemers.toCBORBytesMap(redeemers, options)
+        : Redeemers.toCBORBytes(redeemers, options)
     const datumsBytes = hasDatums ? encodeDatumsTaggedSet(datums) : undefined
 
     payload = datumsBytes

@@ -18,6 +18,7 @@ import type * as PlutusV2 from "../../PlutusV2.js"
 import type * as PlutusV3 from "../../PlutusV3.js"
 import * as PolicyId from "../../PolicyId.js"
 import * as Redeemer from "../../Redeemer.js"
+import * as Redeemers from "../../Redeemers.js"
 import type * as RewardAccount from "../../RewardAccount.js"
 import * as CoreScript from "../../Script.js"
 import * as ScriptDataHash from "../../ScriptDataHash.js"
@@ -665,6 +666,7 @@ export const assembleTransaction = (
 
     // Compute scriptDataHash if there are Plutus scripts (redeemers present)
     let scriptDataHash: ReturnType<typeof hashScriptData> | undefined
+    let redeemersConcrete: Redeemers.RedeemerMap | undefined
     if (redeemers.length > 0) {
       // Get config to access provider for full protocol parameters
       const config = yield* TxBuilderConfigTag
@@ -751,16 +753,15 @@ export const assembleTransaction = (
       })
 
       // Compute the hash of script data (redeemers + optional datums + cost models)
-      const buildOpts = yield* BuildOptionsTag
-      const scriptDataFmt = buildOpts.scriptDataFormat ?? "array"
+      // Use the same concrete Redeemers type that goes into the witness set
+      redeemersConcrete = Redeemers.makeRedeemerMap(redeemers)
       scriptDataHash = hashScriptData(
-        redeemers,
+        redeemersConcrete,
         costModels,
-        plutusDataArray.length > 0 ? plutusDataArray : undefined,
-        scriptDataFmt
+        plutusDataArray.length > 0 ? plutusDataArray : undefined
       )
       yield* Effect.logDebug(
-        `[Assembly] Computed scriptDataHash (format=${scriptDataFmt}): ${scriptDataHash.hash.toString()}`
+        `[Assembly] Computed scriptDataHash: ${scriptDataHash.hash.toString()}`
       )
     }
 
@@ -845,7 +846,7 @@ export const assembleTransaction = (
       bootstrapWitnesses: [],
       plutusV1Scripts,
       plutusData: plutusDataArray,
-      redeemers,
+      redeemers: redeemers.length > 0 ? redeemersConcrete : undefined,
       plutusV2Scripts,
       plutusV3Scripts
     })
@@ -1152,16 +1153,17 @@ export const buildFakeWitnessSet = (
     // Build fake redeemers from state.redeemers for accurate size estimation
     // Redeemers contribute to transaction size and must be included in fee calculation
     const fakeRedeemers: Array<Redeemer.Redeemer> = []
+    let fakeIndex = 0n
     for (const [_key, redeemerData] of state.redeemers) {
       // Use placeholder exUnits if not yet evaluated (will be updated after UPLC evaluation)
       const exUnits = redeemerData.exUnits ?? { mem: 0n, steps: 0n }
 
-      // Create a redeemer with index 0 - the actual index will be computed in assembly
-      // For fee calculation, we just need accurate CBOR size estimation
+      // Use unique placeholder indices — actual indices will be computed in assembly.
+      // For fee calculation, we just need accurate CBOR size estimation.
       fakeRedeemers.push(
         new Redeemer.Redeemer({
           tag: redeemerData.tag,
-          index: 0n, // Placeholder, will be set correctly in assembly
+          index: fakeIndex++, // Unique placeholder, will be set correctly in assembly
           data: redeemerData.data,
           exUnits: new Redeemer.ExUnits({ mem: exUnits.mem, steps: exUnits.steps })
         })
@@ -1174,7 +1176,7 @@ export const buildFakeWitnessSet = (
       bootstrapWitnesses: [],
       plutusV1Scripts,
       plutusData: [],
-      redeemers: fakeRedeemers,
+      redeemers: fakeRedeemers.length > 0 ? Redeemers.makeRedeemerMap(fakeRedeemers) : undefined,
       plutusV2Scripts,
       plutusV3Scripts
     })
