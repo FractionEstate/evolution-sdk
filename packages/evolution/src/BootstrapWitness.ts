@@ -134,7 +134,7 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Boo
  * @since 2.0.0
  * @category schemas
  */
-export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.compose(
     CBOR.FromBytes(options), // Uint8Array → CBOR
     FromCDDL // CBOR → BootstrapWitness
@@ -151,7 +151,7 @@ export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS
  * @since 2.0.0
  * @category schemas
  */
-export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.compose(
     Schema.Uint8ArrayFromHex, // string → Uint8Array
     FromCBORBytes(options) // Uint8Array → BootstrapWitness
@@ -169,7 +169,7 @@ export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) 
  */
 export const fromCBORBytes = (
   bytes: Uint8Array,
-  options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS
+  options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS
 ): BootstrapWitness => Schema.decodeSync(FromCBORBytes(options))(bytes)
 
 /**
@@ -178,7 +178,7 @@ export const fromCBORBytes = (
  * @since 2.0.0
  * @category parsing
  */
-export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS): BootstrapWitness =>
+export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): BootstrapWitness =>
   Schema.decodeSync(FromCBORHex(options))(hex)
 
 /**
@@ -189,7 +189,7 @@ export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.PRESE
  */
 export const toCBORBytes = (
   witness: BootstrapWitness,
-  options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS
+  options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS
 ): Uint8Array => Schema.encodeSync(FromCBORBytes(options))(witness)
 
 /**
@@ -198,7 +198,7 @@ export const toCBORBytes = (
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORHex = (witness: BootstrapWitness, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS): string =>
+export const toCBORHex = (witness: BootstrapWitness, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): string =>
   Schema.encodeSync(FromCBORHex(options))(witness)
 
 /**
@@ -210,9 +210,9 @@ export const arbitrary: FastCheck.Arbitrary<BootstrapWitness> = FastCheck.record
     FastCheck.uint8Array({ minLength: 1, maxLength: 64 }).map((path) => {
       const m = new Map<bigint, Uint8Array>()
       // Byron AddrAttributes: key 1 holds derivation_path; value is CBOR-encoded bytes
-      const inner = CBOR.internalEncodeSync(path, CBOR.PRESERVE_OPTIONS)
+      const inner = CBOR.internalEncodeSync(path, CBOR.CML_DEFAULT_OPTIONS)
       m.set(1n, inner)
-      return CBOR.internalEncodeSync(m, CBOR.PRESERVE_OPTIONS)
+      return CBOR.internalEncodeSync(m, CBOR.CML_DEFAULT_OPTIONS)
     })
   ),
   chainCode: FastCheck.uint8Array({ minLength: 32, maxLength: 32 }),

@@ -397,7 +397,7 @@ export const FromCDDL = FromMapCDDL
  * @since 2.0.0
  * @category schemas
  */
-export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.compose(CBOR.FromBytes(options), FromArrayCDDL).annotations({
     identifier: "Redeemers.FromCBORBytes",
     title: "Redeemers from CBOR Bytes (Array)",
@@ -410,7 +410,7 @@ export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS
  * @since 2.0.0
  * @category schemas
  */
-export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.compose(Schema.Uint8ArrayFromHex, FromCBORBytes(options)).annotations({
     identifier: "Redeemers.FromCBORHex",
     title: "Redeemers from CBOR Hex (Array)",
@@ -423,7 +423,7 @@ export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) 
  * @since 2.0.0
  * @category schemas
  */
-export const FromCBORBytesMap = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const FromCBORBytesMap = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.compose(CBOR.FromBytes(options), FromMapCDDL).annotations({
     identifier: "Redeemers.FromCBORBytesMap",
     title: "Redeemers from CBOR Bytes (Map)",
@@ -436,7 +436,7 @@ export const FromCBORBytesMap = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTI
  * @since 2.0.0
  * @category schemas
  */
-export const FromCBORHexMap = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const FromCBORHexMap = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.compose(Schema.Uint8ArrayFromHex, FromCBORBytesMap(options)).annotations({
     identifier: "Redeemers.FromCBORHexMap",
     title: "Redeemers from CBOR Hex (Map)",
@@ -468,7 +468,7 @@ export const arbitrary: FastCheck.Arbitrary<Redeemers> = FastCheck.array(Redeeme
  * @since 2.0.0
  * @category parsing
  */
-export const fromCBORBytes = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const fromCBORBytes = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.decodeSync(FromCBORBytes(options))(bytes)
 
 /**
@@ -477,7 +477,7 @@ export const fromCBORBytes = (bytes: Uint8Array, options: CBOR.CodecOptions = CB
  * @since 2.0.0
  * @category parsing
  */
-export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.decodeSync(FromCBORHex(options))(hex)
 
 /**
@@ -486,7 +486,7 @@ export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.PRESE
  * @since 2.0.0
  * @category parsing
  */
-export const fromCBORBytesMap = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const fromCBORBytesMap = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.decodeSync(FromCBORBytesMap(options))(bytes)
 
 /**
@@ -495,7 +495,7 @@ export const fromCBORBytesMap = (bytes: Uint8Array, options: CBOR.CodecOptions =
  * @since 2.0.0
  * @category parsing
  */
-export const fromCBORHexMap = (hex: string, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const fromCBORHexMap = (hex: string, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.decodeSync(FromCBORHexMap(options))(hex)
 
 /**
@@ -504,7 +504,7 @@ export const fromCBORHexMap = (hex: string, options: CBOR.CodecOptions = CBOR.PR
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORBytes = (data: RedeemerArray, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const toCBORBytes = (data: RedeemerArray, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.encodeSync(FromCBORBytes(options))(data)
 
 /**
@@ -513,7 +513,7 @@ export const toCBORBytes = (data: RedeemerArray, options: CBOR.CodecOptions = CB
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORHex = (data: RedeemerArray, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const toCBORHex = (data: RedeemerArray, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.encodeSync(FromCBORHex(options))(data)
 
 /**
@@ -522,7 +522,7 @@ export const toCBORHex = (data: RedeemerArray, options: CBOR.CodecOptions = CBOR
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORBytesMap = (data: RedeemerMap, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const toCBORBytesMap = (data: RedeemerMap, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.encodeSync(FromCBORBytesMap(options))(data)
 
 /**
@@ -531,5 +531,5 @@ export const toCBORBytesMap = (data: RedeemerMap, options: CBOR.CodecOptions = C
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORHexMap = (data: RedeemerMap, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const toCBORHexMap = (data: RedeemerMap, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.encodeSync(FromCBORHexMap(options))(data)

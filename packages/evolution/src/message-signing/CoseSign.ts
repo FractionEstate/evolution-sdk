@@ -73,7 +73,7 @@ export const coseSignatureNew = (headers: Headers, signature: Ed25519Signature.E
  * @since 2.0.0
  * @category Schemas
  */
-export const COSESignatureFromCBORBytes = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const COSESignatureFromCBORBytes = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.transformOrFail(CBOR.FromBytes(options), Schema.typeSchema(COSESignature), {
     strict: true,
     decode: (cbor, _, ast) => {
@@ -179,7 +179,7 @@ export const coseSignNew = (
  * @since 2.0.0
  * @category Schemas
  */
-export const COSESignFromCBORBytes = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const COSESignFromCBORBytes = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.transformOrFail(CBOR.FromBytes(options), Schema.typeSchema(COSESign), {
     strict: true,
     decode: (cbor, _, ast) => {
@@ -238,7 +238,7 @@ export const COSESignFromCBORBytes = (options: CBOR.CodecOptions = CBOR.PRESERVE
  * @since 2.0.0
  * @category Schemas
  */
-export const COSESignFromCBORHex = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const COSESignFromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.compose(Schema.Uint8ArrayFromHex, COSESignFromCBORBytes(options)).annotations({
     identifier: "COSESign.FromCBORHex"
   })
@@ -312,14 +312,14 @@ export class COSESignBuilder extends Schema.Class<COSESignBuilder>("COSESignBuil
     const protectedCbor = new Map(
       Array.from(this.headers.protected.headers.entries()).map(([label, value]) => [label.value, value])
     )
-    const protectedBytes = Schema.encodeSync(CBOR.FromBytes(CBOR.PRESERVE_OPTIONS))(protectedCbor)
+    const protectedBytes = Schema.encodeSync(CBOR.FromBytes(CBOR.CML_DEFAULT_OPTIONS))(protectedCbor)
 
     const payloadToSign = this.hashPayload ? blake2b(this.payload, { dkLen: 28 }) : this.payload
 
     // Create Sig_structure for multi-signature: ["Signature", protected, external_aad, payload]
     const sigStructure: CBOR.CBOR = ["Signature", protectedBytes, this.externalAad, payloadToSign]
 
-    return Schema.encodeSync(CBOR.FromBytes(CBOR.PRESERVE_OPTIONS))(sigStructure)
+    return Schema.encodeSync(CBOR.FromBytes(CBOR.CML_DEFAULT_OPTIONS))(sigStructure)
   }
 
   /**

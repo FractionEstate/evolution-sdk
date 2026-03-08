@@ -326,7 +326,7 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Tra
  * @since 2.0.0
  * @category transformer
  */
-export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.compose(
     CBOR.FromBytes(options), // Uint8Array → CBOR
     FromCDDL // CBOR → TransactionOutput
@@ -342,7 +342,7 @@ export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS
  * @since 2.0.0
  * @category transformer
  */
-export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.compose(
     Schema.Uint8ArrayFromHex, // string → Uint8Array
     FromCBORBytes(options) // Uint8Array → TransactionOutput
@@ -369,7 +369,7 @@ export const arbitrary = FastCheck.record({
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORBytes = (data: TransactionOutput, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const toCBORBytes = (data: TransactionOutput, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.encodeSync(FromCBORBytes(options))(data)
 
 /**
@@ -378,7 +378,7 @@ export const toCBORBytes = (data: TransactionOutput, options: CBOR.CodecOptions 
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORHex = (data: TransactionOutput, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const toCBORHex = (data: TransactionOutput, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.encodeSync(FromCBORHex(options))(data)
 
 /**
@@ -387,7 +387,7 @@ export const toCBORHex = (data: TransactionOutput, options: CBOR.CodecOptions = 
  * @since 2.0.0
  * @category decoding
  */
-export const fromCBORBytes = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const fromCBORBytes = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.decodeSync(FromCBORBytes(options))(bytes)
 
 /**
@@ -396,5 +396,5 @@ export const fromCBORBytes = (bytes: Uint8Array, options: CBOR.CodecOptions = CB
  * @since 2.0.0
  * @category decoding
  */
-export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.decodeSync(FromCBORHex(options))(hex)

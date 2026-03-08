@@ -137,7 +137,7 @@ export const hashScriptData = (
   redeemers: Redeemers.Redeemers,
   costModels: CostModel.CostModels,
   datums?: ReadonlyArray<Data.Data>,
-  options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS
+  options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS
 ): ScriptDataHash.ScriptDataHash => {
   const hasDatums = Array.isArray(datums) && datums.length > 0
 

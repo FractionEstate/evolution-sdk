@@ -210,13 +210,13 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(DRe
     })
 })
 
-export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.compose(
     CBOR.FromBytes(options), // Uint8Array → CBOR
     FromCDDL // CBOR → DRep
   )
 
-export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.compose(
     Schema.Uint8ArrayFromHex, // string → Uint8Array
     FromCBORBytes(options) // Uint8Array → DRep

@@ -73,7 +73,7 @@ export class COSESign1 extends Schema.Class<COSESign1>("COSESign1")({
       this.headers.protected.headers.size === 0
         ? new Map()
         : new Map(Array.from(this.headers.protected.headers.entries()).map(([label, value]) => [label.value, value]))
-    const protectedBytes = Schema.encodeSync(CBOR.FromBytes(CBOR.PRESERVE_OPTIONS))(protectedCbor)
+    const protectedBytes = Schema.encodeSync(CBOR.FromBytes(CBOR.CML_DEFAULT_OPTIONS))(protectedCbor)
 
     // Use external payload if provided, otherwise use internal payload
     const payloadToUse =
@@ -82,7 +82,7 @@ export class COSESign1 extends Schema.Class<COSESign1>("COSESign1")({
     // Create Sig_structure: ["Signature1", protected, external_aad, payload]
     const sigStructure: CBOR.CBOR = ["Signature1", protectedBytes, externalAad, payloadToUse]
 
-    return Schema.encodeSync(CBOR.FromBytes(CBOR.PRESERVE_OPTIONS))(sigStructure)
+    return Schema.encodeSync(CBOR.FromBytes(CBOR.CML_DEFAULT_OPTIONS))(sigStructure)
   }
 
   /**
@@ -147,7 +147,7 @@ export class COSESign1 extends Schema.Class<COSESign1>("COSESign1")({
  * @since 2.0.0
  * @category Schemas
  */
-export const COSESign1FromCBORBytes = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const COSESign1FromCBORBytes = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.transformOrFail(CBOR.FromBytes(options), Schema.typeSchema(COSESign1), {
     strict: true,
     decode: (cbor, _, ast) => {
@@ -233,7 +233,7 @@ export const COSESign1FromCBORBytes = (options: CBOR.CodecOptions = CBOR.PRESERV
  * @since 2.0.0
  * @category Schemas
  */
-export const COSESign1FromCBORHex = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const COSESign1FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.compose(Schema.Uint8ArrayFromHex, COSESign1FromCBORBytes(options)).annotations({
     identifier: "COSESign1.FromCBORHex",
     description: "Transforms CBOR hex string to COSESign1"
@@ -355,7 +355,7 @@ export class COSESign1Builder extends Schema.Class<COSESign1Builder>("COSESign1B
     const protectedCbor = new Map(
       Array.from(this.headers.protected.headers.entries()).map(([label, value]) => [label.value, value])
     )
-    const protectedBytes = Schema.encodeSync(CBOR.FromBytes(CBOR.PRESERVE_OPTIONS))(protectedCbor)
+    const protectedBytes = Schema.encodeSync(CBOR.FromBytes(CBOR.CML_DEFAULT_OPTIONS))(protectedCbor)
 
     // Hash payload if needed
     const payloadToSign = this.hashPayload ? blake2b(this.payload, { dkLen: 28 }) : this.payload
@@ -363,7 +363,7 @@ export class COSESign1Builder extends Schema.Class<COSESign1Builder>("COSESign1B
     // Create Sig_structure: ["Signature1", protected, external_aad, payload]
     const sigStructure: CBOR.CBOR = ["Signature1", protectedBytes, this.externalAad, payloadToSign]
 
-    return Schema.encodeSync(CBOR.FromBytes(CBOR.PRESERVE_OPTIONS))(sigStructure)
+    return Schema.encodeSync(CBOR.FromBytes(CBOR.CML_DEFAULT_OPTIONS))(sigStructure)
   }
 
   /**

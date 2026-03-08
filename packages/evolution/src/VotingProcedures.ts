@@ -586,7 +586,7 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Vot
  * @since 2.0.0
  * @category schemas
  */
-export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.compose(
     CBOR.FromBytes(options), // Uint8Array → CBOR
     FromCDDL // CBOR → VotingProcedures
@@ -602,7 +602,7 @@ export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS
  * @since 2.0.0
  * @category schemas
  */
-export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.compose(
     Schema.Uint8ArrayFromHex, // string → Uint8Array
     FromCBORBytes(options) // Uint8Array → VotingProcedures
@@ -801,7 +801,7 @@ export const arbitrary = FastCheck.array(
  * @since 2.0.0
  * @category parsing
  */
-export const fromCBORBytes = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const fromCBORBytes = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.decodeSync(FromCBORBytes(options))(bytes)
 
 /**
@@ -810,7 +810,7 @@ export const fromCBORBytes = (bytes: Uint8Array, options: CBOR.CodecOptions = CB
  * @since 2.0.0
  * @category parsing
  */
-export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.decodeSync(FromCBORHex(options))(hex)
 
 /**
@@ -819,7 +819,7 @@ export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.PRESE
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORBytes = (data: VotingProcedures, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const toCBORBytes = (data: VotingProcedures, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.encodeSync(FromCBORBytes(options))(data)
 
 /**
@@ -828,7 +828,7 @@ export const toCBORBytes = (data: VotingProcedures, options: CBOR.CodecOptions =
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORHex = (data: VotingProcedures, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const toCBORHex = (data: VotingProcedures, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.encodeSync(FromCBORHex(options))(data)
 
 // ============================================================================

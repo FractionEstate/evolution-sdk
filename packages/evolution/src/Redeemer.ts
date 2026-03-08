@@ -267,7 +267,7 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Red
  * @since 2.0.0
  * @category schemas
  */
-export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.compose(
     CBOR.FromBytes(options), // Uint8Array → CBOR
     FromCDDL // CBOR → Redeemer
@@ -284,7 +284,7 @@ export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS
  * @since 2.0.0
  * @category schemas
  */
-export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.compose(
     Schema.Uint8ArrayFromHex, // string → Uint8Array
     FromCBORBytes(options) // Uint8Array → Redeemer
@@ -380,7 +380,7 @@ export const isReward = (redeemer: Redeemer): boolean => redeemer.tag === "rewar
  * @since 2.0.0
  * @category transformation
  */
-export const toCBORBytes = (redeemer: Redeemer, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS): Uint8Array =>
+export const toCBORBytes = (redeemer: Redeemer, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): Uint8Array =>
   Schema.encodeSync(FromCBORBytes(options))(redeemer)
 
 /**
@@ -389,7 +389,7 @@ export const toCBORBytes = (redeemer: Redeemer, options: CBOR.CodecOptions = CBO
  * @since 2.0.0
  * @category transformation
  */
-export const toCBORHex = (redeemer: Redeemer, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS): string =>
+export const toCBORHex = (redeemer: Redeemer, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): string =>
   Schema.encodeSync(FromCBORHex(options))(redeemer)
 
 /**
@@ -398,7 +398,7 @@ export const toCBORHex = (redeemer: Redeemer, options: CBOR.CodecOptions = CBOR.
  * @since 2.0.0
  * @category transformation
  */
-export const fromCBORBytes = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS): Redeemer =>
+export const fromCBORBytes = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): Redeemer =>
   Schema.decodeSync(FromCBORBytes(options))(bytes)
 
 /**
@@ -407,7 +407,7 @@ export const fromCBORBytes = (bytes: Uint8Array, options: CBOR.CodecOptions = CB
  * @since 2.0.0
  * @category transformation
  */
-export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS): Redeemer =>
+export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): Redeemer =>
   Schema.decodeSync(FromCBORHex(options))(hex)
 
 // ============================================================================

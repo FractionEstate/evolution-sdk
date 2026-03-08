@@ -82,7 +82,7 @@ export const FromCDDL = Schema.transform(CDDLSchema, Schema.typeSchema(ProtocolV
  * @since 2.0.0
  * @category schemas
  */
-export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.compose(
     CBOR.FromBytes(options), // Uint8Array → CBOR
     FromCDDL // CBOR → ProtocolVersion
@@ -97,7 +97,7 @@ export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS
  * @since 2.0.0
  * @category schemas
  */
-export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.compose(
     Schema.Uint8ArrayFromHex, // string → Uint8Array
     FromCBORBytes(options) // Uint8Array → ProtocolVersion
@@ -117,7 +117,7 @@ export const fromCBORBytes: {
   (bytes: Uint8Array, options?: CBOR.CodecOptions): ProtocolVersion
 } = Function.dual(
   (args) => args.length >= 1 && args[0] instanceof Uint8Array,
-  (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+  (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
     Schema.decodeSync(FromCBORBytes(options))(bytes)
 )
 
@@ -132,7 +132,7 @@ export const fromCBORHex: {
   (hex: string, options?: CBOR.CodecOptions): ProtocolVersion
 } = Function.dual(
   (args) => args.length >= 1 && typeof args[0] === "string",
-  (hex: string, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) => Schema.decodeSync(FromCBORHex(options))(hex)
+  (hex: string, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) => Schema.decodeSync(FromCBORHex(options))(hex)
 )
 
 /**
@@ -146,7 +146,7 @@ export const toCBORBytes: {
   (version: ProtocolVersion, options?: CBOR.CodecOptions): Uint8Array
 } = Function.dual(
   (args) => args.length >= 1 && args[0] instanceof ProtocolVersion,
-  (version: ProtocolVersion, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+  (version: ProtocolVersion, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
     Schema.encodeSync(FromCBORBytes(options))(version)
 )
 
@@ -161,6 +161,6 @@ export const toCBORHex: {
   (version: ProtocolVersion, options?: CBOR.CodecOptions): string
 } = Function.dual(
   (args) => args.length >= 1 && args[0] instanceof ProtocolVersion,
-  (version: ProtocolVersion, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+  (version: ProtocolVersion, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
     Schema.encodeSync(FromCBORHex(options))(version)
 )

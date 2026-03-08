@@ -310,36 +310,6 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Tra
 
       if (toA.donation !== undefined) record.set(22n, toA.donation)
 
-      // Thread encoding metadata from domain object to CBOR AST with key order guard
-      const enc = CBOR.getEncoding(toA)
-      if (enc !== undefined) {
-        const keySetChanged = enc.keyOrder && (
-          enc.keyOrder.length !== record.size ||
-          !enc.keyOrder.every((k) => record.has(k as bigint))
-        )
-        if (keySetChanged) {
-          // Key set changed — rebuild keyOrder and entries to match new map
-          const newKeyOrder: Array<CBOR.CBOR> = []
-          const newEntries: Array<readonly [CBOR.CBOREncoding | undefined, CBOR.CBOREncoding | undefined]> = []
-          for (let i = 0; i < enc.keyOrder.length; i++) {
-            const oldKey = enc.keyOrder[i]
-            if (record.has(oldKey as bigint)) {
-              newKeyOrder.push(oldKey)
-              newEntries.push(enc.entries?.[i] ?? [undefined, undefined])
-            }
-          }
-          for (const [key] of record) {
-            if (!enc.keyOrder.some((k) => CBOR.equals(k, key))) {
-              newKeyOrder.push(key)
-              newEntries.push([undefined, undefined])
-            }
-          }
-          CBOR.setEncoding(record, { ...enc, keyOrder: newKeyOrder, entries: newEntries })
-        } else {
-          CBOR.setEncoding(record, enc)
-        }
-      }
-
       return record as CDDLSchema
     }),
   decode: (fromA) =>
@@ -503,9 +473,6 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Tra
         },
         { disableValidation: true }
       )
-      // Thread encoding metadata from CBOR AST to domain object
-      const enc = CBOR.getEncoding(fromA)
-      if (enc !== undefined) CBOR.setEncoding(result, enc)
       return result
     })
 })
@@ -517,7 +484,7 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Tra
  * @since 2.0.0
  * @category schemas
  */
-export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.compose(CBOR.FromBytes(options), FromCDDL).annotations({
     identifier: "TransactionBody.FromCBORBytes",
     title: "TransactionBody from CBOR bytes",
@@ -531,7 +498,7 @@ export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS
  * @since 2.0.0
  * @category schemas
  */
-export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.compose(CBOR.FromHex(options), FromCDDL).annotations({
     identifier: "TransactionBody.FromCBORHex",
     title: "TransactionBody from CBOR hex",
@@ -546,7 +513,7 @@ export const isTransactionBody = Schema.is(TransactionBody)
  * @since 2.0.0
  * @category conversion
  */
-export const fromCBORBytes = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const fromCBORBytes = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.decodeSync(FromCBORBytes(options))(bytes)
 
 /**
@@ -555,7 +522,7 @@ export const fromCBORBytes = (bytes: Uint8Array, options: CBOR.CodecOptions = CB
  * @since 2.0.0
  * @category conversion
  */
-export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.decodeSync(FromCBORHex(options))(hex)
 
 /**
@@ -564,7 +531,7 @@ export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.PRESE
  * @since 2.0.0
  * @category conversion
  */
-export const toCBORBytes = (data: TransactionBody, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const toCBORBytes = (data: TransactionBody, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.encodeSync(FromCBORBytes(options))(data)
 
 /**
@@ -573,8 +540,64 @@ export const toCBORBytes = (data: TransactionBody, options: CBOR.CodecOptions = 
  * @since 2.0.0
  * @category conversion
  */
-export const toCBORHex = (data: TransactionBody, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const toCBORHex = (data: TransactionBody, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.encodeSync(FromCBORHex(options))(data)
+
+/**
+ * Parse a TransactionBody from CBOR bytes and return the root format tree.
+ *
+ * @since 2.0.0
+ * @category conversion
+ */
+export const fromCBORBytesWithFormat = (
+  bytes: Uint8Array
+): CBOR.DecodedWithFormat<TransactionBody> => {
+  const decoded = CBOR.fromCBORBytesWithFormat(bytes)
+  const value = Schema.decodeSync(FromCDDL)(decoded.value as Map<bigint, CBOR.CBOR>)
+  return { value, format: decoded.format }
+}
+
+/**
+ * Parse a TransactionBody from CBOR hex string and return the root format tree.
+ *
+ * @since 2.0.0
+ * @category conversion
+ */
+export const fromCBORHexWithFormat = (
+  hex: string
+): CBOR.DecodedWithFormat<TransactionBody> => {
+  const decoded = CBOR.fromCBORHexWithFormat(hex)
+  const value = Schema.decodeSync(FromCDDL)(decoded.value as Map<bigint, CBOR.CBOR>)
+  return { value, format: decoded.format }
+}
+
+/**
+ * Convert a TransactionBody to CBOR bytes using an explicit root format tree.
+ *
+ * @since 2.0.0
+ * @category conversion
+ */
+export const toCBORBytesWithFormat = (
+  data: TransactionBody,
+  format: CBOR.CBORFormat
+): Uint8Array => {
+  const cborMap = Schema.encodeSync(FromCDDL)(data)
+  return CBOR.toCBORBytesWithFormat(cborMap, format)
+}
+
+/**
+ * Convert a TransactionBody to CBOR hex string using an explicit root format tree.
+ *
+ * @since 2.0.0
+ * @category conversion
+ */
+export const toCBORHexWithFormat = (
+  data: TransactionBody,
+  format: CBOR.CBORFormat
+): string => {
+  const cborMap = Schema.encodeSync(FromCDDL)(data)
+  return CBOR.toCBORHexWithFormat(cborMap, format)
+}
 
 // ============================================================================
 // FastCheck Arbitrary

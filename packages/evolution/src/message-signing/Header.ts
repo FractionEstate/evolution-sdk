@@ -287,7 +287,7 @@ export const headerMapNew = (): HeaderMap =>
  * @since 2.0.0
  * @category Schemas
  */
-export const HeaderMapFromCBORBytes = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const HeaderMapFromCBORBytes = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.transformOrFail(CBOR.FromBytes(options), Schema.typeSchema(HeaderMap), {
     strict: true,
     decode: (cbor, _, ast) => {
@@ -326,7 +326,7 @@ export const HeaderMapFromCBORBytes = (options: CBOR.CodecOptions = CBOR.PRESERV
  * @since 2.0.0
  * @category Schemas
  */
-export const HeaderMapFromCBORHex = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const HeaderMapFromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.compose(Schema.Uint8ArrayFromHex, HeaderMapFromCBORBytes(options)).annotations({
     identifier: "HeaderMap.FromCBORHex",
     description: "Transforms CBOR hex string to HeaderMap"

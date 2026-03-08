@@ -83,7 +83,7 @@ export class COSEKey extends Schema.Class<COSEKey>("COSEKey")({
  * @since 2.0.0
  * @category Schemas
  */
-export const COSEKeyFromCBORBytes = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const COSEKeyFromCBORBytes = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.transformOrFail(CBOR.FromBytes(options), Schema.typeSchema(COSEKey), {
     strict: true,
     decode: (cbor, _, ast) => {

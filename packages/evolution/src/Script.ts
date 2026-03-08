@@ -108,13 +108,13 @@ export const FromCDDL = Schema.transformOrFail(ScriptCDDL, Schema.typeSchema(Scr
   description: "Transforms between CDDL tagged tuple and Script union"
 })
 
-export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.compose(
     CBOR.FromBytes(options), // Uint8Array → CDDL
     FromCDDL // CDDL → Script
   )
 
-export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.compose(Schema.Uint8ArrayFromHex, FromCBORBytes(options))
 
 /**
@@ -131,14 +131,14 @@ export const arbitrary: FastCheck.Arbitrary<Script> = FastCheck.oneof(
   PlutusV3.arbitrary
 )
 
-export const fromCBOR = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const fromCBOR = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.decodeSync(FromCBORBytes(options))(bytes)
 
-export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.decodeSync(FromCBORHex(options))(hex)
 
-export const toCBOR = (data: Script, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const toCBOR = (data: Script, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.encodeSync(FromCBORBytes(options))(data)
 
-export const toCBORHex = (data: Script, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const toCBORHex = (data: Script, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.encodeSync(FromCBORHex(options))(data)

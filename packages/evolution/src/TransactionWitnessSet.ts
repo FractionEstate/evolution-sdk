@@ -387,39 +387,6 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Tra
         record.set(7n, CBOR.Tag.make({ tag: 258, value: plutusV3Scripts }))
       }
 
-      // Thread encoding metadata from domain object to CBOR AST
-      // with key order + entries rebuild guard for when keys change
-      const enc = CBOR.getEncoding(toA)
-      if (enc !== undefined) {
-        const keySetChanged = enc.keyOrder && (
-          enc.keyOrder.length !== record.size ||
-          !enc.keyOrder.every((k) => record.has(k as bigint))
-        )
-        if (keySetChanged) {
-          // Key set changed — rebuild keyOrder and entries to match new map
-          const newKeyOrder: Array<CBOR.CBOR> = []
-          const newEntries: Array<readonly [CBOR.CBOREncoding | undefined, CBOR.CBOREncoding | undefined]> = []
-          // Preserve original entries for keys that still exist (in original order)
-          for (let i = 0; i < enc.keyOrder.length; i++) {
-            const oldKey = enc.keyOrder[i]
-            if (record.has(oldKey as bigint)) {
-              newKeyOrder.push(oldKey)
-              newEntries.push(enc.entries?.[i] ?? [undefined, undefined])
-            }
-          }
-          // Append new keys (those not in original keyOrder)
-          for (const [key] of record) {
-            if (!enc.keyOrder.some((k) => CBOR.equals(k, key))) {
-              newKeyOrder.push(key)
-              newEntries.push([undefined, undefined])
-            }
-          }
-          CBOR.setEncoding(record, { ...enc, keyOrder: newKeyOrder, entries: newEntries })
-        } else {
-          CBOR.setEncoding(record, enc)
-        }
-      }
-
       return record
     }),
   decode: (fromA) =>
@@ -553,21 +520,17 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Tra
       }
 
       // Build the class instance directly to allow fully empty witness sets
-      const result = new TransactionWitnessSet(witnessSet, { disableValidation: true })
-      // Thread encoding metadata from CBOR AST to domain object
-      const enc = CBOR.getEncoding(fromA)
-      if (enc !== undefined) CBOR.setEncoding(result, enc)
-      return result
+      return new TransactionWitnessSet(witnessSet, { disableValidation: true })
     })
 })
 
-export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.compose(CBOR.FromBytes(options), FromCDDL).annotations({
     identifier: "TransactionWitnessSet.FromCBORBytes",
     description: "Transforms CBOR bytes to TransactionWitnessSet"
   })
 
-export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.compose(CBOR.FromHex(options), FromCDDL).annotations({
     identifier: "TransactionWitnessSet.FromCBORHex",
     description: "Transforms CBOR hex string to TransactionWitnessSet"
@@ -646,8 +609,26 @@ export const arbitrary: FastCheck.Arbitrary<TransactionWitnessSet> = FastCheck.r
  * @since 2.0.0
  * @category parsing
  */
-export const fromCBORBytes = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const fromCBORBytes = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.decodeSync(FromCBORBytes(options))(bytes)
+
+/**
+ * Parse a TransactionWitnessSet from CBOR bytes and return the root format tree.
+ *
+ * @since 2.0.0
+ * @category parsing
+ */
+export const fromCBORBytesWithFormat = (
+  bytes: Uint8Array
+): CBOR.DecodedWithFormat<TransactionWitnessSet> => {
+  const decoded = CBOR.fromCBORBytesWithFormat(bytes)
+  const value = Schema.decodeSync(FromCDDL)(decoded.value as Map<bigint, CBOR.CBOR>)
+
+  return {
+    value,
+    format: decoded.format
+  }
+}
 
 /**
  * Parse a TransactionWitnessSet from CBOR hex string.
@@ -655,8 +636,26 @@ export const fromCBORBytes = (bytes: Uint8Array, options: CBOR.CodecOptions = CB
  * @since 2.0.0
  * @category parsing
  */
-export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.decodeSync(FromCBORHex(options))(hex)
+
+/**
+ * Parse a TransactionWitnessSet from CBOR hex string and return the root format tree.
+ *
+ * @since 2.0.0
+ * @category parsing
+ */
+export const fromCBORHexWithFormat = (
+  hex: string
+): CBOR.DecodedWithFormat<TransactionWitnessSet> => {
+  const decoded = CBOR.fromCBORHexWithFormat(hex)
+  const value = Schema.decodeSync(FromCDDL)(decoded.value as Map<bigint, CBOR.CBOR>)
+
+  return {
+    value,
+    format: decoded.format
+  }
+}
 
 // ============================================================================
 // Encoding Functions
@@ -668,8 +667,22 @@ export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.PRESE
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORBytes = (data: TransactionWitnessSet, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const toCBORBytes = (data: TransactionWitnessSet, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.encodeSync(FromCBORBytes(options))(data)
+
+/**
+ * Convert a TransactionWitnessSet to CBOR bytes using an explicit root format tree.
+ *
+ * @since 2.0.0
+ * @category encoding
+ */
+export const toCBORBytesWithFormat = (
+  data: TransactionWitnessSet,
+  format: CBOR.CBORFormat
+): Uint8Array => {
+  const cborMap = Schema.encodeSync(FromCDDL)(data)
+  return CBOR.toCBORBytesWithFormat(cborMap, format)
+}
 
 /**
  * Convert a TransactionWitnessSet to CBOR hex string.
@@ -677,8 +690,22 @@ export const toCBORBytes = (data: TransactionWitnessSet, options: CBOR.CodecOpti
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORHex = (data: TransactionWitnessSet, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const toCBORHex = (data: TransactionWitnessSet, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.encodeSync(FromCBORHex(options))(data)
+
+/**
+ * Convert a TransactionWitnessSet to CBOR hex string using an explicit root format tree.
+ *
+ * @since 2.0.0
+ * @category encoding
+ */
+export const toCBORHexWithFormat = (
+  data: TransactionWitnessSet,
+  format: CBOR.CBORFormat
+): string => {
+  const cborMap = Schema.encodeSync(FromCDDL)(data)
+  return CBOR.toCBORHexWithFormat(cborMap, format)
+}
 
 // ============================================================================
 // Factory Functions

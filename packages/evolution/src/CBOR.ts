@@ -89,52 +89,73 @@ export type StringEncoding =
   | { readonly tag: "definite"; readonly byteSize: ByteSize }
   | { readonly tag: "indefinite"; readonly chunks: ReadonlyArray<{ readonly length: number; readonly byteSize: ByteSize }> }
 
+// ============================================================================
+// CBORFormat — tagged discriminated union for per-node encoding metadata
+// ============================================================================
+
 /**
- * Per-node tree capturing how each CBOR value was originally serialized.
- * Every field is optional — absent means "use CML defaults".
+ * Tagged discriminated union capturing how each CBOR node was originally
+ * serialized.  Every variant carries a `_tag` discriminant.  Encoding-detail
+ * fields are optional — absent means "use canonical / minimal default".
  *
  * @since 2.0.0
  * @category model
  */
-export type CBOREncoding = {
-  readonly lengthEncoding?: LengthEncoding
-  readonly integerEncoding?: ByteSize
-  readonly stringEncoding?: StringEncoding
-  readonly keyOrder?: ReadonlyArray<CBOR>
-  readonly tagEncoding?: ByteSize
-  readonly children?: ReadonlyArray<CBOREncoding | undefined>
-  readonly entries?: ReadonlyArray<readonly [CBOREncoding | undefined, CBOREncoding | undefined]>
+export type CBORFormat =
+  | CBORFormat.UInt
+  | CBORFormat.NInt
+  | CBORFormat.Bytes
+  | CBORFormat.Text
+  | CBORFormat.Array
+  | CBORFormat.Map
+  | CBORFormat.Tag
+  | CBORFormat.Simple
+
+/**
+ * @since 2.0.0
+ * @category model
+ */
+export namespace CBORFormat {
+  /** Unsigned integer (major 0). `byteSize` absent → minimal encoding. */
+  export type UInt = { readonly _tag: "uint"; readonly byteSize?: ByteSize }
+  /** Negative integer (major 1). `byteSize` absent → minimal encoding. */
+  export type NInt = { readonly _tag: "nint"; readonly byteSize?: ByteSize }
+  /** Byte string (major 2). `encoding` absent → definite, minimal length. */
+  export type Bytes = { readonly _tag: "bytes"; readonly encoding?: StringEncoding }
+  /** Text string (major 3). `encoding` absent → definite, minimal length. */
+  export type Text = { readonly _tag: "text"; readonly encoding?: StringEncoding }
+  /** Array (major 4). `length` absent → definite, minimal length header. */
+  export type Array = {
+    readonly _tag: "array"
+    readonly length?: LengthEncoding
+    readonly children: ReadonlyArray<CBORFormat>
+  }
+  /** Map (major 5). `keyOrder` stores CBOR-encoded key bytes for serializable ordering. */
+  export type Map = {
+    readonly _tag: "map"
+    readonly length?: LengthEncoding
+    readonly keyOrder?: ReadonlyArray<Uint8Array>
+    readonly entries: ReadonlyArray<readonly [CBORFormat, CBORFormat]>
+  }
+  /** Tag (major 6). `width` absent → minimal tag header. */
+  export type Tag = {
+    readonly _tag: "tag"
+    readonly width?: ByteSize
+    readonly child: CBORFormat
+  }
+  /** Simple value or float (major 7). No encoding choices to preserve. */
+  export type Simple = { readonly _tag: "simple" }
 }
 
 /**
- * Symbol key for attaching encoding metadata to CBOR AST objects.
- * Uses `Symbol.for` so metadata survives across module boundaries.
+ * Decoded value paired with its captured root format tree.
  *
  * @since 2.0.0
- * @category constants
+ * @category model
  */
-export const encodingKey: unique symbol = Symbol.for("evolution.cbor.encoding")
-
-/**
- * Read encoding metadata from a CBOR AST node or domain object.
- * Returns `undefined` for primitives and objects without metadata.
- *
- * @since 2.0.0
- * @category encoding
- */
-export const getEncoding = (value: unknown): CBOREncoding | undefined =>
-  typeof value === "object" && value !== null
-    ? (value as Record<symbol, unknown>)[encodingKey] as CBOREncoding | undefined
-    : undefined
-
-/**
- * Attach encoding metadata to a CBOR AST node or domain object.
- *
- * @since 2.0.0
- * @category encoding
- */
-export const setEncoding = (target: object, encoding: CBOREncoding): void => {
-  ;(target as Record<symbol, unknown>)[encodingKey] = encoding
+export type DecodedWithFormat<A> = {
+  value: A
+  format: CBORFormat
 }
 
 /**
@@ -144,9 +165,6 @@ export const setEncoding = (target: object, encoding: CBOREncoding): void => {
  * @category model
  */
 export type CodecOptions =
-  | {
-      readonly mode: "preserve"
-    }
   | {
       readonly mode: "canonical"
       readonly mapsAsObjects?: boolean
@@ -171,17 +189,6 @@ export type CodecOptions =
  */
 export const CANONICAL_OPTIONS: CodecOptions = {
   mode: "canonical"
-} as const
-
-/**
- * Preserve encoding options. Uses encoding metadata captured during decode
- * to reproduce original bytes. Falls back to CML defaults when metadata is absent.
- *
- * @since 2.0.0
- * @category constants
- */
-export const PRESERVE_OPTIONS: CodecOptions = {
-  mode: "preserve"
 } as const
 
 /**
@@ -722,19 +729,9 @@ export const FromBytes = (options: CodecOptions) =>
             `Failed to decode CBOR value: ${error instanceof CBORError ? error.message : String(error)}`
           )
       }),
-    encode: (toI, _, ast, toA) =>
+    encode: (toI, _, ast) =>
       E.try({
-        try: () => {
-          // In preserve mode, recover encoding metadata from toA (the original domain object)
-          // if toI (the CBOR AST built by FromCDDL.encode) doesn't have it yet
-          if (options.mode === "preserve" && typeof toI === "object" && toI !== null && !getEncoding(toI)) {
-            const enc = getEncoding(toA)
-            if (enc !== undefined) {
-              setEncoding(toI as object, enc)
-            }
-          }
-          return internalEncodeSync(toI, options)
-        },
+        try: () => internalEncodeSync(toI, options),
         catch: (error) =>
           new ParseResult.Type(
             ast,
@@ -755,7 +752,7 @@ export namespace Either {
   /** Decode CBOR bytes to a CBOR value, returning Either */
   export const fromCBORBytes = (
     bytes: Uint8Array,
-    options: CodecOptions = PRESERVE_OPTIONS
+    options: CodecOptions = CML_DEFAULT_OPTIONS
   ): E.Either<CBOR, CBORError> =>
     E.try({
       try: () => internalDecodeSync(bytes, options),
@@ -763,7 +760,7 @@ export namespace Either {
     })
 
   /** Decode CBOR hex string to a CBOR value, returning Either */
-  export const fromCBORHex = (hex: string, options: CodecOptions = PRESERVE_OPTIONS): E.Either<CBOR, CBORError> =>
+  export const fromCBORHex = (hex: string, options: CodecOptions = CML_DEFAULT_OPTIONS): E.Either<CBOR, CBORError> =>
     E.try({
       try: () => {
         const bytes = Bytes.fromHex(hex)
@@ -775,7 +772,7 @@ export namespace Either {
   /** Encode a CBOR value to bytes, returning Either */
   export const toCBORBytes = (
     value: CBOR,
-    options: CodecOptions = PRESERVE_OPTIONS
+    options: CodecOptions = CML_DEFAULT_OPTIONS
   ): E.Either<Uint8Array, CBORError> =>
     E.try({
       try: () => internalEncodeSync(value, options),
@@ -783,7 +780,7 @@ export namespace Either {
     })
 
   /** Encode a CBOR value to hex string, returning Either */
-  export const toCBORHex = (value: CBOR, options: CodecOptions = PRESERVE_OPTIONS): E.Either<string, CBORError> =>
+  export const toCBORHex = (value: CBOR, options: CodecOptions = CML_DEFAULT_OPTIONS): E.Either<string, CBORError> =>
     E.try({
       try: () => Bytes.toHex(internalEncodeSync(value, options)),
       catch: (e) => (e instanceof CBORError ? e : new CBORError({ message: String(e), cause: e }))
@@ -800,8 +797,18 @@ export namespace Either {
  * @since 1.0.0
  * @category parsing
  */
-export const fromCBORBytes = (bytes: Uint8Array, options: CodecOptions = PRESERVE_OPTIONS): CBOR =>
+export const fromCBORBytes = (bytes: Uint8Array, options: CodecOptions = CML_DEFAULT_OPTIONS): CBOR =>
   internalDecodeSync(bytes, options)
+
+/**
+ * Parse a CBOR value from CBOR bytes and return the root format tree.
+ *
+ * @since 2.0.0
+ * @category parsing
+ */
+export const fromCBORBytesWithFormat = (
+  bytes: Uint8Array
+): DecodedWithFormat<CBOR> => internalDecodeWithFormatSync(bytes)
 
 /**
  * Parse a CBOR value from CBOR hex string.
@@ -809,9 +816,22 @@ export const fromCBORBytes = (bytes: Uint8Array, options: CodecOptions = PRESERV
  * @since 1.0.0
  * @category parsing
  */
-export const fromCBORHex = (hex: string, options: CodecOptions = PRESERVE_OPTIONS): CBOR => {
+export const fromCBORHex = (hex: string, options: CodecOptions = CML_DEFAULT_OPTIONS): CBOR => {
   const bytes = Bytes.fromHex(hex)
   return internalDecodeSync(bytes, options)
+}
+
+/**
+ * Parse a CBOR value from CBOR hex string and return the root format tree.
+ *
+ * @since 2.0.0
+ * @category parsing
+ */
+export const fromCBORHexWithFormat = (
+  hex: string
+): DecodedWithFormat<CBOR> => {
+  const bytes = Bytes.fromHex(hex)
+  return internalDecodeWithFormatSync(bytes)
 }
 
 // ============================================================================
@@ -824,8 +844,19 @@ export const fromCBORHex = (hex: string, options: CodecOptions = PRESERVE_OPTION
  * @since 1.0.0
  * @category encoding
  */
-export const toCBORBytes = (value: CBOR, options: CodecOptions = PRESERVE_OPTIONS): Uint8Array =>
+export const toCBORBytes = (value: CBOR, options: CodecOptions = CML_DEFAULT_OPTIONS): Uint8Array =>
   internalEncodeSync(value, options)
+
+/**
+ * Convert a CBOR value to CBOR bytes using an explicit root format tree.
+ *
+ * @since 2.0.0
+ * @category encoding
+ */
+export const toCBORBytesWithFormat = (
+  value: CBOR,
+  format: CBORFormat
+): Uint8Array => internalEncodeSync(value, CML_DEFAULT_OPTIONS, format)
 
 /**
  * Convert a CBOR value to CBOR hex string.
@@ -833,8 +864,19 @@ export const toCBORBytes = (value: CBOR, options: CodecOptions = PRESERVE_OPTION
  * @since 1.0.0
  * @category encoding
  */
-export const toCBORHex = (value: CBOR, options: CodecOptions = PRESERVE_OPTIONS): string =>
+export const toCBORHex = (value: CBOR, options: CodecOptions = CML_DEFAULT_OPTIONS): string =>
   Bytes.toHex(internalEncodeSync(value, options))
+
+/**
+ * Convert a CBOR value to CBOR hex string using an explicit root format tree.
+ *
+ * @since 2.0.0
+ * @category encoding
+ */
+export const toCBORHexWithFormat = (
+  value: CBOR,
+  format: CBORFormat
+): string => Bytes.toHex(internalEncodeSync(value, CML_DEFAULT_OPTIONS, format))
 
 // ============================================================================
 // Sync core (Step 2): fast, exception-based encode/decode with no Effect
@@ -903,22 +945,19 @@ const encodeIntHeader = (majorType: number, value: bigint, byteSize: ByteSize): 
   ])
 }
 
-export const internalEncodeSync = (value: CBOR, options: CodecOptions = PRESERVE_OPTIONS, encoding?: CBOREncoding): Uint8Array => {
-  // In preserve mode, resolve encoding: object's own encodingKey > passed-in encoding > undefined
-  const enc: CBOREncoding | undefined =
-    options.mode === "preserve"
-      ? (getEncoding(value) ?? encoding)
-      : undefined
+export const internalEncodeSync = (value: CBOR, options: CodecOptions = CML_DEFAULT_OPTIONS, fmt?: CBORFormat): Uint8Array => {
+  // Explicit fmt is the only source of format metadata.
+  const resolvedFmt: CBORFormat | undefined = fmt
 
   if (typeof value === "bigint") {
-    if (value >= 0n) return encodeUintSync(value, options, enc)
-    return encodeNintSync(value, options, enc)
+    if (value >= 0n) return encodeUintSync(value, options, resolvedFmt)
+    return encodeNintSync(value, options, resolvedFmt)
   }
-  if (value instanceof Uint8Array) return encodeBytesSync(value, options, enc)
-  if (typeof value === "string") return encodeTextSync(value, options, enc)
-  if (Array.isArray(value)) return encodeArraySync(value, options, enc)
-  if (value instanceof Map) return encodeMapSync(value, options, enc)
-  if (isTag(value)) return encodeTagSync(value.tag, value.value, options, enc)
+  if (value instanceof Uint8Array) return encodeBytesSync(value, options, resolvedFmt)
+  if (typeof value === "string") return encodeTextSync(value, options, resolvedFmt)
+  if (Array.isArray(value)) return encodeArraySync(value, options, resolvedFmt)
+  if (value instanceof Map) return encodeMapSync(value, options, resolvedFmt)
+  if (isTag(value)) return encodeTagSync(value.tag, value.value, options, resolvedFmt)
   // BoundedBytes: PlutusData byte strings, encoded per Conway CDDL bounded_bytes = bytes .size (0..64)
   if (
     typeof value === "object" &&
@@ -936,23 +975,23 @@ export const internalEncodeSync = (value: CBOR, options: CodecOptions = PRESERVE
     !(value instanceof Uint8Array) &&
     !(value instanceof Tag)
   ) {
-    return encodeRecordSync(value as { readonly [key: string | number]: CBOR }, options, enc)
+    return encodeRecordSync(value as { readonly [key: string | number]: CBOR }, options, resolvedFmt)
   }
   if (typeof value === "boolean" || value === null || value === undefined) return encodeSimpleSync(value)
   if (typeof value === "number") return encodeFloatSync(value, options)
   throw new CBORError({ message: `Unsupported CBOR value type: ${typeof value}` })
 }
 
-const encodeUintSync = (value: bigint, options: CodecOptions, encoding?: CBOREncoding): Uint8Array => {
+const encodeUintSync = (value: bigint, options: CodecOptions, fmt?: CBORFormat): Uint8Array => {
   if (value < 0n) throw new CBORError({ message: `Cannot encode negative value ${value} as unsigned integer` })
   const maxUint64 = 18446744073709551615n
   if (value > maxUint64) {
     const bytes = bigintToBytes(value)
-    return encodeTagSync(2, bytes, options, encoding)
+    return encodeTagSync(2, bytes, options, fmt)
   }
-  // Use specific ByteSize from encoding metadata
-  if (encoding?.integerEncoding !== undefined) {
-    return encodeIntHeader(0, value, encoding.integerEncoding)
+  // Use specific ByteSize from format metadata
+  if (fmt?._tag === "uint" && fmt.byteSize !== undefined) {
+    return encodeIntHeader(0, value, fmt.byteSize)
   }
   // Preserve mode without metadata uses minimal encoding (CML default)
   const useMinimal = options.mode !== "custom" || options.useMinimalEncoding
@@ -986,18 +1025,18 @@ const encodeUintSync = (value: bigint, options: CodecOptions, encoding?: CBOREnc
   }
 }
 
-const encodeNintSync = (value: bigint, options: CodecOptions, encoding?: CBOREncoding): Uint8Array => {
+const encodeNintSync = (value: bigint, options: CodecOptions, fmt?: CBORFormat): Uint8Array => {
   if (value >= 0n) throw new CBORError({ message: `Cannot encode non-negative value ${value} as negative integer` })
   const minInt64 = -18446744073709551615n
   if (value < minInt64) {
     const positiveValue = -(value + 1n)
     const bytes = bigintToBytes(positiveValue)
-    return encodeTagSync(3, bytes, options, encoding)
+    return encodeTagSync(3, bytes, options, fmt)
   }
   const positiveValue = -value - 1n
-  // Use specific ByteSize from encoding metadata
-  if (encoding?.integerEncoding !== undefined) {
-    return encodeIntHeader(1, positiveValue, encoding.integerEncoding)
+  // Use specific ByteSize from format metadata
+  if (fmt?._tag === "nint" && fmt.byteSize !== undefined) {
+    return encodeIntHeader(1, positiveValue, fmt.byteSize)
   }
   const useMinimal = options.mode !== "custom" || options.useMinimalEncoding
   if (positiveValue < 24n) {
@@ -1108,13 +1147,14 @@ const encodeBoundedBytesSync = (value: Uint8Array): Uint8Array => {
   return result
 }
 
-const encodeBytesSync = (value: Uint8Array, options: CodecOptions, encoding?: CBOREncoding): Uint8Array => {
+const encodeBytesSync = (value: Uint8Array, options: CodecOptions, fmt?: CBORFormat): Uint8Array => {
   const length = value.length
+  const stringEncoding = fmt?._tag === "bytes" ? fmt.encoding : undefined
 
   // Use string encoding metadata if available
-  if (encoding?.stringEncoding !== undefined) {
-    if (encoding.stringEncoding.tag === "indefinite") {
-      const chunks = encoding.stringEncoding.chunks
+  if (stringEncoding !== undefined) {
+    if (stringEncoding.tag === "indefinite") {
+      const chunks = stringEncoding.chunks
       let totalSize = 2 // 0x5f + 0xff
       for (const chunk of chunks) {
         totalSize += encodeIntHeader(2, BigInt(chunk.length), chunk.byteSize).length + chunk.length
@@ -1135,7 +1175,7 @@ const encodeBytesSync = (value: Uint8Array, options: CodecOptions, encoding?: CB
       return result
     }
     // Definite with specific byteSize
-    const header = encodeIntHeader(2, BigInt(length), encoding.stringEncoding.byteSize)
+    const header = encodeIntHeader(2, BigInt(length), stringEncoding.byteSize)
     const result = new Uint8Array(header.length + length)
     result.set(header, 0)
     result.set(value, header.length)
@@ -1199,12 +1239,13 @@ export const BoundedBytes = {
     (value as { _tag: unknown })._tag === "BoundedBytes"
 } as const
 
-const encodeTextSync = (value: string, options: CodecOptions, encoding?: CBOREncoding): Uint8Array => {
+const encodeTextSync = (value: string, options: CodecOptions, fmt?: CBORFormat): Uint8Array => {
+  const stringEncoding = fmt?._tag === "text" ? fmt.encoding : undefined
   // Use string encoding metadata if available
-  if (encoding?.stringEncoding !== undefined) {
+  if (stringEncoding !== undefined) {
     const utf8 = TEXT_ENCODER.encode(value)
-    if (encoding.stringEncoding.tag === "indefinite") {
-      const chunks = encoding.stringEncoding.chunks
+    if (stringEncoding.tag === "indefinite") {
+      const chunks = stringEncoding.chunks
       let totalSize = 2 // 0x7f + 0xff
       for (const chunk of chunks) {
         totalSize += encodeIntHeader(3, BigInt(chunk.length), chunk.byteSize).length + chunk.length
@@ -1225,7 +1266,7 @@ const encodeTextSync = (value: string, options: CodecOptions, encoding?: CBOREnc
       return result
     }
     // Definite with specific byteSize
-    const header = encodeIntHeader(3, BigInt(utf8.length), encoding.stringEncoding.byteSize)
+    const header = encodeIntHeader(3, BigInt(utf8.length), stringEncoding.byteSize)
     const result = new Uint8Array(header.length + utf8.length)
     result.set(header, 0)
     result.set(utf8, header.length)
@@ -1267,7 +1308,7 @@ const encodeTextSync = (value: string, options: CodecOptions, encoding?: CBOREnc
   return result
 }
 
-const encodeArraySync = (value: ReadonlyArray<CBOR>, options: CodecOptions, encoding?: CBOREncoding): Uint8Array => {
+const encodeArraySync = (value: ReadonlyArray<CBOR>, options: CodecOptions, fmt?: CBORFormat): Uint8Array => {
   const length = value.length
 
   // Fast path for empty arrays
@@ -1275,17 +1316,19 @@ const encodeArraySync = (value: ReadonlyArray<CBOR>, options: CodecOptions, enco
     return new Uint8Array([0x80])
   }
 
-  // Use encoding metadata if available (preserve mode)
-  if (encoding?.lengthEncoding !== undefined) {
+  const arrayFmt = fmt?._tag === "array" ? fmt : undefined
+
+  // Use format metadata if available
+  if (arrayFmt?.length !== undefined) {
     const items = new Array<Uint8Array>(length)
     for (let i = 0; i < length; i++) {
-      items[i] = internalEncodeSync(value[i], options, encoding.children?.[i])
+      items[i] = internalEncodeSync(value[i], options, arrayFmt.children[i])
     }
-    if (encoding.lengthEncoding.tag === "indefinite") {
+    if (arrayFmt.length.tag === "indefinite") {
       return encodeArrayAsIndefinite(items)
     }
     // Definite with specific byteSize
-    const header = encodeIntHeader(4, BigInt(length), encoding.lengthEncoding.byteSize)
+    const header = encodeIntHeader(4, BigInt(length), arrayFmt.length.byteSize)
     const totalItemsLen = items.reduce((acc, b) => acc + b.length, 0)
     const out = new Uint8Array(header.length + totalItemsLen)
     out.set(header, 0)
@@ -1299,65 +1342,25 @@ const encodeArraySync = (value: ReadonlyArray<CBOR>, options: CodecOptions, enco
 
   const useIndefinite = options.mode === "custom" && options.useIndefiniteArrays && length > 0
 
-  // Pre-encode items
+  // Pre-encode items (pass child formats if available even without length override)
   const items = new Array<Uint8Array>(length)
   for (let i = 0; i < length; i++) {
-    items[i] = internalEncodeSync(value[i], options)
+    items[i] = internalEncodeSync(value[i], options, arrayFmt?.children[i])
   }
 
   // Use low-level helpers
   return useIndefinite ? encodeArrayAsIndefinite(items) : encodeArrayAsDefinite(items)
 }
 
-const encodeMapEntriesSync = (pairs: Array<[CBOR, CBOR]>, options: CodecOptions, encoding?: CBOREncoding): Uint8Array => {
+const encodeMapEntriesSync = (pairs: Array<[CBOR, CBOR]>, options: CodecOptions, fmt?: CBORFormat): Uint8Array => {
   const length = pairs.length
-
-  // Use encoding metadata for lengthEncoding and entry encodings (preserve mode)
-  if (encoding?.lengthEncoding !== undefined) {
-    if (length === 0) return new Uint8Array([0xa0])
-    const encodedPairs = new Array<{ encodedKey: Uint8Array; encodedValue: Uint8Array }>(length)
-    for (let i = 0; i < length; i++) {
-      const [key, val] = pairs[i]
-      const entryEnc = encoding.entries?.[i]
-      encodedPairs[i] = {
-        encodedKey: internalEncodeSync(key, options, entryEnc?.[0]),
-        encodedValue: internalEncodeSync(val, options, entryEnc?.[1])
-      }
-    }
-    let payloadSize = 0
-    for (const p of encodedPairs) payloadSize += p.encodedKey.length + p.encodedValue.length
-    if (encoding.lengthEncoding.tag === "indefinite") {
-      const out = new Uint8Array(1 + payloadSize + 1)
-      let off = 0
-      out[off++] = 0xbf
-      for (const p of encodedPairs) {
-        out.set(p.encodedKey, off)
-        off += p.encodedKey.length
-        out.set(p.encodedValue, off)
-        off += p.encodedValue.length
-      }
-      out[off] = 0xff
-      return out
-    }
-    // Definite with specific byteSize
-    const header = encodeIntHeader(5, BigInt(length), encoding.lengthEncoding.byteSize)
-    const out = new Uint8Array(header.length + payloadSize)
-    out.set(header, 0)
-    let off = header.length
-    for (const p of encodedPairs) {
-      out.set(p.encodedKey, off)
-      off += p.encodedKey.length
-      out.set(p.encodedValue, off)
-      off += p.encodedValue.length
-    }
-    return out
-  }
+  const mapFmt = fmt?._tag === "map" ? fmt : undefined
 
   const useMinimal = options.mode !== "custom" || options.useMinimalEncoding
-  const sortKeys = options.mode === "canonical" || (options.mode === "custom" && options.sortMapKeys)
-  const useIndefinite = options.mode === "custom" && options.useIndefiniteMaps && length > 0
+  const sortKeys = !mapFmt && (options.mode === "canonical" || (options.mode === "custom" && options.sortMapKeys))
+  const useIndefinite = !mapFmt && options.mode === "custom" && options.useIndefiniteMaps && length > 0
   const encodeAsPairs =
-    (options.mode === "canonical" || options.mode === "custom") && options.encodeMapAsPairs === true
+    !mapFmt && (options.mode === "canonical" || options.mode === "custom") && options.encodeMapAsPairs === true
 
   // If encoding as array of pairs (Aiken/Plutus style), delegate to array encoding
   if (encodeAsPairs) {
@@ -1366,13 +1369,21 @@ const encodeMapEntriesSync = (pairs: Array<[CBOR, CBOR]>, options: CodecOptions,
   }
 
   // Fast path for empty maps
-  if (length === 0) {
-    return new Uint8Array([0xa0])
-  }
+  if (length === 0) return new Uint8Array([0xa0])
 
-  // Pre-encode pairs
+  // Encode each pair (with per-entry formats if format is available, otherwise canonical)
   let encodedPairs: Array<{ encodedKey: Uint8Array; encodedValue: Uint8Array }>
-  if (sortKeys) {
+  if (mapFmt) {
+    encodedPairs = new Array(length)
+    for (let i = 0; i < length; i++) {
+      const [key, val] = pairs[i]
+      const [keyFmt, valFmt] = mapFmt.entries[i] ?? [undefined, undefined]
+      encodedPairs[i] = {
+        encodedKey: internalEncodeSync(key, options, keyFmt),
+        encodedValue: internalEncodeSync(val, options, valFmt)
+      }
+    }
+  } else if (sortKeys) {
     encodedPairs = pairs.map(([key, val]) => ({
       encodedKey: internalEncodeSync(key, options),
       encodedValue: internalEncodeSync(val, options)
@@ -1382,27 +1393,23 @@ const encodeMapEntriesSync = (pairs: Array<[CBOR, CBOR]>, options: CodecOptions,
     encodedPairs = new Array(length)
     for (let i = 0; i < length; i++) {
       const [key, val] = pairs[i]
-      const ek = internalEncodeSync(key, options)
-      const ev = internalEncodeSync(val, options)
-      encodedPairs[i] = { encodedKey: ek, encodedValue: ev }
+      encodedPairs[i] = {
+        encodedKey: internalEncodeSync(key, options),
+        encodedValue: internalEncodeSync(val, options)
+      }
     }
   }
 
   // Compute payload size
   let payloadSize = 0
-  for (let i = 0; i < encodedPairs.length; i++) {
-    const p = encodedPairs[i]
-    payloadSize += p.encodedKey.length + p.encodedValue.length
-  }
+  for (const p of encodedPairs) payloadSize += p.encodedKey.length + p.encodedValue.length
 
-  // Compute header
-  if (useIndefinite) {
-    const totalSize = 1 + payloadSize + 1
-    const out = new Uint8Array(totalSize)
+  // Build output: indefinite or definite header
+  if (mapFmt?.length?.tag === "indefinite" || useIndefinite) {
+    const out = new Uint8Array(1 + payloadSize + 1)
     let off = 0
     out[off++] = 0xbf
-    for (let i = 0; i < encodedPairs.length; i++) {
-      const p = encodedPairs[i]
+    for (const p of encodedPairs) {
       out.set(p.encodedKey, off)
       off += p.encodedKey.length
       out.set(p.encodedValue, off)
@@ -1410,49 +1417,40 @@ const encodeMapEntriesSync = (pairs: Array<[CBOR, CBOR]>, options: CodecOptions,
     }
     out[off] = 0xff
     return out
-  } else {
-    // Optimize header encoding
-    let headerSize: number
-    let headerBytes: Uint8Array
-    if (length < 24) {
-      headerSize = 1
-      headerBytes = new Uint8Array([0xa0 + length])
-    } else if (length < 256 && useMinimal) {
-      headerSize = 2
-      headerBytes = new Uint8Array([0xb8, length])
-    } else if (length < 65536 && useMinimal) {
-      headerSize = 3
-      headerBytes = new Uint8Array([0xb9, length >> 8, length & 0xff])
-    } else if (length < 4294967296 && useMinimal) {
-      headerSize = 5
-      headerBytes = new Uint8Array([
-        0xba,
-        (length >> 24) & 0xff,
-        (length >> 16) & 0xff,
-        (length >> 8) & 0xff,
-        length & 0xff
-      ])
-    } else {
-      throw new CBORError({ message: `Map too long: ${length} entries` })
-    }
-
-    const totalSize = headerSize + payloadSize
-    const out = new Uint8Array(totalSize)
-
-    // Copy header
-    out.set(headerBytes, 0)
-
-    // Copy payload pairs
-    let off = headerSize
-    for (let i = 0; i < encodedPairs.length; i++) {
-      const p = encodedPairs[i]
-      out.set(p.encodedKey, off)
-      off += p.encodedKey.length
-      out.set(p.encodedValue, off)
-      off += p.encodedValue.length
-    }
-    return out
   }
+
+  // Definite header: use format byteSize if specified, else minimal
+  let headerBytes: Uint8Array
+  if (mapFmt?.length !== undefined) {
+    headerBytes = encodeIntHeader(5, BigInt(length), mapFmt.length.byteSize)
+  } else if (length < 24) {
+    headerBytes = new Uint8Array([0xa0 + length])
+  } else if (length < 256 && useMinimal) {
+    headerBytes = new Uint8Array([0xb8, length])
+  } else if (length < 65536 && useMinimal) {
+    headerBytes = new Uint8Array([0xb9, length >> 8, length & 0xff])
+  } else if (length < 4294967296 && useMinimal) {
+    headerBytes = new Uint8Array([
+      0xba,
+      (length >> 24) & 0xff,
+      (length >> 16) & 0xff,
+      (length >> 8) & 0xff,
+      length & 0xff
+    ])
+  } else {
+    throw new CBORError({ message: `Map too long: ${length} entries` })
+  }
+
+  const out = new Uint8Array(headerBytes.length + payloadSize)
+  out.set(headerBytes, 0)
+  let off = headerBytes.length
+  for (const p of encodedPairs) {
+    out.set(p.encodedKey, off)
+    off += p.encodedKey.length
+    out.set(p.encodedValue, off)
+    off += p.encodedValue.length
+  }
+  return out
 }
 
 /**
@@ -1484,24 +1482,41 @@ const mapGetCBOR = (map: ReadonlyMap<CBOR, CBOR>, key: CBOR): CBOR | undefined =
   return undefined
 }
 
-const encodeMapSync = (value: ReadonlyMap<CBOR, CBOR>, options: CodecOptions, encoding?: CBOREncoding): Uint8Array => {
-  // Use keyOrder from encoding to replay original insertion order
-  if (encoding?.keyOrder) {
+const encodeMapSync = (value: ReadonlyMap<CBOR, CBOR>, options: CodecOptions, fmt?: CBORFormat): Uint8Array => {
+  const mapFmt = fmt?._tag === "map" ? fmt : undefined
+  // Use keyOrder from format to replay original insertion order, then append any new keys
+  if (mapFmt?.keyOrder && mapFmt.keyOrder.length > 0) {
     const pairs: Array<[CBOR, CBOR]> = []
-    for (const key of encoding.keyOrder) {
+    const reorderedEntries: Array<readonly [CBORFormat, CBORFormat]> = []
+    const decodedKeyOrderKeys: Array<CBOR> = []
+
+    // First pass: replay surviving keyOrder keys
+    for (let j = 0; j < mapFmt.keyOrder.length; j++) {
+      const key = internalDecodeSync(mapFmt.keyOrder[j])
+      decodedKeyOrderKeys.push(key)
       const mapped = mapGetCBOR(value, key)
-      if (mapped === undefined) {
-        // Key no longer exists — keyOrder is stale, fall back to current entries
-        return encodeMapEntriesSync(Array.from(value.entries()), options, encoding)
+      if (mapped !== undefined) {
+        pairs.push([key, mapped])
+        reorderedEntries.push(mapFmt.entries[j] ?? [{ _tag: "simple" }, { _tag: "simple" }])
       }
-      pairs.push([key, mapped])
+      // Key missing from map: simply skip (key was removed)
     }
-    return encodeMapEntriesSync(pairs, options, encoding)
+
+    // Second pass: append new keys not covered by keyOrder
+    for (const [key, val] of value) {
+      if (!decodedKeyOrderKeys.some((k) => equals(key, k))) {
+        pairs.push([key, val])
+        reorderedEntries.push([{ _tag: "simple" }, { _tag: "simple" }])
+      }
+    }
+
+    const orderedFmt: CBORFormat.Map = { ...mapFmt, entries: reorderedEntries }
+    return encodeMapEntriesSync(pairs, options, orderedFmt)
   }
-  return encodeMapEntriesSync(Array.from(value.entries()), options, encoding)
+  return encodeMapEntriesSync(Array.from(value.entries()), options, fmt)
 }
 
-const encodeRecordSync = (value: { readonly [key: string | number]: CBOR }, options: CodecOptions, encoding?: CBOREncoding): Uint8Array => {
+const encodeRecordSync = (value: { readonly [key: string | number]: CBOR }, options: CodecOptions, fmt?: CBORFormat): Uint8Array => {
   // Optimize by avoiding Object.entries() and map() allocation
   const mapEntries: Array<[CBOR, CBOR]> = []
   for (const key in value) {
@@ -1515,14 +1530,23 @@ const encodeRecordSync = (value: { readonly [key: string | number]: CBOR }, opti
       }
     }
   }
-  return encodeMapEntriesSync(mapEntries, options, encoding)
+  return encodeMapEntriesSync(mapEntries, options, fmt)
 }
 
-const encodeTagSync = (tag: number, value: CBOR, options: CodecOptions, encoding?: CBOREncoding): Uint8Array => {
-  // Use specific ByteSize from encoding metadata
-  if (encoding?.tagEncoding !== undefined) {
-    const header = encodeIntHeader(6, BigInt(tag), encoding.tagEncoding)
-    const body = internalEncodeSync(value, options, encoding.children?.[0])
+const encodeTagSync = (tag: number, value: CBOR, options: CodecOptions, fmt?: CBORFormat): Uint8Array => {
+  const tagFmt = fmt?._tag === "tag" ? fmt : undefined
+  // Use specific ByteSize from format metadata (pass child format even when width is canonical)
+  if (tagFmt !== undefined) {
+    const header = tagFmt.width !== undefined
+      ? encodeIntHeader(6, BigInt(tag), tagFmt.width)
+      : (() => {
+          const useMinimal = options.mode !== "custom" || options.useMinimalEncoding
+          if (tag < 24) return new Uint8Array([0xc0 + tag])
+          if (tag < 256 && useMinimal) return new Uint8Array([0xd8, tag & 0xff])
+          if (tag < 65536 && useMinimal) return new Uint8Array([0xd9, (tag >> 8) & 0xff, tag & 0xff])
+          throw new CBORError({ message: `Tag ${tag} too large` })
+        })()
+    const body = internalEncodeSync(value, options, tagFmt.child)
     const out = new Uint8Array(header.length + body.length)
     out.set(header, 0)
     out.set(body, header.length)
@@ -1612,13 +1636,13 @@ const encodeFloatSync = (value: number, options: CodecOptions): Uint8Array => {
 export const decodeItemWithOffset = (
   data: Uint8Array,
   offset: number,
-  options: CodecOptions = PRESERVE_OPTIONS
-): { item: CBOR; newOffset: number } => decodeItemAt(data, offset, options)
+  options: CodecOptions = CML_DEFAULT_OPTIONS
+): { item: CBOR; newOffset: number } => decodeItemAt(data, offset, options, "none")
 
 // Decode (sync)
 export const internalDecodeSync = (data: Uint8Array, options: CodecOptions = DEFAULT_OPTIONS): CBOR => {
   if (data.length === 0) throw new CBORError({ message: "Empty CBOR data" })
-  const { item, newOffset } = decodeItemAt(data, 0, options)
+  const { item, newOffset } = decodeItemAt(data, 0, options, "none")
   if (newOffset !== data.length) {
     throw new CBORError({
       message: `Invalid CBOR: expected to consume ${data.length} bytes, but consumed ${newOffset}`
@@ -1627,8 +1651,43 @@ export const internalDecodeSync = (data: Uint8Array, options: CodecOptions = DEF
   return item
 }
 
+/**
+ * Decode CBOR bytes and return both the decoded value and the root format tree.
+ *
+ * @since 2.0.0
+ * @category parsing
+ */
+export const internalDecodeWithFormatSync = (
+  data: Uint8Array
+): DecodedWithFormat<CBOR> => {
+  if (data.length === 0) throw new CBORError({ message: "Empty CBOR data" })
+  const result = decodeItemAt(data, 0, DEFAULT_OPTIONS, "format")
+  if (result.newOffset !== data.length) {
+    throw new CBORError({
+      message: `Invalid CBOR: expected to consume ${data.length} bytes, but consumed ${result.newOffset}`
+    })
+  }
+  return {
+    value: result.item,
+    format: result.format!
+  }
+}
+
 // Fast, offset-based decode helpers (no slicing or copying of input buffer)
-type DecodeAtResult<T = CBOR> = { item: T; newOffset: number; encoding?: CBOREncoding }
+
+/**
+ * Controls what metadata `decodeItemAt` and its helpers track:
+ * - "none"   — no metadata (canonical / cml / aiken paths, fastest)
+ * - "format" — `CBORFormat` tagged union built directly (WithFormat path)
+ */
+type DecodeTrack = "none" | "format"
+
+type DecodeAtResult<T = CBOR> = {
+  item: T
+  newOffset: number
+  /** Populated only when track === "format" */
+  format?: CBORFormat
+}
 
 /** Map CBOR additional info to ByteSize width: <24 → 0 (inline), 24 → 1, 25 → 2, 26 → 4, 27 → 8. */
 const additionalInfoToByteSize = (ai: number): ByteSize => {
@@ -1643,108 +1702,104 @@ const additionalInfoToByteSize = (ai: number): ByteSize => {
 const bytesReadToByteSize = (bytesRead: number): ByteSize =>
   bytesRead <= 1 ? 0 : bytesRead === 2 ? 1 : bytesRead === 3 ? 2 : 4
 
-const decodeItemAt = (data: Uint8Array, offset: number, options: CodecOptions): DecodeAtResult => {
+const decodeItemAt = (data: Uint8Array, offset: number, options: CodecOptions, track: DecodeTrack): DecodeAtResult => {
   const firstByte = data[offset]
   const majorType = (firstByte >> 5) & 0x07
   let result: DecodeAtResult
   switch (majorType) {
     case CBOR_MAJOR_TYPE.UNSIGNED_INTEGER:
-      result = decodeUintAt(data, offset)
+      result = decodeUintAt(data, offset, track)
       break
     case CBOR_MAJOR_TYPE.NEGATIVE_INTEGER:
-      result = decodeNintAt(data, offset)
+      result = decodeNintAt(data, offset, track)
       break
     case CBOR_MAJOR_TYPE.BYTE_STRING:
-      result = decodeBytesAt(data, offset)
+      result = decodeBytesAt(data, offset, track)
       break
     case CBOR_MAJOR_TYPE.TEXT_STRING:
-      result = decodeTextAt(data, offset)
+      result = decodeTextAt(data, offset, track)
       break
     case CBOR_MAJOR_TYPE.ARRAY:
-      result = decodeArrayAt(data, offset, options)
+      result = decodeArrayAt(data, offset, options, track)
       break
     case CBOR_MAJOR_TYPE.MAP:
-      result = decodeMapAt(data, offset, options)
+      result = decodeMapAt(data, offset, options, track)
       break
     case CBOR_MAJOR_TYPE.TAG:
-      result = decodeTagAt(data, offset, options)
+      result = decodeTagAt(data, offset, options, track)
       break
     case CBOR_MAJOR_TYPE.SIMPLE_FLOAT:
-      result = decodeSimpleOrFloatAt(data, offset)
+      result = decodeSimpleOrFloatAt(data, offset, track)
       break
     default:
       throw new CBORError({ message: `Unsupported major type: ${majorType}` })
   }
-  // Attach encoding metadata as Symbol property on objects (Maps, Arrays, Uint8Arrays, Tags)
-  // Non-enumerable so it doesn't affect equality checks or serialization
-  if (result.encoding !== undefined && typeof result.item === "object" && result.item !== null) {
-    Object.defineProperty(result.item, encodingKey, {
-      value: result.encoding,
-      configurable: true,
-      writable: true,
-      enumerable: false
-    })
+  // In format mode, simple/float values don't set result.format — fill the sentinel here.
+  if (track === "format" && result.format === undefined) {
+    result.format = { _tag: "simple" }
   }
   return result
 }
 
-const decodeUintAt = (data: Uint8Array, offset: number): DecodeAtResult => {
+const decodeUintAt = (data: Uint8Array, offset: number, track: DecodeTrack): DecodeAtResult => {
   const firstByte = data[offset]
   const additionalInfo = firstByte & 0x1f
-  const encoding: CBOREncoding = { integerEncoding: additionalInfoToByteSize(additionalInfo) }
+  const bs = additionalInfoToByteSize(additionalInfo)
+  let item: bigint
+  let newOffset: number
   if (additionalInfo < 24) {
-    return { item: BigInt(additionalInfo), newOffset: offset + 1, encoding }
+    item = BigInt(additionalInfo); newOffset = offset + 1
   } else if (additionalInfo === 24) {
     if (data.length < offset + 2) throw new CBORError({ message: "Insufficient data for 1-byte unsigned integer" })
-    return { item: BigInt(data[offset + 1]), newOffset: offset + 2, encoding }
+    item = BigInt(data[offset + 1]); newOffset = offset + 2
   } else if (additionalInfo === 25) {
     if (data.length < offset + 3) throw new CBORError({ message: "Insufficient data for 2-byte unsigned integer" })
-    return { item: BigInt(data[offset + 1]) * 256n + BigInt(data[offset + 2]), newOffset: offset + 3, encoding }
+    item = BigInt(data[offset + 1]) * 256n + BigInt(data[offset + 2]); newOffset = offset + 3
   } else if (additionalInfo === 26) {
     if (data.length < offset + 5) throw new CBORError({ message: "Insufficient data for 4-byte unsigned integer" })
-    const v =
-      BigInt(data[offset + 1]) * 16777216n +
-      BigInt(data[offset + 2]) * 65536n +
-      BigInt(data[offset + 3]) * 256n +
-      BigInt(data[offset + 4])
-    return { item: v, newOffset: offset + 5, encoding }
+    item = BigInt(data[offset + 1]) * 16777216n + BigInt(data[offset + 2]) * 65536n +
+           BigInt(data[offset + 3]) * 256n + BigInt(data[offset + 4]); newOffset = offset + 5
   } else if (additionalInfo === 27) {
     if (data.length < offset + 9) throw new CBORError({ message: "Insufficient data for 8-byte unsigned integer" })
-    let result = 0n
-    for (let i = 1; i <= 8; i++) result = result * 256n + BigInt(data[offset + i])
-    return { item: result, newOffset: offset + 9, encoding }
+    item = 0n
+    for (let i = 1; i <= 8; i++) item = item * 256n + BigInt(data[offset + i])
+    newOffset = offset + 9
+  } else {
+    throw new CBORError({ message: `Unsupported additional info for unsigned integer: ${additionalInfo}` })
   }
-  throw new CBORError({ message: `Unsupported additional info for unsigned integer: ${additionalInfo}` })
+  if (track === "format") return { item, newOffset, format: bs === 0 ? { _tag: "uint" } : { _tag: "uint", byteSize: bs } }
+  return { item, newOffset }
 }
 
-const decodeNintAt = (data: Uint8Array, offset: number): DecodeAtResult => {
+const decodeNintAt = (data: Uint8Array, offset: number, track: DecodeTrack): DecodeAtResult => {
   const firstByte = data[offset]
   const additionalInfo = firstByte & 0x1f
-  const encoding: CBOREncoding = { integerEncoding: additionalInfoToByteSize(additionalInfo) }
+  const bs = additionalInfoToByteSize(additionalInfo)
+  let item: bigint
+  let newOffset: number
   if (additionalInfo < 24) {
-    return { item: -1n - BigInt(additionalInfo), newOffset: offset + 1, encoding }
+    item = -1n - BigInt(additionalInfo); newOffset = offset + 1
   } else if (additionalInfo === 24) {
     if (data.length < offset + 2) throw new CBORError({ message: "Insufficient data for 1-byte negative integer" })
-    return { item: -1n - BigInt(data[offset + 1]), newOffset: offset + 2, encoding }
+    item = -1n - BigInt(data[offset + 1]); newOffset = offset + 2
   } else if (additionalInfo === 25) {
     if (data.length < offset + 3) throw new CBORError({ message: "Insufficient data for 2-byte negative integer" })
-    const v = BigInt(data[offset + 1]) * 256n + BigInt(data[offset + 2])
-    return { item: -1n - v, newOffset: offset + 3, encoding }
+    item = -1n - (BigInt(data[offset + 1]) * 256n + BigInt(data[offset + 2])); newOffset = offset + 3
   } else if (additionalInfo === 26) {
     if (data.length < offset + 5) throw new CBORError({ message: "Insufficient data for 4-byte negative integer" })
-    const v =
-      BigInt(data[offset + 1]) * 16777216n +
-      BigInt(data[offset + 2]) * 65536n +
-      BigInt(data[offset + 3]) * 256n +
-      BigInt(data[offset + 4])
-    return { item: -1n - v, newOffset: offset + 5, encoding }
+    const v = BigInt(data[offset + 1]) * 16777216n + BigInt(data[offset + 2]) * 65536n +
+               BigInt(data[offset + 3]) * 256n + BigInt(data[offset + 4])
+    item = -1n - v; newOffset = offset + 5
   } else if (additionalInfo === 27) {
     if (data.length < offset + 9) throw new CBORError({ message: "Insufficient data for 8-byte negative integer" })
-    let result = 0n
-    for (let i = 1; i <= 8; i++) result = result * 256n + BigInt(data[offset + i])
-    return { item: -1n - result, newOffset: offset + 9, encoding }
+    let v = 0n
+    for (let i = 1; i <= 8; i++) v = v * 256n + BigInt(data[offset + i])
+    item = -1n - v; newOffset = offset + 9
+  } else {
+    throw new CBORError({ message: `Unsupported additional info for negative integer: ${additionalInfo}` })
   }
-  throw new CBORError({ message: `Unsupported additional info for negative integer: ${additionalInfo}` })
+  if (track === "format") return { item, newOffset, format: bs === 0 ? { _tag: "nint" } : { _tag: "nint", byteSize: bs } }
+  return { item, newOffset }
 }
 
 const decodeLengthAt = (data: Uint8Array, offset: number): { length: number; bytesRead: number } => {
@@ -1768,7 +1823,7 @@ const decodeLengthAt = (data: Uint8Array, offset: number): { length: number; byt
   throw new CBORError({ message: `Unsupported length encoding: ${additionalInfo}` })
 }
 
-const decodeBytesAt = (data: Uint8Array, offset: number): DecodeAtResult => {
+const decodeBytesAt = (data: Uint8Array, offset: number, track: DecodeTrack): DecodeAtResult => {
   const firstByte = data[offset]
   const additionalInfo = firstByte & 0x1f
   if (additionalInfo === CBOR_ADDITIONAL_INFO.INDEFINITE) {
@@ -1790,7 +1845,7 @@ const decodeBytesAt = (data: Uint8Array, offset: number): DecodeAtResult => {
       const end = start + length
       if (end > data.length) throw new CBORError({ message: "Insufficient data for byte string chunk" })
       chunks.push(data.subarray(start, end))
-      chunkInfos.push({ length, byteSize: bytesReadToByteSize(bytesRead) })
+      if (track !== "none") chunkInfos.push({ length, byteSize: bytesReadToByteSize(bytesRead) })
       cur = end
     }
     if (!foundBreak) {
@@ -1800,23 +1855,23 @@ const decodeBytesAt = (data: Uint8Array, offset: number): DecodeAtResult => {
     for (let i = 0; i < chunks.length; i++) total += chunks[i].length
     const out = new Uint8Array(total)
     let pos = 0
-    for (const ch of chunks) {
-      out.set(ch, pos)
-      pos += ch.length
-    }
-    const encoding: CBOREncoding = { stringEncoding: { tag: "indefinite", chunks: chunkInfos } }
-    return { item: out, newOffset: cur, encoding }
+    for (const ch of chunks) { out.set(ch, pos); pos += ch.length }
+    if (track === "none") return { item: out, newOffset: cur }
+    const se: StringEncoding = { tag: "indefinite", chunks: chunkInfos }
+    return { item: out, newOffset: cur, format: { _tag: "bytes", encoding: se } }
   } else {
     const { bytesRead, length } = decodeLengthAt(data, offset)
     const start = offset + bytesRead
     const end = start + length
     if (end > data.length) throw new CBORError({ message: "Insufficient data for byte string" })
-    const encoding: CBOREncoding = { stringEncoding: { tag: "definite", byteSize: bytesReadToByteSize(bytesRead) } }
-    return { item: data.subarray(start, end), newOffset: end, encoding }
+    const item = data.subarray(start, end)
+    if (track === "none") return { item, newOffset: end }
+    const bs = bytesReadToByteSize(bytesRead)
+    return { item, newOffset: end, format: bs === 0 ? { _tag: "bytes" } : { _tag: "bytes", encoding: { tag: "definite", byteSize: bs } } }
   }
 }
 
-const decodeTextAt = (data: Uint8Array, offset: number): DecodeAtResult => {
+const decodeTextAt = (data: Uint8Array, offset: number, track: DecodeTrack): DecodeAtResult => {
   const firstByte = data[offset]
   const additionalInfo = firstByte & 0x1f
   if (additionalInfo === CBOR_ADDITIONAL_INFO.INDEFINITE) {
@@ -1837,166 +1892,175 @@ const decodeTextAt = (data: Uint8Array, offset: number): DecodeAtResult => {
       const start = cur + bytesRead
       const end = start + length
       if (end > data.length) throw new CBORError({ message: "Insufficient data for text string chunk" })
-      const str = TEXT_DECODER.decode(data.subarray(start, end))
-      parts.push(str)
-      chunkInfos.push({ length, byteSize: bytesReadToByteSize(bytesRead) })
+      parts.push(TEXT_DECODER.decode(data.subarray(start, end)))
+      if (track !== "none") chunkInfos.push({ length, byteSize: bytesReadToByteSize(bytesRead) })
       cur = end
     }
     if (!foundBreak) {
       throw new CBORError({ message: "Indefinite text string missing break byte (0xff)" })
     }
-    const encoding: CBOREncoding = { stringEncoding: { tag: "indefinite", chunks: chunkInfos } }
-    return { item: parts.join(""), newOffset: cur, encoding }
+    const item = parts.join("")
+    if (track === "none") return { item, newOffset: cur }
+    const se: StringEncoding = { tag: "indefinite", chunks: chunkInfos }
+    return { item, newOffset: cur, format: { _tag: "text", encoding: se } }
   } else {
     const { bytesRead, length } = decodeLengthAt(data, offset)
     const start = offset + bytesRead
     const end = start + length
     if (end > data.length) throw new CBORError({ message: "Insufficient data for text string" })
-    const str = TEXT_DECODER.decode(data.subarray(start, end))
-    const encoding: CBOREncoding = { stringEncoding: { tag: "definite", byteSize: bytesReadToByteSize(bytesRead) } }
-    return { item: str, newOffset: end, encoding }
+    const item = TEXT_DECODER.decode(data.subarray(start, end))
+    if (track === "none") return { item, newOffset: end }
+    const bs = bytesReadToByteSize(bytesRead)
+    return { item, newOffset: end, format: bs === 0 ? { _tag: "text" } : { _tag: "text", encoding: { tag: "definite", byteSize: bs } } }
   }
 }
 
-const decodeArrayAt = (data: Uint8Array, offset: number, options: CodecOptions): DecodeAtResult => {
+const decodeArrayAt = (data: Uint8Array, offset: number, options: CodecOptions, track: DecodeTrack): DecodeAtResult => {
   const firstByte = data[offset]
   const additionalInfo = firstByte & 0x1f
   if (additionalInfo === CBOR_ADDITIONAL_INFO.INDEFINITE) {
     const arr: Array<CBOR> = []
-    const childEncodings: Array<CBOREncoding | undefined> = []
     let cur = offset + 1
     let foundBreak = false
-    while (cur < data.length) {
-      if (data[cur] === 0xff) {
-        cur += 1
-        foundBreak = true
-        break
+    if (track === "none") {
+      while (cur < data.length) {
+        if (data[cur] === 0xff) { cur += 1; foundBreak = true; break }
+        const child = decodeItemAt(data, cur, options, "none")
+        arr.push(child.item); cur = child.newOffset
       }
-      const { item, newOffset, encoding: childEnc } = decodeItemAt(data, cur, options)
-      arr.push(item)
-      childEncodings.push(childEnc)
-      cur = newOffset
+      if (!foundBreak) throw new CBORError({ message: "Indefinite array missing break byte (0xff)" })
+      return { item: arr, newOffset: cur }
     }
-    if (!foundBreak) {
-      throw new CBORError({ message: "Indefinite array missing break byte (0xff)" })
+    const childFormats: Array<CBORFormat> = []
+    while (cur < data.length) {
+      if (data[cur] === 0xff) { cur += 1; foundBreak = true; break }
+      const child = decodeItemAt(data, cur, options, "format")
+      arr.push(child.item); childFormats.push(child.format!); cur = child.newOffset
     }
-    const encoding: CBOREncoding = { lengthEncoding: { tag: "indefinite" }, children: childEncodings }
-    return { item: arr, newOffset: cur, encoding }
+    if (!foundBreak) throw new CBORError({ message: "Indefinite array missing break byte (0xff)" })
+    return { item: arr, newOffset: cur, format: { _tag: "array", length: { tag: "indefinite" }, children: childFormats } }
   } else {
     const { bytesRead, length } = decodeLengthAt(data, offset)
     let cur = offset + bytesRead
     const arr: Array<CBOR> = new Array(length)
-    const childEncodings: Array<CBOREncoding | undefined> = new Array(length)
+    if (track === "none") {
+      for (let i = 0; i < length; i++) {
+        const { item, newOffset } = decodeItemAt(data, cur, options, "none")
+        arr[i] = item; cur = newOffset
+      }
+      return { item: arr, newOffset: cur }
+    }
+    const bs = bytesReadToByteSize(bytesRead)
+    const le: LengthEncoding = { tag: "definite", byteSize: bs }
+    const childFormats: Array<CBORFormat> = new Array(length)
     for (let i = 0; i < length; i++) {
-      const { item, newOffset, encoding: childEnc } = decodeItemAt(data, cur, options)
-      arr[i] = item
-      childEncodings[i] = childEnc
-      cur = newOffset
+      const child = decodeItemAt(data, cur, options, "format")
+      arr[i] = child.item; childFormats[i] = child.format!; cur = child.newOffset
     }
-    const encoding: CBOREncoding = {
-      lengthEncoding: { tag: "definite", byteSize: bytesReadToByteSize(bytesRead) },
-      children: childEncodings
-    }
-    return { item: arr, newOffset: cur, encoding }
+    return { item: arr, newOffset: cur, format: { _tag: "array", ...(bs !== 0 ? { length: le } : {}), children: childFormats } }
   }
 }
 
-const decodeMapAt = (data: Uint8Array, offset: number, options: CodecOptions): DecodeAtResult => {
+const decodeMapAt = (data: Uint8Array, offset: number, options: CodecOptions, track: DecodeTrack): DecodeAtResult => {
   const firstByte = data[offset]
   const additionalInfo = firstByte & 0x1f
+  const isObj = options.mode === "custom" && options.mapsAsObjects
   if (additionalInfo === CBOR_ADDITIONAL_INFO.INDEFINITE) {
-    const isObj = options.mode === "custom" && options.mapsAsObjects
     const map = isObj ? ({} as Record<string, CBOR>) : new Map<CBOR, CBOR>()
-    const keyOrder: Array<CBOR> = []
-    const entryEncodings: Array<readonly [CBOREncoding | undefined, CBOREncoding | undefined]> = []
     let cur = offset + 1
     let foundBreak = false
-    while (cur < data.length) {
-      if (data[cur] === 0xff) {
-        cur += 1
-        foundBreak = true
-        break
+    if (track === "none") {
+      while (cur < data.length) {
+        if (data[cur] === 0xff) { cur += 1; foundBreak = true; break }
+        const k = decodeItemAt(data, cur, options, "none"); cur = k.newOffset
+        const v = decodeItemAt(data, cur, options, "none"); cur = v.newOffset
+        if (map instanceof Map) map.set(k.item, v.item)
+        else map[String(k.item as unknown)] = v.item
       }
-      const k = decodeItemAt(data, cur, options)
-      cur = k.newOffset
-      const v = decodeItemAt(data, cur, options)
-      cur = v.newOffset
-      keyOrder.push(k.item)
-      entryEncodings.push([k.encoding, v.encoding])
+      if (!foundBreak) throw new CBORError({ message: "Indefinite map missing break byte (0xff)" })
+      return { item: map, newOffset: cur }
+    }
+    const keyOrderBytes: Array<Uint8Array> = []
+    const entryFormats: Array<readonly [CBORFormat, CBORFormat]> = []
+    while (cur < data.length) {
+      if (data[cur] === 0xff) { cur += 1; foundBreak = true; break }
+      const keyStart = cur
+      const k = decodeItemAt(data, cur, options, "format"); cur = k.newOffset
+      const v = decodeItemAt(data, cur, options, "format"); cur = v.newOffset
+      keyOrderBytes.push(data.slice(keyStart, k.newOffset)); entryFormats.push([k.format!, v.format!])
       if (map instanceof Map) map.set(k.item, v.item)
-      else map[String(k.item as any)] = v.item
+      else map[String(k.item as unknown)] = v.item
     }
-    if (!foundBreak) {
-      throw new CBORError({ message: "Indefinite map missing break byte (0xff)" })
-    }
-    const encoding: CBOREncoding = {
-      lengthEncoding: { tag: "indefinite" },
-      keyOrder,
-      entries: entryEncodings
-    }
-    return { item: map, newOffset: cur, encoding }
+    if (!foundBreak) throw new CBORError({ message: "Indefinite map missing break byte (0xff)" })
+    return { item: map, newOffset: cur, format: { _tag: "map", length: { tag: "indefinite" }, keyOrder: keyOrderBytes, entries: entryFormats } }
   } else {
     const { bytesRead, length } = decodeLengthAt(data, offset)
     let cur = offset + bytesRead
-    const isObj = options.mode === "custom" && options.mapsAsObjects
     const map = isObj ? ({} as Record<string, CBOR>) : new Map<CBOR, CBOR>()
-    const keyOrder: Array<CBOR> = new Array(length)
-    const entryEncodings: Array<readonly [CBOREncoding | undefined, CBOREncoding | undefined]> = new Array(length)
+    if (track === "none") {
+      for (let i = 0; i < length; i++) {
+        const k = decodeItemAt(data, cur, options, "none")
+        cur = k.newOffset
+        const v = decodeItemAt(data, cur, options, "none")
+        cur = v.newOffset
+        if (map instanceof Map) map.set(k.item, v.item)
+        else map[String(k.item as unknown)] = v.item
+      }
+      return { item: map, newOffset: cur }
+    }
+    const bs = bytesReadToByteSize(bytesRead)
+    const le: LengthEncoding = { tag: "definite", byteSize: bs }
+    const keyOrderBytes: Array<Uint8Array> = new Array(length)
+    const entryFormats: Array<readonly [CBORFormat, CBORFormat]> = new Array(length)
     for (let i = 0; i < length; i++) {
-      const k = decodeItemAt(data, cur, options)
+      const keyStart = cur
+      const k = decodeItemAt(data, cur, options, "format")
       cur = k.newOffset
-      const v = decodeItemAt(data, cur, options)
+      const v = decodeItemAt(data, cur, options, "format")
       cur = v.newOffset
-      keyOrder[i] = k.item
-      entryEncodings[i] = [k.encoding, v.encoding]
+      keyOrderBytes[i] = data.slice(keyStart, k.newOffset)
+      entryFormats[i] = [k.format!, v.format!]
       if (map instanceof Map) map.set(k.item, v.item)
-      else map[String(k.item as any)] = v.item
+      else map[String(k.item as unknown)] = v.item
     }
-    const encoding: CBOREncoding = {
-      lengthEncoding: { tag: "definite", byteSize: bytesReadToByteSize(bytesRead) },
-      keyOrder,
-      entries: entryEncodings
-    }
-    return { item: map, newOffset: cur, encoding }
+    return { item: map, newOffset: cur, format: { _tag: "map", ...(bs !== 0 ? { length: le } : {}), keyOrder: keyOrderBytes, entries: entryFormats } }
   }
 }
 
-const decodeTagAt = (data: Uint8Array, offset: number, options: CodecOptions): DecodeAtResult => {
+const decodeTagAt = (data: Uint8Array, offset: number, options: CodecOptions, track: DecodeTrack): DecodeAtResult => {
   const firstByte = data[offset]
   const additionalInfo = firstByte & 0x1f
   let tagValue: number
   let cur = offset
   if (additionalInfo < 24) {
-    tagValue = additionalInfo
-    cur += 1
+    tagValue = additionalInfo; cur += 1
   } else if (additionalInfo === 24) {
     if (data.length < offset + 2) throw new CBORError({ message: "Insufficient data for 1-byte tag" })
-    tagValue = data[offset + 1]
-    cur += 2
+    tagValue = data[offset + 1]; cur += 2
   } else if (additionalInfo === 25) {
     if (data.length < offset + 3) throw new CBORError({ message: "Insufficient data for 2-byte tag" })
-    tagValue = (data[offset + 1] << 8) | data[offset + 2]
-    cur += 3
+    tagValue = (data[offset + 1] << 8) | data[offset + 2]; cur += 3
   } else {
     throw new CBORError({ message: `Unsupported tag encoding: ${additionalInfo}` })
   }
-  const inner = decodeItemAt(data, cur, options)
+  const inner = decodeItemAt(data, cur, options, track)
   cur = inner.newOffset
-  const encoding: CBOREncoding = {
-    tagEncoding: additionalInfoToByteSize(additionalInfo),
-    children: [inner.encoding]
-  }
+  const bs = additionalInfoToByteSize(additionalInfo)
   if (tagValue === 2 || tagValue === 3) {
     if (!(inner.item instanceof Uint8Array))
       throw new CBORError({ message: `Expected bytes for bigint tag ${tagValue}` })
-    let result = 0n
-    for (let i = 0; i < inner.item.length; i++) result = (result << 8n) | BigInt(inner.item[i])
-    return { item: tagValue === 2 ? result : -1n - result, newOffset: cur, encoding }
+    let n = 0n
+    for (let i = 0; i < inner.item.length; i++) n = (n << 8n) | BigInt(inner.item[i])
+    const item = tagValue === 2 ? n : -1n - n
+    if (track === "none") return { item, newOffset: cur }
+    return { item, newOffset: cur, format: { _tag: "tag", ...(bs !== 0 ? { width: bs } : {}), child: inner.format! } }
   }
-  return { item: { _tag: "Tag", tag: tagValue, value: inner.item }, newOffset: cur, encoding }
+  const item = { _tag: "Tag" as const, tag: tagValue, value: inner.item }
+  if (track === "none") return { item, newOffset: cur }
+  return { item, newOffset: cur, format: { _tag: "tag", ...(bs !== 0 ? { width: bs } : {}), child: inner.format! } }
 }
 
-const decodeSimpleOrFloatAt = (data: Uint8Array, offset: number): DecodeAtResult => {
+const decodeSimpleOrFloatAt = (data: Uint8Array, offset: number, _track: DecodeTrack): DecodeAtResult => {
   const firstByte = data[offset]
   const additionalInfo = firstByte & 0x1f
   if (additionalInfo === CBOR_SIMPLE.FALSE) return { item: false, newOffset: offset + 1 }

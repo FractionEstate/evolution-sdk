@@ -492,29 +492,29 @@ export const FromCDDL = Schema.transformOrFail(CDDLSchema, Schema.typeSchema(Pro
     })
 })
 
-export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.compose(CBOR.FromBytes(options), FromCDDL).annotations({
     identifier: "ProtocolParamUpdate.FromCBORBytes"
   })
 
-export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.compose(Schema.Uint8ArrayFromHex, FromCBORBytes(options)).annotations({
     identifier: "ProtocolParamUpdate.FromCBORHex"
   })
 
-export const toCBOR = (data: ProtocolParamUpdate, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const toCBOR = (data: ProtocolParamUpdate, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.encodeSync(FromCBORBytes(options))(data)
 
-export const fromCBOR = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const fromCBOR = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.decodeSync(FromCBORBytes(options))(bytes)
 
 export const toCBORBytes = toCBOR
 export const fromCBORBytes = fromCBOR
 
-export const toCBORHex = (data: ProtocolParamUpdate, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const toCBORHex = (data: ProtocolParamUpdate, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.encodeSync(FromCBORHex(options))(data)
 
-export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.decodeSync(FromCBORHex(options))(hex)
 
 const coinArb = Coin.arbitrary

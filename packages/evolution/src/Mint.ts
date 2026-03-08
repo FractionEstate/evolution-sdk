@@ -504,7 +504,7 @@ export const FromCDDL = Schema.transformOrFail(Schema.encodedSchema(CDDLSchema),
  * @since 2.0.0
  * @category schemas
  */
-export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.compose(
     CBOR.FromBytes(options), // Uint8Array → CBOR
     FromCDDL // CBOR → Mint
@@ -521,7 +521,7 @@ export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS
  * @since 2.0.0
  * @category schemas
  */
-export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.compose(
     Schema.Uint8ArrayFromHex, // string → Uint8Array
     FromCBORBytes(options) // Uint8Array → Mint
@@ -580,7 +580,7 @@ export const arbitrary: FastCheck.Arbitrary<Mint> = FastCheck.oneof(
  * @since 2.0.0
  * @category parsing
  */
-export const fromCBORBytes = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS): Mint =>
+export const fromCBORBytes = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): Mint =>
   Schema.decodeSync(FromCBORBytes(options))(bytes)
 
 /**
@@ -589,7 +589,7 @@ export const fromCBORBytes = (bytes: Uint8Array, options: CBOR.CodecOptions = CB
  * @since 2.0.0
  * @category parsing
  */
-export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS): Mint =>
+export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): Mint =>
   Schema.decodeSync(FromCBORHex(options))(hex)
 
 /**
@@ -598,7 +598,7 @@ export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.PRESE
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORBytes = (mint: Mint, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS): Uint8Array =>
+export const toCBORBytes = (mint: Mint, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): Uint8Array =>
   Schema.encodeSync(FromCBORBytes(options))(mint)
 
 /**
@@ -607,5 +607,5 @@ export const toCBORBytes = (mint: Mint, options: CBOR.CodecOptions = CBOR.PRESER
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORHex = (mint: Mint, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS): string =>
+export const toCBORHex = (mint: Mint, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): string =>
   Schema.encodeSync(FromCBORHex(options))(mint)

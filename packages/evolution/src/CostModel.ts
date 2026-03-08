@@ -199,7 +199,7 @@ export const FromCDDL = Schema.transform(CDDLSchema, Schema.typeSchema(CostModel
  * @since 2.0.0
  * @category schemas
  */
-export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.compose(
     CBOR.FromBytes(options), // Uint8Array → CBOR
     FromCDDL // CBOR → CostModels
@@ -216,7 +216,7 @@ export const FromCBORBytes = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS
  * @since 2.0.0
  * @category schemas
  */
-export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS) =>
+export const FromCBORHex = (options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS) =>
   Schema.compose(
     Schema.Uint8ArrayFromHex, // string → Uint8Array
     FromCBORBytes(options) // Uint8Array → CostModels
@@ -239,25 +239,25 @@ export const arbitrary: FastCheck.Arbitrary<CostModel> = FastCheck.array(
 /**
  * CBOR encoding for CostModels.
  */
-export const toCBOR = (costModels: CostModels, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS): Uint8Array =>
+export const toCBOR = (costModels: CostModels, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): Uint8Array =>
   Schema.encodeSync(FromCBORBytes(options))(costModels)
 
 /**
  * CBOR decoding for CostModels.
  */
-export const fromCBOR = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS): CostModels =>
+export const fromCBOR = (bytes: Uint8Array, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): CostModels =>
   Schema.decodeSync(FromCBORBytes(options))(bytes)
 
 /**
  * CBOR hex encoding for CostModels.
  */
-export const toCBORHex = (costModels: CostModels, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS): string =>
+export const toCBORHex = (costModels: CostModels, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): string =>
   Schema.encodeSync(FromCBORHex(options))(costModels)
 
 /**
  * CBOR hex decoding for CostModels.
  */
-export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS): CostModels =>
+export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): CostModels =>
   Schema.decodeSync(FromCBORHex(options))(hex)
 
 /**
@@ -344,5 +344,5 @@ export const languageViewsEncoding = (costModels: CostModels): Uint8Array => {
   }
 
   // Encode as canonical CBOR map
-  return CBOR.internalEncodeSync(mapEntries, CBOR.PRESERVE_OPTIONS)
+  return CBOR.internalEncodeSync(mapEntries, CBOR.CML_DEFAULT_OPTIONS)
 }

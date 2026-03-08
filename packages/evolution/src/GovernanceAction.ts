@@ -1133,7 +1133,7 @@ export const match = <R>(
  * @since 2.0.0
  * @category parsing
  */
-export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS): GovernanceAction => {
+export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): GovernanceAction => {
   const bytes = Bytes.fromHex(hex)
   return fromCBOR(bytes, options)
 }
@@ -1144,7 +1144,7 @@ export const fromCBORHex = (hex: string, options: CBOR.CodecOptions = CBOR.PRESE
  * @since 2.0.0
  * @category encoding
  */
-export const toCBORHex = (data: GovernanceAction, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS): string => {
+export const toCBORHex = (data: GovernanceAction, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): string => {
   const bytes = toCBOR(data, options)
   return Bytes.toHex(bytes)
 }
@@ -1157,7 +1157,7 @@ export const toCBORHex = (data: GovernanceAction, options: CBOR.CodecOptions = C
  */
 export const fromCBOR = (
   bytes: Uint8Array,
-  options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS
+  options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS
 ): GovernanceAction => {
   const cddl = CBOR.fromCBORBytes(bytes, options)
   return Schema.decodeSync(FromCDDL)(cddl as any)
@@ -1169,7 +1169,7 @@ export const fromCBOR = (
  * @since 2.0.0
  * @category encoding
  */
-export const toCBOR = (data: GovernanceAction, options: CBOR.CodecOptions = CBOR.PRESERVE_OPTIONS): Uint8Array => {
+export const toCBOR = (data: GovernanceAction, options: CBOR.CodecOptions = CBOR.CML_DEFAULT_OPTIONS): Uint8Array => {
   const cddl = Schema.encodeSync(FromCDDL)(data)
   return CBOR.toCBORBytes(cddl, options)
 }
