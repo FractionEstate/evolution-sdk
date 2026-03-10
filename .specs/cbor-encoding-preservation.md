@@ -1,328 +1,348 @@
-# CBOR Encoding Preservation
+# CBOR Format Preservation Specification
 
-**Status**: DRAFT  
 **Version**: 1.0.0  
-**Owners**: @jonathan  
+**Status**: DRAFT  
+**Created**: March 10, 2026  
+**Authors**: Evolution SDK Team  
+**Reviewers**: [To be assigned]
+
+---
 
 ## Abstract
 
-Defines how the Evolution SDK preserves original CBOR encoding choices (integer widths, definite/indefinite containers, map key ordering) across decode → domain object → re-encode cycles. Preserving byte-level fidelity prevents transaction ID drift and signature invalidation.
+This specification defines how the Evolution SDK preserves CBOR serialization shape across decode and encode boundaries. The design introduces an explicit `WithFormat` contract in which decode returns both the semantic value and a recursive `CBORFormat` tree, and encode accepts that tree as the source of serialization instructions. This allows byte-identical round-trips for any domain where re-encoding must not alter the byte representation of data whose hash has already been computed or committed.
+
+---
 
 ## Purpose and Scope
 
-**Covers**: The `CBOR.ts` decoder/encoder, `FromBytes` schema, and every `FromCDDL` transform that bridges CBOR AST ↔ domain types.
+This specification establishes the architectural requirements and behavioral contracts for CBOR format preservation within the Evolution SDK.
 
-**Does not cover**: The existing `addVKeyWitnessesBytes` byte-splice path (that already preserves bytes by never decoding the body). Does not change the public API surface of any module.
+**Target Audience**: SDK maintainers, contributors implementing CBOR-backed modules, wallet integrators, relay-service authors, and reviewers evaluating serialization behavior.
 
-**Target**: All CBOR-encoded types in `packages/evolution/src/` that use the `Schema.compose(CBOR.FromBytes, FromCDDL)` pipeline.
+**Scope**: This specification covers the `CBORFormat` model, the `DecodedWithFormat` result contract, preservation-aware decode and encode entrypoints on `CBOR`, the contract for domain modules that integrate `WithFormat`, and reconciliation behavior when the semantic value no longer matches the captured format tree.
+
+**Out of Scope**: This specification does not define the general `CodecOptions` behavior of plain CBOR encode APIs beyond their interaction boundary with the preservation path. It does not require immediate rollout of `WithFormat` support to every CBOR-backed module in the repository.
+
+---
 
 ## Introduction
 
-A Cardano transaction ID is `blake2b-256(body_bytes)`. If `decode → re-encode` changes even one byte, the txId changes and every existing signature breaks.
+CBOR has two layers of meaning:
 
-Today, Evolution's CBOR codec re-encodes using configurable options (`CodecOptions`) rather than replaying the original encoding. This loses non-canonical choices made by the original serializer (e.g., CML uses non-minimal integer widths, other wallets may use indefinite-length containers).
+1. the **semantic value** represented by the bytes
+2. the **serialized shape** used to encode that value
 
-CML solves this with auto-generated `*Encoding` structs (~35 fields per type, ~200+ encoding fields per era) and `orig_deser_order` arrays. This works but requires massive codegen and per-type boilerplate.
+The semantic value answers questions such as “what integer was encoded?” or “what keys exist in this map?”. The serialized shape answers questions such as “was this integer encoded with a one-byte or two-byte argument?”, “was this array definite or indefinite?”, and “what order were map keys emitted?”.
 
-The Evolution SDK solves this with a single mechanism: a per-node encoding metadata tree attached via Symbol property during decode, replayed during encode, falling back to `CodecOptions`-driven encoding when metadata is absent.
+For many systems, preserving the semantic value is sufficient. In systems where content hashes are derived from raw bytes, it is not. Re-encoding a semantically equivalent structure with a different shape can produce a different hash. Likewise, interoperability with external serializers can depend on preserving container shape or map entry ordering even when the decoded value remains equivalent.
 
-### Key Insight
+The SDK addresses this by separating two paths:
 
-`CBORValueSchema` (the intermediate schema in every `FromBytes` ↔ `FromCDDL` compose boundary) is `Schema.declare(...)` — a passthrough validator that preserves object identity. Symbols on Maps and Arrays survive through `Schema.compose` without cloning.
+- a **plain path** for semantic decode and option-driven encode
+- a **WithFormat path** for semantic decode plus explicit format capture and replay
 
-## Functional Specification
+### Architectural Overview
 
-### 1. CodecOptions: Preserve Mode
+```mermaid
+flowchart TD
+    Input[Serialized CBOR] --> Decision{Required behavior}
 
-`CodecOptions` gains a third discriminant:
+    Decision -->|Semantic only| PlainDecode[Plain decode]
+    PlainDecode --> PlainValue[Semantic value]
+    PlainValue --> PlainEncode[Encode with codec options]
+    PlainEncode --> Output[Serialized CBOR]
 
-```ts
-export type CodecOptions =
-  | { readonly mode: "preserve" }
-  | { readonly mode: "canonical"; readonly mapsAsObjects?: boolean; readonly encodeMapAsPairs?: boolean }
-  | {
-      readonly mode: "custom"
-      readonly useIndefiniteArrays: boolean
-      readonly useIndefiniteMaps: boolean
-      readonly useDefiniteForEmpty: boolean
-      readonly sortMapKeys: boolean
-      readonly useMinimalEncoding: boolean
-      readonly mapsAsObjects?: boolean
-      readonly encodeMapAsPairs?: boolean
-    }
-
-export const PRESERVE_OPTIONS: CodecOptions = { mode: "preserve" } as const
+    Decision -->|Preserve encoding| FmtDecode[Decode with format capture]
+    FmtDecode --> Pair[Value + CBORFormat tree]
+    Pair --> Mutate{Value mutated?}
+    Mutate -->|No| FmtEncode[Encode with format tree]
+    Mutate -->|Yes| Reconcile[Reconcile format tree]
+    Reconcile --> FmtEncode
+    FmtEncode --> Output
 ```
 
-**Precedence rules:**
+### Design Goal
 
-| Mode | Encoder behavior |
-|------|------------------|
-| `"preserve"` | Use encoding metadata when present. Missing metadata falls back to CML defaults (minimal encoding, definite containers, no key sorting). |
-| `"canonical"` | Ignore metadata unconditionally. Produce RFC 8949 §4.2.1 canonical bytes. |
-| `"custom"` | Ignore metadata unconditionally. Use the explicit custom settings. |
+The design goal is not merely “preserve as much as possible”. The design goal is to make preservation behavior explicit, observable, and testable while still allowing safe fallback when the caller mutates the decoded value.
 
-The decoder always captures encoding metadata regardless of mode — it is zero-cost (reading what is already in the byte stream).
+---
 
-**Default parameter change:** All `fromCBORBytes`, `toCBORBytes`, `FromCBORBytes`, `FromCBORHex`, and `CBOR.FromBytes` default parameters change from `CML_DEFAULT_OPTIONS` to `PRESERVE_OPTIONS`.
+## Functional Specification (Normative)
 
-This is backward-compatible: when no metadata is present (fresh objects, or first run before this feature lands), `"preserve"` falls back to CML defaults — identical to current behavior.
+The following requirements are specified using RFC 2119 / RFC 8174 keywords.
 
-### 2. Encoding Metadata Types
+### 1. Core Concepts
 
-```ts
-/** Width of an integer argument: inline (0), 1-byte, 2-byte, 4-byte, or 8-byte. */
-type Sz = 0 | 1 | 2 | 4 | 8
+#### 1.1 Semantic value
 
-/** Container length encoding. */
-type LenEncoding =
-  | { readonly tag: "indefinite" }
-  | { readonly tag: "definite"; readonly sz: Sz }
+A semantic value is the decoded CBOR content without any promise about how that value was serialized.
 
-/** Chunked byte/text string encoding. */
-type StringEncoding =
-  | { readonly tag: "definite"; readonly sz: Sz }
-  | { readonly tag: "indefinite"; readonly chunks: ReadonlyArray<{ readonly length: number; readonly sz: Sz }> }
+#### 1.2 Format tree
 
-/**
- * Per-node tree capturing how each CBOR value was originally serialized.
- * Every field is optional — absent means "use CodecOptions default".
- */
-type CBOREncoding = {
-  readonly lenEncoding?: LenEncoding        // arrays, maps
-  readonly valueEncoding?: Sz               // unsigned/negative integers, tags
-  readonly stringEncoding?: StringEncoding   // byte strings, text strings
-  readonly keyOrder?: ReadonlyArray<CBOR>    // maps: original key insertion order
-  readonly tagEncoding?: Sz                  // CBOR tag number width
-  readonly children?: ReadonlyArray<CBOREncoding | undefined>  // arrays and tag values
-  readonly entries?: ReadonlyArray<          // maps
-    readonly [CBOREncoding | undefined, CBOREncoding | undefined]
-  >
-}
-```
+A format tree is a recursive structure that captures the serialization choices associated with a CBOR value.
 
-### 3. Symbol Key
+#### 1.3 Preservation boundary
 
-```ts
-export const kEncoding: unique symbol = Symbol.for("evolution.cbor.encoding")
-```
+The preservation boundary is the point at which the SDK stops treating CBOR as raw bytes and starts treating it as a semantic value plus optional preservation metadata.
 
-`Symbol.for` is used rather than a local `Symbol()` so that encoding metadata survives across module boundaries (e.g., monorepo or bundled duplicate modules).
+The `WithFormat` API defines that boundary explicitly.
 
-### 4. Decoder Changes (`internalDecodeSync`)
+### 2. Format Model
 
-Each `decode*At` function returns an additional `encoding` field alongside `item` and `newOffset`:
+The implementation **MUST** expose the following model concepts.
 
-```ts
-type DecodeAtResult<T = CBOR> = {
-  item: T
-  newOffset: number
-  encoding?: CBOREncoding
-}
-```
+#### 2.1 Byte width
 
-**Capturing rules**:
+An integer argument width **MUST** be representable as one of:
 
-| CBOR type | What to capture |
-|-----------|----------------|
-| Unsigned/negative integer | `valueEncoding`: the `Sz` implied by `additionalInfo` ≥ 24 (24→1, 25→2, 26→4, 27→8). Values < 24 always encode as inline, so `valueEncoding` is `0` (or omitted). |
-| Byte string (definite) | `stringEncoding.sz`: header width |
-| Byte string (indefinite) | `stringEncoding.chunks`: length and sz per chunk |
-| Text string | Same as byte string |
-| Array (definite) | `lenEncoding: { tag: "definite", sz }`, `children` recursively |
-| Array (indefinite) | `lenEncoding: { tag: "indefinite" }`, `children` recursively |
-| Map (definite) | `lenEncoding: { tag: "definite", sz }`, `keyOrder` = insertion order, `entries` = `[keyEnc, valEnc]` per pair |
-| Map (indefinite) | `lenEncoding: { tag: "indefinite" }`, same fields |
-| Tag | `tagEncoding`: tag number width. `children[0]` = inner value encoding |
+- inline
+- 1 byte
+- 2 bytes
+- 4 bytes
+- 8 bytes
 
-**Attachment**: After each top-level `decodeItemAt` call returns, if the decoded value is an object (Map, Array, Tag, or BoundedBytes), the encoding tree is attached:
+#### 2.2 Container length encoding
 
-```ts
-if (encoding !== undefined && typeof item === "object" && item !== null) {
-  (item as any)[kEncoding] = encoding
-}
-```
+Array and map length encoding **MUST** distinguish between:
 
-Primitives (bigint, string, boolean, null, undefined, number) cannot carry Symbol properties. Their encoding lives on the parent's `children`/`entries` tree.
+- definite length
+- indefinite length
 
-### 5. Encoder Changes (`internalEncodeSync`)
+Definite length **MUST** be able to preserve the width of the length header.
 
-```ts
-export const internalEncodeSync = (value: CBOR, options: CodecOptions): Uint8Array => {
-  // Only read metadata in preserve mode
-  const encoding: CBOREncoding | undefined =
-    options.mode === "preserve" && typeof value === "object" && value !== null
-      ? (value as any)[kEncoding]
-      : undefined
-  return internalEncodeWithMetadata(value, options, encoding)
-}
-```
+#### 2.3 String encoding
 
-The `encoding` parameter is only read when `mode === "preserve"`. In `"canonical"` and `"custom"` modes, `encoding` is always `undefined` — metadata is unconditionally ignored.
+Byte strings and text strings **MUST** distinguish between:
 
-The new `internalEncodeWithMetadata` function mirrors existing `encode*Sync` functions but checks `encoding` fields first (only reachable in preserve mode):
+- definite encoding with preserved header width
+- indefinite encoding with preserved chunk boundaries and chunk header widths
 
-- **Integers**: If `encoding.valueEncoding` is set, use that specific `Sz`.
-- **Byte/text strings**: If `encoding.stringEncoding` is set, replay chunk structure or definite-length `Sz`.
-- **Arrays**: If `encoding.lenEncoding` is `{ tag: "indefinite" }`, emit `0x9f...0xff`. Otherwise use definite header with `sz`. Recursively pass `encoding.children[i]` to each element.
-- **Maps**: If `encoding.lenEncoding` is indefinite, emit `0xbf...0xff`. Emit keys in `encoding.keyOrder` order. Recursively pass `encoding.entries[i][0]`/`encoding.entries[i][1]` to keys/values.
-- **Tags**: If `encoding.tagEncoding` is set, use that `Sz` for the tag number.
-- **Fallback**: If any encoding field is `undefined`, fall back to CML defaults (minimal encoding, definite containers, no key sorting).
+#### 2.4 `CBORFormat`
 
-### 6. Schema Layer: `FromBytes`
+The root preservation model **MUST** be a tagged discriminated union with variants for:
 
-The `FromBytes` transform changes to thread encoding on both sides:
+- unsigned integer
+- negative integer
+- byte string
+- text string
+- array
+- map
+- tag
+- simple value
 
-```ts
-export const FromBytes = (options: CodecOptions) =>
-  Schema.transformOrFail(Schema.Uint8ArrayFromSelf, CBORValueSchema, {
-    strict: true,
-    decode: (fromA, _, ast) =>
-      E.try({
-        try: () => internalDecodeSync(fromA, options),
-        // kEncoding is already on the returned CBOR value
-        catch: (error) => new ParseResult.Type(ast, fromA, `...`)
-      }),
-    encode: (toI, _, ast, toA) =>
-      E.try({
-        try: () => {
-          // If the CBOR AST value has encoding metadata, use it.
-          // Also check toA (the original value before FromCDDL encoding)
-          // for cases where FromCDDL threads encoding to its output.
-          const enc = (toI as any)?.[kEncoding] ?? (toA as any)?.[kEncoding]
-          if (enc && typeof toI === "object" && toI !== null && !(toI as any)[kEncoding]) {
-            (toI as any)[kEncoding] = enc
-          }
-          return internalEncodeSync(toI, options)
-        },
-        catch: (error) => new ParseResult.Type(ast, toI, `...`)
-      })
-  })
-```
+Each variant **MUST** preserve only the encoding choices relevant to that CBOR node.
 
-### 7. FromCDDL Threading Pattern
+#### 2.5 `DecodedWithFormat`
 
-Every `FromCDDL` transform follows this pattern:
+Preservation-aware decode **MUST** return a pair containing:
 
-**Decode** (CBOR AST → domain object):
-```ts
-decode: (fromA) =>
-  Eff.gen(function* () {
-    const map = fromA as Map<bigint, CBOR.CBOR>
-    // ... existing field extraction ...
-    const result = new DomainType(fields, { disableValidation: true })
-    // Thread encoding from CBOR AST to domain object
-    const enc = (map as any)[kEncoding]
-    if (enc !== undefined) (result as any)[kEncoding] = enc
-    return result
-  })
-```
+- the decoded semantic value
+- the root `CBORFormat` tree
 
-**Encode** (domain object → CBOR AST):
-```ts
-encode: (toI, _, _ast, toA) =>
-  Eff.gen(function* () {
-    const record = new Map<bigint, CBOR.CBOR>()
-    // ... existing field construction ...
-    // Thread encoding from domain object (toA) to CBOR AST
-    const enc = (toA as any)[kEncoding]
-    if (enc !== undefined) (record as any)[kEncoding] = enc
-    return record
-  })
-```
+### 3. `CBORFormat` Semantics
 
-The `toA` parameter in `encode` is the **original domain object before transformation** — it carries the encoding that was attached during decode.
+#### 3.1 Unsigned and negative integers
 
-### 8. Map Key Order Invalidation
+For unsigned and negative integers, the format tree **MUST** preserve the encoded width of the integer argument when that width is explicitly represented in the source bytes.
 
-When a `FromCDDL.encode` adds or removes map keys compared to the original:
+When the current integer value no longer fits the preserved width, encode **MUST** fall back to the smallest valid width that can represent the value rather than fail.
 
-```ts
-// Guard: only replay keyOrder if key set hasn't changed
-const enc = (toA as any)[kEncoding] as CBOREncoding | undefined
-if (enc?.keyOrder) {
-  const originalKeyCount = enc.keyOrder.length
-  const currentKeyCount = record.size
-  if (originalKeyCount !== currentKeyCount) {
-    // Key set changed — drop keyOrder, fall back to CodecOptions
-    const { keyOrder: _, ...restEnc } = enc
-    if (Object.keys(restEnc).length > 0) {
-      (record as any)[kEncoding] = restEnc
-    }
-    // else: no encoding metadata left, full fallback
-  } else {
-    (record as any)[kEncoding] = enc
-  }
-}
-```
+#### 3.2 Byte strings and text strings
 
-This matches CML's behavior: when `orig_deser_order` count differs from field count, fall back to ascending order.
+For byte strings and text strings, the format tree **MUST** preserve:
 
-### 9. Co-Signing (Adding New Witnesses)
+- definite vs indefinite encoding
+- header width for definite encoding
+- chunk boundaries and chunk header widths for indefinite encoding
 
-When adding vkey witnesses to an existing `TransactionWitnessSet`:
+#### 3.3 Arrays
 
-1. The witness set's map encoding (definite/indefinite, key order) is preserved from the original decode.
-2. Existing witnesses keep their per-element encoding in `children`.
-3. New witnesses get `undefined` encoding → canonical fallback.
-4. The inner array's encoding `children` is extended with `undefined` entries for new elements.
+For arrays, the format tree **MUST** preserve:
 
-This produces byte-identical output for all existing data while new data uses canonical encoding.
+- definite vs indefinite encoding
+- definite length header width when applicable
+- the child format branch for each element position
 
-### 10. Implementation Order
+#### 3.4 Maps
 
-1. **CBOR.ts — types**: Add `CBOREncoding`, `LenEncoding`, `StringEncoding`, `Sz`, `kEncoding` exports. Add `mode: "preserve"` to `CodecOptions` union. Add `PRESERVE_OPTIONS` constant.
-2. **CBOR.ts — decoder**: Modify `decodeItemAt` and each `decode*At` to return `encoding` fields. Attach `kEncoding` Symbol on decoded objects. Capture is unconditional (all modes).
-3. **CBOR.ts — encoder**: Add `internalEncodeWithMetadata`. Modify `internalEncodeSync` to read `kEncoding` only when `mode === "preserve"`, ignore otherwise.
-4. **CBOR.ts — `FromBytes`**: Use `toA` 4th parameter in encode to thread encoding. Change default options to `PRESERVE_OPTIONS`.
-5. **All modules — default parameter change**: Replace `CML_DEFAULT_OPTIONS` with `PRESERVE_OPTIONS` in all `FromCBORBytes`, `FromCBORHex`, `fromCBORBytes`, `toCBORBytes`, etc. default parameters.
-6. **TransactionWitnessSet.ts — `FromCDDL`**: Thread `kEncoding` in both decode and encode.
-7. **TransactionBody.ts — `FromCDDL`**: Thread `kEncoding` in both decode and encode, with key order invalidation guard.
-8. **Transaction.ts — `FromCDDL`**: Thread `kEncoding` for the outer transaction tuple.
-9. **Remaining modules**: AuxiliaryData, NativeScripts, Redeemers, BootstrapWitness, etc.
-10. **Property test**: Flip `_proof-property.test.ts` from `not.toBe` to `toBe`.
+For maps, the format tree **MUST** preserve:
 
-### Examples
+- definite vs indefinite encoding
+- definite length header width when applicable
+- serialized key order
+- key format and value format for each entry
 
-**Non-canonical indefinite witness set → decode → add witness → re-encode**:
-```
-Original (hex): bf1a000000009f9f440102030444aabbccddff9f440506070844eeff1122ffffff
-                ^^                                                              ^^ indefinite map
-                  ^^^^^^^^^^  4-byte key 0 (non-minimal)
-                              ^^ ^^                      ^^ ^^ indefinite arrays
-                                 ^^ ^^                      ^^ indefinite pairs
+Serialized key order **MUST** be represented in a form that can be replayed exactly. The preservation model **MUST NOT** reduce map order to a sorting policy.
 
-After adding witness [090a0b0c, 33445566]:
-bf1a000000009f9f440102030444aabbccddff9f440506070844eeff1122ff8244090a0b0c4433445566ffff
-                                                                ^^ new pair: definite (canonical)
-```
+#### 3.5 Tags
 
-Existing encoding is preserved byte-for-byte. New data uses canonical encoding.
+For tags, the format tree **MUST** preserve:
+
+- the width of the tag header
+- the child format branch of the tagged payload
+
+#### 3.6 Simple values
+
+For simple values, the format tree **MUST** support a sentinel branch indicating that no richer serialization choice is preserved.
+
+### 4. Preservation-Aware API Surface
+
+#### 4.1 CBOR module
+
+The `CBOR` module **MUST** expose preservation-aware decode and encode entrypoints for:
+
+- bytes → `DecodedWithFormat<CBOR>`
+- hex → `DecodedWithFormat<CBOR>`
+- `CBOR` + `CBORFormat` → bytes
+- `CBOR` + `CBORFormat` → hex
+
+#### 4.2 Domain modules
+
+Any domain module that requires format preservation **SHOULD** expose parallel preservation-aware decode and encode entrypoints that:
+
+- decode raw CBOR through the `CBOR` module
+- decode the semantic domain value from that CBOR structure
+- return the domain value paired with the original root `CBORFormat`
+
+Domain modules **MUST** follow the same decode and encode contracts defined in Sections 5 and 6.
+
+### 5. Decode Contract
+
+`fromCBOR*WithFormat()` **MUST** capture the format tree during decode of the same byte stream that produced the semantic value.
+
+The decoder **MUST** capture, where applicable:
+
+- integer widths
+- string definite vs indefinite shape
+- string chunk boundaries
+- array definite vs indefinite shape
+- map definite vs indefinite shape
+- map entry order
+- map entry format branches
+- tag widths
+
+If the input is invalid CBOR, decode **MUST** fail with a decode error.
+
+### 6. Encode Contract
+
+`toCBOR*WithFormat()` **MUST** interpret the supplied format tree as the source of serialization instructions.
+
+The preservation-aware encode APIs **MUST NOT** accept general codec options. The format tree and codec options would otherwise become competing authorities over the same serialized output.
+
+When the semantic value remains compatible with the captured format tree, preservation-aware encode **SHOULD** produce byte-identical output.
+
+### 7. Reconciliation Rules
+
+When a caller mutates the decoded semantic value before encode, the implementation **MUST** reconcile the format tree locally and continue.
+
+The reconciliation rules are:
+
+1. Format branches whose corresponding value branches are absent **MUST** be dropped.
+2. Value branches not covered by the format tree **MUST** use default encoding behavior.
+3. Value branches covered by a compatible format branch **MUST** reuse that preserved format branch.
+4. Preserved widths that no longer fit the current value **MUST** fall back to a valid width.
+5. A stale or partial format tree **MUST NOT** cause encode failure by itself.
+
+### 8. Map Preservation Rules
+
+Map preservation requires stronger guarantees than other container types.
+
+For a map encoded with a preserved format tree, the implementation **MUST**:
+
+- replay preserved keys in their preserved serialized order when those keys still exist
+- match preserved keys by semantic CBOR equality rather than object identity
+- preserve preserved key and value format branches for surviving entries
+- append new keys after preserved entries
+- assign default formatting to appended entries when no preserved entry format exists
+
+This rule applies both to low-level CBOR maps and to module-level encode paths that rebuild maps from domain values.
+
+### 9. Error Behavior
+
+The implementation **MUST**:
+
+- throw decode errors for invalid CBOR input
+- throw encode errors for invalid semantic values
+- reject malformed indefinite containers that do not terminate correctly
+- reject invalid tagged integer payloads
+- continue encoding when preservation data is partial or stale
+
+---
 
 ## Appendix
 
-### Appendix A: Why Symbol, Not WeakMap
+### Appendix A: Preservation Flows (Informative)
 
-WeakMap keys must be objects. CBOR AST values include primitives (bigint, string). A WeakMap for the top-level container works, but the child references in array/map entries require per-item metadata anyway. Symbol properties on objects give O(1) direct access with no external state, and are invisible to `JSON.stringify`, `Object.keys`, `for...in`, and `Equal.symbol` comparisons.
+#### A.1. Preservation-aware round-trip
 
-### Appendix B: Why Schema.declare Matters
+```mermaid
+sequenceDiagram
+    participant Caller
+    participant Decoder as WithFormat Decode
+    participant Encoder as WithFormat Encode
 
-`Schema.declare` creates a validation-only schema that does NOT clone the input object. The existing `CBORValueSchema` at CBOR.ts:460 is already `Schema.declare(...)`. This means:
+    Caller->>Decoder: serialized CBOR
+    Decoder-->>Caller: semantic value + CBORFormat tree
+    Note over Caller: mutate value (optional)
+    Caller->>Encoder: semantic value + CBORFormat tree
+    Encoder-->>Caller: serialized CBOR
+```
 
-1. `FromBytes.decode` produces a `Map` with `kEncoding` attached
-2. `Schema.compose` passes this Map through `CBORValueSchema` (no-clone)
-3. `FromCDDL.decode` receives the **same Map object** with the Symbol intact
+#### A.2. Use case: Cardano transaction witness merge (Informative)
 
-If `CBORValueSchema` were `Schema.MapFromSelf(...)` or `Schema.Struct(...)`, the validation step would create a new Map/object and the Symbol would be lost.
+A common consumer of the preservation primitives is Cardano transaction witness merging. The transaction body hash is derived from raw bytes, so re-encoding with a different shape would invalidate the hash. Witness merge uses a WithFormat round-trip:
 
-### Appendix C: Comparison with CML
+1. Decode the wallet witness set to extract vkey witnesses as domain values.
+2. Decode the full transaction with format capture.
+3. Add witnesses at the domain level.
+4. Re-encode using the captured format tree.
 
-| Aspect | CML | Evolution (this spec) |
-|--------|-----|----------------------|
-| Metadata storage | Auto-generated `*Encoding` structs | Single `CBOREncoding` tree via Symbol |
-| Codegen required | Yes (~200+ fields per era) | No |
-| Key order | `orig_deser_order: Vec<Key>`, invalidated when field count changes | `keyOrder: ReadonlyArray<CBOR>`, same invalidation guard |
-| Per-field encoding | Dedicated field per encoding choice | Tree structure with `children`/`entries` |
-| Force canonical | `force_canonical: bool` flag | `mode: "canonical"` or `mode: "custom"` — metadata ignored unconditionally |
-| Preserve toggle | Implicit (always preserves unless `force_canonical`) | Explicit `mode: "preserve"` — only mode that reads metadata |
-| Body mutation | Preserves field encoding, drops key order on field count change | Same behavior |
+Reconciliation (Section 7, Section 8) governs the re-encode: body encoding stays stable (preserving the hash), non-witness map entries keep their format branches, map key ordering is preserved for surviving entries, and new witness entries fall back to default encoding.
+
+```mermaid
+sequenceDiagram
+    participant Caller
+    participant Decode as WithFormat Decode
+    participant Merge as Domain Merge
+    participant Encode as WithFormat Encode
+
+    Caller->>Decode: serialized structure
+    Decode-->>Caller: domain value + CBORFormat tree
+    Caller->>Merge: domain value + new data
+    Merge-->>Caller: merged domain value
+    Caller->>Encode: merged value + original CBORFormat tree
+    Note over Encode: Reconciliation preserves<br/>existing entries. New entries<br/>get default encoding.
+    Encode-->>Caller: serialized structure
+```
+
+### Appendix B: Representative Behaviors (Informative)
+
+The current implementation is validated against representative cases including:
+
+- non-minimal unsigned integer encoding
+- non-minimal negative integer encoding
+- indefinite byte strings
+- indefinite text strings
+- indefinite arrays
+- indefinite maps
+- non-minimal tag width
+- non-canonical map key order
+- non-canonical nested structure bytes
+- map-format containers produced by external tooling
+
+### Appendix C: Glossary (Informative)
+
+**Semantic value**: The decoded meaning of CBOR independent of how it was serialized.
+
+**Serialized shape**: The concrete CBOR encoding choices used to represent a semantic value.
+
+**Format tree**: The recursive preservation model that records serialized shape.
+
+**Preservation-aware encode**: Encode that takes an explicit format tree and replays it where compatible.
+
+**Preservation boundary**: The point at which raw CBOR bytes become a semantic value plus optional format metadata. Defined by the `WithFormat` API (Section 1.3).
+
+**Reconciliation**: The fallback behavior applied when a mutated semantic value no longer matches the captured format tree (Section 7).
+
+
