@@ -212,6 +212,10 @@ export const toCBORHexWithFormat = (
  * redeemer bytes, map key ordering, and all non-witness data are preserved
  * through the format tree reconciliation.
  *
+ * `options` applies only to parsing the wallet witness set bytes. Transaction
+ * decoding and re-encoding are governed by the captured format tree, making
+ * codec options irrelevant for the transaction round-trip path.
+ *
  * @since 2.0.0
  * @category encoding
  */
