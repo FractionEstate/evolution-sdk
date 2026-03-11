@@ -261,6 +261,18 @@ export const addVKeyWitnessesHex = (
 // Raw body bytes extraction
 // ============================================================================
 
+/** Skip a CBOR item header and return its byte width. */
+const cborHeaderSize = (data: Uint8Array, offset: number): number => {
+  const additionalInfo = data[offset] & 0x1f
+  if (additionalInfo < 24) return 1
+  if (additionalInfo === CBOR.CBOR_ADDITIONAL_INFO.DIRECT) return 2
+  if (additionalInfo === CBOR.CBOR_ADDITIONAL_INFO.UINT16) return 3
+  if (additionalInfo === CBOR.CBOR_ADDITIONAL_INFO.UINT32) return 5
+  if (additionalInfo === CBOR.CBOR_ADDITIONAL_INFO.UINT64) return 9
+  if (additionalInfo === CBOR.CBOR_ADDITIONAL_INFO.INDEFINITE) return 1
+  throw new CBOR.CBORError({ message: `Unsupported additional info: ${additionalInfo}` })
+}
+
 /**
  * Extract the original body bytes from a raw transaction CBOR byte array.
  * A Cardano transaction is a 4-element CBOR array: `[body, witnessSet, isValid, auxiliaryData]`.
