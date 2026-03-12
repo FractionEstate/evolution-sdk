@@ -125,6 +125,7 @@ async function unlockFromScript() {
 When using Effect, compose the full pipeline as a single `Effect.gen` and apply `Effect.retry` directly. `Schedule` controls the timing and number of attempts.
 
 ```ts twoslash
+// @noErrors
 import { createClient } from "@evolution-sdk/evolution";
 import { Effect, Schedule } from "effect";
 
@@ -141,7 +142,7 @@ const client = createClient({
 // Illustrative snippet (not runnable as-is) — scriptAddress and redeemer are placeholders
 const unlockAction = Effect.gen(function* () {
   // Script UTxOs fetched fresh on every attempt
-  const scriptUtxos = yield* client.Effect.getUtxos("addr_test1...");
+  const scriptUtxos = yield* client.Effect.getUtxos("addr_test1..." as any);
 
   const signBuilder = yield* client.newTx()
     .collectFrom({ inputs: scriptUtxos })
