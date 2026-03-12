@@ -274,9 +274,12 @@ export const transformJsonwspOgmiosEvaluationResult = (
   const result: Array<EvalRedeemer> = []
 
   for (const [key, budget] of Object.entries(evaluationResult)) {
-    // Parse "spend:0", "mint:1", etc.
-    const [tag, indexStr] = key.split(":")
+    // Parse "spend:0", "mint:1", "certificate:0", "withdrawal:0", etc.
+    // Blockfrost uses Ogmios v5 JSONWSP which returns "certificate" and "withdrawal";
+    // normalize to the SDK's canonical tags "cert" and "reward" (Ogmios v6 / CDDL names).
+    const [rawTag, indexStr] = key.split(":")
     const index = parseInt(indexStr, 10)
+    const tag = rawTag === "certificate" ? "cert" : rawTag === "withdrawal" ? "reward" : rawTag
 
     result.push({
       ex_units: new Redeemer.ExUnits({
