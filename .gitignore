@@ -18,3 +18,7 @@ docs/.twoslash
 # Ignore debug
 debug/
 CLAUDE.md
+
+# Local env overrides — never commit API keys
+.env.local
+.env.test.local
