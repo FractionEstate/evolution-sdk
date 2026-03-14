@@ -303,14 +303,15 @@ describe("evolution-mcp", () => {
     expect(Number.parseInt(built.estimatedFee, 10)).toBeGreaterThan(0)
 
     const transactionCodecResult = await client.callTool({
-      name: "transaction_codec",
+      name: "typed_export_codec",
       arguments: {
+        moduleName: "Transaction",
         action: "decode",
-        transactionCborHex: built.transaction.cborHex
+        cborHex: built.transaction.cborHex
       }
     })
 
-    expect(parseToolJson<{ transaction: { cborHex: string } }>(transactionCodecResult).transaction.cborHex).toBe(built.transaction.cborHex)
+    expect(parseToolJson<{ cborHex: string }>(transactionCodecResult).cborHex).toBe(built.transaction.cborHex)
 
     // typed_export_codec: listModules
     const listModulesResult = await client.callTool({
@@ -522,9 +523,9 @@ describe("evolution-mcp", () => {
     expect(Number(feeResult.minRequiredFee)).toBeGreaterThan(0)
     expect(feeResult.txSizeBytes).toBeGreaterThan(0)
 
-    // cip68_codec: tokenLabels
+    // plutus_data_codec_tools: tokenLabels
     const cip68LabelsResult = await client.callTool({
-      name: "cip68_codec",
+      name: "plutus_data_codec_tools",
       arguments: { action: "tokenLabels" }
     })
 
@@ -540,16 +541,14 @@ describe("evolution-mcp", () => {
     expect(labels.FT_TOKEN_LABEL).toBe(333)
     expect(labels.RFT_TOKEN_LABEL).toBe(444)
 
-    // cip68_codec: encode then decode round-trip
+    // plutus_data_codec_tools: encodeCip68 then decodeCip68 round-trip
     const cip68EncodeResult = await client.callTool({
-      name: "cip68_codec",
+      name: "plutus_data_codec_tools",
       arguments: {
-        action: "encode",
-        datum: {
-          metadata: { type: "map", entries: [] },
-          version: 1,
-          extra: []
-        }
+        action: "encodeCip68",
+        cip68MetadataCborEntries: [],
+        cip68Version: 1,
+        cip68ExtraCborHex: []
       }
     })
 
@@ -557,9 +556,9 @@ describe("evolution-mcp", () => {
     expect(cip68Encoded.cborHex.length).toBeGreaterThan(0)
 
     const cip68DecodeResult = await client.callTool({
-      name: "cip68_codec",
+      name: "plutus_data_codec_tools",
       arguments: {
-        action: "decode",
+        action: "decodeCip68",
         cborHex: "d8799fbf446e616d654474657374ff0180ff"
       }
     })
@@ -767,11 +766,11 @@ describe("evolution-mcp", () => {
     expect(utxoDiff.operation).toBe("difference")
     expect(utxoDiff.resultSize).toBe(1)
 
-    // bech32_codec: encode
+    // encoding_codec: bech32Encode
     const bech32EncodeResult = await client.callTool({
-      name: "bech32_codec",
+      name: "encoding_codec",
       arguments: {
-        action: "encode",
+        action: "bech32Encode",
         hex: "11".repeat(28),
         prefix: "pool"
       }
@@ -781,11 +780,11 @@ describe("evolution-mcp", () => {
     expect(bech32Enc.bech32.startsWith("pool1")).toBe(true)
     expect(bech32Enc.prefix).toBe("pool")
 
-    // bech32_codec: decode
+    // encoding_codec: bech32Decode
     const bech32DecodeResult = await client.callTool({
-      name: "bech32_codec",
+      name: "encoding_codec",
       arguments: {
-        action: "decode",
+        action: "bech32Decode",
         bech32: bech32Enc.bech32
       }
     })
@@ -795,11 +794,11 @@ describe("evolution-mcp", () => {
     expect(bech32Dec.hex).toBe("11".repeat(28))
     expect(bech32Dec.byteLength).toBe(28)
 
-    // bytes_codec: fromHex
+    // encoding_codec: bytesFromHex
     const bytesResult = await client.callTool({
-      name: "bytes_codec",
+      name: "encoding_codec",
       arguments: {
-        action: "fromHex",
+        action: "bytesFromHex",
         hex: "deadbeef"
       }
     })
@@ -808,11 +807,11 @@ describe("evolution-mcp", () => {
     expect(bytesData.hex).toBe("deadbeef")
     expect(bytesData.byteLength).toBe(4)
 
-    // bytes_codec: validate
+    // encoding_codec: bytesValidate
     const bytesValidateResult = await client.callTool({
-      name: "bytes_codec",
+      name: "encoding_codec",
       arguments: {
-        action: "validate",
+        action: "bytesValidate",
         hex: "00".repeat(32),
         expectedLength: 32
       }
@@ -828,11 +827,11 @@ describe("evolution-mcp", () => {
     expect(bytesValid.matchesExpected).toBe(true)
     expect(bytesValid.matchesKnownSize).toBe(true)
 
-    // bytes_codec: equals
+    // encoding_codec: bytesEquals
     const bytesEqResult = await client.callTool({
-      name: "bytes_codec",
+      name: "encoding_codec",
       arguments: {
-        action: "equals",
+        action: "bytesEquals",
         leftHex: "deadbeef",
         rightHex: "deadbeef"
       }
@@ -2179,12 +2178,12 @@ describe("evolution-mcp", () => {
     expect(toolNames).toContain("message_sign")
     expect(toolNames).toContain("message_verify")
     expect(toolNames).toContain("fee_validate")
-    expect(toolNames).toContain("cip68_codec")
+    expect(toolNames).toContain("encoding_codec")
+    expect(toolNames).toContain("client_attach")
+    expect(toolNames).toContain("result_call")
     expect(toolNames).toContain("key_generate")
     expect(toolNames).toContain("native_script_tools")
     expect(toolNames).toContain("utxo_tools")
-    expect(toolNames).toContain("bech32_codec")
-    expect(toolNames).toContain("bytes_codec")
     expect(toolNames).toContain("address_build")
     expect(toolNames).toContain("metadata_tools")
     expect(toolNames).toContain("credential_tools")

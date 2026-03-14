@@ -146,6 +146,11 @@ export class SessionStore {
     return record
   }
 
+  hasSubmit(handle: string): boolean {
+    const record = this.sessions.get(handle)
+    return record !== undefined && record.kind === "submit"
+  }
+
   getCluster(handle: ClusterHandle): ClusterSession {
     const record = this.sessions.get(handle)
     if (!isRecord(record, "cluster")) {

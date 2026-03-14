@@ -814,31 +814,24 @@ const createServerResourceContents = () => ({
         "data_codec",
         "identifier_codec",
         "typed_export_codec",
-        "transaction_codec",
-        "witness_set_codec",
-        "script_codec",
         "evaluator_info",
         "create_client",
-        "client_attach_provider",
-        "client_attach_wallet",
+        "client_attach",
         "client_invoke",
         "tx_builder_create",
         "tx_builder_apply",
         "tx_builder_build",
-        "sign_result_call",
-        "submit_builder_call",
+        "result_call",
         "time_slot_convert",
         "blueprint_parse",
         "blueprint_codegen",
         "message_sign",
         "message_verify",
         "fee_validate",
-        "cip68_codec",
+        "encoding_codec",
         "key_generate",
         "native_script_tools",
         "utxo_tools",
-        "bech32_codec",
-        "bytes_codec",
         "address_build",
         "metadata_tools",
         "credential_tools",
@@ -1301,26 +1294,41 @@ export const createEvolutionMcpServer = (): McpServer => {
     "typed_export_codec",
     {
       description:
-        "Decode or re-encode any Evolution SDK typed export that has fromCBORHex / toCBORHex. " +
-        "Use sdk_exports to verify a module exists, then pass its name here. " +
-        "Covers Certificate, Redeemer, TransactionBody, TransactionOutput, Value, Mint, " +
-        "ProposalProcedure, VotingProcedures, AuxiliaryData, and many more.",
+        "Decode, re-encode, or manipulate any Evolution SDK typed export via CBOR. " +
+        "Covers Transaction, TransactionWitnessSet, Script, Certificate, Redeemer, " +
+        "TransactionBody, TransactionOutput, Value, Mint, and many more.",
       inputSchema: z.object({
         moduleName: z.string().refine((value) => typedExportModules.has(value), {
           message: `Module must be one of: ${typedExportModuleNames.join(", ")}`
         }),
-        action: z.enum(["decode", "reencode", "listModules"]),
+        action: z.enum(["decode", "reencode", "listModules", "addVKeyWitnessesHex"]),
         cborHex: z.string().optional(),
+        witnessSetCborHex: z.string().optional(),
         cborOptionsPreset: CborOptionsPresetSchema
       })
     },
-    async ({ moduleName, action, cborHex, cborOptionsPreset }) => {
+    async ({ moduleName, action, cborHex, witnessSetCborHex, cborOptionsPreset }) => {
       if (action === "listModules") {
         return toolTextResult({ modules: typedExportModuleNames })
       }
 
       if (!cborHex) {
-        throw new Error("cborHex is required for decode and reencode actions")
+        throw new Error("cborHex is required for decode, reencode, and addVKeyWitnessesHex actions")
+      }
+
+      if (action === "addVKeyWitnessesHex") {
+        if (moduleName !== "Transaction") {
+          throw new Error("addVKeyWitnessesHex is only supported for moduleName 'Transaction'")
+        }
+        if (!witnessSetCborHex) {
+          throw new Error("witnessSetCborHex is required for addVKeyWitnessesHex")
+        }
+        const merged = Evolution.Transaction.addVKeyWitnessesHex(cborHex, witnessSetCborHex)
+        return toolTextResult({
+          moduleName,
+          cborHex: merged,
+          transaction: serializeTransaction(Evolution.Transaction.fromCBORHex(merged))
+        })
       }
 
       const mod = typedExportModules.get(moduleName)
@@ -1339,90 +1347,6 @@ export const createEvolutionMcpServer = (): McpServer => {
       const json = hasMethod(decoded, "toJSON") ? toStructured(decoded.toJSON()) : toStructured(decoded)
 
       return toolTextResult({ moduleName, json, cborHex: mod.toCBORHex(decoded, options) })
-    }
-  )
-
-  server.registerTool(
-    "transaction_codec",
-    {
-      description: "Decode, re-encode, or add witnesses to Transaction CBOR",
-      inputSchema: z.object({
-        action: z.enum(["decode", "reencode", "addVKeyWitnessesHex"]),
-        transactionCborHex: z.string(),
-        witnessSetCborHex: z.string().optional()
-      })
-    },
-    async ({ action, transactionCborHex, witnessSetCborHex }) => {
-      const result =
-        action === "decode"
-          ? {
-              transaction: serializeTransaction(Evolution.Transaction.fromCBORHex(transactionCborHex))
-            }
-          : action === "reencode"
-            ? {
-                cborHex: Evolution.Transaction.toCBORHex(Evolution.Transaction.fromCBORHex(transactionCborHex))
-              }
-            : (() => {
-                if (!witnessSetCborHex) {
-                  throw new Error("witnessSetCborHex is required for addVKeyWitnessesHex")
-                }
-
-                const merged = Evolution.Transaction.addVKeyWitnessesHex(transactionCborHex, witnessSetCborHex)
-                return {
-                  cborHex: merged,
-                  transaction: serializeTransaction(Evolution.Transaction.fromCBORHex(merged))
-                }
-              })()
-
-      return toolTextResult(result)
-    }
-  )
-
-  server.registerTool(
-    "witness_set_codec",
-    {
-      description: "Decode or re-encode TransactionWitnessSet CBOR",
-      inputSchema: z.object({
-        action: z.enum(["decode", "reencode"]),
-        witnessSetCborHex: z.string()
-      })
-    },
-    async ({ action, witnessSetCborHex }) => {
-      const witnessSet = Evolution.TransactionWitnessSet.fromCBORHex(witnessSetCborHex)
-      const result =
-        action === "decode"
-          ? {
-              witnessSet: serializeWitnessSet(witnessSet)
-            }
-          : {
-              cborHex: Evolution.TransactionWitnessSet.toCBORHex(witnessSet)
-            }
-
-      return toolTextResult(result)
-    }
-  )
-
-  server.registerTool(
-    "script_codec",
-    {
-      description: "Decode or re-encode Script CBOR",
-      inputSchema: z.object({
-        action: z.enum(["decode", "reencode"]),
-        scriptCborHex: z.string()
-      })
-    },
-    async ({ action, scriptCborHex }) => {
-      const script = Evolution.Script.fromCBORHex(scriptCborHex)
-      const result =
-        action === "decode"
-          ? {
-              script: toStructured(script)
-            }
-          : {
-              cborHex: Evolution.Script.toCBORHex(script)
-            }
-
-      return toolTextResult(result)
     }
   )
 
@@ -1463,50 +1387,38 @@ export const createEvolutionMcpServer = (): McpServer => {
   )
 
   server.registerTool(
-    "client_attach_provider",
+    "client_attach",
     {
-      description: "Attach a provider to a client session",
+      description: "Attach a provider or wallet to a client session",
       inputSchema: z.object({
         clientHandle: z.string(),
-        provider: ProviderConfigSchema
+        type: z.enum(["provider", "wallet"]),
+        provider: ProviderConfigSchema.optional(),
+        wallet: WalletConfigSchema.optional()
       })
     },
-    async ({ clientHandle, provider }) => {
+    async ({ clientHandle, type, provider, wallet }) => {
       const session = sessionStore.getClient(clientHandle)
-      if (!hasMethod(session.client, "attachProvider")) {
-        throw new Error(`Client handle ${clientHandle} does not support attachProvider()`)
+
+      if (type === "provider") {
+        if (!provider) throw new Error("provider config is required when type is 'provider'")
+        if (!hasMethod(session.client, "attachProvider")) {
+          throw new Error(`Client handle ${clientHandle} does not support attachProvider()`)
+        }
+        const attached = session.client.attachProvider(provider)
+        const capabilities = getClientCapabilities(attached)
+        const attachedClientHandle = sessionStore.createClient(attached, capabilities)
+        return toolTextResult({ attachedClientHandle, capabilities })
       }
 
-      const attached = session.client.attachProvider(provider)
-      const capabilities = getClientCapabilities(attached)
-      const attachedClientHandle = sessionStore.createClient(attached, capabilities)
-      const result = { attachedClientHandle, capabilities }
-
-      return toolTextResult(result)
-    }
-  )
-
-  server.registerTool(
-    "client_attach_wallet",
-    {
-      description: "Attach a wallet to a client session",
-      inputSchema: z.object({
-        clientHandle: z.string(),
-        wallet: WalletConfigSchema
-      })
-    },
-    async ({ clientHandle, wallet }) => {
-      const session = sessionStore.getClient(clientHandle)
+      if (!wallet) throw new Error("wallet config is required when type is 'wallet'")
       if (!hasMethod(session.client, "attachWallet")) {
         throw new Error(`Client handle ${clientHandle} does not support attachWallet()`)
       }
-
       const attached = session.client.attachWallet(wallet)
       const capabilities = getClientCapabilities(attached)
       const attachedClientHandle = sessionStore.createClient(attached, capabilities)
-      const result = { attachedClientHandle, capabilities }
-
-      return toolTextResult(result)
+      return toolTextResult({ attachedClientHandle, capabilities })
     }
   )
 
@@ -1798,11 +1710,11 @@ export const createEvolutionMcpServer = (): McpServer => {
   )
 
   server.registerTool(
-    "sign_result_call",
+    "result_call",
     {
-      description: "Sign or inspect a transaction result handle",
+      description: "Sign, inspect, or submit a transaction result/submit handle",
       inputSchema: z.object({
-        resultHandle: z.string(),
+        handle: z.string(),
         action: z.enum([
           "toTransaction",
           "toTransactionWithFakeWitnesses",
@@ -1813,18 +1725,31 @@ export const createEvolutionMcpServer = (): McpServer => {
           "partialSign",
           "getWitnessSet",
           "signWithWitness",
-          "assemble"
+          "assemble",
+          "submit"
         ]),
         witnessSetCborHex: z.string().optional(),
         witnessSetsCborHex: z.array(z.string()).optional()
       })
     },
-    async ({ resultHandle, action, witnessSetCborHex, witnessSetsCborHex }) => {
-      const session = sessionStore.getResult(resultHandle)
+    async ({ handle, action, witnessSetCborHex, witnessSetsCborHex }) => {
+      // Submit actions operate on a submit handle
+      if (action === "submit" || (action === "getWitnessSet" && sessionStore.hasSubmit(handle))) {
+        const session = sessionStore.getSubmit(handle)
+        const submitBuilder = session.submitBuilder as SubmitBuilderLike
+        const result =
+          action === "getWitnessSet"
+            ? { witnessSet: serializeWitnessSet(submitBuilder.witnessSet) }
+            : { txHash: serializeTransactionHash(await submitBuilder.submit()) }
+        return toolTextResult(result)
+      }
+
+      // All other actions operate on a result handle
+      const session = sessionStore.getResult(handle)
       const resultBuilder = session.result as Record<string, (...args: Array<any>) => Promise<any>>
 
       if (session.resultType !== "sign-builder" && !["toTransaction", "toTransactionWithFakeWitnesses", "estimateFee"].includes(action)) {
-        throw new Error(`Result handle ${resultHandle} is not a SignBuilder`)
+        throw new Error(`Result handle ${handle} is not a SignBuilder`)
       }
 
       let result: ToolResultObject
@@ -1855,7 +1780,7 @@ export const createEvolutionMcpServer = (): McpServer => {
         }
         case "sign": {
           const submitBuilder = await resultBuilder.sign()
-          const submitHandle = sessionStore.createSubmit(submitBuilder, resultHandle)
+          const submitHandle = sessionStore.createSubmit(submitBuilder, handle)
           result = {
             submitHandle,
             witnessSet: serializeWitnessSet((submitBuilder as SubmitBuilderLike).witnessSet)
@@ -1876,7 +1801,7 @@ export const createEvolutionMcpServer = (): McpServer => {
             throw new Error("witnessSetCborHex is required for signWithWitness")
           }
           const submitBuilder = await resultBuilder.signWithWitness(parseWitnessSet(witnessSetCborHex))
-          const submitHandle = sessionStore.createSubmit(submitBuilder, resultHandle)
+          const submitHandle = sessionStore.createSubmit(submitBuilder, handle)
           result = {
             submitHandle,
             witnessSet: serializeWitnessSet((submitBuilder as SubmitBuilderLike).witnessSet)
@@ -1888,7 +1813,7 @@ export const createEvolutionMcpServer = (): McpServer => {
             throw new Error("witnessSetsCborHex is required for assemble")
           }
           const submitBuilder = await resultBuilder.assemble(witnessSetsCborHex.map(parseWitnessSet))
-          const submitHandle = sessionStore.createSubmit(submitBuilder, resultHandle)
+          const submitHandle = sessionStore.createSubmit(submitBuilder, handle)
           result = {
             submitHandle,
             witnessSet: serializeWitnessSet((submitBuilder as SubmitBuilderLike).witnessSet)
@@ -1896,28 +1821,6 @@ export const createEvolutionMcpServer = (): McpServer => {
           break
         }
       }
-
-      return toolTextResult(result)
-    }
-  )
-
-  server.registerTool(
-    "submit_builder_call",
-    {
-      description: "Submit a signed transaction",
-      inputSchema: z.object({
-        submitHandle: z.string(),
-        action: z.enum(["getWitnessSet", "submit"])
-      })
-    },
-    async ({ submitHandle, action }) => {
-      const session = sessionStore.getSubmit(submitHandle)
-      const submitBuilder = session.submitBuilder as SubmitBuilderLike
-
-      const result =
-        action === "getWitnessSet"
-          ? { witnessSet: serializeWitnessSet(submitBuilder.witnessSet) }
-          : { txHash: serializeTransactionHash(await submitBuilder.submit()) }
 
       return toolTextResult(result)
     }
@@ -2180,62 +2083,6 @@ export const createEvolutionMcpServer = (): McpServer => {
         txSizeBytes: result.txSizeBytes,
         difference: result.difference.toString()
       })
-    }
-  )
-
-  // ── CIP-68 metadata codec ──────────────────────────────────────────────
-
-  server.registerTool(
-    "cip68_codec",
-    {
-      description:
-        "Encode or decode CIP-68 metadata datums. CIP-68 datums contain metadata (PlutusData), " +
-        "a version integer, and an extra array. Also provides token label constants " +
-        "(REFERENCE=100, NFT=222, FT=333, RFT=444).",
-      inputSchema: z.object({
-        action: z.enum(["decode", "encode", "tokenLabels"]),
-        cborHex: z.string().optional(),
-        datum: z
-          .object({
-            metadata: z.any(),
-            version: z.number().int(),
-            extra: z.array(z.any()).optional()
-          })
-          .optional()
-          
-      })
-    },
-    async ({ action, cborHex, datum }) => {
-      switch (action) {
-        case "decode": {
-          if (!cborHex) throw new Error("'cborHex' is required for decode")
-          const decoded = Evolution.Plutus.CIP68Metadata.Codec.fromCBORHex(cborHex)
-          return toolTextResult({
-            metadata: toStructured(decoded.metadata),
-            version: Number(decoded.version),
-            extra: decoded.extra.map((e: unknown) => toStructured(e))
-          })
-        }
-        case "encode": {
-          if (!datum) throw new Error("'datum' is required for encode")
-          const value = {
-            metadata: parseStructuredData(datum.metadata),
-            version: BigInt(datum.version),
-            extra: (datum.extra ?? []).map((e: unknown) => parseStructuredData(e))
-          }
-          const hex = Evolution.Plutus.CIP68Metadata.Codec.toCBORHex(value as any)
-          return toolTextResult({ cborHex: hex })
-        }
-        case "tokenLabels": {
-          return toolTextResult({
-            REFERENCE_TOKEN_LABEL: Evolution.Plutus.CIP68Metadata.REFERENCE_TOKEN_LABEL,
-            NFT_TOKEN_LABEL: Evolution.Plutus.CIP68Metadata.NFT_TOKEN_LABEL,
-            FT_TOKEN_LABEL: Evolution.Plutus.CIP68Metadata.FT_TOKEN_LABEL,
-            RFT_TOKEN_LABEL: Evolution.Plutus.CIP68Metadata.RFT_TOKEN_LABEL,
-            description: "CIP-68 token label prefixes: REFERENCE (100) for reference tokens, NFT (222), FT (333), RFT (444)"
-          })
-        }
-      }
     }
   )
 
@@ -2541,33 +2388,33 @@ export const createEvolutionMcpServer = (): McpServer => {
     }
   )
 
-  // ── Bech32 codec ────────────────────────────────────────────────────────
+  // ── Encoding codec (bech32 + bytes) ──────────────────────────────────
 
   server.registerTool(
-    "bech32_codec",
+    "encoding_codec",
     {
       description:
-        "Encode or decode Bech32/Bech32m strings. " +
-        "Actions: 'encode' creates a bech32 string from hex data and a prefix (hrp), " +
-        "'decode' extracts the prefix and hex data from a bech32 string.",
+        "Bech32 encode/decode and hex byte conversion/validation/comparison",
       inputSchema: z.object({
-        action: z.enum(["encode", "decode"]),
+        action: z.enum(["bech32Encode", "bech32Decode", "bytesFromHex", "bytesValidate", "bytesEquals"]),
         bech32: z.string().optional(),
         hex: z.string().optional(),
-        prefix: z.string().optional()
+        prefix: z.string().optional(),
+        expectedLength: z.number().int().positive().optional(),
+        leftHex: z.string().optional(),
+        rightHex: z.string().optional()
       })
     },
-    async ({ action, bech32, hex, prefix }) => {
+    async ({ action, bech32, hex, prefix, expectedLength, leftHex, rightHex }) => {
       switch (action) {
-        case "encode": {
-          if (!hex) throw new Error("'hex' is required for encode")
-          if (!prefix) throw new Error("'prefix' is required for encode")
+        case "bech32Encode": {
+          if (!hex) throw new Error("'hex' is required for bech32Encode")
+          if (!prefix) throw new Error("'prefix' is required for bech32Encode")
           const encoded = Evolution.Schema.decodeSync(Evolution.Bech32.FromHex(prefix))(hex)
           return toolTextResult({ bech32: encoded, hex, prefix })
         }
-        case "decode": {
-          if (!bech32) throw new Error("'bech32' is required for decode")
-          // Extract prefix from the bech32 string (everything before the last '1')
+        case "bech32Decode": {
+          if (!bech32) throw new Error("'bech32' is required for bech32Decode")
           const sepIdx = bech32.lastIndexOf("1")
           if (sepIdx < 1) throw new Error("Invalid bech32 string: no separator found")
           const hrp = bech32.substring(0, sepIdx)
@@ -2579,31 +2426,8 @@ export const createEvolutionMcpServer = (): McpServer => {
             bech32
           })
         }
-      }
-    }
-  )
-
-  // ── Bytes codec ─────────────────────────────────────────────────────────
-
-  server.registerTool(
-    "bytes_codec",
-    {
-      description:
-        "Convert between hex strings and byte arrays, validate byte lengths, " +
-        "and compare byte values. Supports all standard Cardano byte sizes " +
-        "(4, 16, 28, 29, 32, 57, 64, 80, 96, 128, 448 bytes).",
-      inputSchema: z.object({
-        action: z.enum(["fromHex", "validate", "equals"]),
-        hex: z.string().optional(),
-        expectedLength: z.number().int().positive().optional(),
-        leftHex: z.string().optional(),
-        rightHex: z.string().optional()
-      })
-    },
-    async ({ action, hex, expectedLength, leftHex, rightHex }) => {
-      switch (action) {
-        case "fromHex": {
-          if (!hex) throw new Error("'hex' is required for fromHex")
+        case "bytesFromHex": {
+          if (!hex) throw new Error("'hex' is required for bytesFromHex")
           const bytes = Evolution.Bytes.fromHex(hex)
           return toolTextResult({
             hex: Evolution.Bytes.toHex(bytes),
@@ -2611,8 +2435,8 @@ export const createEvolutionMcpServer = (): McpServer => {
             hexLength: hex.length
           })
         }
-        case "validate": {
-          if (!hex) throw new Error("'hex' is required for validate")
+        case "bytesValidate": {
+          if (!hex) throw new Error("'hex' is required for bytesValidate")
           const bytes = Evolution.Bytes.fromHex(hex)
           const byteLength = bytes.length
           const validSizes = [4, 16, 28, 29, 32, 57, 64, 80, 96, 128, 448]
@@ -2627,8 +2451,8 @@ export const createEvolutionMcpServer = (): McpServer => {
             knownSizes: validSizes
           })
         }
-        case "equals": {
-          if (!leftHex || !rightHex) throw new Error("'leftHex' and 'rightHex' are required for equals")
+        case "bytesEquals": {
+          if (!leftHex || !rightHex) throw new Error("'leftHex' and 'rightHex' are required for bytesEquals")
           const left = Evolution.Bytes.fromHex(leftHex)
           const right = Evolution.Bytes.fromHex(rightHex)
           return toolTextResult({
@@ -4661,7 +4485,8 @@ export const createEvolutionMcpServer = (): McpServer => {
           "encodeLovelace",
           "decodeLovelace",
           "encodeCip68",
-          "decodeCip68"
+          "decodeCip68",
+          "tokenLabels"
         ]),
         transactionIdHex: z.string().optional(),
         outputIndex: z.number().optional(),
@@ -4816,6 +4641,15 @@ export const createEvolutionMcpServer = (): McpServer => {
             version: Number(result.version),
             metadataEntries: entries,
             extraCount: result.extra?.length ?? 0
+          })
+        }
+        case "tokenLabels": {
+          return toolTextResult({
+            REFERENCE_TOKEN_LABEL: Evolution.Plutus.CIP68Metadata.REFERENCE_TOKEN_LABEL,
+            NFT_TOKEN_LABEL: Evolution.Plutus.CIP68Metadata.NFT_TOKEN_LABEL,
+            FT_TOKEN_LABEL: Evolution.Plutus.CIP68Metadata.FT_TOKEN_LABEL,
+            RFT_TOKEN_LABEL: Evolution.Plutus.CIP68Metadata.RFT_TOKEN_LABEL,
+            description: "CIP-68 token label prefixes: REFERENCE (100) for reference tokens, NFT (222), FT (333), RFT (444)"
           })
         }
         default:
