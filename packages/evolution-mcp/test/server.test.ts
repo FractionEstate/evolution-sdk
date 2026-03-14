@@ -840,6 +840,367 @@ describe("evolution-mcp", () => {
 
     expect(parseToolJson<{ equal: boolean }>(bytesEqResult).equal).toBe(true)
 
+    // ── address_build ──────────────────────────────────────────────────
+
+    // Build enterprise address
+    const addrEntResult = await client.callTool({
+      name: "address_build",
+      arguments: {
+        type: "enterprise",
+        networkId: 0,
+        paymentHash: "0".repeat(56),
+        paymentType: "key"
+      }
+    })
+    const addrEnt = parseToolJson<{ bech32: string; type: string }>(addrEntResult)
+    expect(addrEnt.bech32).toMatch(/^addr_test1/)
+    expect(addrEnt.type).toBe("enterprise")
+
+    // Build base address
+    const addrBaseResult = await client.callTool({
+      name: "address_build",
+      arguments: {
+        type: "base",
+        networkId: 1,
+        paymentHash: "0".repeat(56),
+        stakeHash: "0".repeat(56)
+      }
+    })
+    const addrBase = parseToolJson<{ bech32: string; type: string }>(addrBaseResult)
+    expect(addrBase.bech32).toMatch(/^addr1/)
+    expect(addrBase.type).toBe("base")
+
+    // Build reward address
+    const addrRewResult = await client.callTool({
+      name: "address_build",
+      arguments: {
+        type: "reward",
+        networkId: 0,
+        stakeHash: "0".repeat(56)
+      }
+    })
+    const addrRew = parseToolJson<{ bech32: string; type: string }>(addrRewResult)
+    expect(addrRew.bech32).toMatch(/^stake_test1/)
+    expect(addrRew.type).toBe("reward")
+
+    // ── metadata_tools ──────────────────────────────────────────────────
+
+    // Build metadata
+    const metaBuildResult = await client.callTool({
+      name: "metadata_tools",
+      arguments: {
+        action: "build",
+        entries: [
+          { label: "1", value: "hello world" },
+          { label: "2", value: 42 }
+        ]
+      }
+    })
+    const metaBuild = parseToolJson<{ cborHex: string }>(metaBuildResult)
+    expect(metaBuild.cborHex).toBeTruthy()
+
+    // Parse metadata round-trip
+    const metaParseResult = await client.callTool({
+      name: "metadata_tools",
+      arguments: { action: "parseCbor", cborHex: metaBuild.cborHex }
+    })
+    expect(parseToolJson<{ metadatum: any }>(metaParseResult).metadatum).toBeTruthy()
+
+    // Build AuxiliaryData
+    const auxBuildResult = await client.callTool({
+      name: "metadata_tools",
+      arguments: {
+        action: "buildAuxiliaryData",
+        entries: [{ label: "674", value: "Test metadata message" }]
+      }
+    })
+    const auxBuild = parseToolJson<{ cborHex: string; tag: string }>(auxBuildResult)
+    expect(auxBuild.tag).toBe("ConwayAuxiliaryData")
+
+    // Parse AuxiliaryData round-trip
+    const auxParseResult = await client.callTool({
+      name: "metadata_tools",
+      arguments: { action: "parseAuxiliaryData", cborHex: auxBuild.cborHex }
+    })
+    expect(parseToolJson<{ auxiliaryData: any }>(auxParseResult).auxiliaryData).toBeTruthy()
+
+    // ── credential_tools ────────────────────────────────────────────────
+
+    // Make key hash credential
+    const credKeyResult = await client.callTool({
+      name: "credential_tools",
+      arguments: { action: "makeKeyHash", hashHex: "0".repeat(56) }
+    })
+    const credKey = parseToolJson<{ credential: { tag: string } }>(credKeyResult)
+    expect(credKey.credential.tag).toBe("KeyHash")
+
+    // Make script hash credential
+    const credScriptResult = await client.callTool({
+      name: "credential_tools",
+      arguments: { action: "makeScriptHash", hashHex: "0".repeat(56) }
+    })
+    const credScript = parseToolJson<{ credential: { tag: string }; cborHex: string }>(credScriptResult)
+    expect(credScript.credential.tag).toBe("ScriptHash")
+
+    // CBOR round-trip
+    const credFromCborResult = await client.callTool({
+      name: "credential_tools",
+      arguments: { action: "fromCbor", cborHex: credScript.cborHex }
+    })
+    expect(parseToolJson<{ credential: { tag: string } }>(credFromCborResult).credential.tag).toBe("ScriptHash")
+
+    // ── drep_tools ──────────────────────────────────────────────────────
+
+    // DRep from key hash
+    const drepKeyResult = await client.callTool({
+      name: "drep_tools",
+      arguments: { action: "fromKeyHash", hashHex: "0".repeat(56) }
+    })
+    const drepKey = parseToolJson<{ drep: { tag: string }; bech32: string; hex: string }>(drepKeyResult)
+    expect(drepKey.drep.tag).toBe("KeyHashDRep")
+    expect(drepKey.bech32).toMatch(/^drep1/)
+    expect(drepKey.hex).toBeTruthy()
+
+    // DRep from bech32 round-trip
+    const drepBech32Result = await client.callTool({
+      name: "drep_tools",
+      arguments: { action: "fromBech32", bech32: drepKey.bech32 }
+    })
+    expect(parseToolJson<{ drep: { tag: string } }>(drepBech32Result).drep.tag).toBe("KeyHashDRep")
+
+    // DRep alwaysAbstain
+    const drepAbstainResult = await client.callTool({
+      name: "drep_tools",
+      arguments: { action: "alwaysAbstain" }
+    })
+    expect(parseToolJson<{ drep: { tag: string } }>(drepAbstainResult).drep.tag).toBe("AlwaysAbstainDRep")
+
+    // DRep alwaysNoConfidence
+    const drepNoConfResult = await client.callTool({
+      name: "drep_tools",
+      arguments: { action: "alwaysNoConfidence" }
+    })
+    expect(parseToolJson<{ drep: { tag: string } }>(drepNoConfResult).drep.tag).toBe("AlwaysNoConfidenceDRep")
+
+    // ── Value tools ──────────────────────────────────────────────────────
+    const valueOnlyCoin = await client.callTool({
+      name: "value_tools",
+      arguments: { action: "onlyCoin", lovelace: "5000000" }
+    })
+    const vcResult = parseToolJson<{ cborHex: string; value: { coin: string } }>(valueOnlyCoin)
+    expect(vcResult.value.coin).toBe("5000000")
+    expect(vcResult.cborHex).toBeTruthy()
+
+    const valueOnlyCoin2 = await client.callTool({
+      name: "value_tools",
+      arguments: { action: "onlyCoin", lovelace: "3000000" }
+    })
+    const vc2Hex = parseToolJson<{ cborHex: string }>(valueOnlyCoin2).cborHex
+
+    const valueAdd = await client.callTool({
+      name: "value_tools",
+      arguments: { action: "add", valueCborHex: vcResult.cborHex, valueCborHexB: vc2Hex }
+    })
+    expect(parseToolJson<{ value: { coin: string } }>(valueAdd).value.coin).toBe("8000000")
+
+    const valueGeq = await client.callTool({
+      name: "value_tools",
+      arguments: { action: "geq", valueCborHex: vcResult.cborHex, valueCborHexB: vc2Hex }
+    })
+    expect(parseToolJson<{ geq: boolean }>(valueGeq).geq).toBe(true)
+
+    const valueGetAda = await client.callTool({
+      name: "value_tools",
+      arguments: { action: "getAda", valueCborHex: vcResult.cborHex }
+    })
+    expect(parseToolJson<{ lovelace: string }>(valueGetAda).lovelace).toBe("5000000")
+
+    const valueIsAdaOnly = await client.callTool({
+      name: "value_tools",
+      arguments: { action: "isAdaOnly", valueCborHex: vcResult.cborHex }
+    })
+    expect(parseToolJson<{ isAdaOnly: boolean }>(valueIsAdaOnly).isAdaOnly).toBe(true)
+
+    // ── Assets tools ─────────────────────────────────────────────────────
+    const assetsFromRecord = await client.callTool({
+      name: "assets_tools",
+      arguments: {
+        action: "fromRecord",
+        record: { lovelace: "5000000", ["ab".repeat(28) + "cafe"]: "100" }
+      }
+    })
+    const assetsResult = parseToolJson<{ assets: Record<string, string>; cborHex: string }>(assetsFromRecord)
+    expect(assetsResult.assets["lovelace"]).toBe("5000000")
+    expect(assetsResult.cborHex).toBeTruthy()
+
+    const assetsLovelace = await client.callTool({
+      name: "assets_tools",
+      arguments: { action: "lovelaceOf", cborHex: assetsResult.cborHex }
+    })
+    expect(parseToolJson<{ lovelace: string }>(assetsLovelace).lovelace).toBe("5000000")
+
+    const assetsUnits = await client.callTool({
+      name: "assets_tools",
+      arguments: { action: "getUnits", cborHex: assetsResult.cborHex }
+    })
+    const units = parseToolJson<{ units: string[] }>(assetsUnits).units
+    expect(units).toContain("lovelace")
+
+    const assetsHasMA = await client.callTool({
+      name: "assets_tools",
+      arguments: { action: "hasMultiAsset", cborHex: assetsResult.cborHex }
+    })
+    expect(parseToolJson<{ hasMultiAsset: boolean }>(assetsHasMA).hasMultiAsset).toBe(true)
+
+    // merge two Assets
+    const assetsFromLov = await client.callTool({
+      name: "assets_tools",
+      arguments: { action: "fromLovelace", lovelace: "1000000" }
+    })
+    const lovHex = parseToolJson<{ cborHex: string }>(assetsFromLov).cborHex
+    const assetsMerge = await client.callTool({
+      name: "assets_tools",
+      arguments: { action: "merge", cborHex: assetsResult.cborHex, cborHexB: lovHex }
+    })
+    const mergedAssets = parseToolJson<{ assets: Record<string, string> }>(assetsMerge).assets
+    expect(mergedAssets["lovelace"]).toBe("6000000")
+
+    // CBOR round-trip
+    const assetsFromCbor = await client.callTool({
+      name: "assets_tools",
+      arguments: { action: "fromCbor", cborHex: assetsResult.cborHex }
+    })
+    expect(parseToolJson<{ assets: Record<string, string> }>(assetsFromCbor).assets["lovelace"]).toBe("5000000")
+
+    // ── Unit tools ───────────────────────────────────────────────────────
+    const policyHex = "ab".repeat(28)
+    const unitFromUnit = await client.callTool({
+      name: "unit_tools",
+      arguments: { action: "fromUnit", unit: policyHex + "cafe" }
+    })
+    const unitDetails = parseToolJson<{ policyIdHex: string; assetNameHex: string; label: number | null }>(unitFromUnit)
+    expect(unitDetails.policyIdHex).toBe(policyHex)
+    expect(unitDetails.assetNameHex).toBe("cafe")
+
+    const unitToLabel = await client.callTool({
+      name: "unit_tools",
+      arguments: { action: "toLabel", label: 222 }
+    })
+    const labelResult = parseToolJson<{ labelHex: string; label: number }>(unitToLabel)
+    expect(labelResult.label).toBe(222)
+    expect(labelResult.labelHex).toBeTruthy()
+
+    const unitFromLabel = await client.callTool({
+      name: "unit_tools",
+      arguments: { action: "fromLabel", labelHex: labelResult.labelHex }
+    })
+    expect(parseToolJson<{ label: number | null }>(unitFromLabel).label).toBe(222)
+
+    // ── Coin tools ───────────────────────────────────────────────────────
+    const coinAdd = await client.callTool({
+      name: "coin_tools",
+      arguments: { action: "add", a: "5000000", b: "3000000" }
+    })
+    expect(parseToolJson<{ result: string }>(coinAdd).result).toBe("8000000")
+
+    const coinSubtract = await client.callTool({
+      name: "coin_tools",
+      arguments: { action: "subtract", a: "5000000", b: "3000000" }
+    })
+    expect(parseToolJson<{ result: string }>(coinSubtract).result).toBe("2000000")
+
+    const coinCompare = await client.callTool({
+      name: "coin_tools",
+      arguments: { action: "compare", a: "5000000", b: "3000000" }
+    })
+    expect(parseToolJson<{ result: number }>(coinCompare).result).toBe(1)
+
+    const coinValidate = await client.callTool({
+      name: "coin_tools",
+      arguments: { action: "validate", a: "5000000" }
+    })
+    expect(parseToolJson<{ valid: boolean }>(coinValidate).valid).toBe(true)
+
+    const coinMax = await client.callTool({
+      name: "coin_tools",
+      arguments: { action: "maxCoinValue" }
+    })
+    expect(parseToolJson<{ maxCoinValue: string }>(coinMax).maxCoinValue).toBe("18446744073709551615")
+
+    // ── Network tools ────────────────────────────────────────────────────
+    const netToId = await client.callTool({
+      name: "network_tools",
+      arguments: { action: "toId", network: "Mainnet" }
+    })
+    expect(parseToolJson<{ networkId: number }>(netToId).networkId).toBe(1)
+
+    const netFromId = await client.callTool({
+      name: "network_tools",
+      arguments: { action: "fromId", networkId: 0 }
+    })
+    expect(parseToolJson<{ network: string }>(netFromId).network).toBe("Preview")
+
+    const netValidate = await client.callTool({
+      name: "network_tools",
+      arguments: { action: "validate", network: "Mainnet" }
+    })
+    expect(parseToolJson<{ valid: boolean }>(netValidate).valid).toBe(true)
+
+    // ── Data construction tools ──────────────────────────────────────────
+    const dataInt = await client.callTool({
+      name: "data_construct",
+      arguments: { action: "int", value: "42" }
+    })
+    const intCbor = parseToolJson<{ cborHex: string }>(dataInt).cborHex
+    expect(intCbor).toBeTruthy()
+
+    const dataBytes = await client.callTool({
+      name: "data_construct",
+      arguments: { action: "bytes", value: "deadbeef" }
+    })
+    expect(parseToolJson<{ cborHex: string }>(dataBytes).cborHex).toBeTruthy()
+
+    const dataConstr = await client.callTool({
+      name: "data_construct",
+      arguments: { action: "constr", index: "0", fieldsCborHex: [intCbor] }
+    })
+    const constrResult = parseToolJson<{ cborHex: string; fieldCount: number }>(dataConstr)
+    expect(constrResult.fieldCount).toBe(1)
+
+    const dataList = await client.callTool({
+      name: "data_construct",
+      arguments: { action: "list", fieldsCborHex: [intCbor, intCbor] }
+    })
+    expect(parseToolJson<{ length: number }>(dataList).length).toBe(2)
+
+    // match
+    const dataMatch = await client.callTool({
+      name: "data_construct",
+      arguments: { action: "match", dataCborHex: constrResult.cborHex }
+    })
+    expect(parseToolJson<{ type: string }>(dataMatch).type).toBe("constr")
+
+    const dataIsInt = await client.callTool({
+      name: "data_construct",
+      arguments: { action: "isInt", dataCborHex: intCbor }
+    })
+    expect(parseToolJson<{ isInt: boolean }>(dataIsInt).isInt).toBe(true)
+
+    const dataIsConstr = await client.callTool({
+      name: "data_construct",
+      arguments: { action: "isConstr", dataCborHex: constrResult.cborHex }
+    })
+    expect(parseToolJson<{ isConstr: boolean }>(dataIsConstr).isConstr).toBe(true)
+
+    // ── Hash tools ───────────────────────────────────────────────────────
+    // hashTransactionRaw — just hash some arbitrary bytes
+    const hashRaw = await client.callTool({
+      name: "hash_tools",
+      arguments: { action: "hashTransactionRaw", cborHex: "deadbeef" }
+    })
+    const hashResult = parseToolJson<{ transactionHash: string }>(hashRaw)
+    expect(hashResult.transactionHash).toHaveLength(64)
+
     // Verify all tools are listed
     const allTools = await client.listTools()
     const toolNames = allTools.tools.map((t) => t.name)
@@ -856,6 +1217,17 @@ describe("evolution-mcp", () => {
     expect(toolNames).toContain("utxo_tools")
     expect(toolNames).toContain("bech32_codec")
     expect(toolNames).toContain("bytes_codec")
+    expect(toolNames).toContain("address_build")
+    expect(toolNames).toContain("metadata_tools")
+    expect(toolNames).toContain("credential_tools")
+    expect(toolNames).toContain("drep_tools")
+    expect(toolNames).toContain("value_tools")
+    expect(toolNames).toContain("assets_tools")
+    expect(toolNames).toContain("unit_tools")
+    expect(toolNames).toContain("coin_tools")
+    expect(toolNames).toContain("network_tools")
+    expect(toolNames).toContain("data_construct")
+    expect(toolNames).toContain("hash_tools")
     expect(toolNames).toContain("devnet_create")
     expect(toolNames).toContain("devnet_start")
     expect(toolNames).toContain("devnet_stop")

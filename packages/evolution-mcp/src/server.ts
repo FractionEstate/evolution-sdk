@@ -1,6 +1,9 @@
 import type { Implementation } from "@modelcontextprotocol/sdk/types.js"
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js"
 import * as Evolution from "@evolution-sdk/evolution"
+import * as AssetUnit from "@evolution-sdk/evolution/Assets/Unit"
+import * as AssetLabel from "@evolution-sdk/evolution/Assets/Label"
+import * as EvolutionHash from "@evolution-sdk/evolution/utils/Hash"
 import * as Devnet from "@evolution-sdk/devnet"
 import { createAikenEvaluator } from "@evolution-sdk/aiken-uplc"
 import { createScalusEvaluator } from "@evolution-sdk/scalus-uplc"
@@ -836,6 +839,17 @@ const createServerResourceContents = () => ({
         "utxo_tools",
         "bech32_codec",
         "bytes_codec",
+        "address_build",
+        "metadata_tools",
+        "credential_tools",
+        "drep_tools",
+        "value_tools",
+        "assets_tools",
+        "unit_tools",
+        "coin_tools",
+        "network_tools",
+        "data_construct",
+        "hash_tools",
         "devnet_create",
         "devnet_start",
         "devnet_stop",
@@ -849,7 +863,7 @@ const createServerResourceContents = () => ({
       notes: [
         "Handles are opaque server-side session identifiers.",
         "Client and builder APIs are intentionally grouped into workflow tools.",
-        "The current package covers stateless codecs, evaluators, time/slot conversion, CIP-57 blueprint parsing/codegen, CIP-8/CIP-30 message signing, fee validation, CIP-68 metadata codec, key generation/derivation, native script building, UTxO set operations, bech32/bytes codecs, client sessions, provider access, transaction building/signing flows, and local devnet management.",
+        "The current package covers stateless codecs, evaluators, time/slot conversion, CIP-57 blueprint parsing/codegen, CIP-8/CIP-30 message signing, fee validation, CIP-68 metadata codec, key generation/derivation, native script building, UTxO set operations, bech32/bytes codecs, address building from credentials, transaction metadata/AuxiliaryData construction, credential building, DRep governance tools, Value/Assets arithmetic and construction, CIP-67 unit/label tools, Coin arithmetic, network ID conversion, Plutus Data construction/matching, transaction hashing, client sessions, provider access, transaction building/signing flows, and local devnet management.",
         "Use sdk_exports to inspect the current public @evolution-sdk/evolution export surface at runtime."
       ],
       publicExports: evolutionExports
@@ -2603,6 +2617,882 @@ export const createEvolutionMcpServer = (): McpServer => {
             leftLength: left.length,
             rightLength: right.length
           })
+        }
+      }
+    }
+  )
+
+  // ── Address builder ──────────────────────────────────────────────────
+
+  server.registerTool(
+    "address_build",
+    {
+      description:
+        "Build Cardano addresses from credential hashes. Supports BaseAddress (payment + stake), " +
+        "EnterpriseAddress (payment only), and RewardAddress (stake only). " +
+        "Credentials can be key hashes (28-byte hex, 56 chars) or script hashes. " +
+        "Returns the address as bech32 and hex.",
+      inputSchema: z.object({
+        type: z.enum(["base", "enterprise", "reward"]),
+        networkId: z.number().int().min(0).max(1).describe("0 = testnet, 1 = mainnet"),
+        paymentHash: z.string().optional().describe("Payment credential hash hex (56 chars)"),
+        paymentType: z.enum(["key", "script"]).optional().describe("Payment credential type (default: key)"),
+        stakeHash: z.string().optional().describe("Stake credential hash hex (56 chars)"),
+        stakeType: z.enum(["key", "script"]).optional().describe("Stake credential type (default: key)")
+      })
+    },
+    async ({ type, networkId, paymentHash, paymentType, stakeHash, stakeType }) => {
+      const makeCredential = (hash: string, credType: "key" | "script" = "key") =>
+        credType === "key"
+          ? Evolution.Credential.makeKeyHash(hexToBytes(hash))
+          : Evolution.Credential.makeScriptHash(hexToBytes(hash))
+
+      switch (type) {
+        case "base": {
+          if (!paymentHash) throw new Error("'paymentHash' is required for base address")
+          if (!stakeHash) throw new Error("'stakeHash' is required for base address")
+          const paymentCredential = makeCredential(paymentHash, paymentType ?? "key")
+          const stakeCredential = makeCredential(stakeHash, stakeType ?? "key")
+          const addr = new Evolution.BaseAddress.BaseAddress({ networkId, paymentCredential, stakeCredential })
+          const bytes = Evolution.BaseAddress.toBytes(addr)
+          const eraAddr = Evolution.AddressEras.fromBytes(bytes)
+          const bech32 = Evolution.AddressEras.toBech32(eraAddr)
+          return toolTextResult({
+            bech32,
+            hex: Evolution.AddressEras.toHex(eraAddr),
+            type: "base",
+            networkId,
+            paymentCredential: { hash: paymentHash, type: paymentType ?? "key" },
+            stakeCredential: { hash: stakeHash, type: stakeType ?? "key" }
+          })
+        }
+        case "enterprise": {
+          if (!paymentHash) throw new Error("'paymentHash' is required for enterprise address")
+          const paymentCredential = makeCredential(paymentHash, paymentType ?? "key")
+          const addr = new Evolution.EnterpriseAddress.EnterpriseAddress({ networkId, paymentCredential })
+          const bytes = Evolution.EnterpriseAddress.toBytes(addr)
+          const eraAddr = Evolution.AddressEras.fromBytes(bytes)
+          const bech32 = Evolution.AddressEras.toBech32(eraAddr)
+          return toolTextResult({
+            bech32,
+            hex: Evolution.AddressEras.toHex(eraAddr),
+            type: "enterprise",
+            networkId,
+            paymentCredential: { hash: paymentHash, type: paymentType ?? "key" }
+          })
+        }
+        case "reward": {
+          if (!stakeHash) throw new Error("'stakeHash' is required for reward address")
+          // Build reward address bytes manually: header byte + 28-byte hash
+          // Header: 0xe0 = testnet+key, 0xe1 = mainnet+key, 0xf0 = testnet+script, 0xf1 = mainnet+script
+          const isScript = (stakeType ?? "key") === "script"
+          const header = (isScript ? 0xf0 : 0xe0) | (networkId & 0x0f)
+          const hashBytes = hexToBytes(stakeHash)
+          const addrBytes = new Uint8Array(29)
+          addrBytes[0] = header
+          addrBytes.set(hashBytes, 1)
+          const eraAddr = Evolution.AddressEras.fromBytes(addrBytes)
+          const bech32 = Evolution.AddressEras.toBech32(eraAddr)
+          return toolTextResult({
+            bech32,
+            hex: Evolution.AddressEras.toHex(eraAddr),
+            type: "reward",
+            networkId,
+            stakeCredential: { hash: stakeHash, type: stakeType ?? "key" }
+          })
+        }
+      }
+    }
+  )
+
+  // ── Metadata tools ──────────────────────────────────────────────────────
+
+  server.registerTool(
+    "metadata_tools",
+    {
+      description:
+        "Build and parse Cardano transaction metadata (TransactionMetadatum). " +
+        "Actions: 'build' creates metadata from a JSON spec with typed entries, " +
+        "'parseCbor' decodes metadata from CBOR hex, " +
+        "'buildAuxiliaryData' creates AuxiliaryData with metadata entries, " +
+        "'parseAuxiliaryData' decodes AuxiliaryData from CBOR hex.",
+      inputSchema: z.object({
+        action: z.enum(["build", "parseCbor", "buildAuxiliaryData", "parseAuxiliaryData"]),
+        entries: z
+          .array(
+            z.object({
+              label: z.string().describe("Metadata label as string (bigint)"),
+              value: z.any().describe("Metadata value: string for text, number for int, or {type, value} for explicit types")
+            })
+          )
+          .optional()
+          .describe("Metadata entries: label→value pairs (for build/buildAuxiliaryData)"),
+        cborHex: z.string().optional().describe("CBOR hex to decode (for parseCbor/parseAuxiliaryData)")
+      })
+    },
+    async ({ action, entries, cborHex }) => {
+      const buildMetadatumValue = (v: unknown): any => {
+        if (typeof v === "string") return Evolution.TransactionMetadatum.text(v)
+        if (typeof v === "number") return Evolution.TransactionMetadatum.int(BigInt(v))
+        if (Array.isArray(v)) return Evolution.TransactionMetadatum.array(v.map(buildMetadatumValue))
+        if (v && typeof v === "object") {
+          const obj = v as Record<string, unknown>
+          if (obj.type === "bytes" && typeof obj.value === "string") {
+            return Evolution.TransactionMetadatum.bytes(hexToBytes(obj.value as string))
+          }
+          if (obj.type === "int" && (typeof obj.value === "string" || typeof obj.value === "number")) {
+            return Evolution.TransactionMetadatum.int(BigInt(obj.value))
+          }
+          if (obj.type === "text" && typeof obj.value === "string") {
+            return Evolution.TransactionMetadatum.text(obj.value as string)
+          }
+          if (obj.type === "list" && Array.isArray(obj.value)) {
+            return Evolution.TransactionMetadatum.array(
+              (obj.value as unknown[]).map(buildMetadatumValue)
+            )
+          }
+          if (obj.type === "map" && Array.isArray(obj.value)) {
+            const m = new Map(
+              (obj.value as Array<[unknown, unknown]>).map(
+                ([k, val]: [unknown, unknown]) => [buildMetadatumValue(k), buildMetadatumValue(val)] as [any, any]
+              )
+            )
+            return Evolution.TransactionMetadatum.map(m)
+          }
+          // Object treated as key-value map of text keys
+          const mapEntries = new Map(
+            Object.entries(obj).map(
+              ([k, val]) =>
+                [Evolution.TransactionMetadatum.text(k), buildMetadatumValue(val)] as [any, any]
+            )
+          )
+          return Evolution.TransactionMetadatum.map(mapEntries)
+        }
+        throw new Error(`Unsupported metadata value type: ${typeof v}`)
+      }
+
+      switch (action) {
+        case "build": {
+          if (!entries || entries.length === 0) throw new Error("'entries' is required for build")
+          const metadatum = Evolution.TransactionMetadatum.fromEntries(
+            entries.map((e) => [BigInt(e.label), buildMetadatumValue(e.value)] as [bigint, any])
+          )
+          const hex = Evolution.TransactionMetadatum.toCBORHex(metadatum)
+          return toolTextResult({ cborHex: hex })
+        }
+        case "parseCbor": {
+          if (!cborHex) throw new Error("'cborHex' is required for parseCbor")
+          const metadatum = Evolution.TransactionMetadatum.fromCBORHex(cborHex)
+          return toolTextResult({ metadatum: toStructured(metadatum), cborHex })
+        }
+        case "buildAuxiliaryData": {
+          if (!entries || entries.length === 0) throw new Error("'entries' is required for buildAuxiliaryData")
+          const metadatum = Evolution.TransactionMetadatum.fromEntries(
+            entries.map((e) => [BigInt(e.label), buildMetadatumValue(e.value)] as [bigint, any])
+          )
+          const aux = Evolution.AuxiliaryData.conway({
+            metadata: metadatum as any,
+            nativeScripts: [],
+            plutusV1Scripts: [],
+            plutusV2Scripts: [],
+            plutusV3Scripts: []
+          })
+          const hex = Evolution.AuxiliaryData.toCBORHex(aux)
+          return toolTextResult({ cborHex: hex, tag: "ConwayAuxiliaryData" })
+        }
+        case "parseAuxiliaryData": {
+          if (!cborHex) throw new Error("'cborHex' is required for parseAuxiliaryData")
+          const aux = Evolution.AuxiliaryData.fromCBORHex(cborHex)
+          return toolTextResult({ auxiliaryData: toStructured(aux), cborHex })
+        }
+      }
+    }
+  )
+
+  // ── Credential tools ────────────────────────────────────────────────────
+
+  server.registerTool(
+    "credential_tools",
+    {
+      description:
+        "Build and inspect Cardano credentials. " +
+        "Actions: 'makeKeyHash' creates a key hash credential from a 28-byte hash hex, " +
+        "'makeScriptHash' creates a script hash credential, " +
+        "'fromCbor' decodes a credential from CBOR hex, " +
+        "'toCbor' encodes a credential to CBOR hex.",
+      inputSchema: z.object({
+        action: z.enum(["makeKeyHash", "makeScriptHash", "fromCbor", "toCbor"]),
+        hashHex: z.string().optional().describe("28-byte hash as hex (56 chars)"),
+        cborHex: z.string().optional().describe("CBOR hex of a credential"),
+        credentialType: z.enum(["key", "script"]).optional().describe("Credential type (for toCbor)")
+      })
+    },
+    async ({ action, hashHex, cborHex, credentialType }) => {
+      switch (action) {
+        case "makeKeyHash": {
+          if (!hashHex) throw new Error("'hashHex' is required for makeKeyHash")
+          const cred = Evolution.Credential.makeKeyHash(hexToBytes(hashHex))
+          const hex = Evolution.Credential.toCBORHex(cred)
+          return toolTextResult({
+            credential: { tag: "KeyHash", hash: hashHex },
+            cborHex: hex
+          })
+        }
+        case "makeScriptHash": {
+          if (!hashHex) throw new Error("'hashHex' is required for makeScriptHash")
+          const cred = Evolution.Credential.makeScriptHash(hexToBytes(hashHex))
+          const hex = Evolution.Credential.toCBORHex(cred)
+          return toolTextResult({
+            credential: { tag: "ScriptHash", hash: hashHex },
+            cborHex: hex
+          })
+        }
+        case "fromCbor": {
+          if (!cborHex) throw new Error("'cborHex' is required for fromCbor")
+          const cred = Evolution.Credential.fromCBORHex(cborHex)
+          return toolTextResult({
+            credential: {
+              tag: cred._tag,
+              hash: cred.hash
+            },
+            cborHex
+          })
+        }
+        case "toCbor": {
+          if (!hashHex) throw new Error("'hashHex' is required for toCbor")
+          const type = credentialType ?? "key"
+          const cred =
+            type === "key"
+              ? Evolution.Credential.makeKeyHash(hexToBytes(hashHex))
+              : Evolution.Credential.makeScriptHash(hexToBytes(hashHex))
+          return toolTextResult({
+            cborHex: Evolution.Credential.toCBORHex(cred),
+            credential: { tag: cred._tag, hash: hashHex }
+          })
+        }
+      }
+    }
+  )
+
+  // ── DRep tools ──────────────────────────────────────────────────────────
+
+  server.registerTool(
+    "drep_tools",
+    {
+      description:
+        "Build and inspect DRep (Delegated Representative) values for Cardano governance. " +
+        "Actions: 'fromKeyHash' creates a DRep from a 28-byte key hash, " +
+        "'fromScriptHash' creates a DRep from a script hash, " +
+        "'alwaysAbstain' / 'alwaysNoConfidence' create special DRep constants, " +
+        "'fromBech32' parses a drep1... bech32 string, " +
+        "'toBech32' converts a DRep hex to bech32, " +
+        "'fromCbor' decodes a DRep from CBOR hex, " +
+        "'inspect' returns the hex and bech32 representations of a DRep from its hex encoding.",
+      inputSchema: z.object({
+        action: z.enum([
+          "fromKeyHash",
+          "fromScriptHash",
+          "alwaysAbstain",
+          "alwaysNoConfidence",
+          "fromBech32",
+          "toBech32",
+          "fromCbor",
+          "inspect"
+        ]),
+        hashHex: z.string().optional().describe("Key hash or script hash hex (56 chars)"),
+        bech32: z.string().optional().describe("DRep bech32 string (drep1...)"),
+        cborHex: z.string().optional().describe("DRep CBOR hex"),
+        hex: z.string().optional().describe("DRep raw hex (from toHex)")
+      })
+    },
+    async ({ action, hashHex, bech32, cborHex, hex }) => {
+      const serializeDRep = (d: any) => {
+        switch (d._tag) {
+          case "KeyHashDRep":
+            return { tag: "KeyHashDRep", keyHash: Evolution.KeyHash.toHex(d.keyHash) }
+          case "ScriptHashDRep":
+            return { tag: "ScriptHashDRep", scriptHash: d.scriptHash.hash }
+          case "AlwaysAbstainDRep":
+            return { tag: "AlwaysAbstainDRep" }
+          case "AlwaysNoConfidenceDRep":
+            return { tag: "AlwaysNoConfidenceDRep" }
+          default:
+            return d
+        }
+      }
+
+      const drepHexAndBech32 = (d: any) => {
+        // AlwaysAbstain/AlwaysNoConfidence cannot be encoded to hex or bech32
+        if (d._tag === "AlwaysAbstainDRep" || d._tag === "AlwaysNoConfidenceDRep") {
+          return { hex: null, bech32: null }
+        }
+        const h = Evolution.DRep.toHex(d)
+        const b32 = Evolution.DRep.toBech32(d)
+        return { hex: h, bech32: b32 }
+      }
+
+      switch (action) {
+        case "fromKeyHash": {
+          if (!hashHex) throw new Error("'hashHex' is required for fromKeyHash")
+          const kh = Evolution.KeyHash.fromHex(hashHex)
+          const drep = Evolution.DRep.fromKeyHash(kh)
+          const enc = drepHexAndBech32(drep)
+          return toolTextResult({ drep: serializeDRep(drep), ...enc })
+        }
+        case "fromScriptHash": {
+          if (!hashHex) throw new Error("'hashHex' is required for fromScriptHash")
+          const sh = Evolution.ScriptHash.fromHex(hashHex)
+          const drep = Evolution.DRep.fromScriptHash(sh)
+          const enc = drepHexAndBech32(drep)
+          return toolTextResult({ drep: serializeDRep(drep), ...enc })
+        }
+        case "alwaysAbstain": {
+          const drep = Evolution.DRep.alwaysAbstain()
+          return toolTextResult({ drep: serializeDRep(drep) })
+        }
+        case "alwaysNoConfidence": {
+          const drep = Evolution.DRep.alwaysNoConfidence()
+          return toolTextResult({ drep: serializeDRep(drep) })
+        }
+        case "fromBech32": {
+          if (!bech32) throw new Error("'bech32' is required for fromBech32")
+          const drep = Evolution.Schema.decodeSync(Evolution.DRep.FromBech32)(bech32)
+          const enc = drepHexAndBech32(drep)
+          return toolTextResult({ drep: serializeDRep(drep), ...enc })
+        }
+        case "toBech32": {
+          if (!hex) throw new Error("'hex' is required for toBech32")
+          const drep = Evolution.Schema.decodeSync(Evolution.DRep.FromHex)(hex)
+          const b32 = Evolution.DRep.toBech32(drep)
+          return toolTextResult({ drep: serializeDRep(drep), bech32: b32, hex })
+        }
+        case "fromCbor": {
+          if (!cborHex) throw new Error("'cborHex' is required for fromCbor")
+          const drep = Evolution.DRep.fromCBORHex(cborHex)
+          const enc = drepHexAndBech32(drep)
+          return toolTextResult({ drep: serializeDRep(drep), cborHex, ...enc })
+        }
+        case "inspect": {
+          if (!hex) throw new Error("'hex' is required for inspect")
+          const drep = Evolution.Schema.decodeSync(Evolution.DRep.FromHex)(hex)
+          const enc = drepHexAndBech32(drep)
+          return toolTextResult({ drep: serializeDRep(drep), ...enc })
+        }
+      }
+    }
+  )
+
+  // ── Value tools ─────────────────────────────────────────────────────────
+
+  server.registerTool(
+    "value_tools",
+    {
+      description:
+        "Cardano Value arithmetic and inspection. " +
+        "Actions: 'onlyCoin' creates an ADA-only Value, " +
+        "'withAssets' creates a Value with ADA + multi-asset from CBOR hex, " +
+        "'add' / 'subtract' perform Value arithmetic (CBOR hex inputs), " +
+        "'geq' checks if first Value >= second, " +
+        "'getAda' extracts the ADA (lovelace) amount, " +
+        "'isAdaOnly' checks if Value has only ADA, " +
+        "'getAssets' extracts the multi-asset map.",
+      inputSchema: z.object({
+        action: z.enum(["onlyCoin", "withAssets", "add", "subtract", "geq", "getAda", "isAdaOnly", "getAssets"]),
+        lovelace: z.string().optional().describe("Lovelace amount as decimal string"),
+        multiAssetCborHex: z.string().optional().describe("MultiAsset CBOR hex (for withAssets)"),
+        valueCborHex: z.string().optional().describe("Value CBOR hex"),
+        valueCborHexB: z.string().optional().describe("Second Value CBOR hex (for add/subtract/geq)")
+      })
+    },
+    async ({ action, lovelace, multiAssetCborHex, valueCborHex, valueCborHexB }) => {
+      switch (action) {
+        case "onlyCoin": {
+          if (!lovelace) throw new Error("'lovelace' is required")
+          const v = Evolution.Value.onlyCoin(BigInt(lovelace))
+          const hex = Evolution.Value.toCBORHex(v)
+          return toolTextResult({ value: { tag: v._tag, coin: lovelace }, cborHex: hex })
+        }
+        case "withAssets": {
+          if (!lovelace) throw new Error("'lovelace' is required")
+          if (!multiAssetCborHex) throw new Error("'multiAssetCborHex' is required")
+          const ma = Evolution.MultiAsset.fromCBORHex(multiAssetCborHex)
+          const v = Evolution.Value.withAssets(BigInt(lovelace), ma)
+          const hex = Evolution.Value.toCBORHex(v)
+          return toolTextResult({ value: { tag: v._tag, coin: lovelace }, cborHex: hex })
+        }
+        case "add": {
+          if (!valueCborHex) throw new Error("'valueCborHex' is required")
+          if (!valueCborHexB) throw new Error("'valueCborHexB' is required")
+          const a = Evolution.Value.fromCBORHex(valueCborHex)
+          const b = Evolution.Value.fromCBORHex(valueCborHexB)
+          const result = Evolution.Value.add(a, b)
+          const hex = Evolution.Value.toCBORHex(result)
+          return toolTextResult({ value: { tag: result._tag, coin: String(Evolution.Value.getAda(result)) }, cborHex: hex })
+        }
+        case "subtract": {
+          if (!valueCborHex) throw new Error("'valueCborHex' is required")
+          if (!valueCborHexB) throw new Error("'valueCborHexB' is required")
+          const a = Evolution.Value.fromCBORHex(valueCborHex)
+          const b = Evolution.Value.fromCBORHex(valueCborHexB)
+          const result = Evolution.Value.subtract(a, b)
+          const hex = Evolution.Value.toCBORHex(result)
+          return toolTextResult({ value: { tag: result._tag, coin: String(Evolution.Value.getAda(result)) }, cborHex: hex })
+        }
+        case "geq": {
+          if (!valueCborHex) throw new Error("'valueCborHex' is required")
+          if (!valueCborHexB) throw new Error("'valueCborHexB' is required")
+          const a = Evolution.Value.fromCBORHex(valueCborHex)
+          const b = Evolution.Value.fromCBORHex(valueCborHexB)
+          return toolTextResult({ geq: Evolution.Value.geq(a, b) })
+        }
+        case "getAda": {
+          if (!valueCborHex) throw new Error("'valueCborHex' is required")
+          const v = Evolution.Value.fromCBORHex(valueCborHex)
+          return toolTextResult({ lovelace: String(Evolution.Value.getAda(v)) })
+        }
+        case "isAdaOnly": {
+          if (!valueCborHex) throw new Error("'valueCborHex' is required")
+          const v = Evolution.Value.fromCBORHex(valueCborHex)
+          return toolTextResult({ isAdaOnly: Evolution.Value.isAdaOnly(v) })
+        }
+        case "getAssets": {
+          if (!valueCborHex) throw new Error("'valueCborHex' is required")
+          const v = Evolution.Value.fromCBORHex(valueCborHex)
+          const hasMA = Evolution.Value.hasAssets(v)
+          if (!hasMA) return toolTextResult({ hasAssets: false, multiAssetCborHex: null })
+          const ma = (v as any).assets
+          const maHex = Evolution.MultiAsset.toCBORHex(ma)
+          return toolTextResult({ hasAssets: true, multiAssetCborHex: maHex })
+        }
+      }
+    }
+  )
+
+  // ── Assets tools ────────────────────────────────────────────────────────
+
+  server.registerTool(
+    "assets_tools",
+    {
+      description:
+        "Cardano Assets construction, arithmetic, and inspection. " +
+        "Actions: 'fromLovelace' creates ADA-only assets, " +
+        "'fromAsset' creates assets with a single token, " +
+        "'fromHexStrings' creates from hex policy+name, " +
+        "'fromRecord' creates from a JSON record, " +
+        "'merge' combines two Assets (sums all quantities), " +
+        "'subtract' subtracts one from another, " +
+        "'lovelaceOf' extracts ADA, " +
+        "'getUnits' lists all unit strings, " +
+        "'covers' checks if first Assets covers second, " +
+        "'flatten' lists all (policyHex, nameHex, qty) triples.",
+      inputSchema: z.object({
+        action: z.enum([
+          "fromLovelace", "fromAsset", "fromHexStrings", "fromRecord",
+          "merge", "subtract", "lovelaceOf", "getUnits", "covers",
+          "flatten", "hasMultiAsset", "policies", "addLovelace",
+          "quantityOf", "toCbor", "fromCbor"
+        ]),
+        lovelace: z.string().optional().describe("Lovelace amount as decimal string"),
+        policyIdHex: z.string().optional().describe("Policy ID hex (56 chars)"),
+        assetNameHex: z.string().optional().describe("Asset name hex"),
+        quantity: z.string().optional().describe("Token quantity as decimal string"),
+        record: z.record(z.string(), z.string()).optional().describe("Record of unit→quantity pairs (unit = 'lovelace' or policyHex+nameHex)"),
+        cborHex: z.string().optional().describe("Assets CBOR hex"),
+        cborHexB: z.string().optional().describe("Second Assets CBOR hex (for merge/subtract/covers)")
+      })
+    },
+    async ({ action, lovelace, policyIdHex, assetNameHex, quantity, record, cborHex, cborHexB }) => {
+      const serializeAssets = (a: Evolution.Assets.Assets) => {
+        const units = Evolution.Assets.getUnits(a)
+        const obj: Record<string, string> = {}
+        for (const u of units) {
+          obj[u] = String(Evolution.Assets.getByUnit(a, u))
+        }
+        return obj
+      }
+
+      switch (action) {
+        case "fromLovelace": {
+          if (!lovelace) throw new Error("'lovelace' is required")
+          const a = Evolution.Assets.fromLovelace(BigInt(lovelace))
+          return toolTextResult({ assets: serializeAssets(a), cborHex: Evolution.Assets.toCBORHex(a) })
+        }
+        case "fromAsset": {
+          if (!policyIdHex || !assetNameHex) throw new Error("'policyIdHex' and 'assetNameHex' are required")
+          const qty = quantity ? BigInt(quantity) : 1n
+          const lv = lovelace ? BigInt(lovelace) : 0n
+          const a = Evolution.Assets.fromHexStrings(policyIdHex, assetNameHex, qty, lv)
+          return toolTextResult({ assets: serializeAssets(a), cborHex: Evolution.Assets.toCBORHex(a) })
+        }
+        case "fromHexStrings": {
+          if (!policyIdHex || !assetNameHex) throw new Error("'policyIdHex' and 'assetNameHex' are required")
+          const qty = quantity ? BigInt(quantity) : 1n
+          const lv = lovelace ? BigInt(lovelace) : 0n
+          const a = Evolution.Assets.fromHexStrings(policyIdHex, assetNameHex, qty, lv)
+          return toolTextResult({ assets: serializeAssets(a), cborHex: Evolution.Assets.toCBORHex(a) })
+        }
+        case "fromRecord": {
+          if (!record) throw new Error("'record' is required")
+          const rec: Record<string, bigint> = {}
+          for (const [k, v] of Object.entries(record)) rec[k] = BigInt(v)
+          const a = Evolution.Assets.fromRecord(rec)
+          return toolTextResult({ assets: serializeAssets(a), cborHex: Evolution.Assets.toCBORHex(a) })
+        }
+        case "merge": {
+          if (!cborHex || !cborHexB) throw new Error("'cborHex' and 'cborHexB' are required")
+          const a = Evolution.Assets.fromCBORHex(cborHex)
+          const b = Evolution.Assets.fromCBORHex(cborHexB)
+          const merged = Evolution.Assets.merge(a, b)
+          return toolTextResult({ assets: serializeAssets(merged), cborHex: Evolution.Assets.toCBORHex(merged) })
+        }
+        case "subtract": {
+          if (!cborHex || !cborHexB) throw new Error("'cborHex' and 'cborHexB' are required")
+          const a = Evolution.Assets.fromCBORHex(cborHex)
+          const b = Evolution.Assets.fromCBORHex(cborHexB)
+          const result = Evolution.Assets.subtract(a, b)
+          return toolTextResult({ assets: serializeAssets(result), cborHex: Evolution.Assets.toCBORHex(result) })
+        }
+        case "lovelaceOf": {
+          if (!cborHex) throw new Error("'cborHex' is required")
+          const a = Evolution.Assets.fromCBORHex(cborHex)
+          return toolTextResult({ lovelace: String(Evolution.Assets.lovelaceOf(a)) })
+        }
+        case "getUnits": {
+          if (!cborHex) throw new Error("'cborHex' is required")
+          const a = Evolution.Assets.fromCBORHex(cborHex)
+          return toolTextResult({ units: Evolution.Assets.getUnits(a) })
+        }
+        case "covers": {
+          if (!cborHex || !cborHexB) throw new Error("'cborHex' and 'cborHexB' are required")
+          const a = Evolution.Assets.fromCBORHex(cborHex)
+          const b = Evolution.Assets.fromCBORHex(cborHexB)
+          return toolTextResult({ covers: Evolution.Assets.covers(a, b) })
+        }
+        case "flatten": {
+          if (!cborHex) throw new Error("'cborHex' is required")
+          const a = Evolution.Assets.fromCBORHex(cborHex)
+          const flat = Evolution.Assets.flatten(a)
+          const entries = flat.map(([p, n, q]: [any, any, any]) => ({
+            policyIdHex: bytesToHex(p.hash ?? p),
+            assetNameHex: bytesToHex(n.bytes ?? n),
+            quantity: String(q)
+          }))
+          return toolTextResult({ entries })
+        }
+        case "hasMultiAsset": {
+          if (!cborHex) throw new Error("'cborHex' is required")
+          const a = Evolution.Assets.fromCBORHex(cborHex)
+          return toolTextResult({ hasMultiAsset: Evolution.Assets.hasMultiAsset(a) })
+        }
+        case "policies": {
+          if (!cborHex) throw new Error("'cborHex' is required")
+          const a = Evolution.Assets.fromCBORHex(cborHex)
+          const pols = Evolution.Assets.policies(a)
+          return toolTextResult({ policies: pols.map((p: any) => bytesToHex(p.hash ?? p)) })
+        }
+        case "addLovelace": {
+          if (!cborHex || !lovelace) throw new Error("'cborHex' and 'lovelace' are required")
+          const a = Evolution.Assets.fromCBORHex(cborHex)
+          const result = Evolution.Assets.addLovelace(a, BigInt(lovelace))
+          return toolTextResult({ assets: serializeAssets(result), cborHex: Evolution.Assets.toCBORHex(result) })
+        }
+        case "quantityOf": {
+          if (!cborHex || !policyIdHex || !assetNameHex) throw new Error("'cborHex', 'policyIdHex', and 'assetNameHex' are required")
+          const a = Evolution.Assets.fromCBORHex(cborHex)
+          const qty = Evolution.Assets.getByUnit(a, policyIdHex + assetNameHex)
+          return toolTextResult({ quantity: String(qty) })
+        }
+        case "toCbor": {
+          if (!record && !cborHex) throw new Error("'record' or 'cborHex' is required")
+          if (record) {
+            const rec: Record<string, bigint> = {}
+            for (const [k, v] of Object.entries(record)) rec[k] = BigInt(v)
+            const a = Evolution.Assets.fromRecord(rec)
+            return toolTextResult({ cborHex: Evolution.Assets.toCBORHex(a) })
+          }
+          return toolTextResult({ cborHex })
+        }
+        case "fromCbor": {
+          if (!cborHex) throw new Error("'cborHex' is required")
+          const a = Evolution.Assets.fromCBORHex(cborHex)
+          return toolTextResult({ assets: serializeAssets(a) })
+        }
+      }
+    }
+  )
+
+  // ── Unit & Label tools ──────────────────────────────────────────────────
+
+  server.registerTool(
+    "unit_tools",
+    {
+      description:
+        "CIP-67 asset unit string parsing and construction. " +
+        "Actions: 'fromUnit' parses a unit string (policyHex+assetNameHex) into policyId, assetName, and optional CIP-67 label; " +
+        "'toUnit' constructs a unit string from policyId hex, optional name, and optional label; " +
+        "'toLabel' encodes a CIP-67 label number (0-65535) to its 8-char hex prefix; " +
+        "'fromLabel' decodes a CIP-67 label hex prefix back to its number.",
+      inputSchema: z.object({
+        action: z.enum(["fromUnit", "toUnit", "toLabel", "fromLabel"]),
+        unit: z.string().optional().describe("Unit string (policyIdHex + assetNameHex)"),
+        policyIdHex: z.string().optional().describe("Policy ID hex (56 chars)"),
+        assetNameHex: z.string().optional().describe("Asset name hex (without CIP-67 label prefix)"),
+        label: z.number().int().optional().describe("CIP-67 label number (0-65535)"),
+        labelHex: z.string().optional().describe("CIP-67 label hex prefix (8 chars)")
+      })
+    },
+    async ({ action, unit, policyIdHex, assetNameHex, label, labelHex }) => {
+      switch (action) {
+        case "fromUnit": {
+          if (!unit) throw new Error("'unit' is required")
+          const details = AssetUnit.fromUnit(unit)
+          return toolTextResult({
+            policyIdHex: bytesToHex(details.policyId.hash as any),
+            assetNameHex: details.assetName ? bytesToHex(details.assetName.bytes as any) : null,
+            nameHex: details.name ? bytesToHex(details.name.bytes as any) : null,
+            label: details.label
+          })
+        }
+        case "toUnit": {
+          if (!policyIdHex) throw new Error("'policyIdHex' is required")
+          const result = AssetUnit.toUnit(
+            hexToBytes(policyIdHex) as any,
+            assetNameHex ? hexToBytes(assetNameHex) as any : null,
+            label ?? null
+          )
+          return toolTextResult({ unit: result })
+        }
+        case "toLabel": {
+          if (label === undefined || label === null) throw new Error("'label' is required")
+          const hex = AssetLabel.toLabel(label)
+          return toolTextResult({ labelHex: hex, label })
+        }
+        case "fromLabel": {
+          if (!labelHex) throw new Error("'labelHex' is required")
+          const num = AssetLabel.fromLabel(labelHex)
+          return toolTextResult({ label: num ?? null, labelHex })
+        }
+      }
+    }
+  )
+
+  // ── Coin tools ──────────────────────────────────────────────────────────
+
+  server.registerTool(
+    "coin_tools",
+    {
+      description:
+        "Safe Cardano ADA (Coin) arithmetic with overflow/underflow checking. " +
+        "Actions: 'add' adds two coin amounts, 'subtract' subtracts (throws on underflow), " +
+        "'compare' returns -1/0/1, 'validate' checks if a value is a valid Coin (0 to 2^64-1), " +
+        "'maxCoinValue' returns the maximum valid coin value.",
+      inputSchema: z.object({
+        action: z.enum(["add", "subtract", "compare", "validate", "maxCoinValue"]),
+        a: z.string().optional().describe("First coin amount as decimal string"),
+        b: z.string().optional().describe("Second coin amount as decimal string")
+      })
+    },
+    async ({ action, a, b }) => {
+      switch (action) {
+        case "add": {
+          if (!a || !b) throw new Error("'a' and 'b' are required")
+          const result = Evolution.Coin.add(BigInt(a) as any, BigInt(b) as any)
+          return toolTextResult({ result: String(result) })
+        }
+        case "subtract": {
+          if (!a || !b) throw new Error("'a' and 'b' are required")
+          const result = Evolution.Coin.subtract(BigInt(a) as any, BigInt(b) as any)
+          return toolTextResult({ result: String(result) })
+        }
+        case "compare": {
+          if (!a || !b) throw new Error("'a' and 'b' are required")
+          return toolTextResult({ result: Evolution.Coin.compare(BigInt(a) as any, BigInt(b) as any) })
+        }
+        case "validate": {
+          if (!a) throw new Error("'a' is required")
+          return toolTextResult({ valid: Evolution.Coin.is(BigInt(a)) })
+        }
+        case "maxCoinValue": {
+          return toolTextResult({ maxCoinValue: String(Evolution.Coin.MAX_COIN_VALUE) })
+        }
+      }
+    }
+  )
+
+  // ── Network tools ───────────────────────────────────────────────────────
+
+  server.registerTool(
+    "network_tools",
+    {
+      description:
+        "Cardano network name ↔ ID conversion. " +
+        "'toId' converts a network name (Mainnet/Preview/Preprod) to its numeric ID, " +
+        "'fromId' converts a numeric network ID back to a name (0→Preview, 1→Mainnet), " +
+        "'validate' checks if a string is a valid network name.",
+      inputSchema: z.object({
+        action: z.enum(["toId", "fromId", "validate"]),
+        network: z.string().optional().describe("Network name: Mainnet, Preview, or Preprod"),
+        networkId: z.number().int().optional().describe("Network ID: 0 or 1")
+      })
+    },
+    async ({ action, network, networkId }) => {
+      switch (action) {
+        case "toId": {
+          if (!network) throw new Error("'network' is required")
+          const id = Evolution.Network.toId(network as any)
+          return toolTextResult({ network, networkId: id })
+        }
+        case "fromId": {
+          if (networkId === undefined || networkId === null) throw new Error("'networkId' is required")
+          const name = Evolution.Network.fromId(networkId as any)
+          return toolTextResult({ network: name, networkId })
+        }
+        case "validate": {
+          if (!network) throw new Error("'network' is required")
+          return toolTextResult({ valid: Evolution.Network.is(network) })
+        }
+      }
+    }
+  )
+
+  // ── Data construction tools ─────────────────────────────────────────────
+
+  server.registerTool(
+    "data_construct",
+    {
+      description:
+        "Construct and inspect Plutus Data values programmatically. " +
+        "Actions: 'constr' builds a constructor with index + fields, " +
+        "'int' wraps a bigint, 'bytes' wraps a hex string as byte array, " +
+        "'list' wraps an array of Data (as CBOR hex items), " +
+        "'map' wraps key-value pairs (each as CBOR hex), " +
+        "'match' pattern-matches a Data CBOR hex and returns its structure, " +
+        "'isConstr'/'isMap'/'isList'/'isInt'/'isBytes' type-check a Data CBOR hex.",
+      inputSchema: z.object({
+        action: z.enum(["constr", "int", "bytes", "list", "map", "match", "isConstr", "isMap", "isList", "isInt", "isBytes"]),
+        index: z.string().optional().describe("Constructor index as decimal string (for 'constr')"),
+        fieldsCborHex: z.array(z.string()).optional().describe("Array of Plutus Data CBOR hex strings (for 'constr'/'list')"),
+        value: z.string().optional().describe("Integer decimal string (for 'int') or hex string (for 'bytes')"),
+        entriesCborHex: z.array(z.object({ key: z.string(), value: z.string() })).optional()
+          .describe("Array of {key,value} CBOR hex pairs (for 'map')"),
+        dataCborHex: z.string().optional().describe("Plutus Data CBOR hex to inspect")
+      })
+    },
+    async ({ action, index, fieldsCborHex, value, entriesCborHex, dataCborHex }) => {
+      const dataToHex = (d: any) => Evolution.Data.toCBORHex(d)
+
+      switch (action) {
+        case "constr": {
+          if (index === undefined) throw new Error("'index' is required")
+          const fields = (fieldsCborHex ?? []).map((h: string) => Evolution.Data.fromCBORHex(h))
+          const c = Evolution.Data.constr(BigInt(index), fields)
+          return toolTextResult({ cborHex: dataToHex(c), index, fieldCount: fields.length })
+        }
+        case "int": {
+          if (!value) throw new Error("'value' is required")
+          const d = Evolution.Data.int(BigInt(value))
+          return toolTextResult({ cborHex: dataToHex(d), value })
+        }
+        case "bytes": {
+          if (!value) throw new Error("'value' (hex string) is required")
+          const d = Evolution.Data.bytearray(value)
+          return toolTextResult({ cborHex: dataToHex(d), hex: value })
+        }
+        case "list": {
+          const items = (fieldsCborHex ?? []).map((h: string) => Evolution.Data.fromCBORHex(h))
+          const d = Evolution.Data.list(items)
+          return toolTextResult({ cborHex: dataToHex(d), length: items.length })
+        }
+        case "map": {
+          const entries = (entriesCborHex ?? []).map((e: { key: string; value: string }) => [
+            Evolution.Data.fromCBORHex(e.key),
+            Evolution.Data.fromCBORHex(e.value)
+          ] as [any, any])
+          const d = Evolution.Data.map(entries)
+          return toolTextResult({ cborHex: dataToHex(d), entryCount: entries.length })
+        }
+        case "match": {
+          if (!dataCborHex) throw new Error("'dataCborHex' is required")
+          const d = Evolution.Data.fromCBORHex(dataCborHex)
+          const result = (Evolution.Data.matchData as any)(d, {
+            Constr: (c: any) => ({
+              type: "constr" as const,
+              index: String(c.index),
+              fieldsCborHex: (c.fields as any[]).map(dataToHex)
+            }),
+            Map: (entries: any) => ({
+              type: "map" as const,
+              entries: [...entries].map(([k, v]: [any, any]) => ({ key: dataToHex(k), value: dataToHex(v) }))
+            }),
+            List: (items: any) => ({
+              type: "list" as const,
+              itemsCborHex: (items as any[]).map(dataToHex)
+            }),
+            Int: (i: any) => ({ type: "int" as const, value: String(i) }),
+            Bytes: (b: any) => ({ type: "bytes" as const, hex: bytesToHex(b) })
+          })
+          return toolTextResult(result as any)
+        }
+        case "isConstr": {
+          if (!dataCborHex) throw new Error("'dataCborHex' is required")
+          const d = Evolution.Data.fromCBORHex(dataCborHex)
+          return toolTextResult({ isConstr: Evolution.Data.isConstr(d) })
+        }
+        case "isMap": {
+          if (!dataCborHex) throw new Error("'dataCborHex' is required")
+          const d = Evolution.Data.fromCBORHex(dataCborHex)
+          return toolTextResult({ isMap: Evolution.Data.isMap(d) })
+        }
+        case "isList": {
+          if (!dataCborHex) throw new Error("'dataCborHex' is required")
+          const d = Evolution.Data.fromCBORHex(dataCborHex)
+          return toolTextResult({ isList: Evolution.Data.isList(d) })
+        }
+        case "isInt": {
+          if (!dataCborHex) throw new Error("'dataCborHex' is required")
+          const d = Evolution.Data.fromCBORHex(dataCborHex)
+          return toolTextResult({ isInt: Evolution.Data.isInt(d) })
+        }
+        case "isBytes": {
+          if (!dataCborHex) throw new Error("'dataCborHex' is required")
+          const d = Evolution.Data.fromCBORHex(dataCborHex)
+          return toolTextResult({ isBytes: Evolution.Data.isBytes(d) })
+        }
+      }
+    }
+  )
+
+  // ── Hash tools ──────────────────────────────────────────────────────────
+
+  server.registerTool(
+    "hash_tools",
+    {
+      description:
+        "Cardano hashing utilities (blake2b-256). " +
+        "Actions: 'hashTransaction' computes transaction hash from TransactionBody CBOR hex, " +
+        "'hashTransactionRaw' hashes raw CBOR bytes directly, " +
+        "'hashAuxiliaryData' hashes AuxiliaryData CBOR hex.",
+      inputSchema: z.object({
+        action: z.enum(["hashTransaction", "hashTransactionRaw", "hashAuxiliaryData"]),
+        cborHex: z.string().describe("CBOR hex of TransactionBody or AuxiliaryData or raw bytes")
+      })
+    },
+    async ({ action, cborHex }) => {
+      switch (action) {
+        case "hashTransaction": {
+          const body = Evolution.TransactionBody.fromCBORHex(cborHex)
+          const hash = EvolutionHash.hashTransaction(body)
+          return toolTextResult({ transactionHash: Evolution.TransactionHash.toHex(hash) })
+        }
+        case "hashTransactionRaw": {
+          const bytes = hexToBytes(cborHex)
+          const hash = EvolutionHash.hashTransactionRaw(bytes)
+          return toolTextResult({ transactionHash: Evolution.TransactionHash.toHex(hash) })
+        }
+        case "hashAuxiliaryData": {
+          const aux = Evolution.AuxiliaryData.fromCBORHex(cborHex)
+          const hash = EvolutionHash.hashAuxiliaryData(aux)
+          return toolTextResult({ auxiliaryDataHash: Evolution.AuxiliaryDataHash.toHex(hash) })
         }
       }
     }

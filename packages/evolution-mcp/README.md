@@ -43,6 +43,17 @@ node packages/evolution-mcp/dist/bin.js serve
 - Native script building and analysis: construct, parse, extract key hashes, count required signers, convert to cardano-cli JSON
 - UTxO set operations: create, union, intersection, difference, size
 - Low-level Bech32 encode/decode and byte array codec with length validation
+- Address construction: build Base, Enterprise, and Reward addresses from credential hashes with network selection
+- Credential tools: create key-hash and script-hash credentials, CBOR encode/decode
+- DRep tools: create DReps from key/script hashes or special values (alwaysAbstain, alwaysNoConfidence), Bech32 round-trip, CBOR codec, inspection
+- Transaction metadata: build typed metadata values (text, int, bytes, list, map), Conway auxiliary data construction and parsing
+- Value arithmetic: create ADA-only or multi-asset Values, add, subtract, compare, extract ADA and assets
+- Assets construction and arithmetic: build from lovelace/tokens/records, merge, subtract, coverage checks, unit listing, CBOR round-trip
+- CIP-67 unit and label tools: parse/build asset unit strings, encode/decode CIP-67 label prefixes
+- Coin arithmetic: safe ADA addition/subtraction with overflow checking, comparison, validation
+- Network ID conversion: map between network names (Mainnet/Preview/Preprod) and numeric IDs
+- Plutus Data construction: build constr/int/bytes/list/map values, pattern match, type checking
+- Transaction hashing: blake2b-256 hash of TransactionBody, raw CBOR bytes, or AuxiliaryData
 - Client session creation and attachment
 - Provider and wallet calls via client handles
 - Transaction builder sessions and build operations (with optional Plutus evaluator)
