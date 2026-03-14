@@ -1916,6 +1916,259 @@ describe("evolution-mcp", () => {
     })
     expect(parseToolJson<{ fields: any }>(ppuFromCbor).fields).toBeTruthy()
 
+    // ── transaction_input_tools ────────────────────────────────────
+    const txInBuild = await client.callTool({
+      name: "transaction_input_tools",
+      arguments: {
+        action: "build",
+        txHashHex: "a".repeat(64),
+        index: 0
+      }
+    })
+    const txInResult = parseToolJson<{ cbor: string; json: any }>(txInBuild)
+    expect(txInResult.cbor).toBeTruthy()
+
+    // roundtrip fromCbor
+    const txInDecoded = await client.callTool({
+      name: "transaction_input_tools",
+      arguments: { action: "fromCbor", cborHex: txInResult.cbor }
+    })
+    expect(parseToolJson<{ json: any }>(txInDecoded).json).toBeTruthy()
+
+    // toCbor
+    const txInToCbor = await client.callTool({
+      name: "transaction_input_tools",
+      arguments: { action: "toCbor", txHashHex: "b".repeat(64), index: 1 }
+    })
+    expect(parseToolJson<{ cbor: string }>(txInToCbor).cbor).toBeTruthy()
+
+    // ── transaction_body_tools ──────────────────────────────────────
+    const tbBuild = await client.callTool({
+      name: "transaction_body_tools",
+      arguments: {
+        action: "build",
+        inputs: [{ txHashHex: "a".repeat(64), index: 0 }],
+        outputs: [],
+        fee: "200000"
+      }
+    })
+    const tbResult = parseToolJson<{ cbor: string }>(tbBuild)
+    expect(tbResult.cbor).toBeTruthy()
+
+    // fromCbor roundtrip
+    const tbDecoded = await client.callTool({
+      name: "transaction_body_tools",
+      arguments: { action: "fromCbor", cborHex: tbResult.cbor }
+    })
+    expect(parseToolJson<{ json: any }>(tbDecoded).json).toBeTruthy()
+
+    // build with optional fields
+    const tbWithTtl = await client.callTool({
+      name: "transaction_body_tools",
+      arguments: {
+        action: "build",
+        inputs: [{ txHashHex: "c".repeat(64), index: 2 }],
+        outputs: [],
+        fee: "300000",
+        ttl: "100000",
+        networkId: 1
+      }
+    })
+    expect(parseToolJson<{ cbor: string }>(tbWithTtl).cbor).toBeTruthy()
+
+    // ── pointer_address_tools ───────────────────────────────────────
+    const ptrBuild = await client.callTool({
+      name: "pointer_address_tools",
+      arguments: { action: "buildPointer", slot: 100, txIndex: 1, certIndex: 1 }
+    })
+    expect(parseToolJson<{ json: any }>(ptrBuild).json).toBeTruthy()
+
+    // build full PointerAddress
+    const ptrAddrBuild = await client.callTool({
+      name: "pointer_address_tools",
+      arguments: {
+        action: "buildAddress",
+        slot: 100,
+        txIndex: 1,
+        certIndex: 1,
+        networkId: 1,
+        paymentCredentialType: "keyhash",
+        paymentCredentialHashHex: "a".repeat(56)
+      }
+    })
+    const ptrAddrResult = parseToolJson<{ hex: string; json: any }>(ptrAddrBuild)
+    expect(ptrAddrResult.hex).toBeTruthy()
+
+    // ── plutus_value_tools ──────────────────────────────────────────
+    const pvAdaOnly = await client.callTool({
+      name: "plutus_value_tools",
+      arguments: { action: "buildAdaOnly", lovelace: "2000000" }
+    })
+    const pvAdaResult = parseToolJson<{ cbor: string }>(pvAdaOnly)
+    expect(pvAdaResult.cbor).toBeTruthy()
+
+    // decode roundtrip
+    const pvDecoded = await client.callTool({
+      name: "plutus_value_tools",
+      arguments: { action: "decode", cborHex: pvAdaResult.cbor }
+    })
+    const pvPolicies = parseToolJson<{ policies: any[] }>(pvDecoded).policies
+    expect(pvPolicies.length).toBeGreaterThan(0)
+
+    // multi-asset
+    const pvMulti = await client.callTool({
+      name: "plutus_value_tools",
+      arguments: {
+        action: "buildMultiAsset",
+        lovelace: "5000000",
+        assets: [{ policyIdHex: "a".repeat(56), assetNameHex: "ff", amount: "100" }]
+      }
+    })
+    expect(parseToolJson<{ cbor: string }>(pvMulti).cbor).toBeTruthy()
+
+    // ── script_tools ────────────────────────────────────────────────
+    // First build a native script to wrap
+    const nsForWrap = await client.callTool({
+      name: "native_script_tools",
+      arguments: {
+        action: "build",
+        spec: { tag: "pubKey", keyHashHex: "a".repeat(56) }
+      }
+    })
+    const nsWrapCbor = parseToolJson<{ cborHex: string }>(nsForWrap).cborHex
+
+    const scriptWrap = await client.callTool({
+      name: "script_tools",
+      arguments: { action: "wrapNativeScript", nativeScriptCborHex: nsWrapCbor }
+    })
+    const scriptWrapResult = parseToolJson<{ scriptCbor: string }>(scriptWrap)
+    expect(scriptWrapResult.scriptCbor).toBeTruthy()
+
+    // hashScript
+    const scriptHash = await client.callTool({
+      name: "script_tools",
+      arguments: { action: "hashScript", scriptCborHex: scriptWrapResult.scriptCbor }
+    })
+    expect(parseToolJson<{ scriptHash: string }>(scriptHash).scriptHash).toBeTruthy()
+
+    // ── bip32_key_tools ─────────────────────────────────────────────
+    const entropy24 = "a".repeat(48) // 24 bytes
+    const bip32Root = await client.callTool({
+      name: "bip32_key_tools",
+      arguments: { action: "fromEntropy", entropyHex: entropy24 }
+    })
+    const rootKeyHex = parseToolJson<{ bip32PrivateKeyHex: string }>(bip32Root).bip32PrivateKeyHex
+    expect(rootKeyHex).toBeTruthy()
+    expect(rootKeyHex.length).toBe(192) // 96 bytes
+
+    // derivePath
+    const bip32Derived = await client.callTool({
+      name: "bip32_key_tools",
+      arguments: { action: "derivePath", bip32KeyHex: rootKeyHex, path: "m/1852'/1815'/0'/0/0" }
+    })
+    expect(parseToolJson<{ derivedKeyHex: string }>(bip32Derived).derivedKeyHex).toBeTruthy()
+
+    // toPrivateKey
+    const bip32Priv = await client.callTool({
+      name: "bip32_key_tools",
+      arguments: { action: "toPrivateKey", bip32KeyHex: rootKeyHex }
+    })
+    expect(parseToolJson<{ privateKeyHex: string }>(bip32Priv).privateKeyHex).toBeTruthy()
+
+    // toPublicKey
+    const bip32Pub = await client.callTool({
+      name: "bip32_key_tools",
+      arguments: { action: "toPublicKey", bip32KeyHex: rootKeyHex }
+    })
+    const pubResult = parseToolJson<{ bip32PublicKeyHex: string; rawPublicKeyHex: string }>(bip32Pub)
+    expect(pubResult.bip32PublicKeyHex).toBeTruthy()
+    expect(pubResult.rawPublicKeyHex).toBeTruthy()
+
+    // toXPRV / fromXPRV roundtrip
+    const bip32Xprv = await client.callTool({
+      name: "bip32_key_tools",
+      arguments: { action: "toXPRV", bip32KeyHex: rootKeyHex }
+    })
+    const xprvHex = parseToolJson<{ xprvHex: string }>(bip32Xprv).xprvHex
+    expect(xprvHex).toBeTruthy()
+
+    const bip32FromXprv = await client.callTool({
+      name: "bip32_key_tools",
+      arguments: { action: "fromXPRV", xprvHex }
+    })
+    expect(parseToolJson<{ bip32PrivateKeyHex: string }>(bip32FromXprv).bip32PrivateKeyHex).toBe(rootKeyHex)
+
+    // inspect
+    const bip32Inspect = await client.callTool({
+      name: "bip32_key_tools",
+      arguments: { action: "inspect", bip32KeyHex: rootKeyHex }
+    })
+    expect(parseToolJson<{ ed25519PrivateKeyHex: string }>(bip32Inspect).ed25519PrivateKeyHex).toBeTruthy()
+
+    // ── byron_address_tools ─────────────────────────────────────────
+    // Byron addresses are hard to construct but we can test the tool exists
+    // and the fromHex path at least accepts the call shape
+
+    // ── uplc_tools ──────────────────────────────────────────────────
+    const uplcDetect = await client.callTool({
+      name: "uplc_tools",
+      arguments: { action: "detectEncoding", scriptHex: "480100003322220051" }
+    })
+    expect(parseToolJson<{ encodingLevel: string }>(uplcDetect).encodingLevel).toBeTruthy()
+
+    // doubleEncode / singleEncode
+    const singleHex = "480100003322220051"
+    const uplcDouble = await client.callTool({
+      name: "uplc_tools",
+      arguments: { action: "doubleEncode", scriptHex: singleHex }
+    })
+    expect(parseToolJson<{ doubleCborHex: string }>(uplcDouble).doubleCborHex).toBeTruthy()
+
+    // ── ed25519_signature_tools ─────────────────────────────────────
+    const sigHex = "a".repeat(128) // 64 bytes
+    const sigValidate = await client.callTool({
+      name: "ed25519_signature_tools",
+      arguments: { action: "validate", signatureHex: sigHex }
+    })
+    expect(parseToolJson<{ valid: boolean }>(sigValidate).valid).toBe(true)
+
+    const sigFromHex = await client.callTool({
+      name: "ed25519_signature_tools",
+      arguments: { action: "fromHex", signatureHex: sigHex }
+    })
+    const sigResult = parseToolJson<{ hex: string; bytesLength: number }>(sigFromHex)
+    expect(sigResult.hex).toBe(sigHex)
+    expect(sigResult.bytesLength).toBe(64)
+
+    // ── redeemers_collection_tools ──────────────────────────────────
+    const redeemersCol = await client.callTool({
+      name: "redeemers_collection_tools",
+      arguments: {
+        action: "build",
+        redeemers: [{
+          tag: "spend",
+          index: 0,
+          dataCborHex: "d87980", // Constr(0, [])
+          exUnitsMem: "1000000",
+          exUnitsSteps: "2000000"
+        }]
+      }
+    })
+    const redeemersResult = parseToolJson<{ cborHex: string; count: number }>(redeemersCol)
+    expect(redeemersResult.cborHex).toBeTruthy()
+    expect(redeemersResult.count).toBe(1)
+
+    // fromCbor roundtrip
+    const redeemersDecoded = await client.callTool({
+      name: "redeemers_collection_tools",
+      arguments: { action: "fromCbor", cborHex: redeemersResult.cborHex }
+    })
+    expect(parseToolJson<{ decoded: any }>(redeemersDecoded).decoded).toBeTruthy()
+
+    // ── proposal_procedures_collection_tools ────────────────────────
+    // This tool decodes existing CBOR, so test with the encode from proposal_tools
+    // (PP collection encoding requires fully valid ProposalProcedure objects)
+
     // Verify all tools are listed
     const allTools = await client.listTools()
     const toolNames = allTools.tools.map((t) => t.name)
@@ -1959,6 +2212,17 @@ describe("evolution-mcp", () => {
     expect(toolNames).toContain("committee_cert_tools")
     expect(toolNames).toContain("constitution_tools")
     expect(toolNames).toContain("protocol_param_update_tools")
+    expect(toolNames).toContain("transaction_input_tools")
+    expect(toolNames).toContain("transaction_body_tools")
+    expect(toolNames).toContain("pointer_address_tools")
+    expect(toolNames).toContain("plutus_value_tools")
+    expect(toolNames).toContain("script_tools")
+    expect(toolNames).toContain("bip32_key_tools")
+    expect(toolNames).toContain("byron_address_tools")
+    expect(toolNames).toContain("uplc_tools")
+    expect(toolNames).toContain("ed25519_signature_tools")
+    expect(toolNames).toContain("redeemers_collection_tools")
+    expect(toolNames).toContain("proposal_procedures_collection_tools")
     expect(toolNames).toContain("devnet_create")
     expect(toolNames).toContain("devnet_start")
     expect(toolNames).toContain("devnet_stop")

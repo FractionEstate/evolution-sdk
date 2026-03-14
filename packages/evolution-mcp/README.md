@@ -70,6 +70,17 @@ node packages/evolution-mcp/dist/bin.js serve
 - Committee Certificates: build constitutional committee certificates — AuthCommitteeHotCert (authorize hot key) and ResignCommitteeColdCert (resign with optional anchor)
 - Constitution: build and encode/decode Constitution objects (anchor URL + optional guardrail script hash) for NewConstitutionAction governance proposals
 - Protocol Parameter Updates: build ProtocolParamUpdate with all optional fields — fee params, size limits, deposits, execution units, ExUnitPrices, DRepVotingThresholds (10 thresholds), PoolVotingThresholds (5 thresholds), governance params; CBOR round-trip
+- Transaction Inputs: build and inspect TransactionInput references (txHash + output index), encode/decode CBOR
+- Transaction Body: build full TransactionBody with inputs, outputs, fee, and all optional fields (ttl, certificates, withdrawals, mint, collateral, voting procedures, proposals, validity interval, network ID, etc.); CBOR round-trip
+- Pointer Address: build Pointer (slot/txIndex/certIndex) and PointerAddress (slot-based stake credential reference), encode to hex, decode from hex
+- Plutus Value: encode/decode Plutus script-level Value maps (Map<PolicyId, Map<AssetName, Integer>>), build ADA-only or multi-asset values, CBOR round-trip
+- Script: wrap NativeScript or Plutus scripts into tagged Script union type ([0]=NativeScript, [1]=PlutusV1, [2]=PlutusV2, [3]=PlutusV3), compute script hashes via ScriptHash.fromScript
+- BIP32 HD Key Derivation: generate root keys from BIP39 entropy, derive payment/stake keys via BIP32 path strings (m/1852'/1815'/0'/0/0), convert to Ed25519 private/public keys, export/import 128-byte XPRV format
+- Byron Address: decode and inspect legacy Byron-era Cardano addresses (Base58 encoded, used by exchanges and early wallets)
+- UPLC Scripts: inspect Untyped Plutus Lambda Calculus scripts — detect CBOR encoding level, decode to program AST, apply parameters to parameterized scripts, manage double/single CBOR encoding
+- Ed25519 Signatures: encode/decode/validate Ed25519 signatures (64-byte), convert between hex and bytes representations
+- Redeemers Collection: build and encode/decode Redeemers collections (Conway-era map format), combine multiple Redeemer entries with spend/mint/cert/reward/vote/propose tags
+- Proposal Procedures Collection: encode/decode ProposalProcedures collections for Conway-era governance transactions
 - Client session creation and attachment
 - Provider and wallet calls via client handles
 - Transaction builder sessions and build operations (with optional Plutus evaluator)

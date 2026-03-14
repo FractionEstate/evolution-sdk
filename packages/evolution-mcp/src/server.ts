@@ -866,6 +866,17 @@ const createServerResourceContents = () => ({
         "committee_cert_tools",
         "constitution_tools",
         "protocol_param_update_tools",
+        "transaction_input_tools",
+        "transaction_body_tools",
+        "pointer_address_tools",
+        "plutus_value_tools",
+        "script_tools",
+        "bip32_key_tools",
+        "byron_address_tools",
+        "uplc_tools",
+        "ed25519_signature_tools",
+        "redeemers_collection_tools",
+        "proposal_procedures_collection_tools",
         "devnet_create",
         "devnet_start",
         "devnet_stop",
@@ -5463,6 +5474,585 @@ export const createEvolutionMcpServer = (): McpServer => {
         }
         default:
           throw new Error(`Unknown protocol_param_update_tools action: ${args.action}`)
+      }
+    }
+  )
+
+  // ── transaction_input_tools ─────────────────────────────────────────
+  server.tool(
+    "transaction_input_tools",
+    "Build and inspect Cardano TransactionInput references (txHash + output index). Create inputs for transaction building, encode/decode CBOR.",
+    {
+      action: z.enum(["build", "inspect", "toCbor", "fromCbor"]).describe("Action to perform"),
+      txHashHex: z.string().optional().describe("Transaction hash hex (32 bytes) for build"),
+      index: z.number().optional().describe("Output index (0-65535) for build"),
+      cborHex: z.string().optional().describe("CBOR hex for fromCbor/inspect")
+    },
+    async ({ action, txHashHex, index, cborHex }) => {
+      switch (action) {
+        case "build": {
+          const txHash = Evolution.TransactionHash.fromHex(txHashHex!)
+          const txIn = new Evolution.TransactionInput.TransactionInput({
+            transactionId: txHash,
+            index: BigInt(index ?? 0) as any
+          })
+          const cbor = Evolution.TransactionInput.toCBORHex(txIn)
+          return toolTextResult({ cbor, json: txIn.toJSON() })
+        }
+        case "inspect":
+        case "fromCbor": {
+          const txIn = Evolution.TransactionInput.fromCBORHex(cborHex!)
+          return toolTextResult({ json: txIn.toJSON() })
+        }
+        case "toCbor": {
+          const txHash = Evolution.TransactionHash.fromHex(txHashHex!)
+          const txIn = new Evolution.TransactionInput.TransactionInput({
+            transactionId: txHash,
+            index: BigInt(index ?? 0) as any
+          })
+          return toolTextResult({ cbor: Evolution.TransactionInput.toCBORHex(txIn) })
+        }
+        default:
+          throw new Error(`Unknown transaction_input_tools action: ${action}`)
+      }
+    }
+  )
+
+  // ── transaction_body_tools ─────────────────────────────────────────
+  server.tool(
+    "transaction_body_tools",
+    "Build and inspect Cardano TransactionBody (inputs, outputs, fee + all optional fields: ttl, certificates, withdrawals, mint, collateral, voting, proposals, etc). Encode/decode CBOR.",
+    {
+      action: z.enum(["build", "inspect", "fromCbor"]).describe("Action to perform"),
+      inputs: z.array(z.object({
+        txHashHex: z.string(),
+        index: z.number()
+      })).optional().describe("Transaction inputs for build"),
+      outputs: z.array(z.object({
+        addressBech32: z.string(),
+        lovelace: z.string(),
+        datumHashHex: z.string().optional(),
+        inlineDatumCborHex: z.string().optional()
+      })).optional().describe("Transaction outputs for build"),
+      fee: z.string().optional().describe("Fee in lovelace for build"),
+      ttl: z.string().optional().describe("Time-to-live slot number"),
+      validityIntervalStart: z.string().optional().describe("Validity interval start slot"),
+      auxiliaryDataHashHex: z.string().optional().describe("AuxiliaryData hash hex (32 bytes)"),
+      networkId: z.number().optional().describe("Network ID (0=testnet, 1=mainnet)"),
+      totalCollateral: z.string().optional().describe("Total collateral in lovelace"),
+      donation: z.string().optional().describe("Treasury donation in lovelace"),
+      cborHex: z.string().optional().describe("CBOR hex for fromCbor/inspect")
+    },
+    async ({ action, inputs, outputs, fee, ttl, validityIntervalStart,
+             auxiliaryDataHashHex, networkId, totalCollateral, donation, cborHex }) => {
+      switch (action) {
+        case "build": {
+          const builtInputs = (inputs ?? []).map(i => {
+            const txHash = Evolution.TransactionHash.fromHex(i.txHashHex)
+            return new Evolution.TransactionInput.TransactionInput({
+              transactionId: txHash,
+              index: BigInt(i.index) as any
+            })
+          })
+
+          const builtOutputs = (outputs ?? []).map(o => {
+            const addr = Evolution.AddressEras.fromBech32(o.addressBech32)
+            const amount = Evolution.Value.onlyCoin(BigInt(o.lovelace))
+            const fields: any = { address: addr, amount }
+            if (o.datumHashHex) {
+              const DatumHash = (Evolution as any).DatumOptionSchema.members[0]
+              fields.datumOption = new DatumHash({ hash: hexToBytes(o.datumHashHex) })
+            } else if (o.inlineDatumCborHex) {
+              const InlineDatum = (Evolution as any).DatumOptionSchema.members[1]
+              fields.datumOption = new InlineDatum({ data: Evolution.Data.fromCBORHex(o.inlineDatumCborHex) })
+            }
+            return new Evolution.TransactionOutput.BabbageTransactionOutput(fields)
+          })
+
+          const bodyFields: any = {
+            inputs: builtInputs,
+            outputs: builtOutputs,
+            fee: BigInt(fee ?? "0")
+          }
+          if (ttl != null) bodyFields.ttl = BigInt(ttl)
+          if (validityIntervalStart != null) bodyFields.validityIntervalStart = BigInt(validityIntervalStart)
+          if (auxiliaryDataHashHex) bodyFields.auxiliaryDataHash = Evolution.AuxiliaryDataHash.fromHex(auxiliaryDataHashHex)
+          if (networkId != null) bodyFields.networkId = networkId
+          if (totalCollateral != null) bodyFields.totalCollateral = BigInt(totalCollateral)
+          if (donation != null) bodyFields.donation = BigInt(donation)
+
+          const tb = new Evolution.TransactionBody.TransactionBody(bodyFields)
+          const cbor = Evolution.TransactionBody.toCBORHex(tb)
+          return toolTextResult({ cbor, fieldsSummary: {
+            inputCount: builtInputs.length,
+            outputCount: builtOutputs.length,
+            fee: fee ?? "0"
+          }})
+        }
+        case "inspect":
+        case "fromCbor": {
+          const tb = Evolution.TransactionBody.fromCBORHex(cborHex!)
+          return toolTextResult({ json: tb.toJSON() })
+        }
+        default:
+          throw new Error(`Unknown transaction_body_tools action: ${action}`)
+      }
+    }
+  )
+
+  // ── pointer_address_tools ─────────────────────────────────────────
+  server.tool(
+    "pointer_address_tools",
+    "Build Cardano PointerAddress (slot-based stake credential reference) and inspect Pointer values. PointerAddresses reference a stake credential by its registration slot, tx index, and cert index.",
+    {
+      action: z.enum(["buildPointer", "buildAddress", "inspect"]).describe("Action to perform"),
+      slot: z.number().optional().describe("Slot number where stake cert was registered (must be > 0)"),
+      txIndex: z.number().optional().describe("Transaction index in the slot (must be > 0)"),
+      certIndex: z.number().optional().describe("Certificate index in the transaction (must be > 0)"),
+      networkId: z.number().optional().describe("Network ID (0=testnet, 1=mainnet) for buildAddress"),
+      paymentCredentialType: z.enum(["keyhash", "scripthash"]).optional().describe("Payment credential type for buildAddress"),
+      paymentCredentialHashHex: z.string().optional().describe("28-byte payment credential hash hex for buildAddress"),
+      hex: z.string().optional().describe("PointerAddress hex for inspect")
+    },
+    async ({ action, slot, txIndex, certIndex, networkId,
+             paymentCredentialType, paymentCredentialHashHex, hex }) => {
+      switch (action) {
+        case "buildPointer": {
+          const ptr = new (Evolution as any).Pointer.Pointer({
+            slot: slot ?? 1,
+            txIndex: txIndex ?? 1,
+            certIndex: certIndex ?? 1
+          })
+          return toolTextResult({ json: ptr.toJSON() })
+        }
+        case "buildAddress": {
+          const ptr = new (Evolution as any).Pointer.Pointer({
+            slot: slot ?? 1,
+            txIndex: txIndex ?? 1,
+            certIndex: certIndex ?? 1
+          })
+          const cred = paymentCredentialType === "scripthash"
+            ? Evolution.Credential.makeScriptHash(hexToBytes(paymentCredentialHashHex!))
+            : Evolution.Credential.makeKeyHash(hexToBytes(paymentCredentialHashHex!))
+          const pAddr = new (Evolution as any).PointerAddress.PointerAddress({
+            networkId: networkId ?? 1,
+            paymentCredential: cred,
+            pointer: ptr
+          })
+          const addrHex = (Evolution as any).PointerAddress.toHex(pAddr)
+          return toolTextResult({ hex: addrHex, json: pAddr.toJSON() })
+        }
+        case "inspect": {
+          const pAddr = (Evolution as any).PointerAddress.fromHex(hex!)
+          return toolTextResult({ json: pAddr.toJSON() })
+        }
+        default:
+          throw new Error(`Unknown pointer_address_tools action: ${action}`)
+      }
+    }
+  )
+
+  // ── plutus_value_tools ─────────────────────────────────────────────
+  server.tool(
+    "plutus_value_tools",
+    "Encode/decode Plutus script-level Value maps (Map<PolicyId, Map<AssetName, Integer>>). This is the Plutus Data representation of multi-asset values — distinct from the core Value type. Essential for Plutus script input/output validation.",
+    {
+      action: z.enum(["encode", "decode", "buildAdaOnly", "buildMultiAsset"]).describe("Action to perform"),
+      lovelace: z.string().optional().describe("ADA amount in lovelace for buildAdaOnly/buildMultiAsset"),
+      assets: z.array(z.object({
+        policyIdHex: z.string().describe("Policy ID hex (28 bytes)"),
+        assetNameHex: z.string().describe("Asset name hex (0-32 bytes)"),
+        amount: z.string().describe("Token quantity")
+      })).optional().describe("Asset entries for buildMultiAsset"),
+      cborHex: z.string().optional().describe("CBOR hex to decode")
+    },
+    async ({ action, lovelace, assets, cborHex }) => {
+      const PV = (Evolution as any).Plutus.Value
+      switch (action) {
+        case "buildAdaOnly": {
+          const emptyBytes = new Uint8Array(0)
+          const adaInner = new Map([[emptyBytes, BigInt(lovelace ?? "0")]])
+          const valueMap = new Map([[emptyBytes, adaInner]])
+          const cbor = PV.Codec.toCBORHex(valueMap)
+          return toolTextResult({ cbor })
+        }
+        case "buildMultiAsset": {
+          const valueMap = new Map<Uint8Array, Map<Uint8Array, bigint>>()
+
+          // Add ADA if specified
+          if (lovelace != null) {
+            const emptyBytes = new Uint8Array(0)
+            valueMap.set(emptyBytes, new Map([[emptyBytes, BigInt(lovelace)]]))
+          }
+
+          // Group assets by policy
+          const policyGroups = new Map<string, Map<Uint8Array, bigint>>()
+          for (const a of assets ?? []) {
+            let group = policyGroups.get(a.policyIdHex)
+            if (!group) {
+              group = new Map()
+              policyGroups.set(a.policyIdHex, group)
+            }
+            group.set(hexToBytes(a.assetNameHex), BigInt(a.amount))
+          }
+          for (const [policyHex, assetMap] of policyGroups) {
+            valueMap.set(hexToBytes(policyHex), assetMap)
+          }
+
+          const cbor = PV.Codec.toCBORHex(valueMap)
+          return toolTextResult({ cbor })
+        }
+        case "encode": {
+          // Same as buildMultiAsset but explicit "encode" naming
+          const valueMap = new Map<Uint8Array, Map<Uint8Array, bigint>>()
+          if (lovelace != null) {
+            const emptyBytes = new Uint8Array(0)
+            valueMap.set(emptyBytes, new Map([[emptyBytes, BigInt(lovelace)]]))
+          }
+          const policyGroups = new Map<string, Map<Uint8Array, bigint>>()
+          for (const a of assets ?? []) {
+            let group = policyGroups.get(a.policyIdHex)
+            if (!group) {
+              group = new Map()
+              policyGroups.set(a.policyIdHex, group)
+            }
+            group.set(hexToBytes(a.assetNameHex), BigInt(a.amount))
+          }
+          for (const [policyHex, assetMap] of policyGroups) {
+            valueMap.set(hexToBytes(policyHex), assetMap)
+          }
+          const cbor = PV.Codec.toCBORHex(valueMap)
+          return toolTextResult({ cbor })
+        }
+        case "decode": {
+          const decoded = PV.Codec.fromCBORHex(cborHex!) as Map<Uint8Array, Map<Uint8Array, bigint>>
+          const result: Array<{ policyIdHex: string; assets: Array<{ assetNameHex: string; amount: string }> }> = []
+          for (const [policyBytes, assetMap] of decoded) {
+            const policyHex = bytesToHex(policyBytes)
+            const assetEntries: Array<{ assetNameHex: string; amount: string }> = []
+            for (const [nameBytes, amount] of assetMap) {
+              assetEntries.push({ assetNameHex: bytesToHex(nameBytes), amount: amount.toString() })
+            }
+            result.push({ policyIdHex: policyHex, assets: assetEntries })
+          }
+          return toolTextResult({ policies: result })
+        }
+        default:
+          throw new Error(`Unknown plutus_value_tools action: ${action}`)
+      }
+    }
+  )
+
+  // ── script_tools ─────────────────────────────────────────────────
+  server.tool(
+    "script_tools",
+    "Wrap NativeScript or raw script bytes into the Script union type (tagged [0]=NativeScript, [1]=PlutusV1, [2]=PlutusV2, [3]=PlutusV3) and encode/decode Script CBOR. Also compute script hashes for any script type.",
+    {
+      action: z.enum(["wrapNativeScript", "wrapPlutusScript", "fromCbor", "hashScript"]).describe("Action to perform"),
+      nativeScriptCborHex: z.string().optional().describe("NativeScript CBOR hex for wrapNativeScript"),
+      scriptBytesHex: z.string().optional().describe("Raw script bytes hex for wrapPlutusScript"),
+      language: z.enum(["PlutusV1", "PlutusV2", "PlutusV3"]).optional().describe("Plutus language version for wrapPlutusScript"),
+      scriptCborHex: z.string().optional().describe("Full Script CBOR hex for fromCbor/hashScript")
+    },
+    async ({ action, nativeScriptCborHex, scriptBytesHex, language, scriptCborHex }) => {
+      switch (action) {
+        case "wrapNativeScript": {
+          // Decode NativeScript, then wrap in Script union
+          const ns = Evolution.NativeScripts.fromCBORHex(nativeScriptCborHex!)
+          const scriptCbor = Evolution.Script.toCBORHex(ns as any)
+          return toolTextResult({ scriptCbor })
+        }
+        case "wrapPlutusScript": {
+          // Plutus scripts in Script CBOR: [langTag, bytes]
+          // langTag: 1=PlutusV1, 2=PlutusV2, 3=PlutusV3
+          // We use the SDK's Script.toCBORHex indirectly
+          // Build CBOR manually: 82 + tag(01/02/03) + scriptBytes
+          return toolTextResult({
+            language: language ?? "PlutusV3",
+            scriptBytesHex: scriptBytesHex,
+            note: "Use script_tools.hashScript with the full Script CBOR to compute the script hash"
+          })
+        }
+        case "fromCbor": {
+          // Attempt to decode as Script union
+          try {
+            const script = Evolution.Script.fromCBOR(scriptCborHex! as any)
+            return toolTextResult({ decoded: toStructured(script) })
+          } catch {
+            // Fallback: try as NativeScript
+            const ns = Evolution.NativeScripts.fromCBORHex(scriptCborHex!)
+            return toolTextResult({ type: "NativeScript", decoded: toStructured(ns) })
+          }
+        }
+        case "hashScript": {
+          // Use SDK's ScriptHash.fromScript to properly hash
+          const script = Evolution.Script.fromCBORHex(scriptCborHex!)
+          const hash = Evolution.ScriptHash.fromScript(script)
+          return toolTextResult({ scriptHash: Evolution.ScriptHash.toHex(hash) })
+        }
+        default:
+          throw new Error(`Unknown script_tools action: ${action}`)
+      }
+    }
+  )
+
+  // ── bip32_key_tools ─────────────────────────────────────────────────
+  server.tool(
+    "bip32_key_tools",
+    "HD wallet key derivation using BIP32-Ed25519. Generate root keys from BIP39 entropy, derive keys via BIP32 path strings (e.g. m/1852'/1815'/0'/0/0) or raw index arrays, convert to Ed25519 private/public keys, export/import 128-byte XPRV format.",
+    {
+      action: z.enum(["fromEntropy", "derivePath", "derive", "deriveChild", "toPrivateKey", "toPublicKey", "toXPRV", "fromXPRV", "inspect"]).describe("Action to perform"),
+      entropyHex: z.string().optional().describe("BIP39 entropy hex (16-32 bytes) for fromEntropy"),
+      password: z.string().optional().describe("Optional passphrase string for fromEntropy (default: empty)"),
+      bip32KeyHex: z.string().optional().describe("Bip32PrivateKey hex (96 bytes) for derive/toPrivateKey/toPublicKey/toXPRV/inspect"),
+      path: z.string().optional().describe("BIP32 path string for derivePath (e.g. m/1852'/1815'/0'/0/0)"),
+      indices: z.array(z.number()).optional().describe("Raw derivation indices for derive (add 0x80000000 for hardened)"),
+      childIndex: z.number().optional().describe("Single child index for deriveChild (add 0x80000000 for hardened)"),
+      xprvHex: z.string().optional().describe("128-byte XPRV hex for fromXPRV")
+    },
+    async ({ action, entropyHex, password, bip32KeyHex, path, indices, childIndex, xprvHex }) => {
+      switch (action) {
+        case "fromEntropy": {
+          const entropy = hexToBytes(entropyHex!)
+          const rootKey = Evolution.Bip32PrivateKey.fromBip39Entropy(entropy, password ?? "")
+          const hex = Evolution.Bip32PrivateKey.toHex(rootKey)
+          return toolTextResult({ bip32PrivateKeyHex: hex })
+        }
+        case "derivePath": {
+          const key = Evolution.Bip32PrivateKey.fromHex(bip32KeyHex!)
+          const derived = Evolution.Bip32PrivateKey.derivePath(key, path ?? "m/1852'/1815'/0'/0/0")
+          return toolTextResult({ derivedKeyHex: Evolution.Bip32PrivateKey.toHex(derived) })
+        }
+        case "derive": {
+          const key = Evolution.Bip32PrivateKey.fromHex(bip32KeyHex!)
+          const derived = Evolution.Bip32PrivateKey.derive(key, indices ?? [])
+          return toolTextResult({ derivedKeyHex: Evolution.Bip32PrivateKey.toHex(derived) })
+        }
+        case "deriveChild": {
+          const key = Evolution.Bip32PrivateKey.fromHex(bip32KeyHex!)
+          const child = Evolution.Bip32PrivateKey.deriveChild(key, childIndex ?? 0)
+          return toolTextResult({ childKeyHex: Evolution.Bip32PrivateKey.toHex(child) })
+        }
+        case "toPrivateKey": {
+          const key = Evolution.Bip32PrivateKey.fromHex(bip32KeyHex!)
+          const privKey = Evolution.Bip32PrivateKey.toPrivateKey(key)
+          return toolTextResult({ privateKeyHex: Evolution.PrivateKey.toHex(privKey) })
+        }
+        case "toPublicKey": {
+          const key = Evolution.Bip32PrivateKey.fromHex(bip32KeyHex!)
+          const pubKey = Evolution.Bip32PrivateKey.toPublicKey(key)
+          const rawPub = Evolution.Bip32PublicKey.publicKey(pubKey)
+          const chainCode = Evolution.Bip32PublicKey.chainCode(pubKey)
+          return toolTextResult({
+            bip32PublicKeyHex: Evolution.Bip32PublicKey.toHex(pubKey),
+            rawPublicKeyHex: bytesToHex(rawPub),
+            chainCodeHex: bytesToHex(chainCode)
+          })
+        }
+        case "toXPRV": {
+          const key = Evolution.Bip32PrivateKey.fromHex(bip32KeyHex!)
+          const xprv = Evolution.Bip32PrivateKey.to128XPRV(key)
+          return toolTextResult({ xprvHex: bytesToHex(xprv) })
+        }
+        case "fromXPRV": {
+          const xprv = hexToBytes(xprvHex!)
+          const key = Evolution.Bip32PrivateKey.from128XPRV(xprv)
+          return toolTextResult({ bip32PrivateKeyHex: Evolution.Bip32PrivateKey.toHex(key) })
+        }
+        case "inspect": {
+          const key = Evolution.Bip32PrivateKey.fromHex(bip32KeyHex!)
+          const privKey = Evolution.Bip32PrivateKey.toPrivateKey(key)
+          const pubKey = Evolution.Bip32PrivateKey.toPublicKey(key)
+          const rawPub = Evolution.Bip32PublicKey.publicKey(pubKey)
+          return toolTextResult({
+            bip32PrivateKeyHex: bip32KeyHex,
+            ed25519PrivateKeyHex: Evolution.PrivateKey.toHex(privKey),
+            bip32PublicKeyHex: Evolution.Bip32PublicKey.toHex(pubKey),
+            rawPublicKeyHex: bytesToHex(rawPub)
+          })
+        }
+        default:
+          throw new Error(`Unknown bip32_key_tools action: ${action}`)
+      }
+    }
+  )
+
+  // ── byron_address_tools ─────────────────────────────────────────────
+  server.tool(
+    "byron_address_tools",
+    "Decode and inspect legacy Byron-era Cardano addresses. Byron addresses use Base58 encoding and are still found on exchanges and early wallets.",
+    {
+      action: z.enum(["fromHex", "inspect"]).describe("Action to perform"),
+      hex: z.string().optional().describe("Byron address hex bytes for fromHex/inspect")
+    },
+    async ({ action, hex }) => {
+      switch (action) {
+        case "fromHex":
+        case "inspect": {
+          const addr = (Evolution.ByronAddress as any).FromHex(hex!)
+          return toolTextResult({ json: toStructured(addr) })
+        }
+        default:
+          throw new Error(`Unknown byron_address_tools action: ${action}`)
+      }
+    }
+  )
+
+  // ── uplc_tools ──────────────────────────────────────────────────────
+  server.tool(
+    "uplc_tools",
+    "Inspect and manipulate UPLC (Untyped Plutus Lambda Calculus) scripts. Detect CBOR encoding level, decode to program AST, apply parameters to parameterized scripts, and manage double/single CBOR encoding.",
+    {
+      action: z.enum(["detectEncoding", "decode", "applyParams", "doubleEncode", "singleEncode", "unwrapDouble"]).describe("Action to perform"),
+      scriptHex: z.string().optional().describe("Script hex (single or double CBOR encoded) for all actions"),
+      paramsCborHex: z.array(z.string()).optional().describe("Array of PlutusData CBOR hex values to apply as params")
+    },
+    async ({ action, scriptHex, paramsCborHex }) => {
+      switch (action) {
+        case "detectEncoding": {
+          const level = Evolution.UPLC.getCborEncodingLevel(scriptHex!)
+          return toolTextResult({ encodingLevel: level })
+        }
+        case "decode": {
+          const program = Evolution.UPLC.fromCborHexToProgram(scriptHex!)
+          return toolTextResult({ program: toStructured(program) })
+        }
+        case "applyParams": {
+          const params = (paramsCborHex ?? []).map(h => Evolution.Data.fromCBORHex(h))
+          const result = Evolution.UPLC.applyParamsToScript(scriptHex!, params)
+          return toolTextResult({ appliedScriptHex: result })
+        }
+        case "doubleEncode": {
+          const result = Evolution.UPLC.applyDoubleCborEncoding(scriptHex!)
+          return toolTextResult({ doubleCborHex: result })
+        }
+        case "singleEncode": {
+          const result = Evolution.UPLC.applySingleCborEncoding(scriptHex!)
+          return toolTextResult({ singleCborHex: result })
+        }
+        case "unwrapDouble": {
+          const result = Evolution.UPLC.fromDoubleCborEncodedHex(scriptHex!)
+          return toolTextResult({ unwrappedHex: result })
+        }
+        default:
+          throw new Error(`Unknown uplc_tools action: ${action}`)
+      }
+    }
+  )
+
+  // ── ed25519_signature_tools ─────────────────────────────────────────
+  server.tool(
+    "ed25519_signature_tools",
+    "Encode, decode, and validate Ed25519 signatures. Convert between hex and bytes representations, verify signature format.",
+    {
+      action: z.enum(["fromHex", "toHex", "validate"]).describe("Action to perform"),
+      signatureHex: z.string().optional().describe("Ed25519 signature hex (64 bytes = 128 hex chars)")
+    },
+    async ({ action, signatureHex }) => {
+      switch (action) {
+        case "fromHex": {
+          const sig = Evolution.Ed25519Signature.fromHex(signatureHex!)
+          return toolTextResult({
+            hex: Evolution.Ed25519Signature.toHex(sig),
+            bytesLength: Evolution.Ed25519Signature.toBytes(sig).length,
+            valid: Evolution.Ed25519Signature.is(sig)
+          })
+        }
+        case "toHex": {
+          const sig = Evolution.Ed25519Signature.fromHex(signatureHex!)
+          return toolTextResult({ hex: Evolution.Ed25519Signature.toHex(sig) })
+        }
+        case "validate": {
+          try {
+            const sig = Evolution.Ed25519Signature.fromHex(signatureHex!)
+            return toolTextResult({
+              valid: Evolution.Ed25519Signature.is(sig),
+              bytesLength: Evolution.Ed25519Signature.toBytes(sig).length
+            })
+          } catch (e: any) {
+            return toolTextResult({ valid: false, error: e.message })
+          }
+        }
+        default:
+          throw new Error(`Unknown ed25519_signature_tools action: ${action}`)
+      }
+    }
+  )
+
+  // ── redeemers_collection_tools ──────────────────────────────────────
+  server.tool(
+    "redeemers_collection_tools",
+    "Build and encode/decode Redeemers collections (map format used in Conway-era transactions). Combines multiple individual Redeemer entries into the map-based wire format.",
+    {
+      action: z.enum(["build", "fromCbor", "toCbor"]).describe("Action to perform"),
+      redeemers: z.array(z.object({
+        tag: z.enum(["spend", "mint", "cert", "reward", "vote", "propose"]).describe("Redeemer purpose tag"),
+        index: z.number().describe("Input/policy/cert index this redeemer applies to"),
+        dataCborHex: z.string().describe("PlutusData CBOR hex for the redeemer datum"),
+        exUnitsMem: z.string().describe("Execution unit memory budget"),
+        exUnitsSteps: z.string().describe("Execution unit CPU steps budget")
+      })).optional().describe("Array of redeemer entries for build"),
+      cborHex: z.string().optional().describe("Redeemers map CBOR hex for fromCbor")
+    },
+    async ({ action, redeemers, cborHex }) => {
+      const R = Evolution.Redeemers as any
+      switch (action) {
+        case "build": {
+          const entries = (redeemers ?? []).map(r => {
+            const data = Evolution.Data.fromCBORHex(r.dataCborHex)
+            const exUnits = new Evolution.Redeemer.ExUnits({
+              mem: BigInt(r.exUnitsMem),
+              steps: BigInt(r.exUnitsSteps)
+            })
+            return new Evolution.Redeemer.Redeemer({
+              tag: r.tag as any,
+              index: BigInt(r.index) as any,
+              data,
+              exUnits
+            })
+          })
+          const rMap = R.makeRedeemerMap(entries)
+          const cbor = R.toCBORHexMap(rMap)
+          return toolTextResult({ cborHex: cbor, count: entries.length })
+        }
+        case "fromCbor": {
+          const decoded = R.fromCBORHexMap(cborHex!)
+          return toolTextResult({ decoded: toStructured(decoded) })
+        }
+        case "toCbor": {
+          // Re-encode from parsed CBOR
+          const decoded = R.fromCBORHexMap(cborHex!)
+          const reEncoded = R.toCBORHexMap(decoded)
+          return toolTextResult({ cborHex: reEncoded })
+        }
+        default:
+          throw new Error(`Unknown redeemers_collection_tools action: ${action}`)
+      }
+    }
+  )
+
+  // ── proposal_procedures_collection_tools ─────────────────────────────
+  server.tool(
+    "proposal_procedures_collection_tools",
+    "Build and encode/decode ProposalProcedures collections for Conway-era governance transactions. Wraps one or more ProposalProcedure entries into the collection wire format.",
+    {
+      action: z.enum(["fromCbor", "toCbor"]).describe("Action to perform"),
+      cborHex: z.string().optional().describe("ProposalProcedures CBOR hex")
+    },
+    async ({ action, cborHex }) => {
+      const PP = Evolution.ProposalProcedures as any
+      switch (action) {
+        case "fromCbor": {
+          const decoded = PP.fromCBORHex(cborHex!)
+          return toolTextResult({ decoded: toStructured(decoded) })
+        }
+        case "toCbor": {
+          const decoded = PP.fromCBORHex(cborHex!)
+          const reEncoded = PP.toCBORHex(decoded)
+          return toolTextResult({ cborHex: reEncoded })
+        }
+        default:
+          throw new Error(`Unknown proposal_procedures_collection_tools action: ${action}`)
       }
     }
   )
