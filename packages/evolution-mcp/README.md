@@ -1,8 +1,8 @@
 # Evolution MCP
 
-`@evolution-sdk/mcp` exposes Evolution SDK functionality as an HTTP MCP server.
+`@evolution-sdk/mcp` exposes Evolution SDK functionality as an MCP server with both HTTP and stdio transports.
 
-Default runtime configuration:
+Default runtime configuration (HTTP mode):
 
 - Host: `127.0.0.1`
 - Port: `10000`
@@ -16,7 +16,12 @@ The package ships a Linux-first `postinstall` bootstrap that attempts to registe
 ```bash
 pnpm --filter @evolution-sdk/mcp build
 pnpm --filter @evolution-sdk/mcp test
+
+# HTTP server (default)
 node packages/evolution-mcp/dist/bin.js serve
+
+# Stdio transport (for MCP clients that spawn the process)
+node packages/evolution-mcp/dist/bin.js stdio
 ```
 
 ## Environment Variables

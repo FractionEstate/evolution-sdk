@@ -4,6 +4,7 @@ import { once } from "node:events"
 
 import { resolveConfig } from "./config.js"
 import { startHttpServer } from "./http.js"
+import { startStdioServer } from "./stdio.js"
 
 const args = process.argv.slice(2)
 const command = args[0] ?? "serve"
@@ -21,9 +22,14 @@ const usage = (): void => {
   process.stdout.write(
     [
       "Usage:",
-      "  evolution-mcp serve [--host HOST] [--port PORT] [--path /mcp] [--health-path /health]",
+      "  evolution-mcp serve  [--host HOST] [--port PORT] [--path /mcp] [--health-path /health]",
+      "  evolution-mcp stdio",
       "",
-      "Defaults:",
+      "Commands:",
+      "  serve   Start HTTP server (default)",
+      "  stdio   Start JSON-RPC stdio transport (stdin/stdout)",
+      "",
+      "Defaults (serve):",
       "  host=127.0.0.1 port=10000 path=/mcp health-path=/health"
     ].join("\n") + "\n"
   )
@@ -32,6 +38,11 @@ const usage = (): void => {
 const main = async (): Promise<void> => {
   if (command === "help" || command === "--help" || command === "-h") {
     usage()
+    return
+  }
+
+  if (command === "stdio") {
+    await startStdioServer()
     return
   }
 
