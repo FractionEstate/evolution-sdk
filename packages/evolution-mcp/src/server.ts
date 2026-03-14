@@ -850,6 +850,17 @@ const createServerResourceContents = () => ({
         "network_tools",
         "data_construct",
         "hash_tools",
+        "mint_tools",
+        "withdrawals_tools",
+        "anchor_tools",
+        "certificate_tools",
+        "redeemer_tools",
+        "voting_tools",
+        "script_ref_tools",
+        "governance_action_tools",
+        "proposal_tools",
+        "tx_output_tools",
+        "plutus_data_codec_tools",
         "devnet_create",
         "devnet_start",
         "devnet_stop",
@@ -863,7 +874,7 @@ const createServerResourceContents = () => ({
       notes: [
         "Handles are opaque server-side session identifiers.",
         "Client and builder APIs are intentionally grouped into workflow tools.",
-        "The current package covers stateless codecs, evaluators, time/slot conversion, CIP-57 blueprint parsing/codegen, CIP-8/CIP-30 message signing, fee validation, CIP-68 metadata codec, key generation/derivation, native script building, UTxO set operations, bech32/bytes codecs, address building from credentials, transaction metadata/AuxiliaryData construction, credential building, DRep governance tools, Value/Assets arithmetic and construction, CIP-67 unit/label tools, Coin arithmetic, network ID conversion, Plutus Data construction/matching, transaction hashing, client sessions, provider access, transaction building/signing flows, and local devnet management.",
+        "The current package covers stateless codecs, evaluators, time/slot conversion, CIP-57 blueprint parsing/codegen, CIP-8/CIP-30 message signing, fee validation, CIP-68 metadata codec, key generation/derivation, native script building, UTxO set operations, bech32/bytes codecs, address building from credentials, transaction metadata/AuxiliaryData construction, credential building, DRep governance tools, Value/Assets arithmetic and construction, CIP-67 unit/label tools, Coin arithmetic, network ID conversion, Plutus Data construction/matching, transaction hashing, Mint construction for minting/burning, Withdrawals for reward claiming, governance Anchors, certificate building (staking/delegation/governance), Redeemer/ExUnits for script validation, VotingProcedures for governance voting, ScriptRef for output references, client sessions, provider access, transaction building/signing flows, and local devnet management.",
         "Use sdk_exports to inspect the current public @evolution-sdk/evolution export surface at runtime."
       ],
       publicExports: evolutionExports
@@ -3784,6 +3795,1147 @@ export const createEvolutionMcpServer = (): McpServer => {
       }
 
       return toolTextResult({ [sectionName]: toStructured(sections[sectionName]) })
+    }
+  )
+
+  // ── mint_tools ──────────────────────────────────────────────────────────
+  server.registerTool(
+    "mint_tools",
+    {
+      description:
+        "Build and inspect Mint values for minting/burning native tokens. " +
+        "Positive amounts = mint, negative = burn.",
+      inputSchema: z.object({
+        action: z.enum([
+          "singleton",
+          "empty",
+          "insert",
+          "get",
+          "getByHex",
+          "has",
+          "isEmpty",
+          "policyCount",
+          "removePolicy",
+          "removeAsset",
+          "fromEntries",
+          "toCbor",
+          "fromCbor"
+        ]),
+        policyIdHex: z.string().optional(),
+        assetNameHex: z.string().optional(),
+        amount: z.string().optional(),
+        mintCborHex: z.string().optional(),
+        entries: z
+          .array(
+            z.object({
+              policyIdHex: z.string(),
+              assets: z.array(
+                z.object({ assetNameHex: z.string(), amount: z.string() })
+              )
+            })
+          )
+          .optional()
+      })
+    },
+    async ({ action, policyIdHex, assetNameHex, amount, mintCborHex, entries }) => {
+      const parseMint = () => {
+        if (!mintCborHex) throw new Error("mintCborHex is required")
+        return Evolution.Mint.fromCBORHex(mintCborHex)
+      }
+      const parsePid = () => {
+        if (!policyIdHex) throw new Error("policyIdHex is required")
+        return Evolution.PolicyId.fromHex(policyIdHex)
+      }
+      const parseAn = () => Evolution.AssetName.fromHex(assetNameHex ?? "")
+
+      switch (action) {
+        case "singleton": {
+          const mint = Evolution.Mint.singleton(parsePid(), parseAn(), BigInt(amount ?? "1"))
+          return toolTextResult({ cborHex: Evolution.Mint.toCBORHex(mint) })
+        }
+        case "empty":
+          return toolTextResult({ cborHex: Evolution.Mint.toCBORHex(Evolution.Mint.empty()) })
+        case "insert": {
+          const base = parseMint()
+          const result = Evolution.Mint.insert(base, parsePid(), parseAn(), BigInt(amount ?? "1"))
+          return toolTextResult({ cborHex: Evolution.Mint.toCBORHex(result) })
+        }
+        case "get": {
+          const v = Evolution.Mint.get(parseMint(), parsePid(), parseAn())
+          return toolTextResult({ value: v !== undefined ? v.toString() : null })
+        }
+        case "getByHex": {
+          const v = Evolution.Mint.getByHex(parseMint(), policyIdHex ?? "", assetNameHex ?? "")
+          return toolTextResult({ value: v !== undefined ? v.toString() : null })
+        }
+        case "has":
+          return toolTextResult({ has: Evolution.Mint.has(parseMint(), parsePid(), parseAn()) })
+        case "isEmpty":
+          return toolTextResult({ isEmpty: Evolution.Mint.isEmpty(parseMint()) })
+        case "policyCount":
+          return toolTextResult({ count: Evolution.Mint.policyCount(parseMint()) })
+        case "removePolicy": {
+          const r = Evolution.Mint.removePolicy(parseMint(), parsePid())
+          return toolTextResult({ cborHex: Evolution.Mint.toCBORHex(r) })
+        }
+        case "removeAsset": {
+          const r = Evolution.Mint.removeAsset(parseMint(), parsePid(), parseAn())
+          return toolTextResult({ cborHex: Evolution.Mint.toCBORHex(r) })
+        }
+        case "fromEntries": {
+          if (!entries) throw new Error("entries is required")
+          let mint = Evolution.Mint.empty()
+          for (const e of entries) {
+            const pid = Evolution.PolicyId.fromHex(e.policyIdHex)
+            for (const a of e.assets) {
+              mint = Evolution.Mint.insert(mint, pid, Evolution.AssetName.fromHex(a.assetNameHex), BigInt(a.amount))
+            }
+          }
+          return toolTextResult({ cborHex: Evolution.Mint.toCBORHex(mint) })
+        }
+        case "toCbor":
+          return toolTextResult({ cborHex: Evolution.Mint.toCBORHex(parseMint()) })
+        case "fromCbor": {
+          const m = parseMint()
+          return toolTextResult({
+            isEmpty: Evolution.Mint.isEmpty(m),
+            policyCount: Evolution.Mint.policyCount(m),
+            cborHex: Evolution.Mint.toCBORHex(m)
+          })
+        }
+        default:
+          throw new Error(`Unknown mint_tools action: ${action}`)
+      }
+    }
+  )
+
+  // ── withdrawals_tools ───────────────────────────────────────────────────
+  server.registerTool(
+    "withdrawals_tools",
+    {
+      description:
+        "Build and inspect Withdrawals maps for reward claiming. " +
+        "RewardAccount is given as hex (e.g. e0 + 28-byte stake credential hash).",
+      inputSchema: z.object({
+        action: z.enum([
+          "singleton",
+          "empty",
+          "add",
+          "remove",
+          "get",
+          "has",
+          "isEmpty",
+          "size",
+          "entries",
+          "toCbor",
+          "fromCbor"
+        ]),
+        rewardAccountHex: z.string().optional(),
+        coin: z.string().optional(),
+        withdrawalsCborHex: z.string().optional()
+      })
+    },
+    async ({ action, rewardAccountHex, coin, withdrawalsCborHex }) => {
+      const parseW = () => {
+        if (!withdrawalsCborHex) throw new Error("withdrawalsCborHex is required")
+        return Evolution.Withdrawals.fromCBORHex(withdrawalsCborHex)
+      }
+      const parseRA = () => {
+        if (!rewardAccountHex) throw new Error("rewardAccountHex is required")
+        return Evolution.RewardAccount.fromHex(rewardAccountHex)
+      }
+
+      switch (action) {
+        case "singleton":
+          return toolTextResult({
+            cborHex: Evolution.Withdrawals.toCBORHex(
+              Evolution.Withdrawals.singleton(parseRA(), BigInt(coin ?? "0"))
+            )
+          })
+        case "empty":
+          return toolTextResult({
+            cborHex: Evolution.Withdrawals.toCBORHex(Evolution.Withdrawals.empty())
+          })
+        case "add": {
+          const r = Evolution.Withdrawals.add(parseW(), parseRA(), BigInt(coin ?? "0"))
+          return toolTextResult({ cborHex: Evolution.Withdrawals.toCBORHex(r) })
+        }
+        case "remove": {
+          const r = Evolution.Withdrawals.remove(parseW(), parseRA())
+          return toolTextResult({ cborHex: Evolution.Withdrawals.toCBORHex(r) })
+        }
+        case "get": {
+          const v = Evolution.Withdrawals.get(parseW(), parseRA())
+          return toolTextResult({ coin: v !== undefined ? v.toString() : null })
+        }
+        case "has":
+          return toolTextResult({ has: Evolution.Withdrawals.has(parseW(), parseRA()) })
+        case "isEmpty":
+          return toolTextResult({ isEmpty: Evolution.Withdrawals.isEmpty(parseW()) })
+        case "size":
+          return toolTextResult({ size: Evolution.Withdrawals.size(parseW()) })
+        case "entries": {
+          const es = Evolution.Withdrawals.entries(parseW())
+          return toolTextResult({
+            entries: es.map(([ra, c]) => ({
+              rewardAccountHex: Evolution.RewardAccount.toHex(ra),
+              coin: c.toString()
+            }))
+          })
+        }
+        case "toCbor":
+          return toolTextResult({ cborHex: Evolution.Withdrawals.toCBORHex(parseW()) })
+        case "fromCbor": {
+          const w = parseW()
+          return toolTextResult({
+            isEmpty: Evolution.Withdrawals.isEmpty(w),
+            size: Evolution.Withdrawals.size(w),
+            cborHex: Evolution.Withdrawals.toCBORHex(w)
+          })
+        }
+        default:
+          throw new Error(`Unknown withdrawals_tools action: ${action}`)
+      }
+    }
+  )
+
+  // ── anchor_tools ────────────────────────────────────────────────────────
+  server.registerTool(
+    "anchor_tools",
+    {
+      description:
+        "Create and parse governance Anchor values (URL + 32-byte data hash). " +
+        "Used in proposals, DRep registration, and certificates.",
+      inputSchema: z.object({
+        action: z.enum(["create", "toCbor", "fromCbor"]),
+        url: z.string().optional(),
+        dataHashHex: z.string().optional(),
+        anchorCborHex: z.string().optional()
+      })
+    },
+    async ({ action, url, dataHashHex, anchorCborHex }) => {
+      switch (action) {
+        case "create": {
+          if (!url) throw new Error("url is required")
+          if (!dataHashHex) throw new Error("dataHashHex is required")
+          const urlObj = new Evolution.Url.Url({ href: url })
+          const anchor = new Evolution.Anchor.Anchor({
+            anchorUrl: urlObj,
+            anchorDataHash: hexToBytes(dataHashHex)
+          })
+          return toolTextResult({ cborHex: Evolution.Anchor.toCBORHex(anchor) })
+        }
+        case "toCbor": {
+          if (!anchorCborHex) throw new Error("anchorCborHex is required")
+          const a = Evolution.Anchor.fromCBORHex(anchorCborHex)
+          return toolTextResult({ cborHex: Evolution.Anchor.toCBORHex(a) })
+        }
+        case "fromCbor": {
+          if (!anchorCborHex) throw new Error("anchorCborHex is required")
+          const a = Evolution.Anchor.fromCBORHex(anchorCborHex)
+          return toolTextResult({
+            url: (a as any).anchorUrl?.href ?? String((a as any).anchorUrl),
+            dataHashHex: bytesToHex((a as any).anchorDataHash),
+            cborHex: Evolution.Anchor.toCBORHex(a)
+          })
+        }
+        default:
+          throw new Error(`Unknown anchor_tools action: ${action}`)
+      }
+    }
+  )
+
+  // ── certificate_tools ───────────────────────────────────────────────────
+  server.registerTool(
+    "certificate_tools",
+    {
+      description:
+        "Build Cardano certificates for staking, delegation, governance, and pool operations. " +
+        "All credential hashes are 28-byte hex. Supports both pre-Conway and Conway-era certificates.",
+      inputSchema: z.object({
+        action: z.enum([
+          "stakeRegistration",
+          "stakeDeregistration",
+          "stakeDelegation",
+          "poolRetirement",
+          "regCert",
+          "unregCert",
+          "voteDelegCert",
+          "stakeVoteDelegCert",
+          "stakeRegDelegCert",
+          "voteRegDelegCert",
+          "toCbor",
+          "fromCbor"
+        ]),
+        credentialType: z.enum(["keyHash", "scriptHash"]).optional(),
+        credentialHashHex: z.string().optional(),
+        poolKeyHashHex: z.string().optional(),
+        epoch: z.string().optional(),
+        coin: z.string().optional(),
+        drepType: z.enum(["keyHash", "scriptHash", "alwaysAbstain", "alwaysNoConfidence"]).optional(),
+        drepHashHex: z.string().optional(),
+        certCborHex: z.string().optional()
+      })
+    },
+    async ({
+      action, credentialType, credentialHashHex, poolKeyHashHex,
+      epoch, coin, drepType, drepHashHex, certCborHex
+    }) => {
+      const parseCred = () => {
+        if (!credentialHashHex) throw new Error("credentialHashHex is required")
+        return (credentialType ?? "keyHash") === "keyHash"
+          ? Evolution.Credential.makeKeyHash(hexToBytes(credentialHashHex))
+          : Evolution.Credential.makeScriptHash(hexToBytes(credentialHashHex))
+      }
+      const parseDRep = () => {
+        const dt = drepType ?? "alwaysAbstain"
+        if (dt === "alwaysAbstain") return new Evolution.DRep.AlwaysAbstainDRep()
+        if (dt === "alwaysNoConfidence") return new Evolution.DRep.AlwaysNoConfidenceDRep()
+        if (!drepHashHex) throw new Error("drepHashHex is required for keyHash/scriptHash DRep")
+        if (dt === "keyHash") return Evolution.DRep.fromKeyHash(Evolution.KeyHash.fromHex(drepHashHex))
+        return Evolution.DRep.fromScriptHash(Evolution.ScriptHash.fromHex(drepHashHex))
+      }
+
+      switch (action) {
+        case "stakeRegistration": {
+          const cert = new Evolution.Certificate.StakeRegistration({ stakeCredential: parseCred() })
+          return toolTextResult({ cborHex: Evolution.Certificate.toCBORHex(cert) })
+        }
+        case "stakeDeregistration": {
+          const cert = new Evolution.Certificate.StakeDeregistration({ stakeCredential: parseCred() })
+          return toolTextResult({ cborHex: Evolution.Certificate.toCBORHex(cert) })
+        }
+        case "stakeDelegation": {
+          if (!poolKeyHashHex) throw new Error("poolKeyHashHex is required")
+          const cert = new Evolution.Certificate.StakeDelegation({
+            stakeCredential: parseCred(),
+            poolKeyHash: Evolution.PoolKeyHash.fromHex(poolKeyHashHex)
+          })
+          return toolTextResult({ cborHex: Evolution.Certificate.toCBORHex(cert) })
+        }
+        case "poolRetirement": {
+          if (!poolKeyHashHex) throw new Error("poolKeyHashHex is required")
+          if (!epoch) throw new Error("epoch is required")
+          const cert = new Evolution.Certificate.PoolRetirement({
+            poolKeyHash: Evolution.PoolKeyHash.fromHex(poolKeyHashHex),
+            epoch: BigInt(epoch)
+          })
+          return toolTextResult({ cborHex: Evolution.Certificate.toCBORHex(cert) })
+        }
+        case "regCert": {
+          const cert = new Evolution.Certificate.RegCert({
+            stakeCredential: parseCred(),
+            coin: BigInt(coin ?? "2000000")
+          })
+          return toolTextResult({ cborHex: Evolution.Certificate.toCBORHex(cert) })
+        }
+        case "unregCert": {
+          const cert = new Evolution.Certificate.UnregCert({
+            stakeCredential: parseCred(),
+            coin: BigInt(coin ?? "2000000")
+          })
+          return toolTextResult({ cborHex: Evolution.Certificate.toCBORHex(cert) })
+        }
+        case "voteDelegCert": {
+          const cert = new Evolution.Certificate.VoteDelegCert({
+            stakeCredential: parseCred(),
+            drep: parseDRep()
+          })
+          return toolTextResult({ cborHex: Evolution.Certificate.toCBORHex(cert) })
+        }
+        case "stakeVoteDelegCert": {
+          if (!poolKeyHashHex) throw new Error("poolKeyHashHex is required")
+          const cert = new Evolution.Certificate.StakeVoteDelegCert({
+            stakeCredential: parseCred(),
+            poolKeyHash: Evolution.PoolKeyHash.fromHex(poolKeyHashHex),
+            drep: parseDRep()
+          })
+          return toolTextResult({ cborHex: Evolution.Certificate.toCBORHex(cert) })
+        }
+        case "stakeRegDelegCert": {
+          if (!poolKeyHashHex) throw new Error("poolKeyHashHex is required")
+          const cert = new Evolution.Certificate.StakeRegDelegCert({
+            stakeCredential: parseCred(),
+            poolKeyHash: Evolution.PoolKeyHash.fromHex(poolKeyHashHex),
+            coin: BigInt(coin ?? "2000000")
+          })
+          return toolTextResult({ cborHex: Evolution.Certificate.toCBORHex(cert) })
+        }
+        case "voteRegDelegCert": {
+          const cert = new Evolution.Certificate.VoteRegDelegCert({
+            stakeCredential: parseCred(),
+            drep: parseDRep(),
+            coin: BigInt(coin ?? "2000000")
+          })
+          return toolTextResult({ cborHex: Evolution.Certificate.toCBORHex(cert) })
+        }
+        case "toCbor": {
+          if (!certCborHex) throw new Error("certCborHex is required")
+          const c = Evolution.Certificate.fromCBORHex(certCborHex)
+          return toolTextResult({ cborHex: Evolution.Certificate.toCBORHex(c) })
+        }
+        case "fromCbor": {
+          if (!certCborHex) throw new Error("certCborHex is required")
+          const c = Evolution.Certificate.fromCBORHex(certCborHex)
+          return toolTextResult({
+            tag: (c as any)._tag ?? "unknown",
+            cborHex: Evolution.Certificate.toCBORHex(c)
+          })
+        }
+        default:
+          throw new Error(`Unknown certificate_tools action: ${action}`)
+      }
+    }
+  )
+
+  // ── redeemer_tools ──────────────────────────────────────────────────────
+  server.registerTool(
+    "redeemer_tools",
+    {
+      description:
+        "Build and inspect Redeemers with ExUnits for Plutus script validation. " +
+        "Tags: spend, mint, cert, reward. Data is PlutusData CBOR hex.",
+      inputSchema: z.object({
+        action: z.enum([
+          "spend",
+          "mint",
+          "cert",
+          "reward",
+          "fromCbor",
+          "toCbor"
+        ]),
+        index: z.string().optional(),
+        dataCborHex: z.string().optional(),
+        mem: z.string().optional(),
+        steps: z.string().optional(),
+        redeemerCborHex: z.string().optional()
+      })
+    },
+    async ({ action, index, dataCborHex, mem, steps, redeemerCborHex }) => {
+      const parseExUnits = () =>
+        new Evolution.Redeemer.ExUnits({
+          mem: BigInt(mem ?? "0"),
+          steps: BigInt(steps ?? "0")
+        })
+      const parseData = () => {
+        if (!dataCborHex) throw new Error("dataCborHex is required")
+        return Evolution.Data.fromCBORHex(dataCborHex)
+      }
+      const idx = BigInt(index ?? "0")
+
+      switch (action) {
+        case "spend": {
+          const r = Evolution.Redeemer.spend(idx, parseData(), parseExUnits())
+          return toolTextResult({ cborHex: Evolution.Redeemer.toCBORHex(r) })
+        }
+        case "mint": {
+          const r = Evolution.Redeemer.mint(idx, parseData(), parseExUnits())
+          return toolTextResult({ cborHex: Evolution.Redeemer.toCBORHex(r) })
+        }
+        case "cert": {
+          const r = Evolution.Redeemer.cert(idx, parseData(), parseExUnits())
+          return toolTextResult({ cborHex: Evolution.Redeemer.toCBORHex(r) })
+        }
+        case "reward": {
+          const r = Evolution.Redeemer.reward(idx, parseData(), parseExUnits())
+          return toolTextResult({ cborHex: Evolution.Redeemer.toCBORHex(r) })
+        }
+        case "fromCbor": {
+          if (!redeemerCborHex) throw new Error("redeemerCborHex is required")
+          const r = Evolution.Redeemer.fromCBORHex(redeemerCborHex)
+          return toolTextResult({
+            tag: (r as any).tag ?? "unknown",
+            index: String((r as any).index ?? 0),
+            mem: String((r as any).exUnits?.mem ?? 0),
+            steps: String((r as any).exUnits?.steps ?? 0),
+            isSpend: Evolution.Redeemer.isSpend(r),
+            isMint: Evolution.Redeemer.isMint(r),
+            cborHex: Evolution.Redeemer.toCBORHex(r)
+          })
+        }
+        case "toCbor": {
+          if (!redeemerCborHex) throw new Error("redeemerCborHex is required")
+          const r = Evolution.Redeemer.fromCBORHex(redeemerCborHex)
+          return toolTextResult({ cborHex: Evolution.Redeemer.toCBORHex(r) })
+        }
+        default:
+          throw new Error(`Unknown redeemer_tools action: ${action}`)
+      }
+    }
+  )
+
+  // ── voting_tools ────────────────────────────────────────────────────────
+  server.registerTool(
+    "voting_tools",
+    {
+      description:
+        "Build VotingProcedures for Cardano governance. Construct voters, votes, and " +
+        "combine them into VotingProcedures for transaction inclusion.",
+      inputSchema: z.object({
+        action: z.enum([
+          "singleVote",
+          "toCbor",
+          "fromCbor"
+        ]),
+        voterType: z.enum(["drep", "stakePool", "constitutionalCommittee"]).optional(),
+        voterCredentialType: z.enum(["keyHash", "scriptHash"]).optional(),
+        voterHashHex: z.string().optional(),
+        drepType: z.enum(["keyHash", "scriptHash", "alwaysAbstain", "alwaysNoConfidence"]).optional(),
+        drepHashHex: z.string().optional(),
+        govActionTxHashHex: z.string().optional(),
+        govActionIndex: z.string().optional(),
+        vote: z.enum(["yes", "no", "abstain"]).optional(),
+        anchorUrl: z.string().optional(),
+        anchorDataHashHex: z.string().optional(),
+        votingCborHex: z.string().optional()
+      })
+    },
+    async ({
+      action, voterType, voterCredentialType, voterHashHex,
+      drepType, drepHashHex, govActionTxHashHex, govActionIndex,
+      vote, anchorUrl, anchorDataHashHex, votingCborHex
+    }) => {
+      const makeVoter = () => {
+        const vt = voterType ?? "drep"
+        if (vt === "drep") {
+          const dt = drepType ?? "keyHash"
+          let drep: any
+          if (dt === "alwaysAbstain") drep = new Evolution.DRep.AlwaysAbstainDRep()
+          else if (dt === "alwaysNoConfidence") drep = new Evolution.DRep.AlwaysNoConfidenceDRep()
+          else if (dt === "keyHash") {
+            if (!drepHashHex) throw new Error("drepHashHex required for keyHash DRep voter")
+            drep = Evolution.DRep.fromKeyHash(Evolution.KeyHash.fromHex(drepHashHex))
+          } else {
+            if (!drepHashHex) throw new Error("drepHashHex required for scriptHash DRep voter")
+            drep = Evolution.DRep.fromScriptHash(Evolution.ScriptHash.fromHex(drepHashHex))
+          }
+          return new Evolution.VotingProcedures.DRepVoter({ drep })
+        }
+        if (vt === "stakePool") {
+          if (!voterHashHex) throw new Error("voterHashHex required for stakePool voter")
+          return new Evolution.VotingProcedures.StakePoolVoter({
+            poolKeyHash: Evolution.PoolKeyHash.fromHex(voterHashHex)
+          })
+        }
+        if (!voterHashHex) throw new Error("voterHashHex required for CC voter")
+        const cred = (voterCredentialType ?? "keyHash") === "keyHash"
+          ? Evolution.Credential.makeKeyHash(hexToBytes(voterHashHex))
+          : Evolution.Credential.makeScriptHash(hexToBytes(voterHashHex))
+        return new Evolution.VotingProcedures.ConstitutionalCommitteeVoter({ credential: cred })
+      }
+
+      const makeVote = () => {
+        const v = vote ?? "yes"
+        if (v === "yes") return Evolution.VotingProcedures.yes()
+        if (v === "no") return Evolution.VotingProcedures.no()
+        return Evolution.VotingProcedures.abstain()
+      }
+
+      switch (action) {
+        case "singleVote": {
+          if (!govActionTxHashHex) throw new Error("govActionTxHashHex is required")
+          const ga = new Evolution.GovernanceAction.GovActionId({
+            transactionId: Evolution.TransactionHash.fromHex(govActionTxHashHex),
+            govActionIndex: BigInt(govActionIndex ?? "0")
+          })
+          const voteObj = makeVote()
+
+          let anchor: any = null
+          if (anchorUrl && anchorDataHashHex) {
+            const urlObj = new Evolution.Url.Url({ href: anchorUrl })
+            anchor = new Evolution.Anchor.Anchor({
+              anchorUrl: urlObj,
+              anchorDataHash: hexToBytes(anchorDataHashHex)
+            })
+          }
+
+          const votingProcedure = new Evolution.VotingProcedures.VotingProcedure({
+            vote: voteObj,
+            anchor
+          })
+          const vp = Evolution.VotingProcedures.singleVote(makeVoter(), ga, votingProcedure)
+          return toolTextResult({ cborHex: Evolution.VotingProcedures.toCBORHex(vp) })
+        }
+        case "toCbor": {
+          if (!votingCborHex) throw new Error("votingCborHex is required")
+          const v = Evolution.VotingProcedures.fromCBORHex(votingCborHex)
+          return toolTextResult({ cborHex: Evolution.VotingProcedures.toCBORHex(v) })
+        }
+        case "fromCbor": {
+          if (!votingCborHex) throw new Error("votingCborHex is required")
+          const v = Evolution.VotingProcedures.fromCBORHex(votingCborHex)
+          return toolTextResult({ cborHex: Evolution.VotingProcedures.toCBORHex(v) })
+        }
+        default:
+          throw new Error(`Unknown voting_tools action: ${action}`)
+      }
+    }
+  )
+
+  // ── script_ref_tools ────────────────────────────────────────────────────
+  server.registerTool(
+    "script_ref_tools",
+    {
+      description:
+        "Build and inspect ScriptRef values (CBOR tag-24 wrapped scripts for transaction output references).",
+      inputSchema: z.object({
+        action: z.enum(["fromHex", "toHex", "toCbor", "fromCbor"]),
+        hex: z.string().optional(),
+        cborHex: z.string().optional()
+      })
+    },
+    async ({ action, hex, cborHex }) => {
+      switch (action) {
+        case "fromHex": {
+          if (!hex) throw new Error("hex is required")
+          const sr = Evolution.ScriptRef.fromHex(hex)
+          return toolTextResult({
+            hex: Evolution.ScriptRef.toHex(sr),
+            cborHex: Evolution.ScriptRef.toCBORHex(sr)
+          })
+        }
+        case "toHex": {
+          if (!cborHex) throw new Error("cborHex is required")
+          const sr = Evolution.ScriptRef.fromCBORHex(cborHex)
+          return toolTextResult({ hex: Evolution.ScriptRef.toHex(sr) })
+        }
+        case "toCbor": {
+          if (!hex) throw new Error("hex is required")
+          const sr = Evolution.ScriptRef.fromHex(hex)
+          return toolTextResult({ cborHex: Evolution.ScriptRef.toCBORHex(sr) })
+        }
+        case "fromCbor": {
+          if (!cborHex) throw new Error("cborHex is required")
+          const sr = Evolution.ScriptRef.fromCBORHex(cborHex)
+          return toolTextResult({
+            hex: Evolution.ScriptRef.toHex(sr),
+            cborHex: Evolution.ScriptRef.toCBORHex(sr)
+          })
+        }
+        default:
+          throw new Error(`Unknown script_ref_tools action: ${action}`)
+      }
+    }
+  )
+
+  // ── governance_action_tools ─────────────────────────────────────────────
+  server.registerTool(
+    "governance_action_tools",
+    {
+      description:
+        "Create and inspect Cardano governance actions (CIP-1694). Supports InfoAction, " +
+        "NoConfidenceAction, ParameterChangeAction, TreasuryWithdrawalsAction, " +
+        "HardForkInitiationAction, NewConstitutionAction, UpdateCommitteeAction. " +
+        "Also builds GovActionId references and pattern-matches action types.",
+      inputSchema: z.object({
+        action: z.enum([
+          "infoAction",
+          "noConfidenceAction",
+          "parameterChangeAction",
+          "treasuryWithdrawalsAction",
+          "hardForkInitiationAction",
+          "newConstitutionAction",
+          "updateCommitteeAction",
+          "govActionId",
+          "inspect",
+          "toCbor",
+          "fromCbor"
+        ]),
+        govActionIdTransactionHashHex: z.string().optional(),
+        govActionIdIndex: z.number().optional(),
+        prevGovActionIdTransactionHashHex: z.string().optional(),
+        prevGovActionIdIndex: z.number().optional(),
+        protocolParamUpdateCborHex: z.string().optional(),
+        policyHashHex: z.string().optional(),
+        withdrawals: z.array(z.object({
+          rewardAccountHex: z.string(),
+          coin: z.string()
+        })).optional(),
+        protocolVersionMajor: z.number().optional(),
+        protocolVersionMinor: z.number().optional(),
+        anchorUrl: z.string().optional(),
+        anchorDataHashHex: z.string().optional(),
+        constitutionScriptHashHex: z.string().optional(),
+        membersToRemoveHex: z.array(z.string()).optional(),
+        membersToAdd: z.array(z.object({
+          credentialHashHex: z.string(),
+          epoch: z.number()
+        })).optional(),
+        thresholdNumerator: z.number().optional(),
+        thresholdDenominator: z.number().optional(),
+        cborHex: z.string().optional()
+      })
+    },
+    async (args) => {
+      const {
+        action, cborHex,
+        govActionIdTransactionHashHex, govActionIdIndex,
+        prevGovActionIdTransactionHashHex, prevGovActionIdIndex,
+        protocolParamUpdateCborHex, policyHashHex,
+        withdrawals, protocolVersionMajor, protocolVersionMinor,
+        anchorUrl, anchorDataHashHex, constitutionScriptHashHex,
+        membersToRemoveHex, membersToAdd,
+        thresholdNumerator, thresholdDenominator
+      } = args
+
+      const buildPrevGovActionId = () => {
+        if (!prevGovActionIdTransactionHashHex) return null
+        return new Evolution.GovernanceAction.GovActionId({
+          transactionId: Evolution.TransactionHash.fromHex(prevGovActionIdTransactionHashHex),
+          govActionIndex: BigInt(prevGovActionIdIndex ?? 0)
+        })
+      }
+
+      switch (action) {
+        case "infoAction": {
+          const ga = new Evolution.GovernanceAction.InfoAction({})
+          return toolTextResult({ cborHex: Evolution.GovernanceAction.toCBORHex(ga), type: "InfoAction" })
+        }
+        case "noConfidenceAction": {
+          const ga = new Evolution.GovernanceAction.NoConfidenceAction({
+            govActionId: buildPrevGovActionId()
+          })
+          return toolTextResult({ cborHex: Evolution.GovernanceAction.toCBORHex(ga), type: "NoConfidenceAction" })
+        }
+        case "parameterChangeAction": {
+          const ppu = protocolParamUpdateCborHex
+            ? Evolution.ProtocolParamUpdate.fromCBORHex(protocolParamUpdateCborHex)
+            : new Evolution.ProtocolParamUpdate.ProtocolParamUpdate({})
+          const ga = new Evolution.GovernanceAction.ParameterChangeAction({
+            govActionId: buildPrevGovActionId(),
+            protocolParamUpdate: ppu,
+            policyHash: policyHashHex ? Evolution.ScriptHash.fromHex(policyHashHex) : null
+          })
+          return toolTextResult({ cborHex: Evolution.GovernanceAction.toCBORHex(ga), type: "ParameterChangeAction" })
+        }
+        case "treasuryWithdrawalsAction": {
+          const wMap = new Map<unknown, bigint>()
+          for (const w of (withdrawals ?? [])) {
+            const raBytes = hexToBytes(w.rewardAccountHex)
+            const ra = Evolution.AddressEras.fromBytes(raBytes)
+            wMap.set(ra, BigInt(w.coin))
+          }
+          const ga = new Evolution.GovernanceAction.TreasuryWithdrawalsAction({
+            withdrawals: wMap as any,
+            policyHash: policyHashHex ? Evolution.ScriptHash.fromHex(policyHashHex) : null
+          })
+          return toolTextResult({ cborHex: Evolution.GovernanceAction.toCBORHex(ga), type: "TreasuryWithdrawalsAction" })
+        }
+        case "hardForkInitiationAction": {
+          const pv = new Evolution.ProtocolVersion.ProtocolVersion({
+            major: BigInt(protocolVersionMajor ?? 10),
+            minor: BigInt(protocolVersionMinor ?? 0)
+          })
+          const ga = new Evolution.GovernanceAction.HardForkInitiationAction({
+            govActionId: buildPrevGovActionId(),
+            protocolVersion: pv
+          })
+          return toolTextResult({ cborHex: Evolution.GovernanceAction.toCBORHex(ga), type: "HardForkInitiationAction" })
+        }
+        case "newConstitutionAction": {
+          if (!anchorUrl || !anchorDataHashHex) throw new Error("anchorUrl and anchorDataHashHex are required")
+          const anchor = new Evolution.Anchor.Anchor({
+            anchorUrl: new Evolution.Url.Url({ href: anchorUrl }),
+            anchorDataHash: hexToBytes(anchorDataHashHex)
+          })
+          const constitution = new Evolution.Constitution.Constitution({
+            anchor,
+            scriptHash: constitutionScriptHashHex
+              ? Evolution.ScriptHash.fromHex(constitutionScriptHashHex)
+              : null
+          })
+          const ga = new Evolution.GovernanceAction.NewConstitutionAction({
+            govActionId: buildPrevGovActionId(),
+            constitution
+          })
+          return toolTextResult({ cborHex: Evolution.GovernanceAction.toCBORHex(ga), type: "NewConstitutionAction" })
+        }
+        case "updateCommitteeAction": {
+          const toRemove = (membersToRemoveHex ?? []).map(h => {
+            const bytes = hexToBytes(h)
+            return bytes.length === 28
+              ? Evolution.Credential.makeKeyHash(bytes)
+              : Evolution.Credential.makeScriptHash(bytes)
+          })
+          const toAdd = new Map<any, bigint>()
+          for (const m of (membersToAdd ?? [])) {
+            const bytes = hexToBytes(m.credentialHashHex)
+            const cred = Evolution.Credential.makeKeyHash(bytes)
+            toAdd.set(cred, BigInt(m.epoch))
+          }
+          const threshold = new Evolution.UnitInterval.UnitInterval({
+            numerator: BigInt(thresholdNumerator ?? 1),
+            denominator: BigInt(thresholdDenominator ?? 2)
+          })
+          const ga = new Evolution.GovernanceAction.UpdateCommitteeAction({
+            govActionId: buildPrevGovActionId(),
+            membersToRemove: toRemove,
+            membersToAdd: toAdd,
+            threshold
+          })
+          return toolTextResult({ cborHex: Evolution.GovernanceAction.toCBORHex(ga), type: "UpdateCommitteeAction" })
+        }
+        case "govActionId": {
+          if (!govActionIdTransactionHashHex) throw new Error("govActionIdTransactionHashHex is required")
+          const gaid = new Evolution.GovernanceAction.GovActionId({
+            transactionId: Evolution.TransactionHash.fromHex(govActionIdTransactionHashHex),
+            govActionIndex: BigInt(govActionIdIndex ?? 0)
+          })
+          return toolTextResult({
+            transactionHashHex: govActionIdTransactionHashHex,
+            index: govActionIdIndex ?? 0
+          })
+        }
+        case "inspect": {
+          if (!cborHex) throw new Error("cborHex is required")
+          const ga = Evolution.GovernanceAction.fromCBORHex(cborHex)
+          const type = Evolution.GovernanceAction.match(ga, {
+            InfoAction: () => "InfoAction",
+            NoConfidenceAction: () => "NoConfidenceAction",
+            ParameterChangeAction: () => "ParameterChangeAction",
+            TreasuryWithdrawalsAction: () => "TreasuryWithdrawalsAction",
+            HardForkInitiationAction: () => "HardForkInitiationAction",
+            NewConstitutionAction: () => "NewConstitutionAction",
+            UpdateCommitteeAction: () => "UpdateCommitteeAction"
+          })
+          return toolTextResult({ type, cborHex: Evolution.GovernanceAction.toCBORHex(ga) })
+        }
+        case "toCbor": {
+          if (!cborHex) throw new Error("cborHex is required")
+          const ga = Evolution.GovernanceAction.fromCBORHex(cborHex)
+          return toolTextResult({ cborHex: Evolution.GovernanceAction.toCBORHex(ga) })
+        }
+        case "fromCbor": {
+          if (!cborHex) throw new Error("cborHex is required")
+          const ga = Evolution.GovernanceAction.fromCBORHex(cborHex)
+          const type = Evolution.GovernanceAction.match(ga, {
+            InfoAction: () => "InfoAction",
+            NoConfidenceAction: () => "NoConfidenceAction",
+            ParameterChangeAction: () => "ParameterChangeAction",
+            TreasuryWithdrawalsAction: () => "TreasuryWithdrawalsAction",
+            HardForkInitiationAction: () => "HardForkInitiationAction",
+            NewConstitutionAction: () => "NewConstitutionAction",
+            UpdateCommitteeAction: () => "UpdateCommitteeAction"
+          })
+          return toolTextResult({ type, cborHex: Evolution.GovernanceAction.toCBORHex(ga) })
+        }
+        default:
+          throw new Error(`Unknown governance_action_tools action: ${action}`)
+      }
+    }
+  )
+
+  // ── proposal_tools ──────────────────────────────────────────────────────
+  server.registerTool(
+    "proposal_tools",
+    {
+      description:
+        "Build and parse Cardano governance ProposalProcedures (CIP-1694). " +
+        "Combines a deposit, reward account, governance action, and anchor into a proposal.",
+      inputSchema: z.object({
+        action: z.enum(["create", "toCbor", "fromCbor"]),
+        deposit: z.string().optional(),
+        rewardAccountHex: z.string().optional(),
+        governanceActionCborHex: z.string().optional(),
+        anchorUrl: z.string().optional(),
+        anchorDataHashHex: z.string().optional(),
+        cborHex: z.string().optional()
+      })
+    },
+    async ({ action, deposit, rewardAccountHex, governanceActionCborHex, anchorUrl, anchorDataHashHex, cborHex }) => {
+      switch (action) {
+        case "create": {
+          if (!deposit) throw new Error("deposit is required")
+          if (!rewardAccountHex) throw new Error("rewardAccountHex is required")
+          if (!governanceActionCborHex) throw new Error("governanceActionCborHex is required")
+          if (!anchorUrl || !anchorDataHashHex) throw new Error("anchorUrl and anchorDataHashHex are required")
+          const anchor = new Evolution.Anchor.Anchor({
+            anchorUrl: new Evolution.Url.Url({ href: anchorUrl }),
+            anchorDataHash: hexToBytes(anchorDataHashHex)
+          })
+          const ga = Evolution.GovernanceAction.fromCBORHex(governanceActionCborHex)
+          const ra = Evolution.AddressEras.fromBytes(hexToBytes(rewardAccountHex))
+          const pp = new Evolution.ProposalProcedure.ProposalProcedure({
+            deposit: BigInt(deposit),
+            rewardAccount: ra as any,
+            governanceAction: ga,
+            anchor
+          })
+          return toolTextResult({ cborHex: Evolution.ProposalProcedure.toCBORHex(pp) })
+        }
+        case "toCbor": {
+          if (!cborHex) throw new Error("cborHex is required")
+          const pp = Evolution.ProposalProcedure.fromCBORHex(cborHex)
+          return toolTextResult({ cborHex: Evolution.ProposalProcedure.toCBORHex(pp) })
+        }
+        case "fromCbor": {
+          if (!cborHex) throw new Error("cborHex is required")
+          const pp = Evolution.ProposalProcedure.fromCBORHex(cborHex)
+          return toolTextResult({
+            deposit: String((pp as any).deposit),
+            governanceActionCborHex: Evolution.GovernanceAction.toCBORHex((pp as any).governanceAction),
+            anchorUrl: (pp as any).anchor?.anchorUrl?.href ?? "",
+            anchorDataHashHex: bytesToHex((pp as any).anchor?.anchorDataHash ?? new Uint8Array()),
+            cborHex: Evolution.ProposalProcedure.toCBORHex(pp)
+          })
+        }
+        default:
+          throw new Error(`Unknown proposal_tools action: ${action}`)
+      }
+    }
+  )
+
+  // ── tx_output_tools ─────────────────────────────────────────────────────
+  server.registerTool(
+    "tx_output_tools",
+    {
+      description:
+        "Build and parse Cardano transaction outputs (Babbage era). " +
+        "Supports ada-only or multi-asset values, optional datum hash, inline datum, and script reference.",
+      inputSchema: z.object({
+        action: z.enum(["create", "fromCbor", "toCbor"]),
+        addressBech32: z.string().optional(),
+        lovelace: z.string().optional(),
+        datumHashHex: z.string().optional(),
+        inlineDatumCborHex: z.string().optional(),
+        scriptRefHex: z.string().optional(),
+        cborHex: z.string().optional()
+      })
+    },
+    async ({ action, addressBech32, lovelace, datumHashHex, inlineDatumCborHex, scriptRefHex, cborHex }) => {
+      switch (action) {
+        case "create": {
+          if (!addressBech32) throw new Error("addressBech32 is required")
+          if (!lovelace) throw new Error("lovelace is required")
+          const addr = Evolution.AddressEras.fromBech32(addressBech32)
+          const value = Evolution.Value.onlyCoin(BigInt(lovelace))
+          const opts: Record<string, any> = { address: addr, amount: value }
+
+          if (datumHashHex) {
+            const DOSchema = Evolution.DatumOption.DatumOptionSchema
+            const [DatumHash] = DOSchema.members
+            opts.datumOption = new (DatumHash as any)({ hash: hexToBytes(datumHashHex) })
+          } else if (inlineDatumCborHex) {
+            const data = Evolution.Data.fromCBORHex(inlineDatumCborHex)
+            const DOSchema = Evolution.DatumOption.DatumOptionSchema
+            const [, InlineDatum] = DOSchema.members
+            opts.datumOption = new (InlineDatum as any)({ data })
+          }
+
+          if (scriptRefHex) {
+            opts.scriptRef = Evolution.ScriptRef.fromHex(scriptRefHex)
+          }
+
+          const txOut = new Evolution.TransactionOutput.BabbageTransactionOutput(opts as any)
+          return toolTextResult({ cborHex: Evolution.TransactionOutput.toCBORHex(txOut) })
+        }
+        case "fromCbor": {
+          if (!cborHex) throw new Error("cborHex is required")
+          const txOut = Evolution.TransactionOutput.fromCBORHex(cborHex)
+          const result: Record<string, any> = {
+            type: (txOut as any)._tag,
+            cborHex: Evolution.TransactionOutput.toCBORHex(txOut)
+          }
+          if ((txOut as any).datumOption) {
+            const dOpt = (txOut as any).datumOption
+            if (Evolution.DatumOption.isDatumHash(dOpt)) {
+              result.datumHashHex = bytesToHex(dOpt.hash)
+            } else if (Evolution.DatumOption.isInlineDatum(dOpt)) {
+              result.inlineDatumCborHex = Evolution.Data.toCBORHex(dOpt.data)
+            }
+          }
+          return toolTextResult(result)
+        }
+        case "toCbor": {
+          if (!cborHex) throw new Error("cborHex is required")
+          const txOut = Evolution.TransactionOutput.fromCBORHex(cborHex)
+          return toolTextResult({ cborHex: Evolution.TransactionOutput.toCBORHex(txOut) })
+        }
+        default:
+          throw new Error(`Unknown tx_output_tools action: ${action}`)
+      }
+    }
+  )
+
+  // ── plutus_data_codec_tools ─────────────────────────────────────────────
+  server.registerTool(
+    "plutus_data_codec_tools",
+    {
+      description:
+        "Encode and decode typed Plutus data using the SDK's Plutus codec system. " +
+        "Supports OutputReference, Credential, Address, Value (Lovelace/PolicyId), " +
+        "and CIP-68 metadata codecs. Converts between typed representations and CBOR hex.",
+      inputSchema: z.object({
+        action: z.enum([
+          "encodeOutputReference",
+          "decodeOutputReference",
+          "encodeCredential",
+          "decodeCredential",
+          "encodeAddress",
+          "decodeAddress",
+          "encodeLovelace",
+          "decodeLovelace",
+          "encodeCip68",
+          "decodeCip68"
+        ]),
+        transactionIdHex: z.string().optional(),
+        outputIndex: z.number().optional(),
+        credentialType: z.enum(["VerificationKey", "Script"]).optional(),
+        credentialHashHex: z.string().optional(),
+        stakeCredentialType: z.enum(["VerificationKey", "Script"]).optional(),
+        stakeCredentialHashHex: z.string().optional(),
+        lovelace: z.string().optional(),
+        cip68MetadataCborEntries: z.array(z.object({
+          keyHex: z.string(),
+          valueCborHex: z.string()
+        })).optional(),
+        cip68Version: z.number().optional(),
+        cip68ExtraCborHex: z.array(z.string()).optional(),
+        cborHex: z.string().optional()
+      })
+    },
+    async (args) => {
+      const {
+        action, transactionIdHex, outputIndex,
+        credentialType, credentialHashHex,
+        stakeCredentialType, stakeCredentialHashHex,
+        lovelace, cborHex,
+        cip68MetadataCborEntries, cip68Version, cip68ExtraCborHex
+      } = args
+
+      switch (action) {
+        case "encodeOutputReference": {
+          if (!transactionIdHex) throw new Error("transactionIdHex is required")
+          const codec = Evolution.Plutus.OutputReference.Codec
+          const result = codec.toCBORHex({
+            transaction_id: hexToBytes(transactionIdHex),
+            output_index: BigInt(outputIndex ?? 0)
+          } as any)
+          return toolTextResult({ cborHex: result })
+        }
+        case "decodeOutputReference": {
+          if (!cborHex) throw new Error("cborHex is required")
+          const codec = Evolution.Plutus.OutputReference.Codec
+          const result = codec.fromCBORHex(cborHex)
+          return toolTextResult({
+            transactionIdHex: bytesToHex((result as any).transaction_id),
+            outputIndex: Number((result as any).output_index)
+          })
+        }
+        case "encodeCredential": {
+          if (!credentialHashHex) throw new Error("credentialHashHex is required")
+          const codec = Evolution.Plutus.Credential.CredentialCodec
+          const cred = credentialType === "Script"
+            ? { Script: { hash: hexToBytes(credentialHashHex) } }
+            : { VerificationKey: { hash: hexToBytes(credentialHashHex) } }
+          const result = codec.toCBORHex(cred as any)
+          return toolTextResult({ cborHex: result })
+        }
+        case "decodeCredential": {
+          if (!cborHex) throw new Error("cborHex is required")
+          const codec = Evolution.Plutus.Credential.CredentialCodec
+          const result = codec.fromCBORHex(cborHex) as any
+          if (result.VerificationKey) {
+            return toolTextResult({
+              type: "VerificationKey",
+              hashHex: bytesToHex(result.VerificationKey.hash)
+            })
+          } else {
+            return toolTextResult({
+              type: "Script",
+              hashHex: bytesToHex(result.Script.hash)
+            })
+          }
+        }
+        case "encodeAddress": {
+          if (!credentialHashHex) throw new Error("credentialHashHex is required")
+          const codec = Evolution.Plutus.Address.Codec
+          const paymentCred = credentialType === "Script"
+            ? { Script: { hash: hexToBytes(credentialHashHex) } }
+            : { VerificationKey: { hash: hexToBytes(credentialHashHex) } }
+          const addr: any = {
+            payment_credential: paymentCred,
+            stake_credential: undefined as any
+          }
+          if (stakeCredentialHashHex) {
+            const stakeCred = stakeCredentialType === "Script"
+              ? { Script: { hash: hexToBytes(stakeCredentialHashHex) } }
+              : { VerificationKey: { hash: hexToBytes(stakeCredentialHashHex) } }
+            addr.stake_credential = { Inline: { credential: stakeCred } }
+          }
+          const result = codec.toCBORHex(addr)
+          return toolTextResult({ cborHex: result })
+        }
+        case "decodeAddress": {
+          if (!cborHex) throw new Error("cborHex is required")
+          const codec = Evolution.Plutus.Address.Codec
+          const result = codec.fromCBORHex(cborHex) as any
+          const out: Record<string, any> = {}
+          if (result.payment_credential?.VerificationKey) {
+            out.paymentCredentialType = "VerificationKey"
+            out.paymentCredentialHashHex = bytesToHex(result.payment_credential.VerificationKey.hash)
+          } else if (result.payment_credential?.Script) {
+            out.paymentCredentialType = "Script"
+            out.paymentCredentialHashHex = bytesToHex(result.payment_credential.Script.hash)
+          }
+          if (result.stake_credential?.Inline?.credential) {
+            const sc = result.stake_credential.Inline.credential
+            if (sc.VerificationKey) {
+              out.stakeCredentialType = "VerificationKey"
+              out.stakeCredentialHashHex = bytesToHex(sc.VerificationKey.hash)
+            } else if (sc.Script) {
+              out.stakeCredentialType = "Script"
+              out.stakeCredentialHashHex = bytesToHex(sc.Script.hash)
+            }
+          }
+          return toolTextResult(out)
+        }
+        case "encodeLovelace": {
+          if (!lovelace) throw new Error("lovelace is required")
+          const codec = Evolution.Plutus.Value.LovelaceCodec
+          return toolTextResult({ cborHex: codec.toCBORHex(BigInt(lovelace)) })
+        }
+        case "decodeLovelace": {
+          if (!cborHex) throw new Error("cborHex is required")
+          const codec = Evolution.Plutus.Value.LovelaceCodec
+          const result = codec.fromCBORHex(cborHex)
+          return toolTextResult({ lovelace: String(result) })
+        }
+        case "encodeCip68": {
+          const codec = Evolution.Plutus.CIP68Metadata.Codec
+          const metadataMap = new Map<any, any>()
+          for (const entry of (cip68MetadataCborEntries ?? [])) {
+            metadataMap.set(
+              Evolution.Data.bytearray(entry.keyHex),
+              Evolution.Data.fromCBORHex(entry.valueCborHex)
+            )
+          }
+          const extra = (cip68ExtraCborHex ?? []).map(h => Evolution.Data.fromCBORHex(h))
+          const datum = { metadata: metadataMap, version: BigInt(cip68Version ?? 1), extra }
+          return toolTextResult({ cborHex: codec.toCBORHex(datum as any) })
+        }
+        case "decodeCip68": {
+          if (!cborHex) throw new Error("cborHex is required")
+          const codec = Evolution.Plutus.CIP68Metadata.Codec
+          const result = codec.fromCBORHex(cborHex) as any
+          const entries: Array<{ keyHex: string; valueCborHex: string }> = []
+          if (result.metadata instanceof Map) {
+            for (const [k, v] of result.metadata) {
+              entries.push({
+                keyHex: bytesToHex(k instanceof Uint8Array ? k : new Uint8Array()),
+                valueCborHex: Evolution.Data.toCBORHex(v)
+              })
+            }
+          }
+          return toolTextResult({
+            version: Number(result.version),
+            metadataEntries: entries,
+            extraCount: result.extra?.length ?? 0
+          })
+        }
+        default:
+          throw new Error(`Unknown plutus_data_codec_tools action: ${action}`)
+      }
     }
   )
 

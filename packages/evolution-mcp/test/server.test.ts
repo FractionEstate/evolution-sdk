@@ -1201,6 +1201,506 @@ describe("evolution-mcp", () => {
     const hashResult = parseToolJson<{ transactionHash: string }>(hashRaw)
     expect(hashResult.transactionHash).toHaveLength(64)
 
+    // ── Mint tools ────────────────────────────────────────────────────────
+    const mintSingleton = await client.callTool({
+      name: "mint_tools",
+      arguments: {
+        action: "singleton",
+        policyIdHex: "ab".repeat(28),
+        assetNameHex: "cafe",
+        amount: "100"
+      }
+    })
+    const mintResult = parseToolJson<{ cborHex: string }>(mintSingleton)
+    expect(mintResult.cborHex).toBeTruthy()
+
+    // insert an additional asset
+    const mintInsert = await client.callTool({
+      name: "mint_tools",
+      arguments: {
+        action: "insert",
+        mintCborHex: mintResult.cborHex,
+        policyIdHex: "ab".repeat(28),
+        assetNameHex: "beef",
+        amount: "-50"
+      }
+    })
+    const mintInserted = parseToolJson<{ cborHex: string }>(mintInsert)
+    expect(mintInserted.cborHex).toBeTruthy()
+
+    // get value
+    const mintGet = await client.callTool({
+      name: "mint_tools",
+      arguments: {
+        action: "getByHex",
+        mintCborHex: mintInserted.cborHex,
+        policyIdHex: "ab".repeat(28),
+        assetNameHex: "cafe"
+      }
+    })
+    const mintGetResult = parseToolJson<{ value: string }>(mintGet)
+    expect(mintGetResult.value).toBe("100")
+
+    // policyCount
+    const mintCount = await client.callTool({
+      name: "mint_tools",
+      arguments: { action: "policyCount", mintCborHex: mintInserted.cborHex }
+    })
+    const mintCountResult = parseToolJson<{ count: number }>(mintCount)
+    expect(mintCountResult.count).toBe(1)
+
+    // empty mint
+    const mintEmpty = await client.callTool({
+      name: "mint_tools",
+      arguments: { action: "empty" }
+    })
+    const emptyMintResult = parseToolJson<{ cborHex: string }>(mintEmpty)
+    expect(emptyMintResult.cborHex).toBeTruthy()
+
+    // ── Withdrawals tools ─────────────────────────────────────────────────
+    const wSingleton = await client.callTool({
+      name: "withdrawals_tools",
+      arguments: {
+        action: "singleton",
+        rewardAccountHex: "e0" + "00".repeat(28),
+        coin: "5000000"
+      }
+    })
+    const wResult = parseToolJson<{ cborHex: string }>(wSingleton)
+    expect(wResult.cborHex).toBeTruthy()
+
+    // size
+    const wSize = await client.callTool({
+      name: "withdrawals_tools",
+      arguments: { action: "size", withdrawalsCborHex: wResult.cborHex }
+    })
+    const wSizeResult = parseToolJson<{ size: number }>(wSize)
+    expect(wSizeResult.size).toBe(1)
+
+    // entries
+    const wEntries = await client.callTool({
+      name: "withdrawals_tools",
+      arguments: { action: "entries", withdrawalsCborHex: wResult.cborHex }
+    })
+    const wEntriesResult = parseToolJson<{ entries: Array<{ rewardAccountHex: string; coin: string }> }>(wEntries)
+    expect(wEntriesResult.entries).toHaveLength(1)
+    expect(wEntriesResult.entries[0].coin).toBe("5000000")
+
+    // isEmpty on empty
+    const wEmpty = await client.callTool({
+      name: "withdrawals_tools",
+      arguments: { action: "empty" }
+    })
+    const wEmptyResult = parseToolJson<{ cborHex: string }>(wEmpty)
+    const wIsEmpty = await client.callTool({
+      name: "withdrawals_tools",
+      arguments: { action: "isEmpty", withdrawalsCborHex: wEmptyResult.cborHex }
+    })
+    expect(parseToolJson<{ isEmpty: boolean }>(wIsEmpty).isEmpty).toBe(true)
+
+    // ── Anchor tools ──────────────────────────────────────────────────────
+    const anchorCreate = await client.callTool({
+      name: "anchor_tools",
+      arguments: {
+        action: "create",
+        url: "https://example.com/proposal.json",
+        dataHashHex: "ab".repeat(32)
+      }
+    })
+    const anchorResult = parseToolJson<{ cborHex: string }>(anchorCreate)
+    expect(anchorResult.cborHex).toBeTruthy()
+
+    // roundtrip
+    const anchorParse = await client.callTool({
+      name: "anchor_tools",
+      arguments: { action: "fromCbor", anchorCborHex: anchorResult.cborHex }
+    })
+    const anchorParsed = parseToolJson<{ url: string; dataHashHex: string; cborHex: string }>(anchorParse)
+    expect(anchorParsed.url).toBe("https://example.com/proposal.json")
+
+    // ── Certificate tools ─────────────────────────────────────────────────
+    const stakeReg = await client.callTool({
+      name: "certificate_tools",
+      arguments: {
+        action: "stakeRegistration",
+        credentialType: "keyHash",
+        credentialHashHex: "00".repeat(28)
+      }
+    })
+    const stakeRegResult = parseToolJson<{ cborHex: string }>(stakeReg)
+    expect(stakeRegResult.cborHex).toBeTruthy()
+
+    // stakeDelegation
+    const stakeDeleg = await client.callTool({
+      name: "certificate_tools",
+      arguments: {
+        action: "stakeDelegation",
+        credentialType: "keyHash",
+        credentialHashHex: "00".repeat(28),
+        poolKeyHashHex: "00".repeat(28)
+      }
+    })
+    expect(parseToolJson<{ cborHex: string }>(stakeDeleg).cborHex).toBeTruthy()
+
+    // regCert (Conway)
+    const regCert = await client.callTool({
+      name: "certificate_tools",
+      arguments: {
+        action: "regCert",
+        credentialType: "keyHash",
+        credentialHashHex: "00".repeat(28),
+        coin: "2000000"
+      }
+    })
+    expect(parseToolJson<{ cborHex: string }>(regCert).cborHex).toBeTruthy()
+
+    // voteDelegCert
+    const voteDelegCert = await client.callTool({
+      name: "certificate_tools",
+      arguments: {
+        action: "voteDelegCert",
+        credentialType: "keyHash",
+        credentialHashHex: "00".repeat(28),
+        drepType: "alwaysAbstain"
+      }
+    })
+    expect(parseToolJson<{ cborHex: string }>(voteDelegCert).cborHex).toBeTruthy()
+
+    // fromCbor roundtrip
+    const certParse = await client.callTool({
+      name: "certificate_tools",
+      arguments: { action: "fromCbor", certCborHex: stakeRegResult.cborHex }
+    })
+    const certParsed = parseToolJson<{ tag: string; cborHex: string }>(certParse)
+    expect(certParsed.tag).toBe("StakeRegistration")
+
+    // ── Redeemer tools ────────────────────────────────────────────────────
+    // Build a Data.int(42) CBOR for use as redeemer data
+    const dataIntRaw = await client.callTool({
+      name: "data_construct",
+      arguments: { action: "int", value: "42" }
+    })
+    const dataIntCbor = parseToolJson<{ cborHex: string }>(dataIntRaw).cborHex
+
+    const spendRedeemer = await client.callTool({
+      name: "redeemer_tools",
+      arguments: {
+        action: "spend",
+        index: "0",
+        dataCborHex: dataIntCbor,
+        mem: "100000",
+        steps: "200000"
+      }
+    })
+    const spendResult = parseToolJson<{ cborHex: string }>(spendRedeemer)
+    expect(spendResult.cborHex).toBeTruthy()
+
+    const mintRedeemer = await client.callTool({
+      name: "redeemer_tools",
+      arguments: {
+        action: "mint",
+        index: "0",
+        dataCborHex: dataIntCbor,
+        mem: "0",
+        steps: "0"
+      }
+    })
+    expect(parseToolJson<{ cborHex: string }>(mintRedeemer).cborHex).toBeTruthy()
+
+    // fromCbor roundtrip
+    const redeemerParse = await client.callTool({
+      name: "redeemer_tools",
+      arguments: { action: "fromCbor", redeemerCborHex: spendResult.cborHex }
+    })
+    const rdParsed = parseToolJson<{ isSpend: boolean; isMint: boolean }>(redeemerParse)
+    expect(rdParsed.isSpend).toBe(true)
+    expect(rdParsed.isMint).toBe(false)
+
+    // ── Voting tools ──────────────────────────────────────────────────────
+    const singleVote = await client.callTool({
+      name: "voting_tools",
+      arguments: {
+        action: "singleVote",
+        voterType: "drep",
+        drepType: "keyHash",
+        drepHashHex: "00".repeat(28),
+        govActionTxHashHex: "ab".repeat(32),
+        govActionIndex: "0",
+        vote: "yes"
+      }
+    })
+    const voteResult = parseToolJson<{ cborHex: string }>(singleVote)
+    expect(voteResult.cborHex).toBeTruthy()
+
+    // roundtrip
+    const voteParse = await client.callTool({
+      name: "voting_tools",
+      arguments: { action: "fromCbor", votingCborHex: voteResult.cborHex }
+    })
+    expect(parseToolJson<{ cborHex: string }>(voteParse).cborHex).toBe(voteResult.cborHex)
+
+    // ── Script ref tools ──────────────────────────────────────────────────
+    const srFromHex = await client.callTool({
+      name: "script_ref_tools",
+      arguments: { action: "fromHex", hex: "00".repeat(10) }
+    })
+    const srResult = parseToolJson<{ hex: string; cborHex: string }>(srFromHex)
+    expect(srResult.hex).toBe("00".repeat(10))
+    expect(srResult.cborHex).toBeTruthy()
+
+    // roundtrip via fromCbor
+    const srParse = await client.callTool({
+      name: "script_ref_tools",
+      arguments: { action: "fromCbor", cborHex: srResult.cborHex }
+    })
+    const srParsed = parseToolJson<{ hex: string }>(srParse)
+    expect(srParsed.hex).toBe("00".repeat(10))
+
+    // ── Governance action tools ───────────────────────────────────────────
+    const infoAction = await client.callTool({
+      name: "governance_action_tools",
+      arguments: { action: "infoAction" }
+    })
+    const infoResult = parseToolJson<{ cborHex: string; type: string }>(infoAction)
+    expect(infoResult.type).toBe("InfoAction")
+    expect(infoResult.cborHex).toBe("8106")
+
+    const noConfAction = await client.callTool({
+      name: "governance_action_tools",
+      arguments: { action: "noConfidenceAction" }
+    })
+    const noConfResult = parseToolJson<{ cborHex: string; type: string }>(noConfAction)
+    expect(noConfResult.type).toBe("NoConfidenceAction")
+    expect(noConfResult.cborHex).toBe("8203f6")
+
+    const paramChange = await client.callTool({
+      name: "governance_action_tools",
+      arguments: { action: "parameterChangeAction" }
+    })
+    const paramResult = parseToolJson<{ cborHex: string; type: string }>(paramChange)
+    expect(paramResult.type).toBe("ParameterChangeAction")
+    expect(paramResult.cborHex).toBeTruthy()
+
+    const noConfWithRef = await client.callTool({
+      name: "governance_action_tools",
+      arguments: {
+        action: "noConfidenceAction",
+        prevGovActionIdTransactionHashHex: "00".repeat(32),
+        prevGovActionIdIndex: 0
+      }
+    })
+    const noConfRefResult = parseToolJson<{ cborHex: string }>(noConfWithRef)
+    expect(noConfRefResult.cborHex).toContain("00".repeat(32))
+
+    const inspected = await client.callTool({
+      name: "governance_action_tools",
+      arguments: { action: "inspect", cborHex: "8106" }
+    })
+    expect(parseToolJson<{ type: string }>(inspected).type).toBe("InfoAction")
+
+    const fromCborGA = await client.callTool({
+      name: "governance_action_tools",
+      arguments: { action: "fromCbor", cborHex: "8203f6" }
+    })
+    expect(parseToolJson<{ type: string }>(fromCborGA).type).toBe("NoConfidenceAction")
+
+    const hardFork = await client.callTool({
+      name: "governance_action_tools",
+      arguments: {
+        action: "hardForkInitiationAction",
+        protocolVersionMajor: 10,
+        protocolVersionMinor: 0
+      }
+    })
+    expect(parseToolJson<{ type: string }>(hardFork).type).toBe("HardForkInitiationAction")
+
+    const newConst = await client.callTool({
+      name: "governance_action_tools",
+      arguments: {
+        action: "newConstitutionAction",
+        anchorUrl: "https://example.com",
+        anchorDataHashHex: "00".repeat(32)
+      }
+    })
+    expect(parseToolJson<{ type: string }>(newConst).type).toBe("NewConstitutionAction")
+
+    const updateComm = await client.callTool({
+      name: "governance_action_tools",
+      arguments: {
+        action: "updateCommitteeAction",
+        thresholdNumerator: 1,
+        thresholdDenominator: 2
+      }
+    })
+    expect(parseToolJson<{ type: string }>(updateComm).type).toBe("UpdateCommitteeAction")
+
+    const treasuryWd = await client.callTool({
+      name: "governance_action_tools",
+      arguments: {
+        action: "treasuryWithdrawalsAction",
+        withdrawals: [{
+          rewardAccountHex: "e0" + "00".repeat(28),
+          coin: "1000000"
+        }]
+      }
+    })
+    expect(parseToolJson<{ type: string }>(treasuryWd).type).toBe("TreasuryWithdrawalsAction")
+
+    // ── Proposal tools ────────────────────────────────────────────────────
+    const proposal = await client.callTool({
+      name: "proposal_tools",
+      arguments: {
+        action: "create",
+        deposit: "500000000",
+        rewardAccountHex: "e0" + "00".repeat(28),
+        governanceActionCborHex: "8106",
+        anchorUrl: "https://example.com/proposal",
+        anchorDataHashHex: "00".repeat(32)
+      }
+    })
+    const proposalResult = parseToolJson<{ cborHex: string }>(proposal)
+    expect(proposalResult.cborHex).toBeTruthy()
+
+    const ppFromCbor = await client.callTool({
+      name: "proposal_tools",
+      arguments: { action: "fromCbor", cborHex: proposalResult.cborHex }
+    })
+    const ppParsed = parseToolJson<{ deposit: string; anchorUrl: string }>(ppFromCbor)
+    expect(ppParsed.deposit).toBe("500000000")
+    expect(ppParsed.anchorUrl).toBe("https://example.com/proposal")
+
+    // ── Transaction output tools ──────────────────────────────────────────
+    const txOut = await client.callTool({
+      name: "tx_output_tools",
+      arguments: {
+        action: "create",
+        addressBech32: "addr_test1qz2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3jcu5d8ps7zex2k2xt3uqxgjqnnj83ws8lhrn648jjxtwq2ytjqp",
+        lovelace: "5000000"
+      }
+    })
+    const txOutResult = parseToolJson<{ cborHex: string }>(txOut)
+    expect(txOutResult.cborHex).toBeTruthy()
+
+    const txOutParsed = await client.callTool({
+      name: "tx_output_tools",
+      arguments: { action: "fromCbor", cborHex: txOutResult.cborHex }
+    })
+    expect(parseToolJson<{ type: string }>(txOutParsed).type).toBe("BabbageTransactionOutput")
+
+    // with datum hash
+    const txOutDatum = await client.callTool({
+      name: "tx_output_tools",
+      arguments: {
+        action: "create",
+        addressBech32: "addr_test1qz2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3jcu5d8ps7zex2k2xt3uqxgjqnnj83ws8lhrn648jjxtwq2ytjqp",
+        lovelace: "5000000",
+        datumHashHex: "00".repeat(32)
+      }
+    })
+    const txOutDatumResult = parseToolJson<{ cborHex: string }>(txOutDatum)
+    expect(txOutDatumResult.cborHex).toBeTruthy()
+
+    const txOutDatumParsed = await client.callTool({
+      name: "tx_output_tools",
+      arguments: { action: "fromCbor", cborHex: txOutDatumResult.cborHex }
+    })
+    expect(parseToolJson<{ datumHashHex: string }>(txOutDatumParsed).datumHashHex).toBe("00".repeat(32))
+
+    // with inline datum
+    const txOutInline = await client.callTool({
+      name: "tx_output_tools",
+      arguments: {
+        action: "create",
+        addressBech32: "addr_test1qz2fxv2umyhttkxyxp8x0dlpdt3k6cwng5pxj3jhsydzer3jcu5d8ps7zex2k2xt3uqxgjqnnj83ws8lhrn648jjxtwq2ytjqp",
+        lovelace: "5000000",
+        inlineDatumCborHex: "182a"
+      }
+    })
+    const txOutInlineResult = parseToolJson<{ cborHex: string }>(txOutInline)
+    expect(txOutInlineResult.cborHex).toBeTruthy()
+
+    const txOutInlineParsed = await client.callTool({
+      name: "tx_output_tools",
+      arguments: { action: "fromCbor", cborHex: txOutInlineResult.cborHex }
+    })
+    expect(parseToolJson<{ inlineDatumCborHex: string }>(txOutInlineParsed).inlineDatumCborHex).toBe("182a")
+
+    // ── Plutus data codec tools ───────────────────────────────────────────
+    const orEnc = await client.callTool({
+      name: "plutus_data_codec_tools",
+      arguments: {
+        action: "encodeOutputReference",
+        transactionIdHex: "00".repeat(32),
+        outputIndex: 0
+      }
+    })
+    const orEncResult = parseToolJson<{ cborHex: string }>(orEnc)
+    expect(orEncResult.cborHex).toBeTruthy()
+
+    const orDec = await client.callTool({
+      name: "plutus_data_codec_tools",
+      arguments: { action: "decodeOutputReference", cborHex: orEncResult.cborHex }
+    })
+    const orDecResult = parseToolJson<{ transactionIdHex: string; outputIndex: number }>(orDec)
+    expect(orDecResult.transactionIdHex).toBe("00".repeat(32))
+    expect(orDecResult.outputIndex).toBe(0)
+
+    const credEnc = await client.callTool({
+      name: "plutus_data_codec_tools",
+      arguments: {
+        action: "encodeCredential",
+        credentialType: "VerificationKey",
+        credentialHashHex: "00".repeat(28)
+      }
+    })
+    const credEncResult = parseToolJson<{ cborHex: string }>(credEnc)
+    expect(credEncResult.cborHex).toBeTruthy()
+
+    const credDec = await client.callTool({
+      name: "plutus_data_codec_tools",
+      arguments: { action: "decodeCredential", cborHex: credEncResult.cborHex }
+    })
+    const credDecResult = parseToolJson<{ type: string; hashHex: string }>(credDec)
+    expect(credDecResult.type).toBe("VerificationKey")
+    expect(credDecResult.hashHex).toBe("00".repeat(28))
+
+    const addrEnc = await client.callTool({
+      name: "plutus_data_codec_tools",
+      arguments: {
+        action: "encodeAddress",
+        credentialType: "VerificationKey",
+        credentialHashHex: "00".repeat(28),
+        stakeCredentialType: "VerificationKey",
+        stakeCredentialHashHex: "00".repeat(28)
+      }
+    })
+    const addrEncResult = parseToolJson<{ cborHex: string }>(addrEnc)
+    expect(addrEncResult.cborHex).toBeTruthy()
+
+    const addrDec = await client.callTool({
+      name: "plutus_data_codec_tools",
+      arguments: { action: "decodeAddress", cborHex: addrEncResult.cborHex }
+    })
+    const addrDecResult = parseToolJson<{
+      paymentCredentialType: string;
+      stakeCredentialType: string
+    }>(addrDec)
+    expect(addrDecResult.paymentCredentialType).toBe("VerificationKey")
+    expect(addrDecResult.stakeCredentialType).toBe("VerificationKey")
+
+    const lovEnc = await client.callTool({
+      name: "plutus_data_codec_tools",
+      arguments: { action: "encodeLovelace", lovelace: "42000000" }
+    })
+    const lovEncResult = parseToolJson<{ cborHex: string }>(lovEnc)
+    expect(lovEncResult.cborHex).toBeTruthy()
+
+    const lovDec = await client.callTool({
+      name: "plutus_data_codec_tools",
+      arguments: { action: "decodeLovelace", cborHex: lovEncResult.cborHex }
+    })
+    expect(parseToolJson<{ lovelace: string }>(lovDec).lovelace).toBe("42000000")
+
     // Verify all tools are listed
     const allTools = await client.listTools()
     const toolNames = allTools.tools.map((t) => t.name)
@@ -1228,6 +1728,17 @@ describe("evolution-mcp", () => {
     expect(toolNames).toContain("network_tools")
     expect(toolNames).toContain("data_construct")
     expect(toolNames).toContain("hash_tools")
+    expect(toolNames).toContain("mint_tools")
+    expect(toolNames).toContain("withdrawals_tools")
+    expect(toolNames).toContain("anchor_tools")
+    expect(toolNames).toContain("certificate_tools")
+    expect(toolNames).toContain("redeemer_tools")
+    expect(toolNames).toContain("voting_tools")
+    expect(toolNames).toContain("script_ref_tools")
+    expect(toolNames).toContain("governance_action_tools")
+    expect(toolNames).toContain("proposal_tools")
+    expect(toolNames).toContain("tx_output_tools")
+    expect(toolNames).toContain("plutus_data_codec_tools")
     expect(toolNames).toContain("devnet_create")
     expect(toolNames).toContain("devnet_start")
     expect(toolNames).toContain("devnet_stop")

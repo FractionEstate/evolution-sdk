@@ -54,6 +54,17 @@ node packages/evolution-mcp/dist/bin.js serve
 - Network ID conversion: map between network names (Mainnet/Preview/Preprod) and numeric IDs
 - Plutus Data construction: build constr/int/bytes/list/map values, pattern match, type checking
 - Transaction hashing: blake2b-256 hash of TransactionBody, raw CBOR bytes, or AuxiliaryData
+- Mint construction: build Mint values for minting/burning tokens, singleton/insert/remove/query operations, CBOR round-trip
+- Withdrawals: build reward withdrawal maps, singleton/add/remove/query/entries operations, CBOR round-trip
+- Governance Anchors: create Anchor values (URL + data hash) for proposals and certificates, CBOR round-trip
+- Certificate building: all pre-Conway and Conway-era certificates (stakeRegistration, stakeDeregistration, stakeDelegation, poolRetirement, regCert, unregCert, voteDelegCert, stakeVoteDelegCert, stakeRegDelegCert, voteRegDelegCert), CBOR round-trip
+- Redeemer/ExUnits: build spend/mint/cert/reward Redeemers with execution unit budgets, inspection, CBOR round-trip
+- VotingProcedures: build governance votes with DRep/StakePool/CC voters, yes/no/abstain voting, optional Anchor, CBOR round-trip
+- ScriptRef: build and parse CBOR tag-24 script references for transaction outputs
+- Governance Actions: create all CIP-1694 governance actions (InfoAction, NoConfidenceAction, ParameterChangeAction, TreasuryWithdrawalsAction, HardForkInitiationAction, NewConstitutionAction, UpdateCommitteeAction), GovActionId references, pattern matching, CBOR round-trip
+- Proposal Procedures: build governance ProposalProcedures combining deposit, reward account, governance action, and anchor; CBOR round-trip
+- Transaction Outputs: build Babbage-era transaction outputs with address, value, optional datum hash or inline datum, optional script reference; inspect and parse existing outputs
+- Plutus Data Codecs: structured encode/decode of typed Plutus data using SDK codecs — OutputReference, Credential, Address, Lovelace, and CIP-68 metadata; convert between typed representations and CBOR hex
 - Client session creation and attachment
 - Provider and wallet calls via client handles
 - Transaction builder sessions and build operations (with optional Plutus evaluator)
