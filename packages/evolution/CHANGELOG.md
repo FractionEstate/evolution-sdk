@@ -1,5 +1,13 @@
 # @evolution-sdk/evolution
 
+## 0.3.27
+
+### Patch Changes
+
+- [#203](https://github.com/IntersectMBO/evolution-sdk/pull/203) [`9701411`](https://github.com/IntersectMBO/evolution-sdk/commit/9701411a17a4a2ef4d9b6c3547d3314801ec616c) Thanks [@solidsnakedev](https://github.com/solidsnakedev)! - Fix `awaitTx` failing with a `ParseError` when Koios returns `asset_list` as a Haskell show-formatted string on collateral outputs. Add configurable `timeout` parameter to `awaitTx` across all providers (Koios, Blockfrost, Maestro, Kupmios).
+
+- [#204](https://github.com/IntersectMBO/evolution-sdk/pull/204) [`78e8fd7`](https://github.com/IntersectMBO/evolution-sdk/commit/78e8fd756021c69cecd810d3a95ed34af721ce56) Thanks [@solidsnakedev](https://github.com/solidsnakedev)! - Pass network to TxBuilder so testnet slot configs resolve correctly instead of always defaulting to Mainnet.
+
 ## 0.3.26
 
 ### Patch Changes
