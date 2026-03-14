@@ -9,7 +9,7 @@ The Evolution SDK ships an HTTP-based [Model Context Protocol](https://modelcont
 
 ## What is the MCP Server?
 
-`@evolution-sdk/mcp` wraps Evolution SDK functionality into **81 tools** that any MCP-compatible client can invoke over HTTP or stdio. The server starts automatically after installation and listens at `http://localhost:10000/mcp`, so AI assistants such as GitHub Copilot, Claude, Cursor, and other MCP clients can build, encode, sign, and submit Cardano transactions without writing code directly.
+`@evolution-sdk/mcp` wraps Evolution SDK functionality into **66 tools** that any MCP-compatible client can invoke over HTTP or stdio. The server starts automatically after installation and listens at `http://localhost:10000/mcp`, so AI assistants such as GitHub Copilot, Claude, Cursor, and other MCP clients can build, encode, sign, and submit Cardano transactions without writing code directly.
 
 The server supports two transports:
 - **HTTP** — StreamableHTTP server for network-accessible MCP (default)
@@ -63,103 +63,52 @@ node packages/evolution-mcp/dist/bin.js stdio
 
 ## Tool Categories
 
-The 81 tools are organized into the following categories:
+The 66 tools are organized into the following categories:
 
-### SDK Metadata & Introspection (3 tools)
-Query SDK version, enumerate exported modules, and retrieve server runtime statistics.
+### Meta / Introspection (3 tools)
+Query SDK version, enumerate exported modules, destroy session handles, and retrieve server runtime statistics.
 
-### Codecs (8 tools)
-Stateless CBOR encode/decode for Address, Assets, Transaction, TransactionWitnessSet, Script, Plutus Data, identifiers, and hashes. Plus a **generic typed-export codec** covering 40+ SDK modules with `fromCBORHex`/`toCBORHex`.
+### Codecs & Encoding (8 tools)
+Stateless CBOR encode/decode for Address, Assets, Plutus Data, identifiers, and hashes. A **generic typed-export codec** covering 40+ SDK modules (Transaction, WitnessSet, Script, Certificate, Value, etc.) with `fromCBORHex`/`toCBORHex`. Bech32/bytes encoding. Structured Plutus data codecs for OutputReference, Credential, Address, Lovelace, and CIP-68 metadata.
 
-### UPLC Evaluators (2 tools)
-Discover and select Plutus script evaluators from `@evolution-sdk/aiken-uplc` and `@evolution-sdk/scalus-uplc`.
+### Workflow (7 tools)
+End-to-end transaction lifecycle — create client sessions, attach providers and wallets (via unified `client_attach`), invoke provider queries, open transaction builders, build with optional Plutus evaluation, and sign/submit via unified `result_call`.
 
-### Time & Slots (1 tool)
-Convert between slots and Unix timestamps, get the current slot, and inspect per-network slot configuration.
+### Cryptography (5 tools)
+BIP-39 mnemonic generation and BIP32-Ed25519 key derivation, BIP32 HD key export/import, CIP-8/CIP-30 message signing and verification, Ed25519 signature encode/decode/validate.
 
-### Blueprints (2 tools)
-Parse CIP-57 Plutus blueprints and generate TypeScript bindings.
+### Governance & Certificates (10 tools)
+Anchors, Certificates (pre-Conway and Conway era), VotingProcedures, GovernanceActions (all CIP-1694 types), ProposalProcedures, DRep tools (creation, Bech32, CBOR), DRep certificates, Committee certificates, Constitution, and Protocol Parameter Updates.
 
-### Signing & Verification (2 tools)
-CIP-8/CIP-30 message signing and signature verification.
-
-### Fee Validation (1 tool)
-Validate transaction fees against protocol parameters.
-
-### CIP-68 Metadata (1 tool)
-Encode and decode CIP-68 metadata datums with token label constants.
-
-### Key Management (1 tool)
-Generate BIP-39 mnemonics and derive BIP32-Ed25519 keys for devnet and testing.
-
-### Native Scripts (1 tool)
-Build, parse, and analyze native scripts — extract key hashes, count required signers, convert to cardano-cli JSON.
-
-### UTxO Operations (1 tool)
-Create UTxO sets and perform union, intersection, difference, and size operations.
-
-### Low-Level Encoding (2 tools)
-Bech32 encode/decode and byte array codec with length validation.
-
-### Address Construction (1 tool)
-Build Base, Enterprise, and Reward addresses from credential hashes with network selection.
-
-### Credential Tools (1 tool)
-Create key-hash and script-hash credentials with CBOR encode/decode.
-
-### DRep Tools (1 tool)
-Create DReps from key/script hashes or special values, Bech32 round-trip, CBOR codec, and inspection.
-
-### Transaction Metadata (1 tool)
-Build typed metadata values (text, int, bytes, list, map) and Conway auxiliary data.
+### Transaction Primitives (9 tools)
+TransactionInput, TransactionOutput, TransactionBody construction, Mint for minting/burning tokens, Withdrawals for reward claiming, Redeemer/ExUnits building, Redeemers collection (Conway map format), ProposalProcedures collection, and ScriptRef tag-24 wrapping.
 
 ### Value & Assets (5 tools)
-Create ADA-only or multi-asset Values, arithmetic operations, Coin handling with overflow protection, and Mint construction for minting/burning tokens.
+Create ADA-only or multi-asset Values with arithmetic, Assets construction and merge, CIP-67 unit/label tools, Coin arithmetic with overflow protection, and Plutus script-level Value maps.
 
-### Network (1 tool)
-Map between network names (`Mainnet`/`Preview`/`Preprod`) and numeric IDs.
+### Scripts (4 tools)
+Native script building/analysis, Script union wrapping (NativeScript/PlutusV1-V3), UPLC script inspection and parameter application, and UPLC evaluator discovery.
 
-### Plutus Data (1 tool)
-Build `constr`, `int`, `bytes`, `list`, and `map` data values with pattern matching and type checking.
+### Address Types (3 tools)
+Build Base/Enterprise/Reward addresses from credentials, PointerAddress construction, and Byron-era address decoding.
 
-### Hashing (1 tool)
-Blake2b-256 hashing of TransactionBody, raw CBOR bytes, or AuxiliaryData.
+### Data & Hashing (2 tools)
+Plutus Data construction (`constr`/`int`/`bytes`/`list`/`map`) with pattern matching, and Blake2b-256 hashing.
 
-### Governance (8 tools)
-Anchors, Certificates (pre-Conway and Conway era), VotingProcedures, GovernanceActions (all CIP-1694 types), ProposalProcedures, DRep certificates, Committee certificates, and Constitution building.
+### Blueprints (2 tools)
+CIP-57 Plutus blueprint parsing and TypeScript codegen.
 
-### Transaction Building Blocks (5 tools)
-TransactionInput, TransactionOutput, TransactionBody construction, Redeemer/ExUnits building, and ScriptRef tag-24 wrapping.
+### Network & Time (2 tools)
+Network name/ID mapping and slot-to-Unix/Unix-to-slot conversion with per-network config.
 
-### Plutus Codecs (1 tool)
-Structured encode/decode of typed Plutus data — OutputReference, Credential, Address, Lovelace, CIP-68 metadata.
+### Metadata & Credentials (2 tools)
+Transaction metadata/AuxiliaryData construction and credential creation (key-hash/script-hash).
 
-### Pool Parameters (1 tool)
-Build full PoolParams for stake pool registration with relays, metadata, and validation helpers.
+### Other (3 tools)
+UTxO set operations, full PoolParams for stake pool registration, and fee validation.
 
-### Advanced Types (4 tools)
-PointerAddress, Plutus-level Value maps, Script union wrapping, and Protocol Parameter Updates with all optional fields.
-
-### BIP32 HD Keys (1 tool)
-Generate root keys from BIP39 entropy, derive via path strings, export/import 128-byte XPRV format.
-
-### Byron Address (1 tool)
-Decode and inspect legacy Byron-era Base58 addresses.
-
-### UPLC Scripts (1 tool)
-Inspect CBOR encoding level, decode to program AST, apply parameters, manage double/single encoding.
-
-### Ed25519 Signatures (1 tool)
-Encode, decode, and validate 64-byte Ed25519 signatures.
-
-### Collection Types (2 tools)
-Redeemers collection (Conway-era map format) and ProposalProcedures collection encoding.
-
-### Workflow Tools (7 tools)
-End-to-end transaction lifecycle — create client sessions, attach providers and wallets, open transaction builders, build with optional Plutus evaluation, sign, and submit.
-
-### Devnet Management (9 tools)
-Full Docker-based local Cardano network management — create, start, stop, remove clusters; query genesis UTxOs and epochs; execute container commands; inspect default configuration.
+### Devnet (1 tool)
+Docker-based local Cardano cluster management — create, start, stop, remove, query genesis UTxOs, query epochs, execute commands, and inspect default config.
 
 ## Usage with MCP Clients
 

@@ -33,63 +33,24 @@ node packages/evolution-mcp/dist/bin.js stdio
 - `EVOLUTION_MCP_SKIP_POSTINSTALL`: skip install-time bootstrap when set to `1`
 - `EVOLUTION_MCP_POSTINSTALL_STRICT`: fail install if bootstrap fails when set to `1`
 
-## Current Tool Surface
+## Tool Surface (66 tools)
 
-- SDK metadata, root export introspection, and server stats
-- Stateless codecs for Address, Assets, CBOR, Plutus Data, identifiers and hashes, Transaction, TransactionWitnessSet, and Script
-- Generic typed-export codec for any SDK module with `fromCBORHex`/`toCBORHex` (40+ modules including Certificate, Redeemer, Value, TransactionBody, and more)
-- UPLC evaluator info and selection (`@evolution-sdk/aiken-uplc`, `@evolution-sdk/scalus-uplc`)
-- Time/slot conversion: slot-to-Unix, Unix-to-slot, current slot, and per-network slot configuration
-- CIP-57 Plutus blueprint parsing and TypeScript codegen
-- CIP-8/CIP-30 message signing and verification
-- Fee validation against protocol parameters
-- CIP-68 metadata datum codec (encode, decode, token label constants)
-- Key generation and management: BIP-39 mnemonics, BIP32-Ed25519 derivation, public key and key hash computation (devnet/testing only)
-- Native script building and analysis: construct, parse, extract key hashes, count required signers, convert to cardano-cli JSON
-- UTxO set operations: create, union, intersection, difference, size
-- Low-level Bech32 encode/decode and byte array codec with length validation
-- Address construction: build Base, Enterprise, and Reward addresses from credential hashes with network selection
-- Credential tools: create key-hash and script-hash credentials, CBOR encode/decode
-- DRep tools: create DReps from key/script hashes or special values (alwaysAbstain, alwaysNoConfidence), Bech32 round-trip, CBOR codec, inspection
-- Transaction metadata: build typed metadata values (text, int, bytes, list, map), Conway auxiliary data construction and parsing
-- Value arithmetic: create ADA-only or multi-asset Values, add, subtract, compare, extract ADA and assets
-- Assets construction and arithmetic: build from lovelace/tokens/records, merge, subtract, coverage checks, unit listing, CBOR round-trip
-- CIP-67 unit and label tools: parse/build asset unit strings, encode/decode CIP-67 label prefixes
-- Coin arithmetic: safe ADA addition/subtraction with overflow checking, comparison, validation
-- Network ID conversion: map between network names (Mainnet/Preview/Preprod) and numeric IDs
-- Plutus Data construction: build constr/int/bytes/list/map values, pattern match, type checking
-- Transaction hashing: blake2b-256 hash of TransactionBody, raw CBOR bytes, or AuxiliaryData
-- Mint construction: build Mint values for minting/burning tokens, singleton/insert/remove/query operations, CBOR round-trip
-- Withdrawals: build reward withdrawal maps, singleton/add/remove/query/entries operations, CBOR round-trip
-- Governance Anchors: create Anchor values (URL + data hash) for proposals and certificates, CBOR round-trip
-- Certificate building: all pre-Conway and Conway-era certificates (stakeRegistration, stakeDeregistration, stakeDelegation, poolRetirement, regCert, unregCert, voteDelegCert, stakeVoteDelegCert, stakeRegDelegCert, voteRegDelegCert), CBOR round-trip
-- Redeemer/ExUnits: build spend/mint/cert/reward Redeemers with execution unit budgets, inspection, CBOR round-trip
-- VotingProcedures: build governance votes with DRep/StakePool/CC voters, yes/no/abstain voting, optional Anchor, CBOR round-trip
-- ScriptRef: build and parse CBOR tag-24 script references for transaction outputs
-- Governance Actions: create all CIP-1694 governance actions (InfoAction, NoConfidenceAction, ParameterChangeAction, TreasuryWithdrawalsAction, HardForkInitiationAction, NewConstitutionAction, UpdateCommitteeAction), GovActionId references, pattern matching, CBOR round-trip
-- Proposal Procedures: build governance ProposalProcedures combining deposit, reward account, governance action, and anchor; CBOR round-trip
-- Transaction Outputs: build Babbage-era transaction outputs with address, value, optional datum hash or inline datum, optional script reference; inspect and parse existing outputs
-- Plutus Data Codecs: structured encode/decode of typed Plutus data using SDK codecs — OutputReference, Credential, Address, Lovelace, and CIP-68 metadata; convert between typed representations and CBOR hex
-- Pool Parameters: build full PoolParams for stake pool registration (operator, VRF key, pledge, cost, margin, relays, metadata), create SingleHostAddr/SingleHostName/MultiHostName relays, PoolRegistration/PoolRetirement certificates, validation helpers (hasMinimumCost, hasValidMargin), CBOR round-trip
-- DRep Certificates: build governance DRep certificates — RegDrepCert (register with deposit + optional anchor), UnregDrepCert (unregister), UpdateDrepCert (update anchor)
-- Committee Certificates: build constitutional committee certificates — AuthCommitteeHotCert (authorize hot key) and ResignCommitteeColdCert (resign with optional anchor)
-- Constitution: build and encode/decode Constitution objects (anchor URL + optional guardrail script hash) for NewConstitutionAction governance proposals
-- Protocol Parameter Updates: build ProtocolParamUpdate with all optional fields — fee params, size limits, deposits, execution units, ExUnitPrices, DRepVotingThresholds (10 thresholds), PoolVotingThresholds (5 thresholds), governance params; CBOR round-trip
-- Transaction Inputs: build and inspect TransactionInput references (txHash + output index), encode/decode CBOR
-- Transaction Body: build full TransactionBody with inputs, outputs, fee, and all optional fields (ttl, certificates, withdrawals, mint, collateral, voting procedures, proposals, validity interval, network ID, etc.); CBOR round-trip
-- Pointer Address: build Pointer (slot/txIndex/certIndex) and PointerAddress (slot-based stake credential reference), encode to hex, decode from hex
-- Plutus Value: encode/decode Plutus script-level Value maps (Map<PolicyId, Map<AssetName, Integer>>), build ADA-only or multi-asset values, CBOR round-trip
-- Script: wrap NativeScript or Plutus scripts into tagged Script union type ([0]=NativeScript, [1]=PlutusV1, [2]=PlutusV2, [3]=PlutusV3), compute script hashes via ScriptHash.fromScript
-- BIP32 HD Key Derivation: generate root keys from BIP39 entropy, derive payment/stake keys via BIP32 path strings (m/1852'/1815'/0'/0/0), convert to Ed25519 private/public keys, export/import 128-byte XPRV format
-- Byron Address: decode and inspect legacy Byron-era Cardano addresses (Base58 encoded, used by exchanges and early wallets)
-- UPLC Scripts: inspect Untyped Plutus Lambda Calculus scripts — detect CBOR encoding level, decode to program AST, apply parameters to parameterized scripts, manage double/single CBOR encoding
-- Ed25519 Signatures: encode/decode/validate Ed25519 signatures (64-byte), convert between hex and bytes representations
-- Redeemers Collection: build and encode/decode Redeemers collections (Conway-era map format), combine multiple Redeemer entries with spend/mint/cert/reward/vote/propose tags
-- Proposal Procedures Collection: encode/decode ProposalProcedures collections for Conway-era governance transactions
-- Client session creation and attachment
-- Provider and wallet calls via client handles
-- Transaction builder sessions and build operations (with optional Plutus evaluator)
-- Sign and submit flows via result handles
-- Local Cardano devnet management via Docker (`@evolution-sdk/devnet`): create, start, stop, remove clusters; query genesis UTxOs and epochs; execute container commands; inspect default configs
+| Category | Count | Tools |
+|----------|-------|-------|
+| Meta / Introspection | 3 | `sdk_info`, `sdk_exports`, `destroy_handle` |
+| Codecs & Encoding | 8 | `address_codec`, `assets_codec`, `cbor_codec`, `data_codec`, `identifier_codec`, `typed_export_codec`, `encoding_codec`, `plutus_data_codec_tools` |
+| Workflow | 7 | `create_client`, `client_attach`, `client_invoke`, `tx_builder_create`, `tx_builder_apply`, `tx_builder_build`, `result_call` |
+| Cryptography | 5 | `key_generate`, `bip32_key_tools`, `message_sign`, `message_verify`, `ed25519_signature_tools` |
+| Governance & Certificates | 10 | `anchor_tools`, `certificate_tools`, `voting_tools`, `governance_action_tools`, `proposal_tools`, `drep_tools`, `drep_cert_tools`, `committee_cert_tools`, `constitution_tools`, `protocol_param_update_tools` |
+| Transaction Primitives | 9 | `transaction_input_tools`, `transaction_body_tools`, `tx_output_tools`, `mint_tools`, `withdrawals_tools`, `redeemer_tools`, `redeemers_collection_tools`, `proposal_procedures_collection_tools`, `script_ref_tools` |
+| Value & Assets | 5 | `value_tools`, `assets_tools`, `unit_tools`, `coin_tools`, `plutus_value_tools` |
+| Scripts | 4 | `native_script_tools`, `script_tools`, `uplc_tools`, `evaluator_info` |
+| Address Types | 3 | `address_build`, `pointer_address_tools`, `byron_address_tools` |
+| Data & Hashing | 2 | `data_construct`, `hash_tools` |
+| Blueprints | 2 | `blueprint_parse`, `blueprint_codegen` |
+| Network & Time | 2 | `network_tools`, `time_slot_convert` |
+| Metadata & Credentials | 2 | `metadata_tools`, `credential_tools` |
+| Other | 3 | `utxo_tools`, `pool_params_tools`, `fee_validate` |
+| Devnet | 1 | `devnet` |
 
 This package covers all four workspace packages: `@evolution-sdk/evolution`, `@evolution-sdk/aiken-uplc`, `@evolution-sdk/scalus-uplc`, and `@evolution-sdk/devnet`.
