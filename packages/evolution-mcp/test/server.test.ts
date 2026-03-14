@@ -378,10 +378,10 @@ describe("evolution-mcp", () => {
     expect(evaluatorInfo.evaluators[1]?.name).toBe("scalus")
     expect(evaluatorInfo.evaluators[1]?.available).toBe(true)
 
-    // devnet_config_defaults: get defaults
+    // devnet: config_defaults action
     const devnetDefaultsResult = await client.callTool({
-      name: "devnet_config_defaults",
-      arguments: { section: "all" }
+      name: "devnet",
+      arguments: { action: "config_defaults", section: "all" }
     })
 
     const devnetDefaults = parseToolJson<{
@@ -2223,15 +2223,7 @@ describe("evolution-mcp", () => {
     expect(toolNames).toContain("ed25519_signature_tools")
     expect(toolNames).toContain("redeemers_collection_tools")
     expect(toolNames).toContain("proposal_procedures_collection_tools")
-    expect(toolNames).toContain("devnet_create")
-    expect(toolNames).toContain("devnet_start")
-    expect(toolNames).toContain("devnet_stop")
-    expect(toolNames).toContain("devnet_remove")
-    expect(toolNames).toContain("devnet_status")
-    expect(toolNames).toContain("devnet_exec")
-    expect(toolNames).toContain("devnet_genesis_utxos")
-    expect(toolNames).toContain("devnet_query_epoch")
-    expect(toolNames).toContain("devnet_config_defaults")
+    expect(toolNames).toContain("devnet")
 
     await client.close()
     await transport.close()

@@ -26,6 +26,15 @@ export interface StartedHttpServer {
 
 export const startHttpServer = async (overrides: Partial<EvolutionMcpConfig> = {}): Promise<StartedHttpServer> => {
   const config = resolveConfig(overrides)
+  const mcpServer = createEvolutionMcpServer()
+
+  // McpServer supports one transport at a time; serialize MCP requests
+  let pending: Promise<void> = Promise.resolve()
+  const enqueue = (fn: () => Promise<void>): Promise<void> => {
+    const next = pending.then(fn, fn)
+    pending = next
+    return next
+  }
 
   const server = createServer(async (req, res) => {
     if (!req.url) {
@@ -55,30 +64,30 @@ export const startHttpServer = async (overrides: Partial<EvolutionMcpConfig> = {
         return
       }
 
-      const transport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: undefined,
-        enableJsonResponse: true
-      })
-      const mcpServer = createEvolutionMcpServer()
+      await enqueue(async () => {
+        const transport = new StreamableHTTPServerTransport({
+          sessionIdGenerator: undefined,
+          enableJsonResponse: true
+        })
 
-      try {
-        await mcpServer.connect(transport)
-        await transport.handleRequest(req, res)
-      } catch (error) {
-        if (!res.headersSent) {
-          respondJson(res, 500, {
-            jsonrpc: "2.0",
-            error: {
-              code: -32_603,
-              message: error instanceof Error ? error.message : "Internal server error"
-            },
-            id: null
-          })
+        try {
+          await mcpServer.connect(transport)
+          await transport.handleRequest(req, res)
+        } catch (error) {
+          if (!res.headersSent) {
+            respondJson(res, 500, {
+              jsonrpc: "2.0",
+              error: {
+                code: -32_603,
+                message: error instanceof Error ? error.message : "Internal server error"
+              },
+              id: null
+            })
+          }
+        } finally {
+          await transport.close().catch(() => undefined)
         }
-      } finally {
-        await transport.close().catch(() => undefined)
-        await mcpServer.close().catch(() => undefined)
-      }
+      })
 
       return
     }

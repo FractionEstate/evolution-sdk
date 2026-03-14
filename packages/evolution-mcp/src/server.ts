@@ -877,15 +877,7 @@ const createServerResourceContents = () => ({
         "ed25519_signature_tools",
         "redeemers_collection_tools",
         "proposal_procedures_collection_tools",
-        "devnet_create",
-        "devnet_start",
-        "devnet_stop",
-        "devnet_remove",
-        "devnet_status",
-        "devnet_exec",
-        "devnet_genesis_utxos",
-        "devnet_query_epoch",
-        "devnet_config_defaults"
+        "devnet"
       ],
       notes: [
         "Handles are opaque server-side session identifiers.",
@@ -923,7 +915,7 @@ export const createEvolutionMcpServer = (): McpServer => {
   server.registerTool(
     "sdk_info",
     {
-      description: "Return Evolution MCP server metadata, session counts, and high-level tool groups"
+      description: "Server metadata, session counts, and tool groups"
     },
     async () => {
       const result = {
@@ -948,7 +940,7 @@ export const createEvolutionMcpServer = (): McpServer => {
   server.registerTool(
     "sdk_exports",
     {
-      description: "List the public @evolution-sdk/evolution root exports or inspect the members of one export",
+      description: "List SDK root exports or inspect members of one export",
       inputSchema: z.object({
         exportName: ExportNameSchema.optional()
       })
@@ -971,7 +963,7 @@ export const createEvolutionMcpServer = (): McpServer => {
   server.registerTool(
     "destroy_handle",
     {
-      description: "Delete a previously created MCP session handle",
+      description: "Delete a session handle",
       inputSchema: z.object({ handle: z.string() })
     },
     async ({ handle }) => {
@@ -984,7 +976,7 @@ export const createEvolutionMcpServer = (): McpServer => {
   server.registerTool(
     "address_codec",
     {
-      description: "Inspect or convert public Address values using the Evolution Address module",
+      description: "Inspect or convert Cardano addresses (bech32/hex)",
       inputSchema: z.object({
         action: z.enum(["inspect", "toBech32", "toHex"]),
         value: z.string()
@@ -1019,7 +1011,7 @@ export const createEvolutionMcpServer = (): McpServer => {
   server.registerTool(
     "assets_codec",
     {
-      description: "Inspect and combine public Assets values using record-shaped inputs",
+      description: "Inspect and combine Assets values",
       inputSchema: z.object({
         action: z.enum(["inspect", "merge", "subtract", "negate", "addByHex"]),
         record: AssetRecordSchema.optional(),
@@ -1093,7 +1085,7 @@ export const createEvolutionMcpServer = (): McpServer => {
   server.registerTool(
     "cbor_codec",
     {
-      description: "Decode, inspect, compare, and encode public CBOR values using an MCP-friendly tagged JSON shape",
+      description: "Decode, encode, compare CBOR values",
       inputSchema: z.object({
         action: z.enum(["decode", "decodeWithFormat", "encode", "reencode", "equals"]),
         cborHex: z.string().optional(),
@@ -1166,7 +1158,7 @@ export const createEvolutionMcpServer = (): McpServer => {
   server.registerTool(
     "data_codec",
     {
-      description: "Decode, encode, hash, and compare public Plutus Data values using an MCP-friendly tagged JSON shape",
+      description: "Decode, encode, hash Plutus Data values",
       inputSchema: z.object({
         action: z.enum(["decode", "encode", "reencode", "hashData", "equals"]),
         dataCborHex: z.string().optional(),
@@ -1245,7 +1237,7 @@ export const createEvolutionMcpServer = (): McpServer => {
   server.registerTool(
     "identifier_codec",
     {
-      description: "Inspect and convert public identifier exports including hashes, credentials, and DReps",
+      description: "Inspect and convert hashes, credentials, keys",
       inputSchema: z.object({
         kind: IdentifierKindSchema,
         action: z.enum(["decode", "encode", "equals"]),
@@ -1353,7 +1345,7 @@ export const createEvolutionMcpServer = (): McpServer => {
   server.registerTool(
     "transaction_codec",
     {
-      description: "Decode, re-encode, or add witnesses to public Transaction CBOR hex values",
+      description: "Decode, re-encode, or add witnesses to Transaction CBOR",
       inputSchema: z.object({
         action: z.enum(["decode", "reencode", "addVKeyWitnessesHex"]),
         transactionCborHex: z.string(),
@@ -1389,7 +1381,7 @@ export const createEvolutionMcpServer = (): McpServer => {
   server.registerTool(
     "witness_set_codec",
     {
-      description: "Decode or re-encode public TransactionWitnessSet CBOR hex values",
+      description: "Decode or re-encode TransactionWitnessSet CBOR",
       inputSchema: z.object({
         action: z.enum(["decode", "reencode"]),
         witnessSetCborHex: z.string()
@@ -1413,7 +1405,7 @@ export const createEvolutionMcpServer = (): McpServer => {
   server.registerTool(
     "script_codec",
     {
-      description: "Decode or re-encode public Script CBOR hex values",
+      description: "Decode or re-encode Script CBOR",
       inputSchema: z.object({
         action: z.enum(["decode", "reencode"]),
         scriptCborHex: z.string()
@@ -1437,7 +1429,7 @@ export const createEvolutionMcpServer = (): McpServer => {
   server.registerTool(
     "create_client",
     {
-      description: "Create an Evolution client session from provider and wallet configuration",
+      description: "Create an Evolution client session",
       inputSchema: z.object({
         network: NetworkSchema.optional(),
         provider: ProviderConfigSchema.optional(),
@@ -1473,7 +1465,7 @@ export const createEvolutionMcpServer = (): McpServer => {
   server.registerTool(
     "client_attach_provider",
     {
-      description: "Attach a provider to an existing client session that supports attachProvider",
+      description: "Attach a provider to a client session",
       inputSchema: z.object({
         clientHandle: z.string(),
         provider: ProviderConfigSchema
@@ -1497,7 +1489,7 @@ export const createEvolutionMcpServer = (): McpServer => {
   server.registerTool(
     "client_attach_wallet",
     {
-      description: "Attach a wallet to an existing client session that supports attachWallet",
+      description: "Attach a wallet to a client session",
       inputSchema: z.object({
         clientHandle: z.string(),
         wallet: WalletConfigSchema
@@ -1521,7 +1513,7 @@ export const createEvolutionMcpServer = (): McpServer => {
   server.registerTool(
     "client_invoke",
     {
-      description: "Invoke a supported client-level wallet or provider method using a client handle",
+      description: "Invoke a wallet or provider method on a client",
       inputSchema: z.object({
         clientHandle: z.string(),
         method: z.enum([
@@ -1645,7 +1637,7 @@ export const createEvolutionMcpServer = (): McpServer => {
   server.registerTool(
     "tx_builder_create",
     {
-      description: "Create a transaction builder session from a client handle",
+      description: "Create a transaction builder from a client handle",
       inputSchema: z.object({
         clientHandle: z.string(),
         availableUtxos: z.array(UtxoInputSchema).optional()
@@ -1668,7 +1660,7 @@ export const createEvolutionMcpServer = (): McpServer => {
   server.registerTool(
     "tx_builder_apply",
     {
-      description: "Apply a supported transaction builder operation to a builder handle",
+      description: "Apply a builder operation to a tx builder handle",
       inputSchema: z.object({
         builderHandle: z.string(),
         operation: z.enum(["payToAddress", "collectFrom", "readFrom", "mintAssets", "setValidity", "sendAll"]),
@@ -1738,10 +1730,10 @@ export const createEvolutionMcpServer = (): McpServer => {
   server.registerTool(
     "tx_builder_build",
     {
-      description: "Build a transaction from a builder handle and return a result handle",
+      description: "Build a transaction from a builder handle",
       inputSchema: z.object({
         builderHandle: z.string(),
-        evaluator: EvaluatorSchema.describe("UPLC evaluator for Plutus scripts: 'aiken' or 'scalus'"),
+        evaluator: EvaluatorSchema,
         buildOptions: z
           .object({
             changeAddress: z.string().optional(),
@@ -1808,7 +1800,7 @@ export const createEvolutionMcpServer = (): McpServer => {
   server.registerTool(
     "sign_result_call",
     {
-      description: "Invoke a supported SignBuilder or TransactionResult method on a result handle",
+      description: "Sign or inspect a transaction result handle",
       inputSchema: z.object({
         resultHandle: z.string(),
         action: z.enum([
@@ -1912,7 +1904,7 @@ export const createEvolutionMcpServer = (): McpServer => {
   server.registerTool(
     "submit_builder_call",
     {
-      description: "Inspect or submit a SubmitBuilder handle",
+      description: "Submit a signed transaction",
       inputSchema: z.object({
         submitHandle: z.string(),
         action: z.enum(["getWitnessSet", "submit"])
@@ -1979,17 +1971,17 @@ export const createEvolutionMcpServer = (): McpServer => {
         "'getConfig' returns the slot configuration for a network.",
       inputSchema: z.object({
         action: z.enum(["slotToUnix", "unixToSlot", "currentSlot", "getConfig"]),
-        network: SlotConfigNetworkSchema.optional().describe("Network name (default: Mainnet)"),
-        slot: z.string().optional().describe("Slot number as string (for slotToUnix)"),
-        unixTime: z.string().optional().describe("Unix time in milliseconds as string (for unixToSlot)"),
+        network: SlotConfigNetworkSchema.optional(),
+        slot: z.string().optional(),
+        unixTime: z.string().optional(),
         customConfig: z
           .object({
-            zeroTime: z.string().describe("Zero time in ms as string (bigint)"),
-            zeroSlot: z.string().describe("Zero slot as string (bigint)"),
-            slotLength: z.number().positive().describe("Slot length in ms")
+            zeroTime: z.string(),
+            zeroSlot: z.string(),
+            slotLength: z.number().positive()
           })
           .optional()
-          .describe("Custom slot config (overrides network)")
+          
       })
     },
     async ({ action, network, slot, unixTime, customConfig }) => {
@@ -2046,7 +2038,7 @@ export const createEvolutionMcpServer = (): McpServer => {
         "Parse a CIP-57 Plutus blueprint JSON. Returns the preamble, validator list " +
         "(with compiled code hashes, datum/redeemer types), and definition count.",
       inputSchema: z.object({
-        blueprintJson: z.string().describe("The blueprint JSON string")
+        blueprintJson: z.string()
       })
     },
     async ({ blueprintJson }) => {
@@ -2076,7 +2068,7 @@ export const createEvolutionMcpServer = (): McpServer => {
       description:
         "Generate TypeScript code from a CIP-57 Plutus blueprint JSON. Uses @evolution-sdk/evolution Blueprint codegen.",
       inputSchema: z.object({
-        blueprintJson: z.string().describe("The blueprint JSON string"),
+        blueprintJson: z.string(),
         config: z
           .object({
             optionStyle: z.enum(["NullOr", "Option"]).optional(),
@@ -2087,7 +2079,7 @@ export const createEvolutionMcpServer = (): McpServer => {
             indent: z.string().optional()
           })
           .optional()
-          .describe("Optional codegen configuration overrides")
+          
       })
     },
     async ({ blueprintJson, config }) => {
@@ -2111,9 +2103,9 @@ export const createEvolutionMcpServer = (): McpServer => {
         "Sign arbitrary data with a private key following CIP-8 / CIP-30 message signing. " +
         "Returns a COSE_Sign1 signed message. Suitable for devnet/testing use.",
       inputSchema: z.object({
-        addressHex: z.string().describe("Address as hex string"),
-        payload: z.string().describe("Payload as hex string"),
-        privateKeyHex: z.string().describe("Ed25519 private key as hex string")
+        addressHex: z.string(),
+        payload: z.string(),
+        privateKeyHex: z.string()
       })
     },
     async ({ addressHex, payload, privateKeyHex }) => {
@@ -2132,12 +2124,12 @@ export const createEvolutionMcpServer = (): McpServer => {
       description:
         "Verify a CIP-8 / CIP-30 signed message. Returns whether the signature is valid.",
       inputSchema: z.object({
-        addressHex: z.string().describe("Address as hex string"),
-        keyHash: z.string().describe("Key hash (hex) used when signing"),
-        payload: z.string().describe("Original payload as hex string"),
+        addressHex: z.string(),
+        keyHash: z.string(),
+        payload: z.string(),
         signedMessage: z.object({
-          signature: z.string().describe("COSE_Sign1 signature hex"),
-          key: z.string().describe("COSE_Key hex")
+          signature: z.string(),
+          key: z.string()
         })
       })
     },
@@ -2161,10 +2153,10 @@ export const createEvolutionMcpServer = (): McpServer => {
         "Validate whether a transaction's fee meets the minimum required fee. " +
         "Returns isValid, actualFee, minRequiredFee, txSizeBytes, and difference.",
       inputSchema: z.object({
-        transactionCborHex: z.string().describe("Full transaction CBOR hex"),
-        minFeeCoefficient: z.string().describe("Protocol param minFeeCoefficient (bigint as string)"),
-        minFeeConstant: z.string().describe("Protocol param minFeeConstant (bigint as string)"),
-        fakeWitnessSetCborHex: z.string().optional().describe("Optional fake witness set CBOR hex for size estimation")
+        transactionCborHex: z.string(),
+        minFeeCoefficient: z.string(),
+        minFeeConstant: z.string(),
+        fakeWitnessSetCborHex: z.string().optional()
       })
     },
     async ({ transactionCborHex, minFeeCoefficient, minFeeConstant, fakeWitnessSetCborHex }) => {
@@ -2202,15 +2194,15 @@ export const createEvolutionMcpServer = (): McpServer => {
         "(REFERENCE=100, NFT=222, FT=333, RFT=444).",
       inputSchema: z.object({
         action: z.enum(["decode", "encode", "tokenLabels"]),
-        cborHex: z.string().optional().describe("CBOR hex of CIP-68 datum (for decode)"),
+        cborHex: z.string().optional(),
         datum: z
           .object({
-            metadata: z.any().describe("Metadata as PlutusData JSON"),
-            version: z.number().int().describe("Version integer"),
-            extra: z.array(z.any()).optional().describe("Extra PlutusData array (default: [])")
+            metadata: z.any(),
+            version: z.number().int(),
+            extra: z.array(z.any()).optional()
           })
           .optional()
-          .describe("CIP-68 datum fields (for encode)")
+          
       })
     },
     async ({ action, cborHex, datum }) => {
@@ -2262,13 +2254,13 @@ export const createEvolutionMcpServer = (): McpServer => {
         "'keyHash' computes the Ed25519 key hash (blake2b-224) from a private key.",
       inputSchema: z.object({
         action: z.enum(["generateMnemonic", "validateMnemonic", "fromMnemonicCardano", "toPublicKey", "keyHash"]),
-        mnemonic: z.string().optional().describe("BIP-39 mnemonic phrase (for validate/derive)"),
-        mnemonicStrength: z.enum(["128", "160", "192", "224", "256"]).optional().describe("Mnemonic strength in bits (default: 256)"),
-        account: z.number().int().nonnegative().optional().describe("Account index (default: 0)"),
-        role: z.enum(["0", "2"]).optional().describe("Role: 0 = payment, 2 = staking (default: 0)"),
-        index: z.number().int().nonnegative().optional().describe("Address index (default: 0)"),
-        password: z.string().optional().describe("Optional BIP-39 passphrase"),
-        privateKeyHex: z.string().optional().describe("Private key hex (for toPublicKey/keyHash)")
+        mnemonic: z.string().optional(),
+        mnemonicStrength: z.enum(["128", "160", "192", "224", "256"]).optional(),
+        account: z.number().int().nonnegative().optional(),
+        role: z.enum(["0", "2"]).optional(),
+        index: z.number().int().nonnegative().optional(),
+        password: z.string().optional(),
+        privateKeyHex: z.string().optional()
       })
     },
     async ({ action, mnemonic, mnemonicStrength, account, role, index, password, privateKeyHex }) => {
@@ -2332,14 +2324,14 @@ export const createEvolutionMcpServer = (): McpServer => {
 
   const NativeScriptVariantSchema: z.ZodType<any> = z.lazy(() =>
     z.discriminatedUnion("tag", [
-      z.object({ tag: z.literal("pubKey"), keyHashHex: z.string().describe("Ed25519 key hash as hex (56 chars)") }),
-      z.object({ tag: z.literal("invalidBefore"), slot: z.string().describe("Slot number as string (bigint)") }),
-      z.object({ tag: z.literal("invalidHereafter"), slot: z.string().describe("Slot number as string (bigint)") }),
+      z.object({ tag: z.literal("pubKey"), keyHashHex: z.string() }),
+      z.object({ tag: z.literal("invalidBefore"), slot: z.string() }),
+      z.object({ tag: z.literal("invalidHereafter"), slot: z.string() }),
       z.object({ tag: z.literal("all"), scripts: z.array(NativeScriptVariantSchema) }),
       z.object({ tag: z.literal("any"), scripts: z.array(NativeScriptVariantSchema) }),
       z.object({
         tag: z.literal("nOfK"),
-        required: z.string().describe("Required count as string (bigint)"),
+        required: z.string(),
         scripts: z.array(NativeScriptVariantSchema)
       })
     ])
@@ -2398,8 +2390,8 @@ export const createEvolutionMcpServer = (): McpServer => {
         "'countRequiredSigners' returns the minimum number of signers needed.",
       inputSchema: z.object({
         action: z.enum(["build", "parseCbor", "toJson", "extractKeyHashes", "countRequiredSigners"]),
-        spec: NativeScriptVariantSchema.optional().describe("Script specification (for build)"),
-        cborHex: z.string().optional().describe("CBOR hex of a native script (for parse/toJson/extract/count)")
+        spec: NativeScriptVariantSchema.optional(),
+        cborHex: z.string().optional()
       })
     },
     async ({ action, spec, cborHex }) => {
@@ -2452,10 +2444,10 @@ export const createEvolutionMcpServer = (): McpServer => {
   // ── UTxO set tools ──────────────────────────────────────────────────────
 
   const UtxoItemSchema = z.object({
-    transactionId: z.string().describe("Transaction hash hex (64 chars)"),
-    index: z.number().int().nonnegative().describe("Output index"),
-    address: z.string().describe("Address (bech32)"),
-    assets: z.record(z.string(), z.string()).describe("Asset map: { lovelace: '...', policyId.assetName: '...' }")
+    transactionId: z.string(),
+    index: z.number().int().nonnegative(),
+    address: z.string(),
+    assets: z.record(z.string(), z.string())
   })
 
   const parseUtxoItem = (item: any): Evolution.UTxO.UTxO => {
@@ -2502,9 +2494,9 @@ export const createEvolutionMcpServer = (): McpServer => {
         "check membership, and get size. Useful for preparing coin selection and transaction building.",
       inputSchema: z.object({
         action: z.enum(["create", "union", "intersection", "difference", "size"]),
-        utxos: z.array(UtxoItemSchema).optional().describe("UTxO items (for create)"),
-        left: z.array(UtxoItemSchema).optional().describe("Left UTxO set (for set operations)"),
-        right: z.array(UtxoItemSchema).optional().describe("Right UTxO set (for set operations)")
+        utxos: z.array(UtxoItemSchema).optional(),
+        left: z.array(UtxoItemSchema).optional(),
+        right: z.array(UtxoItemSchema).optional()
       })
     },
     async ({ action, utxos, left, right }) => {
@@ -2560,9 +2552,9 @@ export const createEvolutionMcpServer = (): McpServer => {
         "'decode' extracts the prefix and hex data from a bech32 string.",
       inputSchema: z.object({
         action: z.enum(["encode", "decode"]),
-        bech32: z.string().optional().describe("Bech32 string to decode"),
-        hex: z.string().optional().describe("Hex data to encode"),
-        prefix: z.string().optional().describe("Human-readable prefix (for encode)")
+        bech32: z.string().optional(),
+        hex: z.string().optional(),
+        prefix: z.string().optional()
       })
     },
     async ({ action, bech32, hex, prefix }) => {
@@ -2602,10 +2594,10 @@ export const createEvolutionMcpServer = (): McpServer => {
         "(4, 16, 28, 29, 32, 57, 64, 80, 96, 128, 448 bytes).",
       inputSchema: z.object({
         action: z.enum(["fromHex", "validate", "equals"]),
-        hex: z.string().optional().describe("Hex string"),
-        expectedLength: z.number().int().positive().optional().describe("Expected byte length to validate against"),
-        leftHex: z.string().optional().describe("Left hex string (for equals)"),
-        rightHex: z.string().optional().describe("Right hex string (for equals)")
+        hex: z.string().optional(),
+        expectedLength: z.number().int().positive().optional(),
+        leftHex: z.string().optional(),
+        rightHex: z.string().optional()
       })
     },
     async ({ action, hex, expectedLength, leftHex, rightHex }) => {
@@ -2661,11 +2653,11 @@ export const createEvolutionMcpServer = (): McpServer => {
         "Returns the address as bech32 and hex.",
       inputSchema: z.object({
         type: z.enum(["base", "enterprise", "reward"]),
-        networkId: z.number().int().min(0).max(1).describe("0 = testnet, 1 = mainnet"),
-        paymentHash: z.string().optional().describe("Payment credential hash hex (56 chars)"),
-        paymentType: z.enum(["key", "script"]).optional().describe("Payment credential type (default: key)"),
-        stakeHash: z.string().optional().describe("Stake credential hash hex (56 chars)"),
-        stakeType: z.enum(["key", "script"]).optional().describe("Stake credential type (default: key)")
+        networkId: z.number().int().min(0).max(1),
+        paymentHash: z.string().optional(),
+        paymentType: z.enum(["key", "script"]).optional(),
+        stakeHash: z.string().optional(),
+        stakeType: z.enum(["key", "script"]).optional()
       })
     },
     async ({ type, networkId, paymentHash, paymentType, stakeHash, stakeType }) => {
@@ -2748,13 +2740,13 @@ export const createEvolutionMcpServer = (): McpServer => {
         entries: z
           .array(
             z.object({
-              label: z.string().describe("Metadata label as string (bigint)"),
-              value: z.any().describe("Metadata value: string for text, number for int, or {type, value} for explicit types")
+              label: z.string(),
+              value: z.any()
             })
           )
           .optional()
-          .describe("Metadata entries: label→value pairs (for build/buildAuxiliaryData)"),
-        cborHex: z.string().optional().describe("CBOR hex to decode (for parseCbor/parseAuxiliaryData)")
+          ,
+        cborHex: z.string().optional()
       })
     },
     async ({ action, entries, cborHex }) => {
@@ -2849,9 +2841,9 @@ export const createEvolutionMcpServer = (): McpServer => {
         "'toCbor' encodes a credential to CBOR hex.",
       inputSchema: z.object({
         action: z.enum(["makeKeyHash", "makeScriptHash", "fromCbor", "toCbor"]),
-        hashHex: z.string().optional().describe("28-byte hash as hex (56 chars)"),
-        cborHex: z.string().optional().describe("CBOR hex of a credential"),
-        credentialType: z.enum(["key", "script"]).optional().describe("Credential type (for toCbor)")
+        hashHex: z.string().optional(),
+        cborHex: z.string().optional(),
+        credentialType: z.enum(["key", "script"]).optional()
       })
     },
     async ({ action, hashHex, cborHex, credentialType }) => {
@@ -2926,10 +2918,10 @@ export const createEvolutionMcpServer = (): McpServer => {
           "fromCbor",
           "inspect"
         ]),
-        hashHex: z.string().optional().describe("Key hash or script hash hex (56 chars)"),
-        bech32: z.string().optional().describe("DRep bech32 string (drep1...)"),
-        cborHex: z.string().optional().describe("DRep CBOR hex"),
-        hex: z.string().optional().describe("DRep raw hex (from toHex)")
+        hashHex: z.string().optional(),
+        bech32: z.string().optional(),
+        cborHex: z.string().optional(),
+        hex: z.string().optional()
       })
     },
     async ({ action, hashHex, bech32, cborHex, hex }) => {
@@ -3025,10 +3017,10 @@ export const createEvolutionMcpServer = (): McpServer => {
         "'getAssets' extracts the multi-asset map.",
       inputSchema: z.object({
         action: z.enum(["onlyCoin", "withAssets", "add", "subtract", "geq", "getAda", "isAdaOnly", "getAssets"]),
-        lovelace: z.string().optional().describe("Lovelace amount as decimal string"),
-        multiAssetCborHex: z.string().optional().describe("MultiAsset CBOR hex (for withAssets)"),
-        valueCborHex: z.string().optional().describe("Value CBOR hex"),
-        valueCborHexB: z.string().optional().describe("Second Value CBOR hex (for add/subtract/geq)")
+        lovelace: z.string().optional(),
+        multiAssetCborHex: z.string().optional(),
+        valueCborHex: z.string().optional(),
+        valueCborHexB: z.string().optional()
       })
     },
     async ({ action, lovelace, multiAssetCborHex, valueCborHex, valueCborHexB }) => {
@@ -3119,13 +3111,13 @@ export const createEvolutionMcpServer = (): McpServer => {
           "flatten", "hasMultiAsset", "policies", "addLovelace",
           "quantityOf", "toCbor", "fromCbor"
         ]),
-        lovelace: z.string().optional().describe("Lovelace amount as decimal string"),
-        policyIdHex: z.string().optional().describe("Policy ID hex (56 chars)"),
-        assetNameHex: z.string().optional().describe("Asset name hex"),
-        quantity: z.string().optional().describe("Token quantity as decimal string"),
-        record: z.record(z.string(), z.string()).optional().describe("Record of unit→quantity pairs (unit = 'lovelace' or policyHex+nameHex)"),
-        cborHex: z.string().optional().describe("Assets CBOR hex"),
-        cborHexB: z.string().optional().describe("Second Assets CBOR hex (for merge/subtract/covers)")
+        lovelace: z.string().optional(),
+        policyIdHex: z.string().optional(),
+        assetNameHex: z.string().optional(),
+        quantity: z.string().optional(),
+        record: z.record(z.string(), z.string()).optional(),
+        cborHex: z.string().optional(),
+        cborHexB: z.string().optional()
       })
     },
     async ({ action, lovelace, policyIdHex, assetNameHex, quantity, record, cborHex, cborHexB }) => {
@@ -3261,11 +3253,11 @@ export const createEvolutionMcpServer = (): McpServer => {
         "'fromLabel' decodes a CIP-67 label hex prefix back to its number.",
       inputSchema: z.object({
         action: z.enum(["fromUnit", "toUnit", "toLabel", "fromLabel"]),
-        unit: z.string().optional().describe("Unit string (policyIdHex + assetNameHex)"),
-        policyIdHex: z.string().optional().describe("Policy ID hex (56 chars)"),
-        assetNameHex: z.string().optional().describe("Asset name hex (without CIP-67 label prefix)"),
-        label: z.number().int().optional().describe("CIP-67 label number (0-65535)"),
-        labelHex: z.string().optional().describe("CIP-67 label hex prefix (8 chars)")
+        unit: z.string().optional(),
+        policyIdHex: z.string().optional(),
+        assetNameHex: z.string().optional(),
+        label: z.number().int().optional(),
+        labelHex: z.string().optional()
       })
     },
     async ({ action, unit, policyIdHex, assetNameHex, label, labelHex }) => {
@@ -3315,8 +3307,8 @@ export const createEvolutionMcpServer = (): McpServer => {
         "'maxCoinValue' returns the maximum valid coin value.",
       inputSchema: z.object({
         action: z.enum(["add", "subtract", "compare", "validate", "maxCoinValue"]),
-        a: z.string().optional().describe("First coin amount as decimal string"),
-        b: z.string().optional().describe("Second coin amount as decimal string")
+        a: z.string().optional(),
+        b: z.string().optional()
       })
     },
     async ({ action, a, b }) => {
@@ -3358,8 +3350,8 @@ export const createEvolutionMcpServer = (): McpServer => {
         "'validate' checks if a string is a valid network name.",
       inputSchema: z.object({
         action: z.enum(["toId", "fromId", "validate"]),
-        network: z.string().optional().describe("Network name: Mainnet, Preview, or Preprod"),
-        networkId: z.number().int().optional().describe("Network ID: 0 or 1")
+        network: z.string().optional(),
+        networkId: z.number().int().optional()
       })
     },
     async ({ action, network, networkId }) => {
@@ -3397,12 +3389,12 @@ export const createEvolutionMcpServer = (): McpServer => {
         "'isConstr'/'isMap'/'isList'/'isInt'/'isBytes' type-check a Data CBOR hex.",
       inputSchema: z.object({
         action: z.enum(["constr", "int", "bytes", "list", "map", "match", "isConstr", "isMap", "isList", "isInt", "isBytes"]),
-        index: z.string().optional().describe("Constructor index as decimal string (for 'constr')"),
-        fieldsCborHex: z.array(z.string()).optional().describe("Array of Plutus Data CBOR hex strings (for 'constr'/'list')"),
-        value: z.string().optional().describe("Integer decimal string (for 'int') or hex string (for 'bytes')"),
+        index: z.string().optional(),
+        fieldsCborHex: z.array(z.string()).optional(),
+        value: z.string().optional(),
         entriesCborHex: z.array(z.object({ key: z.string(), value: z.string() })).optional()
-          .describe("Array of {key,value} CBOR hex pairs (for 'map')"),
-        dataCborHex: z.string().optional().describe("Plutus Data CBOR hex to inspect")
+          ,
+        dataCborHex: z.string().optional()
       })
     },
     async ({ action, index, fieldsCborHex, value, entriesCborHex, dataCborHex }) => {
@@ -3501,7 +3493,7 @@ export const createEvolutionMcpServer = (): McpServer => {
         "'hashAuxiliaryData' hashes AuxiliaryData CBOR hex.",
       inputSchema: z.object({
         action: z.enum(["hashTransaction", "hashTransactionRaw", "hashAuxiliaryData"]),
-        cborHex: z.string().describe("CBOR hex of TransactionBody or AuxiliaryData or raw bytes")
+        cborHex: z.string()
       })
     },
     async ({ action, cborHex }) => {
@@ -3525,7 +3517,7 @@ export const createEvolutionMcpServer = (): McpServer => {
     }
   )
 
-  // ── Devnet cluster tools ────────────────────────────────────────────────
+  // ── Devnet cluster tool ──────────────────────────────────────────────
 
   const DevnetConfigSchema = z
     .object({
@@ -3568,249 +3560,126 @@ export const createEvolutionMcpServer = (): McpServer => {
   })
 
   server.registerTool(
-    "devnet_create",
+    "devnet",
     {
-      description:
-        "Create a local Cardano devnet cluster using Docker. " +
-        "Returns a cluster handle for use with other devnet_ tools. " +
-        "Requires Docker to be running. Package: @evolution-sdk/devnet.",
+      description: "Local Cardano devnet via Docker: create, start, stop, remove, status, exec, genesis UTxOs, epoch, config",
       inputSchema: z.object({
-        config: DevnetConfigSchema
+        action: z.enum(["create", "start", "stop", "remove", "status", "exec", "genesis_utxos", "query_epoch", "config_defaults"]),
+        clusterHandle: z.string().optional(),
+        config: DevnetConfigSchema,
+        containerName: z.enum(["cardanoNode", "kupo", "ogmios"]).optional(),
+        command: z.array(z.string()).min(1).optional(),
+        genesisAction: z.enum(["calculate", "query"]).optional(),
+        configSection: z.enum(["all", "shelleyGenesis", "alonzoGenesis", "conwayGenesis", "byronGenesis", "kupo", "ogmios", "nodeConfig"]).optional()
       })
     },
-    async ({ config }) => {
-      const mergedConfig: Partial<Devnet.Config.DevNetConfig> | undefined = config
-        ? {
-            ...(config.clusterName ? { clusterName: config.clusterName } : undefined),
-            ...(config.networkMagic ? { networkMagic: config.networkMagic } : undefined),
-            ...(config.ports ? { ports: { ...Devnet.Config.DEFAULT_DEVNET_CONFIG.ports, ...config.ports } } : undefined),
-            ...(config.shelleyGenesis
-              ? {
-                  shelleyGenesis: {
-                    ...Devnet.Config.DEFAULT_SHELLEY_GENESIS,
-                    ...config.shelleyGenesis
-                  }
-                }
-              : undefined),
-            ...(config.kupo
-              ? { kupo: { ...Devnet.Config.DEFAULT_KUPO_CONFIG, ...config.kupo } }
-              : undefined),
-            ...(config.ogmios
-              ? { ogmios: { ...Devnet.Config.DEFAULT_OGMIOS_CONFIG, ...config.ogmios } }
-              : undefined)
-          }
-        : undefined
+    async ({ action, clusterHandle, config, containerName, command, genesisAction, configSection }) => {
+      if (action === "create") {
+        const mergedConfig: Partial<Devnet.Config.DevNetConfig> | undefined = config
+          ? {
+              ...(config.clusterName ? { clusterName: config.clusterName } : undefined),
+              ...(config.networkMagic ? { networkMagic: config.networkMagic } : undefined),
+              ...(config.ports ? { ports: { ...Devnet.Config.DEFAULT_DEVNET_CONFIG.ports, ...config.ports } } : undefined),
+              ...(config.shelleyGenesis
+                ? { shelleyGenesis: { ...Devnet.Config.DEFAULT_SHELLEY_GENESIS, ...config.shelleyGenesis } }
+                : undefined),
+              ...(config.kupo
+                ? { kupo: { ...Devnet.Config.DEFAULT_KUPO_CONFIG, ...config.kupo } }
+                : undefined),
+              ...(config.ogmios
+                ? { ogmios: { ...Devnet.Config.DEFAULT_OGMIOS_CONFIG, ...config.ogmios } }
+                : undefined)
+            }
+          : undefined
 
-      const cluster = await Devnet.Cluster.make(mergedConfig)
-      const clusterHandle = sessionStore.createCluster(cluster, cluster.networkName)
-
-      return toolTextResult({
-        clusterHandle,
-        cluster: serializeCluster(cluster)
-      })
-    }
-  )
-
-  server.registerTool(
-    "devnet_start",
-    {
-      description: "Start all containers in a devnet cluster. Waits for block production before returning.",
-      inputSchema: z.object({
-        clusterHandle: z.string()
-      })
-    },
-    async ({ clusterHandle }) => {
-      const session = sessionStore.getCluster(clusterHandle)
-      const cluster = session.cluster as Devnet.Cluster.Cluster
-      await Devnet.Cluster.start(cluster)
-
-      return toolTextResult({
-        clusterHandle,
-        status: "started",
-        cluster: serializeCluster(cluster)
-      })
-    }
-  )
-
-  server.registerTool(
-    "devnet_stop",
-    {
-      description: "Stop all containers in a devnet cluster without removing them.",
-      inputSchema: z.object({
-        clusterHandle: z.string()
-      })
-    },
-    async ({ clusterHandle }) => {
-      const session = sessionStore.getCluster(clusterHandle)
-      const cluster = session.cluster as Devnet.Cluster.Cluster
-      await Devnet.Cluster.stop(cluster)
-
-      return toolTextResult({ clusterHandle, status: "stopped" })
-    }
-  )
-
-  server.registerTool(
-    "devnet_remove",
-    {
-      description: "Stop and remove all containers in a devnet cluster.",
-      inputSchema: z.object({
-        clusterHandle: z.string()
-      })
-    },
-    async ({ clusterHandle }) => {
-      const session = sessionStore.getCluster(clusterHandle)
-      const cluster = session.cluster as Devnet.Cluster.Cluster
-      await Devnet.Cluster.remove(cluster)
-      sessionStore.delete(clusterHandle)
-
-      return toolTextResult({ clusterHandle, status: "removed" })
-    }
-  )
-
-  server.registerTool(
-    "devnet_status",
-    {
-      description: "Get the status of containers in a devnet cluster.",
-      inputSchema: z.object({
-        clusterHandle: z.string(),
-        containerName: z.enum(["cardanoNode", "kupo", "ogmios"]).optional()
-      })
-    },
-    async ({ clusterHandle, containerName }) => {
-      const session = sessionStore.getCluster(clusterHandle)
-      const cluster = session.cluster as Devnet.Cluster.Cluster
-
-      const containers: Array<{ name: string; container: Devnet.Container.Container }> = containerName
-        ? (() => {
-            const c = cluster[containerName]
-            if (!c) throw new Error(`Container ${containerName} is not part of this cluster`)
-            return [{ name: containerName, container: c }]
-          })()
-        : [
-            { name: "cardanoNode", container: cluster.cardanoNode },
-            ...(cluster.kupo ? [{ name: "kupo", container: cluster.kupo }] : []),
-            ...(cluster.ogmios ? [{ name: "ogmios", container: cluster.ogmios }] : [])
-          ]
-
-      const statuses = await Promise.all(
-        containers.map(async ({ name, container }) => {
-          const info = await Devnet.Container.getStatus(container)
-          return {
-            name,
-            containerId: container.id,
-            containerName: container.name,
-            running: info?.State?.Running ?? false,
-            status: info?.State?.Status ?? "unknown"
-          }
-        })
-      )
-
-      return toolTextResult({ clusterHandle, containers: statuses })
-    }
-  )
-
-  server.registerTool(
-    "devnet_exec",
-    {
-      description: "Execute a command inside a devnet container. Returns stdout.",
-      inputSchema: z.object({
-        clusterHandle: z.string(),
-        containerName: z.enum(["cardanoNode", "kupo", "ogmios"]),
-        command: z.array(z.string()).min(1)
-      })
-    },
-    async ({ clusterHandle, containerName, command }) => {
-      const session = sessionStore.getCluster(clusterHandle)
-      const cluster = session.cluster as Devnet.Cluster.Cluster
-      const container = cluster[containerName]
-
-      if (!container) {
-        throw new Error(`Container ${containerName} is not part of this cluster`)
+        const cluster = await Devnet.Cluster.make(mergedConfig)
+        const handle = sessionStore.createCluster(cluster, cluster.networkName)
+        return toolTextResult({ clusterHandle: handle, cluster: serializeCluster(cluster) })
       }
 
-      const output = await Devnet.Container.execCommand(container, command)
-      return toolTextResult({ containerName, command, output })
-    }
-  )
-
-  server.registerTool(
-    "devnet_genesis_utxos",
-    {
-      description:
-        "Calculate genesis UTxOs from cluster config (offline) or query them from a running cluster. " +
-        "The 'calculate' action works without a running node.",
-      inputSchema: z.object({
-        clusterHandle: z.string(),
-        action: z.enum(["calculate", "query"])
-      })
-    },
-    async ({ clusterHandle, action }) => {
-      const session = sessionStore.getCluster(clusterHandle)
-      const cluster = session.cluster as Devnet.Cluster.Cluster
-
-      const utxos =
-        action === "calculate"
-          ? await Devnet.Genesis.calculateUtxosFromConfig(cluster.shelleyGenesis)
-          : await Devnet.Genesis.queryUtxos(cluster)
-
-      return toolTextResult({
-        action,
-        count: utxos.length,
-        utxos: serializeUtxos(utxos as unknown as ReadonlyArray<Evolution.UTxO.UTxO>)
-      })
-    }
-  )
-
-  server.registerTool(
-    "devnet_query_epoch",
-    {
-      description: "Query the current epoch from a running devnet cluster.",
-      inputSchema: z.object({
-        clusterHandle: z.string()
-      })
-    },
-    async ({ clusterHandle }) => {
-      const session = sessionStore.getCluster(clusterHandle)
-      const cluster = session.cluster as Devnet.Cluster.Cluster
-      const epoch = await Devnet.Genesis.queryCurrentEpoch(cluster)
-
-      return toolTextResult({ epoch: epoch.toString() })
-    }
-  )
-
-  server.registerTool(
-    "devnet_config_defaults",
-    {
-      description: "Return the default devnet configuration values from @evolution-sdk/devnet.",
-      inputSchema: z.object({
-        section: z.enum(["all", "shelleyGenesis", "alonzoGenesis", "conwayGenesis", "byronGenesis", "kupo", "ogmios", "nodeConfig"]).optional()
-      })
-    },
-    async ({ section }) => {
-      const sectionName = section ?? "all"
-
-      if (sectionName === "all") {
-        return toolTextResult({
-          clusterName: Devnet.Config.DEFAULT_DEVNET_CONFIG.clusterName,
-          networkMagic: Devnet.Config.DEFAULT_DEVNET_CONFIG.networkMagic,
-          image: Devnet.Config.DEFAULT_DEVNET_CONFIG.image,
-          ports: Devnet.Config.DEFAULT_DEVNET_CONFIG.ports,
+      if (action === "config_defaults") {
+        const sectionName = configSection ?? "all"
+        if (sectionName === "all") {
+          return toolTextResult({
+            clusterName: Devnet.Config.DEFAULT_DEVNET_CONFIG.clusterName,
+            networkMagic: Devnet.Config.DEFAULT_DEVNET_CONFIG.networkMagic,
+            image: Devnet.Config.DEFAULT_DEVNET_CONFIG.image,
+            ports: Devnet.Config.DEFAULT_DEVNET_CONFIG.ports,
+            kupo: Devnet.Config.DEFAULT_KUPO_CONFIG,
+            ogmios: Devnet.Config.DEFAULT_OGMIOS_CONFIG
+          })
+        }
+        const sections: Record<string, unknown> = {
+          shelleyGenesis: Devnet.Config.DEFAULT_SHELLEY_GENESIS,
+          alonzoGenesis: Devnet.Config.DEFAULT_ALONZO_GENESIS,
+          conwayGenesis: Devnet.Config.DEFAULT_CONWAY_GENESIS,
+          byronGenesis: Devnet.Config.DEFAULT_BYRON_GENESIS,
           kupo: Devnet.Config.DEFAULT_KUPO_CONFIG,
-          ogmios: Devnet.Config.DEFAULT_OGMIOS_CONFIG
-        })
+          ogmios: Devnet.Config.DEFAULT_OGMIOS_CONFIG,
+          nodeConfig: Devnet.Config.DEFAULT_NODE_CONFIG
+        }
+        return toolTextResult({ [sectionName]: toStructured(sections[sectionName]) })
       }
 
-      const sections: Record<string, unknown> = {
-        shelleyGenesis: Devnet.Config.DEFAULT_SHELLEY_GENESIS,
-        alonzoGenesis: Devnet.Config.DEFAULT_ALONZO_GENESIS,
-        conwayGenesis: Devnet.Config.DEFAULT_CONWAY_GENESIS,
-        byronGenesis: Devnet.Config.DEFAULT_BYRON_GENESIS,
-        kupo: Devnet.Config.DEFAULT_KUPO_CONFIG,
-        ogmios: Devnet.Config.DEFAULT_OGMIOS_CONFIG,
-        nodeConfig: Devnet.Config.DEFAULT_NODE_CONFIG
-      }
+      // All remaining actions require a clusterHandle
+      if (!clusterHandle) throw new Error("clusterHandle is required")
+      const session = sessionStore.getCluster(clusterHandle)
+      const cluster = session.cluster as Devnet.Cluster.Cluster
 
-      return toolTextResult({ [sectionName]: toStructured(sections[sectionName]) })
+      switch (action) {
+        case "start": {
+          await Devnet.Cluster.start(cluster)
+          return toolTextResult({ clusterHandle, status: "started", cluster: serializeCluster(cluster) })
+        }
+        case "stop": {
+          await Devnet.Cluster.stop(cluster)
+          return toolTextResult({ clusterHandle, status: "stopped" })
+        }
+        case "remove": {
+          await Devnet.Cluster.remove(cluster)
+          sessionStore.delete(clusterHandle)
+          return toolTextResult({ clusterHandle, status: "removed" })
+        }
+        case "status": {
+          const containers: Array<{ name: string; container: Devnet.Container.Container }> = containerName
+            ? (() => {
+                const c = cluster[containerName]
+                if (!c) throw new Error(`Container ${containerName} is not part of this cluster`)
+                return [{ name: containerName, container: c }]
+              })()
+            : [
+                { name: "cardanoNode", container: cluster.cardanoNode },
+                ...(cluster.kupo ? [{ name: "kupo", container: cluster.kupo }] : []),
+                ...(cluster.ogmios ? [{ name: "ogmios", container: cluster.ogmios }] : [])
+              ]
+          const statuses = await Promise.all(
+            containers.map(async ({ name, container }) => {
+              const info = await Devnet.Container.getStatus(container)
+              return { name, containerId: container.id, containerName: container.name, running: info?.State?.Running ?? false, status: info?.State?.Status ?? "unknown" }
+            })
+          )
+          return toolTextResult({ clusterHandle, containers: statuses })
+        }
+        case "exec": {
+          if (!containerName) throw new Error("containerName is required for exec")
+          if (!command) throw new Error("command is required for exec")
+          const container = cluster[containerName]
+          if (!container) throw new Error(`Container ${containerName} is not part of this cluster`)
+          const output = await Devnet.Container.execCommand(container, command)
+          return toolTextResult({ containerName, command, output })
+        }
+        case "genesis_utxos": {
+          const gAction = genesisAction ?? "calculate"
+          const utxos = gAction === "calculate"
+            ? await Devnet.Genesis.calculateUtxosFromConfig(cluster.shelleyGenesis)
+            : await Devnet.Genesis.queryUtxos(cluster)
+          return toolTextResult({ action: gAction, count: utxos.length, utxos: serializeUtxos(utxos as unknown as ReadonlyArray<Evolution.UTxO.UTxO>) })
+        }
+        case "query_epoch": {
+          const epoch = await Devnet.Genesis.queryCurrentEpoch(cluster)
+          return toolTextResult({ epoch: epoch.toString() })
+        }
+      }
     }
   )
 
@@ -4958,7 +4827,7 @@ export const createEvolutionMcpServer = (): McpServer => {
   // ── pool_params_tools ─────────────────────────────────────────────────
   server.tool(
     "pool_params_tools",
-    "Build Cardano stake pool parameters (PoolParams), relays (SingleHostAddr/SingleHostName/MultiHostName), pool metadata, and pool-related certificates (PoolRegistration/PoolRetirement). Also provides PoolKeyHash/VrfKeyHash helpers and validation (hasMinimumCost, hasValidMargin, calculatePoolRewards, getEffectiveStake).",
+    "Build stake pool params, relays, and pool certificates",
     {
       action: z.enum([
         "createPoolParams",
@@ -4972,32 +4841,32 @@ export const createEvolutionMcpServer = (): McpServer => {
         "getEffectiveStake",
         "toCbor",
         "fromCbor"
-      ]).describe("Action to perform"),
-      operatorHex: z.string().optional().describe("Pool operator key hash hex (28 bytes) for createPoolParams"),
-      vrfKeyHashHex: z.string().optional().describe("VRF key hash hex (32 bytes) for createPoolParams"),
-      pledge: z.string().optional().describe("Pledge in lovelace for createPoolParams"),
-      cost: z.string().optional().describe("Cost in lovelace for createPoolParams"),
-      marginNumerator: z.string().optional().describe("Margin numerator for createPoolParams"),
-      marginDenominator: z.string().optional().describe("Margin denominator for createPoolParams"),
-      rewardAccountHex: z.string().optional().describe("Reward account hex (29 bytes with header) for createPoolParams"),
-      poolOwnerHexes: z.array(z.string()).optional().describe("Pool owner key hash hexes (28 bytes each) for createPoolParams"),
+      ]),
+      operatorHex: z.string().optional(),
+      vrfKeyHashHex: z.string().optional(),
+      pledge: z.string().optional(),
+      cost: z.string().optional(),
+      marginNumerator: z.string().optional(),
+      marginDenominator: z.string().optional(),
+      rewardAccountHex: z.string().optional(),
+      poolOwnerHexes: z.array(z.string()).optional(),
       relays: z.array(z.object({
         type: z.enum(["singleHostAddr", "singleHostName", "multiHostName"]),
         port: z.number().optional(),
-        ipv4: z.string().optional().describe("IPv4 as dot-notation e.g. '192.168.1.1'"),
-        ipv6Hex: z.string().optional().describe("IPv6 as 16-byte hex"),
+        ipv4: z.string().optional(),
+        ipv6Hex: z.string().optional(),
         dnsName: z.string().optional()
-      })).optional().describe("Relay definitions for createPoolParams or createRelay"),
-      metadataUrl: z.string().optional().describe("Pool metadata URL for createPoolMetadata"),
-      metadataHashHex: z.string().optional().describe("Pool metadata hash hex (32 bytes) for createPoolMetadata"),
-      poolKeyHashHex: z.string().optional().describe("PoolKeyHash hex for poolRetirement"),
-      epoch: z.string().optional().describe("Epoch for poolRetirement"),
-      poolParamsCbor: z.string().optional().describe("PoolParams CBOR hex for hasMinimumCost/hasValidMargin/calculatePoolRewards/getEffectiveStake"),
-      minCost: z.string().optional().describe("Minimum cost in lovelace for hasMinimumCost"),
-      totalStake: z.string().optional().describe("Total stake for getEffectiveStake/calculatePoolRewards"),
-      sigma: z.string().optional().describe("Pool relative stake (numerator) for calculatePoolRewards"),
-      sigmaDenominator: z.string().optional().describe("Pool relative stake (denominator) for calculatePoolRewards"),
-      cborHex: z.string().optional().describe("CBOR hex for fromCbor")
+      })).optional(),
+      metadataUrl: z.string().optional(),
+      metadataHashHex: z.string().optional(),
+      poolKeyHashHex: z.string().optional(),
+      epoch: z.string().optional(),
+      poolParamsCbor: z.string().optional(),
+      minCost: z.string().optional(),
+      totalStake: z.string().optional(),
+      sigma: z.string().optional(),
+      sigmaDenominator: z.string().optional(),
+      cborHex: z.string().optional()
     },
     async ({ action, operatorHex, vrfKeyHashHex, pledge, cost,
              marginNumerator, marginDenominator, rewardAccountHex,
@@ -5150,14 +5019,14 @@ export const createEvolutionMcpServer = (): McpServer => {
   // ── drep_cert_tools ─────────────────────────────────────────────────
   server.tool(
     "drep_cert_tools",
-    "Build Cardano DRep governance certificates: RegDrepCert (register as DRep with deposit + optional anchor), UnregDrepCert (unregister), UpdateDrepCert (update anchor). Returns certificate JSON.",
+    "Build DRep registration/update/unregistration certs",
     {
-      action: z.enum(["regDrep", "unregDrep", "updateDrep"]).describe("Certificate type to create"),
-      credentialType: z.enum(["keyhash", "scripthash"]).describe("Credential type"),
-      credentialHashHex: z.string().describe("28-byte credential hash hex"),
-      coin: z.string().optional().describe("Deposit amount in lovelace (required for regDrep/unregDrep)"),
-      anchorUrl: z.string().optional().describe("Governance anchor URL (optional for regDrep/updateDrep)"),
-      anchorDataHashHex: z.string().optional().describe("Anchor data hash hex (32 bytes, required if anchorUrl set)")
+      action: z.enum(["regDrep", "unregDrep", "updateDrep"]),
+      credentialType: z.enum(["keyhash", "scripthash"]),
+      credentialHashHex: z.string(),
+      coin: z.string().optional(),
+      anchorUrl: z.string().optional(),
+      anchorDataHashHex: z.string().optional()
     },
     async ({ action, credentialType, credentialHashHex, coin, anchorUrl, anchorDataHashHex }) => {
       const cred = credentialType === "keyhash"
@@ -5205,15 +5074,15 @@ export const createEvolutionMcpServer = (): McpServer => {
   // ── committee_cert_tools ─────────────────────────────────────────────
   server.tool(
     "committee_cert_tools",
-    "Build Cardano constitutional committee certificates: AuthCommitteeHotCert (authorize hot key from cold key) and ResignCommitteeColdCert (resign from committee with optional anchor). Returns certificate JSON.",
+    "Build committee authorization and resignation certs",
     {
-      action: z.enum(["authHot", "resignCold"]).describe("Certificate type"),
-      coldCredentialType: z.enum(["keyhash", "scripthash"]).describe("Cold credential type"),
-      coldCredentialHashHex: z.string().describe("Cold credential 28-byte hash hex"),
-      hotCredentialType: z.enum(["keyhash", "scripthash"]).optional().describe("Hot credential type (required for authHot)"),
-      hotCredentialHashHex: z.string().optional().describe("Hot credential 28-byte hash hex (required for authHot)"),
-      anchorUrl: z.string().optional().describe("Resignation anchor URL (optional for resignCold)"),
-      anchorDataHashHex: z.string().optional().describe("Anchor data hash hex (32 bytes, required if anchorUrl set)")
+      action: z.enum(["authHot", "resignCold"]),
+      coldCredentialType: z.enum(["keyhash", "scripthash"]),
+      coldCredentialHashHex: z.string(),
+      hotCredentialType: z.enum(["keyhash", "scripthash"]).optional(),
+      hotCredentialHashHex: z.string().optional(),
+      anchorUrl: z.string().optional(),
+      anchorDataHashHex: z.string().optional()
     },
     async ({ action, coldCredentialType, coldCredentialHashHex,
              hotCredentialType, hotCredentialHashHex, anchorUrl, anchorDataHashHex }) => {
@@ -5256,13 +5125,13 @@ export const createEvolutionMcpServer = (): McpServer => {
   // ── constitution_tools ─────────────────────────────────────────────
   server.tool(
     "constitution_tools",
-    "Build and encode/decode Cardano Constitution objects (anchor URL + optional guardrail script hash). Constitution is used in NewConstitutionAction governance actions.",
+    "Build Constitution objects for governance",
     {
-      action: z.enum(["create", "toCbor", "fromCbor"]).describe("Action to perform"),
-      anchorUrl: z.string().optional().describe("Constitution document URL (required for create)"),
-      anchorDataHashHex: z.string().optional().describe("Anchor data hash hex (32 bytes, required for create)"),
-      scriptHashHex: z.string().optional().describe("Optional guardrail script hash hex (28 bytes)"),
-      cborHex: z.string().optional().describe("CBOR hex for fromCbor")
+      action: z.enum(["create", "toCbor", "fromCbor"]),
+      anchorUrl: z.string().optional(),
+      anchorDataHashHex: z.string().optional(),
+      scriptHashHex: z.string().optional(),
+      cborHex: z.string().optional()
     },
     async ({ action, anchorUrl, anchorDataHashHex, scriptHashHex, cborHex }) => {
       switch (action) {
@@ -5312,9 +5181,9 @@ export const createEvolutionMcpServer = (): McpServer => {
   // ── protocol_param_update_tools ─────────────────────────────────────
   server.tool(
     "protocol_param_update_tools",
-    "Build and encode/decode Cardano ProtocolParamUpdate objects with all optional fields: fee params, size limits, deposits, execution units, ExUnitPrices, DRepVotingThresholds (t1-t10), PoolVotingThresholds (t1-t5), and governance params.",
+    "Build ProtocolParamUpdate with all optional fields",
     {
-      action: z.enum(["create", "toCbor", "fromCbor"]).describe("Action to perform"),
+      action: z.enum(["create", "toCbor", "fromCbor"]),
       minfeeA: z.string().optional(),
       minfeeB: z.string().optional(),
       maxBlockBodySize: z.string().optional(),
@@ -5324,8 +5193,8 @@ export const createEvolutionMcpServer = (): McpServer => {
       poolDeposit: z.string().optional(),
       maxEpoch: z.string().optional(),
       nOpt: z.string().optional(),
-      poolPledgeInfluenceNum: z.string().optional().describe("Numerator of pool pledge influence ratio"),
-      poolPledgeInfluenceDen: z.string().optional().describe("Denominator of pool pledge influence ratio"),
+      poolPledgeInfluenceNum: z.string().optional(),
+      poolPledgeInfluenceDen: z.string().optional(),
       expansionRateNum: z.string().optional(),
       expansionRateDen: z.string().optional(),
       treasuryGrowthRateNum: z.string().optional(),
@@ -5336,21 +5205,21 @@ export const createEvolutionMcpServer = (): McpServer => {
       maxTxExSteps: z.string().optional(),
       maxBlockExMem: z.string().optional(),
       maxBlockExSteps: z.string().optional(),
-      exUnitMemPriceNum: z.string().optional().describe("ExUnit memory price numerator"),
-      exUnitMemPriceDen: z.string().optional().describe("ExUnit memory price denominator"),
-      exUnitStepPriceNum: z.string().optional().describe("ExUnit step price numerator"),
-      exUnitStepPriceDen: z.string().optional().describe("ExUnit step price denominator"),
+      exUnitMemPriceNum: z.string().optional(),
+      exUnitMemPriceDen: z.string().optional(),
+      exUnitStepPriceNum: z.string().optional(),
+      exUnitStepPriceDen: z.string().optional(),
       maxValueSize: z.string().optional(),
       collateralPercentage: z.string().optional(),
       maxCollateralInputs: z.string().optional(),
       drepVotingThresholds: z.array(z.object({
         numerator: z.string(),
         denominator: z.string()
-      })).optional().describe("10 UnitIntervals for DRep voting thresholds (t1-t10)"),
+      })).optional(),
       poolVotingThresholds: z.array(z.object({
         numerator: z.string(),
         denominator: z.string()
-      })).optional().describe("5 UnitIntervals for pool voting thresholds (t1-t5)"),
+      })).optional(),
       minCommitteeSize: z.string().optional(),
       committeeTermLimit: z.string().optional(),
       governanceActionValidity: z.string().optional(),
@@ -5359,7 +5228,7 @@ export const createEvolutionMcpServer = (): McpServer => {
       drepInactivityPeriod: z.string().optional(),
       minfeeRefScriptCoinsPerByteNum: z.string().optional(),
       minfeeRefScriptCoinsPerByteDen: z.string().optional(),
-      cborHex: z.string().optional().describe("CBOR hex for fromCbor")
+      cborHex: z.string().optional()
     },
     async (args) => {
       switch (args.action) {
@@ -5481,12 +5350,12 @@ export const createEvolutionMcpServer = (): McpServer => {
   // ── transaction_input_tools ─────────────────────────────────────────
   server.tool(
     "transaction_input_tools",
-    "Build and inspect Cardano TransactionInput references (txHash + output index). Create inputs for transaction building, encode/decode CBOR.",
+    "Build TransactionInput references (txHash + index)",
     {
-      action: z.enum(["build", "inspect", "toCbor", "fromCbor"]).describe("Action to perform"),
-      txHashHex: z.string().optional().describe("Transaction hash hex (32 bytes) for build"),
-      index: z.number().optional().describe("Output index (0-65535) for build"),
-      cborHex: z.string().optional().describe("CBOR hex for fromCbor/inspect")
+      action: z.enum(["build", "inspect", "toCbor", "fromCbor"]),
+      txHashHex: z.string().optional(),
+      index: z.number().optional(),
+      cborHex: z.string().optional()
     },
     async ({ action, txHashHex, index, cborHex }) => {
       switch (action) {
@@ -5521,27 +5390,27 @@ export const createEvolutionMcpServer = (): McpServer => {
   // ── transaction_body_tools ─────────────────────────────────────────
   server.tool(
     "transaction_body_tools",
-    "Build and inspect Cardano TransactionBody (inputs, outputs, fee + all optional fields: ttl, certificates, withdrawals, mint, collateral, voting, proposals, etc). Encode/decode CBOR.",
+    "Build TransactionBody with inputs, outputs, fee",
     {
-      action: z.enum(["build", "inspect", "fromCbor"]).describe("Action to perform"),
+      action: z.enum(["build", "inspect", "fromCbor"]),
       inputs: z.array(z.object({
         txHashHex: z.string(),
         index: z.number()
-      })).optional().describe("Transaction inputs for build"),
+      })).optional(),
       outputs: z.array(z.object({
         addressBech32: z.string(),
         lovelace: z.string(),
         datumHashHex: z.string().optional(),
         inlineDatumCborHex: z.string().optional()
-      })).optional().describe("Transaction outputs for build"),
-      fee: z.string().optional().describe("Fee in lovelace for build"),
-      ttl: z.string().optional().describe("Time-to-live slot number"),
-      validityIntervalStart: z.string().optional().describe("Validity interval start slot"),
-      auxiliaryDataHashHex: z.string().optional().describe("AuxiliaryData hash hex (32 bytes)"),
-      networkId: z.number().optional().describe("Network ID (0=testnet, 1=mainnet)"),
-      totalCollateral: z.string().optional().describe("Total collateral in lovelace"),
-      donation: z.string().optional().describe("Treasury donation in lovelace"),
-      cborHex: z.string().optional().describe("CBOR hex for fromCbor/inspect")
+      })).optional(),
+      fee: z.string().optional(),
+      ttl: z.string().optional(),
+      validityIntervalStart: z.string().optional(),
+      auxiliaryDataHashHex: z.string().optional(),
+      networkId: z.number().optional(),
+      totalCollateral: z.string().optional(),
+      donation: z.string().optional(),
+      cborHex: z.string().optional()
     },
     async ({ action, inputs, outputs, fee, ttl, validityIntervalStart,
              auxiliaryDataHashHex, networkId, totalCollateral, donation, cborHex }) => {
@@ -5603,16 +5472,16 @@ export const createEvolutionMcpServer = (): McpServer => {
   // ── pointer_address_tools ─────────────────────────────────────────
   server.tool(
     "pointer_address_tools",
-    "Build Cardano PointerAddress (slot-based stake credential reference) and inspect Pointer values. PointerAddresses reference a stake credential by its registration slot, tx index, and cert index.",
+    "Build PointerAddress (slot-based stake reference)",
     {
-      action: z.enum(["buildPointer", "buildAddress", "inspect"]).describe("Action to perform"),
-      slot: z.number().optional().describe("Slot number where stake cert was registered (must be > 0)"),
-      txIndex: z.number().optional().describe("Transaction index in the slot (must be > 0)"),
-      certIndex: z.number().optional().describe("Certificate index in the transaction (must be > 0)"),
-      networkId: z.number().optional().describe("Network ID (0=testnet, 1=mainnet) for buildAddress"),
-      paymentCredentialType: z.enum(["keyhash", "scripthash"]).optional().describe("Payment credential type for buildAddress"),
-      paymentCredentialHashHex: z.string().optional().describe("28-byte payment credential hash hex for buildAddress"),
-      hex: z.string().optional().describe("PointerAddress hex for inspect")
+      action: z.enum(["buildPointer", "buildAddress", "inspect"]),
+      slot: z.number().optional(),
+      txIndex: z.number().optional(),
+      certIndex: z.number().optional(),
+      networkId: z.number().optional(),
+      paymentCredentialType: z.enum(["keyhash", "scripthash"]).optional(),
+      paymentCredentialHashHex: z.string().optional(),
+      hex: z.string().optional()
     },
     async ({ action, slot, txIndex, certIndex, networkId,
              paymentCredentialType, paymentCredentialHashHex, hex }) => {
@@ -5655,16 +5524,16 @@ export const createEvolutionMcpServer = (): McpServer => {
   // ── plutus_value_tools ─────────────────────────────────────────────
   server.tool(
     "plutus_value_tools",
-    "Encode/decode Plutus script-level Value maps (Map<PolicyId, Map<AssetName, Integer>>). This is the Plutus Data representation of multi-asset values — distinct from the core Value type. Essential for Plutus script input/output validation.",
+    "Encode/decode Plutus-level Value maps",
     {
-      action: z.enum(["encode", "decode", "buildAdaOnly", "buildMultiAsset"]).describe("Action to perform"),
-      lovelace: z.string().optional().describe("ADA amount in lovelace for buildAdaOnly/buildMultiAsset"),
+      action: z.enum(["encode", "decode", "buildAdaOnly", "buildMultiAsset"]),
+      lovelace: z.string().optional(),
       assets: z.array(z.object({
-        policyIdHex: z.string().describe("Policy ID hex (28 bytes)"),
-        assetNameHex: z.string().describe("Asset name hex (0-32 bytes)"),
-        amount: z.string().describe("Token quantity")
-      })).optional().describe("Asset entries for buildMultiAsset"),
-      cborHex: z.string().optional().describe("CBOR hex to decode")
+        policyIdHex: z.string(),
+        assetNameHex: z.string(),
+        amount: z.string()
+      })).optional(),
+      cborHex: z.string().optional()
     },
     async ({ action, lovelace, assets, cborHex }) => {
       const PV = (Evolution as any).Plutus.Value
@@ -5746,13 +5615,13 @@ export const createEvolutionMcpServer = (): McpServer => {
   // ── script_tools ─────────────────────────────────────────────────
   server.tool(
     "script_tools",
-    "Wrap NativeScript or raw script bytes into the Script union type (tagged [0]=NativeScript, [1]=PlutusV1, [2]=PlutusV2, [3]=PlutusV3) and encode/decode Script CBOR. Also compute script hashes for any script type.",
+    "Wrap scripts into tagged Script union type",
     {
-      action: z.enum(["wrapNativeScript", "wrapPlutusScript", "fromCbor", "hashScript"]).describe("Action to perform"),
-      nativeScriptCborHex: z.string().optional().describe("NativeScript CBOR hex for wrapNativeScript"),
-      scriptBytesHex: z.string().optional().describe("Raw script bytes hex for wrapPlutusScript"),
-      language: z.enum(["PlutusV1", "PlutusV2", "PlutusV3"]).optional().describe("Plutus language version for wrapPlutusScript"),
-      scriptCborHex: z.string().optional().describe("Full Script CBOR hex for fromCbor/hashScript")
+      action: z.enum(["wrapNativeScript", "wrapPlutusScript", "fromCbor", "hashScript"]),
+      nativeScriptCborHex: z.string().optional(),
+      scriptBytesHex: z.string().optional(),
+      language: z.enum(["PlutusV1", "PlutusV2", "PlutusV3"]).optional(),
+      scriptCborHex: z.string().optional()
     },
     async ({ action, nativeScriptCborHex, scriptBytesHex, language, scriptCborHex }) => {
       switch (action) {
@@ -5799,16 +5668,16 @@ export const createEvolutionMcpServer = (): McpServer => {
   // ── bip32_key_tools ─────────────────────────────────────────────────
   server.tool(
     "bip32_key_tools",
-    "HD wallet key derivation using BIP32-Ed25519. Generate root keys from BIP39 entropy, derive keys via BIP32 path strings (e.g. m/1852'/1815'/0'/0/0) or raw index arrays, convert to Ed25519 private/public keys, export/import 128-byte XPRV format.",
+    "BIP32-Ed25519 HD key derivation from entropy",
     {
-      action: z.enum(["fromEntropy", "derivePath", "derive", "deriveChild", "toPrivateKey", "toPublicKey", "toXPRV", "fromXPRV", "inspect"]).describe("Action to perform"),
-      entropyHex: z.string().optional().describe("BIP39 entropy hex (16-32 bytes) for fromEntropy"),
-      password: z.string().optional().describe("Optional passphrase string for fromEntropy (default: empty)"),
-      bip32KeyHex: z.string().optional().describe("Bip32PrivateKey hex (96 bytes) for derive/toPrivateKey/toPublicKey/toXPRV/inspect"),
-      path: z.string().optional().describe("BIP32 path string for derivePath (e.g. m/1852'/1815'/0'/0/0)"),
-      indices: z.array(z.number()).optional().describe("Raw derivation indices for derive (add 0x80000000 for hardened)"),
-      childIndex: z.number().optional().describe("Single child index for deriveChild (add 0x80000000 for hardened)"),
-      xprvHex: z.string().optional().describe("128-byte XPRV hex for fromXPRV")
+      action: z.enum(["fromEntropy", "derivePath", "derive", "deriveChild", "toPrivateKey", "toPublicKey", "toXPRV", "fromXPRV", "inspect"]),
+      entropyHex: z.string().optional(),
+      password: z.string().optional(),
+      bip32KeyHex: z.string().optional(),
+      path: z.string().optional(),
+      indices: z.array(z.number()).optional(),
+      childIndex: z.number().optional(),
+      xprvHex: z.string().optional()
     },
     async ({ action, entropyHex, password, bip32KeyHex, path, indices, childIndex, xprvHex }) => {
       switch (action) {
@@ -5880,10 +5749,10 @@ export const createEvolutionMcpServer = (): McpServer => {
   // ── byron_address_tools ─────────────────────────────────────────────
   server.tool(
     "byron_address_tools",
-    "Decode and inspect legacy Byron-era Cardano addresses. Byron addresses use Base58 encoding and are still found on exchanges and early wallets.",
+    "Decode legacy Byron-era addresses",
     {
-      action: z.enum(["fromHex", "inspect"]).describe("Action to perform"),
-      hex: z.string().optional().describe("Byron address hex bytes for fromHex/inspect")
+      action: z.enum(["fromHex", "inspect"]),
+      hex: z.string().optional()
     },
     async ({ action, hex }) => {
       switch (action) {
@@ -5901,11 +5770,11 @@ export const createEvolutionMcpServer = (): McpServer => {
   // ── uplc_tools ──────────────────────────────────────────────────────
   server.tool(
     "uplc_tools",
-    "Inspect and manipulate UPLC (Untyped Plutus Lambda Calculus) scripts. Detect CBOR encoding level, decode to program AST, apply parameters to parameterized scripts, and manage double/single CBOR encoding.",
+    "Inspect and manipulate UPLC scripts",
     {
-      action: z.enum(["detectEncoding", "decode", "applyParams", "doubleEncode", "singleEncode", "unwrapDouble"]).describe("Action to perform"),
-      scriptHex: z.string().optional().describe("Script hex (single or double CBOR encoded) for all actions"),
-      paramsCborHex: z.array(z.string()).optional().describe("Array of PlutusData CBOR hex values to apply as params")
+      action: z.enum(["detectEncoding", "decode", "applyParams", "doubleEncode", "singleEncode", "unwrapDouble"]),
+      scriptHex: z.string().optional(),
+      paramsCborHex: z.array(z.string()).optional()
     },
     async ({ action, scriptHex, paramsCborHex }) => {
       switch (action) {
@@ -5943,10 +5812,10 @@ export const createEvolutionMcpServer = (): McpServer => {
   // ── ed25519_signature_tools ─────────────────────────────────────────
   server.tool(
     "ed25519_signature_tools",
-    "Encode, decode, and validate Ed25519 signatures. Convert between hex and bytes representations, verify signature format.",
+    "Encode/decode Ed25519 signatures",
     {
-      action: z.enum(["fromHex", "toHex", "validate"]).describe("Action to perform"),
-      signatureHex: z.string().optional().describe("Ed25519 signature hex (64 bytes = 128 hex chars)")
+      action: z.enum(["fromHex", "toHex", "validate"]),
+      signatureHex: z.string().optional()
     },
     async ({ action, signatureHex }) => {
       switch (action) {
@@ -5982,17 +5851,17 @@ export const createEvolutionMcpServer = (): McpServer => {
   // ── redeemers_collection_tools ──────────────────────────────────────
   server.tool(
     "redeemers_collection_tools",
-    "Build and encode/decode Redeemers collections (map format used in Conway-era transactions). Combines multiple individual Redeemer entries into the map-based wire format.",
+    "Build Redeemers collections (Conway map format)",
     {
-      action: z.enum(["build", "fromCbor", "toCbor"]).describe("Action to perform"),
+      action: z.enum(["build", "fromCbor", "toCbor"]),
       redeemers: z.array(z.object({
-        tag: z.enum(["spend", "mint", "cert", "reward", "vote", "propose"]).describe("Redeemer purpose tag"),
-        index: z.number().describe("Input/policy/cert index this redeemer applies to"),
-        dataCborHex: z.string().describe("PlutusData CBOR hex for the redeemer datum"),
-        exUnitsMem: z.string().describe("Execution unit memory budget"),
-        exUnitsSteps: z.string().describe("Execution unit CPU steps budget")
-      })).optional().describe("Array of redeemer entries for build"),
-      cborHex: z.string().optional().describe("Redeemers map CBOR hex for fromCbor")
+        tag: z.enum(["spend", "mint", "cert", "reward", "vote", "propose"]),
+        index: z.number(),
+        dataCborHex: z.string(),
+        exUnitsMem: z.string(),
+        exUnitsSteps: z.string()
+      })).optional(),
+      cborHex: z.string().optional()
     },
     async ({ action, redeemers, cborHex }) => {
       const R = Evolution.Redeemers as any
@@ -6034,10 +5903,10 @@ export const createEvolutionMcpServer = (): McpServer => {
   // ── proposal_procedures_collection_tools ─────────────────────────────
   server.tool(
     "proposal_procedures_collection_tools",
-    "Build and encode/decode ProposalProcedures collections for Conway-era governance transactions. Wraps one or more ProposalProcedure entries into the collection wire format.",
+    "Encode/decode ProposalProcedures collections",
     {
-      action: z.enum(["fromCbor", "toCbor"]).describe("Action to perform"),
-      cborHex: z.string().optional().describe("ProposalProcedures CBOR hex")
+      action: z.enum(["fromCbor", "toCbor"]),
+      cborHex: z.string().optional()
     },
     async ({ action, cborHex }) => {
       const PP = Evolution.ProposalProcedures as any
