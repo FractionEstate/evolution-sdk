@@ -65,6 +65,11 @@ node packages/evolution-mcp/dist/bin.js serve
 - Proposal Procedures: build governance ProposalProcedures combining deposit, reward account, governance action, and anchor; CBOR round-trip
 - Transaction Outputs: build Babbage-era transaction outputs with address, value, optional datum hash or inline datum, optional script reference; inspect and parse existing outputs
 - Plutus Data Codecs: structured encode/decode of typed Plutus data using SDK codecs — OutputReference, Credential, Address, Lovelace, and CIP-68 metadata; convert between typed representations and CBOR hex
+- Pool Parameters: build full PoolParams for stake pool registration (operator, VRF key, pledge, cost, margin, relays, metadata), create SingleHostAddr/SingleHostName/MultiHostName relays, PoolRegistration/PoolRetirement certificates, validation helpers (hasMinimumCost, hasValidMargin), CBOR round-trip
+- DRep Certificates: build governance DRep certificates — RegDrepCert (register with deposit + optional anchor), UnregDrepCert (unregister), UpdateDrepCert (update anchor)
+- Committee Certificates: build constitutional committee certificates — AuthCommitteeHotCert (authorize hot key) and ResignCommitteeColdCert (resign with optional anchor)
+- Constitution: build and encode/decode Constitution objects (anchor URL + optional guardrail script hash) for NewConstitutionAction governance proposals
+- Protocol Parameter Updates: build ProtocolParamUpdate with all optional fields — fee params, size limits, deposits, execution units, ExUnitPrices, DRepVotingThresholds (10 thresholds), PoolVotingThresholds (5 thresholds), governance params; CBOR round-trip
 - Client session creation and attachment
 - Provider and wallet calls via client handles
 - Transaction builder sessions and build operations (with optional Plutus evaluator)

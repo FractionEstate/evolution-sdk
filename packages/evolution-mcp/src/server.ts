@@ -861,6 +861,11 @@ const createServerResourceContents = () => ({
         "proposal_tools",
         "tx_output_tools",
         "plutus_data_codec_tools",
+        "pool_params_tools",
+        "drep_cert_tools",
+        "committee_cert_tools",
+        "constitution_tools",
+        "protocol_param_update_tools",
         "devnet_create",
         "devnet_start",
         "devnet_stop",
@@ -4935,6 +4940,529 @@ export const createEvolutionMcpServer = (): McpServer => {
         }
         default:
           throw new Error(`Unknown plutus_data_codec_tools action: ${action}`)
+      }
+    }
+  )
+
+  // ── pool_params_tools ─────────────────────────────────────────────────
+  server.tool(
+    "pool_params_tools",
+    "Build Cardano stake pool parameters (PoolParams), relays (SingleHostAddr/SingleHostName/MultiHostName), pool metadata, and pool-related certificates (PoolRegistration/PoolRetirement). Also provides PoolKeyHash/VrfKeyHash helpers and validation (hasMinimumCost, hasValidMargin, calculatePoolRewards, getEffectiveStake).",
+    {
+      action: z.enum([
+        "createPoolParams",
+        "createRelay",
+        "createPoolMetadata",
+        "poolRegistration",
+        "poolRetirement",
+        "hasMinimumCost",
+        "hasValidMargin",
+        "calculatePoolRewards",
+        "getEffectiveStake",
+        "toCbor",
+        "fromCbor"
+      ]).describe("Action to perform"),
+      operatorHex: z.string().optional().describe("Pool operator key hash hex (28 bytes) for createPoolParams"),
+      vrfKeyHashHex: z.string().optional().describe("VRF key hash hex (32 bytes) for createPoolParams"),
+      pledge: z.string().optional().describe("Pledge in lovelace for createPoolParams"),
+      cost: z.string().optional().describe("Cost in lovelace for createPoolParams"),
+      marginNumerator: z.string().optional().describe("Margin numerator for createPoolParams"),
+      marginDenominator: z.string().optional().describe("Margin denominator for createPoolParams"),
+      rewardAccountHex: z.string().optional().describe("Reward account hex (29 bytes with header) for createPoolParams"),
+      poolOwnerHexes: z.array(z.string()).optional().describe("Pool owner key hash hexes (28 bytes each) for createPoolParams"),
+      relays: z.array(z.object({
+        type: z.enum(["singleHostAddr", "singleHostName", "multiHostName"]),
+        port: z.number().optional(),
+        ipv4: z.string().optional().describe("IPv4 as dot-notation e.g. '192.168.1.1'"),
+        ipv6Hex: z.string().optional().describe("IPv6 as 16-byte hex"),
+        dnsName: z.string().optional()
+      })).optional().describe("Relay definitions for createPoolParams or createRelay"),
+      metadataUrl: z.string().optional().describe("Pool metadata URL for createPoolMetadata"),
+      metadataHashHex: z.string().optional().describe("Pool metadata hash hex (32 bytes) for createPoolMetadata"),
+      poolKeyHashHex: z.string().optional().describe("PoolKeyHash hex for poolRetirement"),
+      epoch: z.string().optional().describe("Epoch for poolRetirement"),
+      poolParamsCbor: z.string().optional().describe("PoolParams CBOR hex for hasMinimumCost/hasValidMargin/calculatePoolRewards/getEffectiveStake"),
+      minCost: z.string().optional().describe("Minimum cost in lovelace for hasMinimumCost"),
+      totalStake: z.string().optional().describe("Total stake for getEffectiveStake/calculatePoolRewards"),
+      sigma: z.string().optional().describe("Pool relative stake (numerator) for calculatePoolRewards"),
+      sigmaDenominator: z.string().optional().describe("Pool relative stake (denominator) for calculatePoolRewards"),
+      cborHex: z.string().optional().describe("CBOR hex for fromCbor")
+    },
+    async ({ action, operatorHex, vrfKeyHashHex, pledge, cost,
+             marginNumerator, marginDenominator, rewardAccountHex,
+             poolOwnerHexes, relays, metadataUrl, metadataHashHex,
+             poolKeyHashHex, epoch, poolParamsCbor, minCost,
+             totalStake, cborHex }) => {
+      switch (action) {
+        case "createPoolParams": {
+          const operator = Evolution.PoolKeyHash.fromHex(operatorHex!)
+          const vrfKeyhash = Evolution.VrfKeyHash.fromHex(vrfKeyHashHex!)
+          const margin = new Evolution.UnitInterval.UnitInterval({
+            numerator: BigInt(marginNumerator ?? "1"),
+            denominator: BigInt(marginDenominator ?? "100")
+          })
+          const rewardAccount = Evolution.RewardAccount.fromHex(rewardAccountHex!)
+          const poolOwners = (poolOwnerHexes ?? []).map(h => Evolution.KeyHash.fromHex(h))
+
+          const builtRelays = (relays ?? []).map(r => {
+            switch (r.type) {
+              case "singleHostAddr": {
+                const args: any = {}
+                if (r.port != null) args.port = BigInt(r.port)
+                if (r.ipv4) {
+                  const parts = r.ipv4.split(".").map(Number)
+                  args.ipv4 = Evolution.IPv4.fromBytes(new Uint8Array(parts))
+                }
+                if (r.ipv6Hex) {
+                  args.ipv6 = Evolution.IPv6.fromBytes(hexToBytes(r.ipv6Hex))
+                }
+                return Evolution.Relay.fromSingleHostAddr(
+                  new Evolution.SingleHostAddr.SingleHostAddr(args)
+                )
+              }
+              case "singleHostName": {
+                return Evolution.Relay.fromSingleHostName(
+                  new Evolution.SingleHostName.SingleHostName({
+                    port: r.port != null ? BigInt(r.port) : undefined,
+                    dnsName: r.dnsName as any
+                  } as any)
+                )
+              }
+              case "multiHostName": {
+                return Evolution.Relay.fromMultiHostName(
+                  new Evolution.MultiHostName.MultiHostName({
+                    dnsName: r.dnsName as any
+                  })
+                )
+              }
+            }
+          })
+
+          let poolMetadata: any = undefined
+          if (metadataUrl && metadataHashHex) {
+            const url = new (Evolution.Url as any).Url({ href: metadataUrl })
+            poolMetadata = new Evolution.PoolMetadata.PoolMetadata({
+              url,
+              hash: hexToBytes(metadataHashHex)
+            })
+          }
+
+          const pp = new Evolution.PoolParams.PoolParams({
+            operator,
+            vrfKeyhash,
+            pledge: BigInt(pledge ?? "0"),
+            cost: BigInt(cost ?? "0"),
+            margin,
+            rewardAccount,
+            poolOwners,
+            relays: builtRelays,
+            poolMetadata
+          } as any)
+          return toolTextResult({ cbor: pp.toCBORHex(), json: pp.toJSON() })
+        }
+        case "createRelay": {
+          const defs = relays ?? []
+          const results = defs.map(r => {
+            switch (r.type) {
+              case "singleHostAddr": {
+                const args: any = {}
+                if (r.port != null) args.port = BigInt(r.port)
+                if (r.ipv4) {
+                  const parts = r.ipv4.split(".").map(Number)
+                  args.ipv4 = Evolution.IPv4.fromBytes(new Uint8Array(parts))
+                }
+                if (r.ipv6Hex) args.ipv6 = Evolution.IPv6.fromBytes(hexToBytes(r.ipv6Hex))
+                const sha = new Evolution.SingleHostAddr.SingleHostAddr(args)
+                return { type: r.type, cbor: sha.toCBORHex(), json: sha.toJSON() }
+              }
+              case "singleHostName": {
+                const shn = new Evolution.SingleHostName.SingleHostName({
+                  port: r.port != null ? BigInt(r.port) : undefined,
+                  dnsName: r.dnsName as any
+                } as any)
+                return { type: r.type, cbor: shn.toCBORHex(), json: shn.toJSON() }
+              }
+              case "multiHostName": {
+                const mhn = new Evolution.MultiHostName.MultiHostName({ dnsName: r.dnsName as any })
+                return { type: r.type, cbor: mhn.toCBORHex(), json: mhn.toJSON() }
+              }
+            }
+          })
+          return toolTextResult({ relays: results })
+        }
+        case "createPoolMetadata": {
+          const url = new (Evolution.Url as any).Url({ href: metadataUrl! })
+          const pm = new Evolution.PoolMetadata.PoolMetadata({
+            url,
+            hash: hexToBytes(metadataHashHex!)
+          })
+          return toolTextResult({ json: pm.toJSON() })
+        }
+        case "poolRegistration": {
+          const pp = Evolution.PoolParams.fromHex(poolParamsCbor!)
+          const cert = new Evolution.Certificate.PoolRegistration({ poolParams: pp })
+          return toolTextResult({ tag: cert._tag, json: cert.toJSON() })
+        }
+        case "poolRetirement": {
+          const pkh = Evolution.PoolKeyHash.fromHex(poolKeyHashHex!)
+          const cert = new Evolution.Certificate.PoolRetirement({ poolKeyHash: pkh, epoch: BigInt(epoch ?? "0") })
+          return toolTextResult({ tag: cert._tag, json: cert.toJSON() })
+        }
+        case "hasMinimumCost": {
+          const pp = Evolution.PoolParams.fromHex(poolParamsCbor!)
+          return toolTextResult({ hasMinimumCost: Evolution.PoolParams.hasMinimumCost(pp, BigInt(minCost ?? "0")) })
+        }
+        case "hasValidMargin": {
+          const pp = Evolution.PoolParams.fromHex(poolParamsCbor!)
+          return toolTextResult({ hasValidMargin: Evolution.PoolParams.hasValidMargin(pp) })
+        }
+        case "calculatePoolRewards":
+        case "getEffectiveStake": {
+          return toolTextResult({
+            note: `${action} requires runtime protocol parameters and is better used through tx_build_ops`
+          })
+        }
+        case "toCbor": {
+          const pp = Evolution.PoolParams.fromHex(poolParamsCbor!)
+          return toolTextResult({ cbor: pp.toCBORHex() })
+        }
+        case "fromCbor": {
+          const pp = Evolution.PoolParams.fromHex(cborHex!)
+          return toolTextResult({ json: pp.toJSON() })
+        }
+        default:
+          throw new Error(`Unknown pool_params_tools action: ${action}`)
+      }
+    }
+  )
+
+  // ── drep_cert_tools ─────────────────────────────────────────────────
+  server.tool(
+    "drep_cert_tools",
+    "Build Cardano DRep governance certificates: RegDrepCert (register as DRep with deposit + optional anchor), UnregDrepCert (unregister), UpdateDrepCert (update anchor). Returns certificate JSON.",
+    {
+      action: z.enum(["regDrep", "unregDrep", "updateDrep"]).describe("Certificate type to create"),
+      credentialType: z.enum(["keyhash", "scripthash"]).describe("Credential type"),
+      credentialHashHex: z.string().describe("28-byte credential hash hex"),
+      coin: z.string().optional().describe("Deposit amount in lovelace (required for regDrep/unregDrep)"),
+      anchorUrl: z.string().optional().describe("Governance anchor URL (optional for regDrep/updateDrep)"),
+      anchorDataHashHex: z.string().optional().describe("Anchor data hash hex (32 bytes, required if anchorUrl set)")
+    },
+    async ({ action, credentialType, credentialHashHex, coin, anchorUrl, anchorDataHashHex }) => {
+      const cred = credentialType === "keyhash"
+        ? Evolution.Credential.makeKeyHash(hexToBytes(credentialHashHex))
+        : Evolution.Credential.makeScriptHash(hexToBytes(credentialHashHex))
+
+      let anchor: InstanceType<typeof Evolution.Anchor.Anchor> | null = null
+      if (anchorUrl && anchorDataHashHex) {
+        const url = new (Evolution.Url as any).Url({ href: anchorUrl })
+        anchor = new Evolution.Anchor.Anchor({
+          anchorUrl: url,
+          anchorDataHash: hexToBytes(anchorDataHashHex)
+        })
+      }
+
+      switch (action) {
+        case "regDrep": {
+          const cert = new Evolution.Certificate.RegDrepCert({
+            drepCredential: cred,
+            coin: BigInt(coin ?? "500000000"),
+            anchor
+          })
+          return toolTextResult({ tag: cert._tag, json: cert.toJSON() })
+        }
+        case "unregDrep": {
+          const cert = new Evolution.Certificate.UnregDrepCert({
+            drepCredential: cred,
+            coin: BigInt(coin ?? "500000000")
+          })
+          return toolTextResult({ tag: cert._tag, json: cert.toJSON() })
+        }
+        case "updateDrep": {
+          const cert = new Evolution.Certificate.UpdateDrepCert({
+            drepCredential: cred,
+            anchor
+          })
+          return toolTextResult({ tag: cert._tag, json: cert.toJSON() })
+        }
+        default:
+          throw new Error(`Unknown drep_cert_tools action: ${action}`)
+      }
+    }
+  )
+
+  // ── committee_cert_tools ─────────────────────────────────────────────
+  server.tool(
+    "committee_cert_tools",
+    "Build Cardano constitutional committee certificates: AuthCommitteeHotCert (authorize hot key from cold key) and ResignCommitteeColdCert (resign from committee with optional anchor). Returns certificate JSON.",
+    {
+      action: z.enum(["authHot", "resignCold"]).describe("Certificate type"),
+      coldCredentialType: z.enum(["keyhash", "scripthash"]).describe("Cold credential type"),
+      coldCredentialHashHex: z.string().describe("Cold credential 28-byte hash hex"),
+      hotCredentialType: z.enum(["keyhash", "scripthash"]).optional().describe("Hot credential type (required for authHot)"),
+      hotCredentialHashHex: z.string().optional().describe("Hot credential 28-byte hash hex (required for authHot)"),
+      anchorUrl: z.string().optional().describe("Resignation anchor URL (optional for resignCold)"),
+      anchorDataHashHex: z.string().optional().describe("Anchor data hash hex (32 bytes, required if anchorUrl set)")
+    },
+    async ({ action, coldCredentialType, coldCredentialHashHex,
+             hotCredentialType, hotCredentialHashHex, anchorUrl, anchorDataHashHex }) => {
+      const coldCred = coldCredentialType === "keyhash"
+        ? Evolution.Credential.makeKeyHash(hexToBytes(coldCredentialHashHex))
+        : Evolution.Credential.makeScriptHash(hexToBytes(coldCredentialHashHex))
+
+      switch (action) {
+        case "authHot": {
+          const hotCred = hotCredentialType === "keyhash"
+            ? Evolution.Credential.makeKeyHash(hexToBytes(hotCredentialHashHex!))
+            : Evolution.Credential.makeScriptHash(hexToBytes(hotCredentialHashHex!))
+          const cert = new Evolution.Certificate.AuthCommitteeHotCert({
+            committeeColdCredential: coldCred,
+            committeeHotCredential: hotCred
+          })
+          return toolTextResult({ tag: cert._tag, json: cert.toJSON() })
+        }
+        case "resignCold": {
+          let anchor: InstanceType<typeof Evolution.Anchor.Anchor> | null = null
+          if (anchorUrl && anchorDataHashHex) {
+            const url = new (Evolution.Url as any).Url({ href: anchorUrl })
+            anchor = new Evolution.Anchor.Anchor({
+              anchorUrl: url,
+              anchorDataHash: hexToBytes(anchorDataHashHex)
+            })
+          }
+          const cert = new Evolution.Certificate.ResignCommitteeColdCert({
+            committeeColdCredential: coldCred,
+            anchor
+          })
+          return toolTextResult({ tag: cert._tag, json: cert.toJSON() })
+        }
+        default:
+          throw new Error(`Unknown committee_cert_tools action: ${action}`)
+      }
+    }
+  )
+
+  // ── constitution_tools ─────────────────────────────────────────────
+  server.tool(
+    "constitution_tools",
+    "Build and encode/decode Cardano Constitution objects (anchor URL + optional guardrail script hash). Constitution is used in NewConstitutionAction governance actions.",
+    {
+      action: z.enum(["create", "toCbor", "fromCbor"]).describe("Action to perform"),
+      anchorUrl: z.string().optional().describe("Constitution document URL (required for create)"),
+      anchorDataHashHex: z.string().optional().describe("Anchor data hash hex (32 bytes, required for create)"),
+      scriptHashHex: z.string().optional().describe("Optional guardrail script hash hex (28 bytes)"),
+      cborHex: z.string().optional().describe("CBOR hex for fromCbor")
+    },
+    async ({ action, anchorUrl, anchorDataHashHex, scriptHashHex, cborHex }) => {
+      switch (action) {
+        case "create": {
+          const url = new (Evolution.Url as any).Url({ href: anchorUrl! })
+          const anchor = new Evolution.Anchor.Anchor({
+            anchorUrl: url,
+            anchorDataHash: hexToBytes(anchorDataHashHex!)
+          })
+          const scriptHash = scriptHashHex
+            ? Evolution.ScriptHash.fromHex(scriptHashHex)
+            : null
+          const constitution = new Evolution.Constitution.Constitution({
+            anchor,
+            scriptHash
+          })
+          return toolTextResult({
+            cbor: Evolution.Constitution.toCBORHex(constitution),
+            json: constitution.toJSON()
+          })
+        }
+        case "toCbor": {
+          const url = new (Evolution.Url as any).Url({ href: anchorUrl! })
+          const anchor = new Evolution.Anchor.Anchor({
+            anchorUrl: url,
+            anchorDataHash: hexToBytes(anchorDataHashHex!)
+          })
+          const scriptHash = scriptHashHex
+            ? Evolution.ScriptHash.fromHex(scriptHashHex)
+            : null
+          const constitution = new Evolution.Constitution.Constitution({
+            anchor,
+            scriptHash
+          })
+          return toolTextResult({ cbor: Evolution.Constitution.toCBORHex(constitution) })
+        }
+        case "fromCbor": {
+          const constitution = Evolution.Constitution.fromCBORHex(cborHex!)
+          return toolTextResult({ json: constitution.toJSON() })
+        }
+        default:
+          throw new Error(`Unknown constitution_tools action: ${action}`)
+      }
+    }
+  )
+
+  // ── protocol_param_update_tools ─────────────────────────────────────
+  server.tool(
+    "protocol_param_update_tools",
+    "Build and encode/decode Cardano ProtocolParamUpdate objects with all optional fields: fee params, size limits, deposits, execution units, ExUnitPrices, DRepVotingThresholds (t1-t10), PoolVotingThresholds (t1-t5), and governance params.",
+    {
+      action: z.enum(["create", "toCbor", "fromCbor"]).describe("Action to perform"),
+      minfeeA: z.string().optional(),
+      minfeeB: z.string().optional(),
+      maxBlockBodySize: z.string().optional(),
+      maxTxSize: z.string().optional(),
+      maxBlockHeaderSize: z.string().optional(),
+      keyDeposit: z.string().optional(),
+      poolDeposit: z.string().optional(),
+      maxEpoch: z.string().optional(),
+      nOpt: z.string().optional(),
+      poolPledgeInfluenceNum: z.string().optional().describe("Numerator of pool pledge influence ratio"),
+      poolPledgeInfluenceDen: z.string().optional().describe("Denominator of pool pledge influence ratio"),
+      expansionRateNum: z.string().optional(),
+      expansionRateDen: z.string().optional(),
+      treasuryGrowthRateNum: z.string().optional(),
+      treasuryGrowthRateDen: z.string().optional(),
+      minPoolCost: z.string().optional(),
+      adaPerUtxoByte: z.string().optional(),
+      maxTxExMem: z.string().optional(),
+      maxTxExSteps: z.string().optional(),
+      maxBlockExMem: z.string().optional(),
+      maxBlockExSteps: z.string().optional(),
+      exUnitMemPriceNum: z.string().optional().describe("ExUnit memory price numerator"),
+      exUnitMemPriceDen: z.string().optional().describe("ExUnit memory price denominator"),
+      exUnitStepPriceNum: z.string().optional().describe("ExUnit step price numerator"),
+      exUnitStepPriceDen: z.string().optional().describe("ExUnit step price denominator"),
+      maxValueSize: z.string().optional(),
+      collateralPercentage: z.string().optional(),
+      maxCollateralInputs: z.string().optional(),
+      drepVotingThresholds: z.array(z.object({
+        numerator: z.string(),
+        denominator: z.string()
+      })).optional().describe("10 UnitIntervals for DRep voting thresholds (t1-t10)"),
+      poolVotingThresholds: z.array(z.object({
+        numerator: z.string(),
+        denominator: z.string()
+      })).optional().describe("5 UnitIntervals for pool voting thresholds (t1-t5)"),
+      minCommitteeSize: z.string().optional(),
+      committeeTermLimit: z.string().optional(),
+      governanceActionValidity: z.string().optional(),
+      governanceActionDeposit: z.string().optional(),
+      drepDeposit: z.string().optional(),
+      drepInactivityPeriod: z.string().optional(),
+      minfeeRefScriptCoinsPerByteNum: z.string().optional(),
+      minfeeRefScriptCoinsPerByteDen: z.string().optional(),
+      cborHex: z.string().optional().describe("CBOR hex for fromCbor")
+    },
+    async (args) => {
+      switch (args.action) {
+        case "create":
+        case "toCbor": {
+          const fields: any = {}
+          const s2b = (s: string | undefined) => s != null ? BigInt(s) : undefined
+
+          if (args.minfeeA != null) fields.minfeeA = s2b(args.minfeeA)
+          if (args.minfeeB != null) fields.minfeeB = s2b(args.minfeeB)
+          if (args.maxBlockBodySize != null) fields.maxBlockBodySize = s2b(args.maxBlockBodySize)
+          if (args.maxTxSize != null) fields.maxTxSize = s2b(args.maxTxSize)
+          if (args.maxBlockHeaderSize != null) fields.maxBlockHeaderSize = s2b(args.maxBlockHeaderSize)
+          if (args.keyDeposit != null) fields.keyDeposit = s2b(args.keyDeposit)
+          if (args.poolDeposit != null) fields.poolDeposit = s2b(args.poolDeposit)
+          if (args.maxEpoch != null) fields.maxEpoch = s2b(args.maxEpoch)
+          if (args.nOpt != null) fields.nOpt = s2b(args.nOpt)
+          if (args.minPoolCost != null) fields.minPoolCost = s2b(args.minPoolCost)
+          if (args.adaPerUtxoByte != null) fields.adaPerUtxoByte = s2b(args.adaPerUtxoByte)
+          if (args.maxValueSize != null) fields.maxValueSize = s2b(args.maxValueSize)
+          if (args.collateralPercentage != null) fields.collateralPercentage = s2b(args.collateralPercentage)
+          if (args.maxCollateralInputs != null) fields.maxCollateralInputs = s2b(args.maxCollateralInputs)
+          if (args.minCommitteeSize != null) fields.minCommitteeSize = s2b(args.minCommitteeSize)
+          if (args.committeeTermLimit != null) fields.committeeTermLimit = s2b(args.committeeTermLimit)
+          if (args.governanceActionValidity != null) fields.governanceActionValidity = s2b(args.governanceActionValidity)
+          if (args.governanceActionDeposit != null) fields.governanceActionDeposit = s2b(args.governanceActionDeposit)
+          if (args.drepDeposit != null) fields.drepDeposit = s2b(args.drepDeposit)
+          if (args.drepInactivityPeriod != null) fields.drepInactivityPeriod = s2b(args.drepInactivityPeriod)
+
+          // Ratios using NonnegativeInterval (from Cardano module)
+          const NI = (Evolution as any).Cardano.NonnegativeInterval.NonnegativeInterval
+          if (args.poolPledgeInfluenceNum != null && args.poolPledgeInfluenceDen != null) {
+            fields.poolPledgeInfluence = new NI({
+              numerator: BigInt(args.poolPledgeInfluenceNum),
+              denominator: BigInt(args.poolPledgeInfluenceDen)
+            })
+          }
+          if (args.expansionRateNum != null && args.expansionRateDen != null) {
+            fields.expansionRate = new Evolution.UnitInterval.UnitInterval({
+              numerator: BigInt(args.expansionRateNum),
+              denominator: BigInt(args.expansionRateDen)
+            })
+          }
+          if (args.treasuryGrowthRateNum != null && args.treasuryGrowthRateDen != null) {
+            fields.treasuryGrowthRate = new Evolution.UnitInterval.UnitInterval({
+              numerator: BigInt(args.treasuryGrowthRateNum),
+              denominator: BigInt(args.treasuryGrowthRateDen)
+            })
+          }
+          if (args.minfeeRefScriptCoinsPerByteNum != null && args.minfeeRefScriptCoinsPerByteDen != null) {
+            fields.minfeeRefScriptCoinsPerByte = new NI({
+              numerator: BigInt(args.minfeeRefScriptCoinsPerByteNum),
+              denominator: BigInt(args.minfeeRefScriptCoinsPerByteDen)
+            })
+          }
+
+          // ExUnits
+          if (args.maxTxExMem != null && args.maxTxExSteps != null) {
+            fields.maxTxExUnits = new Evolution.ProtocolParamUpdate.ExUnits({
+              mem: BigInt(args.maxTxExMem),
+              steps: BigInt(args.maxTxExSteps)
+            })
+          }
+          if (args.maxBlockExMem != null && args.maxBlockExSteps != null) {
+            fields.maxBlockExUnits = new Evolution.ProtocolParamUpdate.ExUnits({
+              mem: BigInt(args.maxBlockExMem),
+              steps: BigInt(args.maxBlockExSteps)
+            })
+          }
+
+          // ExUnitPrices
+          if (args.exUnitMemPriceNum != null && args.exUnitMemPriceDen != null &&
+              args.exUnitStepPriceNum != null && args.exUnitStepPriceDen != null) {
+            fields.exUnitPrices = new Evolution.ProtocolParamUpdate.ExUnitPrices({
+              memPrice: new NI({
+                numerator: BigInt(args.exUnitMemPriceNum),
+                denominator: BigInt(args.exUnitMemPriceDen)
+              }),
+              stepPrice: new NI({
+                numerator: BigInt(args.exUnitStepPriceNum),
+                denominator: BigInt(args.exUnitStepPriceDen)
+              })
+            })
+          }
+
+          // Voting thresholds
+          if (args.drepVotingThresholds && args.drepVotingThresholds.length === 10) {
+            const uis = args.drepVotingThresholds.map(t =>
+              new Evolution.UnitInterval.UnitInterval({ numerator: BigInt(t.numerator), denominator: BigInt(t.denominator) })
+            )
+            fields.drepVotingThresholds = new Evolution.ProtocolParamUpdate.DRepVotingThresholds({
+              t1: uis[0], t2: uis[1], t3: uis[2], t4: uis[3], t5: uis[4],
+              t6: uis[5], t7: uis[6], t8: uis[7], t9: uis[8], t10: uis[9]
+            })
+          }
+          if (args.poolVotingThresholds && args.poolVotingThresholds.length === 5) {
+            const uis = args.poolVotingThresholds.map(t =>
+              new Evolution.UnitInterval.UnitInterval({ numerator: BigInt(t.numerator), denominator: BigInt(t.denominator) })
+            )
+            fields.poolVotingThresholds = new Evolution.ProtocolParamUpdate.PoolVotingThresholds({
+              t1: uis[0], t2: uis[1], t3: uis[2], t4: uis[3], t5: uis[4]
+            })
+          }
+
+          const ppu = new Evolution.ProtocolParamUpdate.ProtocolParamUpdate(fields)
+          const cbor = Evolution.ProtocolParamUpdate.toCBORHex(ppu)
+          return toolTextResult(args.action === "toCbor" ? { cbor } : { cbor, fieldsSet: Object.keys(fields) })
+        }
+        case "fromCbor": {
+          const ppu = Evolution.ProtocolParamUpdate.fromCBORHex(args.cborHex!)
+          return toolTextResult({ fields: toStructured(ppu) })
+        }
+        default:
+          throw new Error(`Unknown protocol_param_update_tools action: ${args.action}`)
       }
     }
   )

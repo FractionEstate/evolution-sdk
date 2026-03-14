@@ -1701,6 +1701,221 @@ describe("evolution-mcp", () => {
     })
     expect(parseToolJson<{ lovelace: string }>(lovDec).lovelace).toBe("42000000")
 
+    // ── pool_params_tools ─────────────────────────────────────────────
+    // Create a full pool params with relay
+    const poolParams = await client.callTool({
+      name: "pool_params_tools",
+      arguments: {
+        action: "createPoolParams",
+        operatorHex: "aa".repeat(28),
+        vrfKeyHashHex: "bb".repeat(32),
+        pledge: "10000000000",
+        cost: "340000000",
+        marginNumerator: "1",
+        marginDenominator: "100",
+        rewardAccountHex: "e1" + "dd".repeat(28),
+        poolOwnerHexes: ["cc".repeat(28)],
+        relays: [{ type: "singleHostName", port: 3001, dnsName: "relay.example.com" }]
+      }
+    })
+    const poolParamsResult = parseToolJson<{ cbor: string; json: any }>(poolParams)
+    expect(poolParamsResult.cbor).toBeTruthy()
+    expect(poolParamsResult.json._tag).toBe("PoolParams")
+
+    // Create relay standalone
+    const relays = await client.callTool({
+      name: "pool_params_tools",
+      arguments: {
+        action: "createRelay",
+        relays: [
+          { type: "singleHostName", port: 6000, dnsName: "relay1.example.com" },
+          { type: "multiHostName", dnsName: "pool.example.com" }
+        ]
+      }
+    })
+    const relayResult = parseToolJson<{ relays: any[] }>(relays)
+    expect(relayResult.relays).toHaveLength(2)
+    expect(relayResult.relays[0].type).toBe("singleHostName")
+    expect(relayResult.relays[1].type).toBe("multiHostName")
+
+    // Pool retirement certificate
+    const poolRetire = await client.callTool({
+      name: "pool_params_tools",
+      arguments: {
+        action: "poolRetirement",
+        poolKeyHashHex: "aa".repeat(28),
+        epoch: "350"
+      }
+    })
+    expect(parseToolJson<{ tag: string }>(poolRetire).tag).toBe("PoolRetirement")
+
+    // fromCbor roundtrip
+    const poolFromCbor = await client.callTool({
+      name: "pool_params_tools",
+      arguments: {
+        action: "fromCbor",
+        cborHex: poolParamsResult.cbor
+      }
+    })
+    expect(parseToolJson<{ json: any }>(poolFromCbor).json._tag).toBe("PoolParams")
+
+    // ── drep_cert_tools ─────────────────────────────────────────────
+    // Register DRep
+    const regDrep = await client.callTool({
+      name: "drep_cert_tools",
+      arguments: {
+        action: "regDrep",
+        credentialType: "keyhash",
+        credentialHashHex: "dd".repeat(28),
+        coin: "500000000",
+        anchorUrl: "https://example.com/drep.json",
+        anchorDataHashHex: "ee".repeat(32)
+      }
+    })
+    const regDrepResult = parseToolJson<{ tag: string; json: any }>(regDrep)
+    expect(regDrepResult.tag).toBe("RegDrepCert")
+    expect(regDrepResult.json.coin).toBe("500000000")
+
+    // Unregister DRep
+    const unregDrep = await client.callTool({
+      name: "drep_cert_tools",
+      arguments: {
+        action: "unregDrep",
+        credentialType: "keyhash",
+        credentialHashHex: "dd".repeat(28),
+        coin: "500000000"
+      }
+    })
+    expect(parseToolJson<{ tag: string }>(unregDrep).tag).toBe("UnregDrepCert")
+
+    // Update DRep
+    const updateDrep = await client.callTool({
+      name: "drep_cert_tools",
+      arguments: {
+        action: "updateDrep",
+        credentialType: "scripthash",
+        credentialHashHex: "ff".repeat(28)
+      }
+    })
+    expect(parseToolJson<{ tag: string }>(updateDrep).tag).toBe("UpdateDrepCert")
+
+    // ── committee_cert_tools ─────────────────────────────────────────
+    // Authorize committee hot key
+    const authHot = await client.callTool({
+      name: "committee_cert_tools",
+      arguments: {
+        action: "authHot",
+        coldCredentialType: "keyhash",
+        coldCredentialHashHex: "aa".repeat(28),
+        hotCredentialType: "keyhash",
+        hotCredentialHashHex: "bb".repeat(28)
+      }
+    })
+    expect(parseToolJson<{ tag: string }>(authHot).tag).toBe("AuthCommitteeHotCert")
+
+    // Resign committee cold credential
+    const resignCold = await client.callTool({
+      name: "committee_cert_tools",
+      arguments: {
+        action: "resignCold",
+        coldCredentialType: "scripthash",
+        coldCredentialHashHex: "cc".repeat(28),
+        anchorUrl: "https://example.com/resign.json",
+        anchorDataHashHex: "dd".repeat(32)
+      }
+    })
+    const resignResult = parseToolJson<{ tag: string; json: any }>(resignCold)
+    expect(resignResult.tag).toBe("ResignCommitteeColdCert")
+    expect(resignResult.json.anchor).not.toBeNull()
+
+    // ── constitution_tools ─────────────────────────────────────────
+    // Create constitution
+    const constitution = await client.callTool({
+      name: "constitution_tools",
+      arguments: {
+        action: "create",
+        anchorUrl: "https://example.com/constitution.json",
+        anchorDataHashHex: "ab".repeat(32)
+      }
+    })
+    const constResult = parseToolJson<{ cbor: string; json: any }>(constitution)
+    expect(constResult.cbor).toBeTruthy()
+    expect(constResult.json._tag).toBe("Constitution")
+    expect(constResult.json.scriptHash).toBeNull()
+
+    // Create with guardrail script
+    const constWithScript = await client.callTool({
+      name: "constitution_tools",
+      arguments: {
+        action: "create",
+        anchorUrl: "https://example.com/constitution.json",
+        anchorDataHashHex: "ab".repeat(32),
+        scriptHashHex: "cd".repeat(28)
+      }
+    })
+    expect(parseToolJson<{ json: any }>(constWithScript).json.scriptHash).not.toBeNull()
+
+    // fromCbor roundtrip
+    const constFromCbor = await client.callTool({
+      name: "constitution_tools",
+      arguments: { action: "fromCbor", cborHex: constResult.cbor }
+    })
+    expect(parseToolJson<{ json: any }>(constFromCbor).json._tag).toBe("Constitution")
+
+    // ── protocol_param_update_tools ─────────────────────────────────
+    // Create with basic fields
+    const ppuBasic = await client.callTool({
+      name: "protocol_param_update_tools",
+      arguments: {
+        action: "create",
+        minfeeA: "44",
+        minfeeB: "155381",
+        maxTxSize: "16384",
+        keyDeposit: "2000000",
+        poolDeposit: "500000000"
+      }
+    })
+    const ppuResult = parseToolJson<{ cbor: string; fieldsSet: string[] }>(ppuBasic)
+    expect(ppuResult.cbor).toBeTruthy()
+    expect(ppuResult.fieldsSet).toContain("minfeeA")
+    expect(ppuResult.fieldsSet).toContain("keyDeposit")
+
+    // Create with ExUnits
+    const ppuExUnits = await client.callTool({
+      name: "protocol_param_update_tools",
+      arguments: {
+        action: "create",
+        maxTxExMem: "14000000",
+        maxTxExSteps: "10000000000",
+        maxBlockExMem: "62000000",
+        maxBlockExSteps: "20000000000"
+      }
+    })
+    const ppuExResult = parseToolJson<{ cbor: string; fieldsSet: string[] }>(ppuExUnits)
+    expect(ppuExResult.fieldsSet).toContain("maxTxExUnits")
+    expect(ppuExResult.fieldsSet).toContain("maxBlockExUnits")
+
+    // Create with voting thresholds
+    const ui = { numerator: "1", denominator: "2" }
+    const ppuVoting = await client.callTool({
+      name: "protocol_param_update_tools",
+      arguments: {
+        action: "create",
+        drepVotingThresholds: [ui, ui, ui, ui, ui, ui, ui, ui, ui, ui],
+        poolVotingThresholds: [ui, ui, ui, ui, ui]
+      }
+    })
+    const ppuVotingResult = parseToolJson<{ cbor: string; fieldsSet: string[] }>(ppuVoting)
+    expect(ppuVotingResult.fieldsSet).toContain("drepVotingThresholds")
+    expect(ppuVotingResult.fieldsSet).toContain("poolVotingThresholds")
+
+    // fromCbor roundtrip
+    const ppuFromCbor = await client.callTool({
+      name: "protocol_param_update_tools",
+      arguments: { action: "fromCbor", cborHex: ppuResult.cbor }
+    })
+    expect(parseToolJson<{ fields: any }>(ppuFromCbor).fields).toBeTruthy()
+
     // Verify all tools are listed
     const allTools = await client.listTools()
     const toolNames = allTools.tools.map((t) => t.name)
@@ -1739,6 +1954,11 @@ describe("evolution-mcp", () => {
     expect(toolNames).toContain("proposal_tools")
     expect(toolNames).toContain("tx_output_tools")
     expect(toolNames).toContain("plutus_data_codec_tools")
+    expect(toolNames).toContain("pool_params_tools")
+    expect(toolNames).toContain("drep_cert_tools")
+    expect(toolNames).toContain("committee_cert_tools")
+    expect(toolNames).toContain("constitution_tools")
+    expect(toolNames).toContain("protocol_param_update_tools")
     expect(toolNames).toContain("devnet_create")
     expect(toolNames).toContain("devnet_start")
     expect(toolNames).toContain("devnet_stop")
