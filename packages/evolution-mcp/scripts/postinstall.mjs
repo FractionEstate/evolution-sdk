@@ -197,7 +197,9 @@ const main = async () => {
   }
 
   if (process.platform !== "linux") {
-    failOrWarn("Automatic bootstrap is only implemented for Linux. Start manually with: node dist/bin.js serve")
+    failOrWarn(
+      "Automatic postinstall bootstrap is only implemented for Linux. On macOS and Windows, the server will not start automatically; start it manually with: node dist/bin.js serve"
+    )
     return
   }
 
